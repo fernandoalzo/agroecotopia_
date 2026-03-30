@@ -290,66 +290,150 @@ const Navbar = () => {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="fixed top-[60px] inset-x-4 bg-background/95 backdrop-blur-2xl px-6 py-10 rounded-3xl border border-border shadow-2xl md:hidden z-40 overflow-hidden"
+            initial={{ opacity: 0, x: "100%" }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed inset-0 top-0 z-[60] flex h-screen w-full flex-col bg-primary dark:bg-[#0a1f14] md:hidden overflow-hidden"
           >
-            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-primary/5 rounded-full blur-3xl -z-10" />
-            <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-primary/5 rounded-full blur-3xl -z-10" />
-
-            <div className="flex flex-col gap-8 items-center">
-              {links.map((l, i) => (
-                <motion.div
-                  key={l.href}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="w-full text-center"
-                >
-                  <Link
-                    href={l.href}
-                    onClick={() => setOpen(false)}
-                    className={cn(
-                      "font-display text-3xl font-black transition-all block tracking-tight",
-                      isActive(l.href) ? "text-primary scale-110" : "text-muted-foreground/60 hover:text-foreground"
-                    )}
-                  >
-                    {l.label}
-                  </Link>
-                </motion.div>
-              ))}
-
-              <div className="w-full h-px bg-border/40 my-4" />
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="w-full mt-4 flex flex-col gap-6"
+            {/* Background pattern layer - Organic Leaf SVGs from Visual Concept */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.07] mix-blend-overlay">
+              <div className="absolute top-0 -left-10 w-64 h-64 rotate-12">
+                <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-white">
+                  <path d="M40 160C40 160 20 120 40 80C60 40 100 20 140 40C180 60 180 120 160 140C140 160 100 180 40 160Z" stroke="currentColor" strokeWidth="1" />
+                  <path d="M40 160L140 40" stroke="currentColor" strokeWidth="0.5" />
+                  <path d="M80 120C100 110 120 100 140 100" stroke="currentColor" strokeWidth="0.5" />
+                  <path d="M60 100C80 90 100 80 120 80" stroke="currentColor" strokeWidth="0.5" />
+                </svg>
+              </div>
+              <div className="absolute bottom-20 -right-16 w-80 h-80 -rotate-45">
+                <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-white">
+                  <path d="M40 160C40 160 20 120 40 80C60 40 100 20 140 40C180 60 180 120 160 140C140 160 100 180 40 160Z" stroke="currentColor" strokeWidth="1" />
+                  <path d="M40 160L140 40" stroke="currentColor" strokeWidth="0.5" />
+                </svg>
+              </div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-20">
+                <div className="w-full h-full bg-[radial-gradient(circle,transparent_20%,#000_100%)] mix-blend-multiply" />
+              </div>
+            </div>
+            
+            <div className="relative flex flex-col h-full px-6 pt-24 pb-10">
+              {/* Top Header inside menu */}
+              <div className="absolute top-6 left-6 flex items-center gap-2">
+                 <Leaf className="h-6 w-6 text-white/90" />
+                 <span className="font-display text-xl font-bold text-white tracking-tight">Agroecotopia</span>
+              </div>
+              
+              <button 
+                onClick={() => setOpen(false)}
+                className="absolute top-6 right-6 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md border border-white/20 active:scale-90 transition-all"
               >
-                <div className="flex items-center justify-center gap-4 p-4 rounded-3xl bg-secondary/20 border border-border/40 backdrop-blur-md">
-                   <div className="flex flex-col items-center gap-2">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">{t.navbar.idioma}</span>
-                      <LanguageSelector />
-                   </div>
-                   <div className="w-px h-10 bg-border/40" />
-                   <div className="flex flex-col items-center gap-2">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">{t.navbar.tema ?? "Theme"}</span>
-                      <ThemeToggle />
-                   </div>
-                </div>
+                <X className="h-6 w-6" />
+              </button>
 
-                <Link
-                  href="/cart"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center justify-center gap-4 rounded-3xl bg-primary px-8 py-5 font-display text-2xl font-black text-white transition-all relative group shadow-[0_10px_30px_rgba(var(--primary),0.3)] active:scale-95"
+              <div className="flex flex-col gap-6 mt-12">
+                {links.map((l, i) => (
+                  <motion.div
+                    key={l.href}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.1 + 0.2, type: "spring", damping: 20 }}
+                    className="w-full"
+                  >
+                    <Link
+                      href={l.href}
+                      onClick={() => setOpen(false)}
+                      className={cn(
+                        "group relative flex items-center justify-between py-2 transition-all",
+                        isActive(l.href) ? "text-white" : "text-white/60 hover:text-white"
+                      )}
+                    >
+                      <span className="font-display text-4xl font-black tracking-tighter">
+                        {l.label}
+                      </span>
+                      {isActive(l.href) && (
+                        <motion.div 
+                          layoutId="activeIndicator"
+                          className="h-2 w-2 rounded-full bg-accent"
+                        />
+                      )}
+                      
+                      {/* Hover effect underline */}
+                      <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-accent transition-all duration-300 group-hover:w-16" />
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="mt-auto space-y-8">
+                {/* Visual Separator */}
+                <div className="h-px w-full bg-gradient-to-r from-white/20 via-white/5 to-transparent" />
+
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  className="space-y-6"
                 >
-                  <ShoppingCartIcon totalItems={totalItems} />
-                  <span>{t.navbar.miCarrito}</span>
-                </Link>
-              </motion.div>
+                  {/* Settings Block */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-3 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{t.navbar.idioma}</span>
+                      <div className="flex justify-center -ml-1">
+                        <LanguageSelector />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-3 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{t.navbar.tema ?? "Theme"}</span>
+                      <div className="flex justify-center -ml-1">
+                        <ThemeToggle />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* High Contrast Cart Button - Refined to match visual concept */}
+                  <div className="relative group">
+                    <Link
+                      href="/cart"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center justify-between gap-4 rounded-3xl bg-[#0f2a1d] border border-white/10 px-8 py-6 text-white shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 transition-all overflow-hidden relative"
+                    >
+                      {/* Subtle shine effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                      
+                      <div className="flex items-center gap-5 relative z-10">
+                        <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
+                          <ShoppingCart className="h-6 w-6 text-white" />
+                        </div>
+                        <span className="font-display text-2xl font-black tracking-tight uppercase">{t.navbar.miCarrito}</span>
+                      </div>
+                      
+                      <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center relative z-10">
+                         <Leaf className="h-4 w-4 text-white/40 group-hover:text-accent transition-colors" />
+                      </div>
+                    </Link>
+
+                    {/* Red Notification Badge - Floating at top-right of button */}
+                    <AnimatePresence>
+                      {totalItems > 0 && (
+                        <motion.div
+                          initial={{ scale: 0, x: 10, y: -10 }}
+                          animate={{ scale: 1, x: 0, y: 0 }}
+                          exit={{ scale: 0, x: 10, y: -10 }}
+                          className="absolute -right-3 -top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-[#ff3b30] text-[15px] font-black text-white shadow-[0_10px_20px_rgba(255,59,48,0.5)] border-[3px] border-[#0f2a1d]"
+                        >
+                          {totalItems}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Bottom Footer Info */}
+                  <div className="flex justify-center gap-6 pt-4 text-white/30">
+                    <div className="text-[10px] uppercase font-bold tracking-widest">© 2024 Agroecotopia</div>
+                  </div>
+                </motion.div>
+              </div>
             </div>
           </motion.div>
         )}
