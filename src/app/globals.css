@@ -1,26 +1,138 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
+
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  --font-display: "Playfair Display", serif;
+  --font-body: "Source Sans 3", sans-serif;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-background: oklch(0.985 0.01 90);
+  --color-foreground: oklch(0.1 0.03 150);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.1 0.03 150);
+
+  --color-popover: oklch(0.985 0.01 90);
+  --color-popover-foreground: oklch(0.1 0.03 150);
+
+  --color-primary: oklch(0.28 0.05 142);
+  --color-primary-foreground: oklch(0.96 0.06 80);
+
+  --color-secondary: oklch(0.94 0.02 85);
+  --color-secondary-foreground: oklch(0.12 0.03 150);
+
+  --color-muted: oklch(0.92 0.015 90);
+  --color-muted-foreground: oklch(0.35 0.015 150);
+
+  --color-accent: oklch(0.45 0.055 78);
+  --color-accent-foreground: oklch(0.97 0.02 90);
+
+  --color-destructive: oklch(0.602 0.0842 0);
+  --color-destructive-foreground: oklch(0.98 0.04 210);
+
+  --color-border: oklch(0.8 0.015 100);
+  --color-input: oklch(0.8 0.015 100);
+  --color-ring: oklch(0.28 0.05 142);
+
+  --radius-lg: 0.75rem;
+  --radius-md: calc(0.75rem - 2px);
+  --radius-sm: calc(0.75rem - 4px);
+
+  --shadow-card: 0 10px 40px -10px oklch(0.2 0.05 142 / 0.12), 0 0 0 1px oklch(0.2 0.05 142 / 0.02);
+  --shadow-card-hover: 0 20px 50px -12px oklch(0.2 0.05 142 / 0.18), 0 0 0 1px oklch(0.2 0.05 142 / 0.05);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-float: float 3s ease-in-out infinite;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+
+    to {
+      height: 0;
+    }
+  }
+
+  @keyframes float {
+
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-10px);
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Dark mode colors - Tailwind 4 variables */
+@layer base {
+  :root {
+    --background: 0.985 0.01 90;
+    --foreground: 0.1 0.03 150;
+  }
+
+  .dark {
+    --color-background: oklch(0.12 0.015 160);
+    --color-foreground: oklch(0.95 0.02 120);
+
+    --color-card: oklch(0.15 0.02 165);
+    --color-card-foreground: oklch(0.95 0.02 120);
+
+    --color-popover: oklch(0.12 0.015 160);
+    --color-popover-foreground: oklch(0.95 0.02 120);
+
+    --color-primary: oklch(0.55 0.12 145);
+    --color-primary-foreground: oklch(0.15 0.05 140);
+
+    --color-secondary: oklch(0.2 0.03 160);
+    --color-secondary-foreground: oklch(0.9 0.03 120);
+
+    --color-muted: oklch(0.22 0.02 165);
+    --color-muted-foreground: oklch(0.7 0.02 130);
+
+    --color-accent: oklch(0.65 0.1 85);
+    --color-accent-foreground: oklch(0.15 0.05 140);
+
+    --color-border: oklch(0.25 0.02 170);
+    --color-input: oklch(0.25 0.02 170);
+    --color-ring: oklch(0.55 0.12 145);
+
+    --shadow-card: 0 10px 40px -10px oklch(0 0 0 / 0.5), 0 0 0 1px oklch(1 1 1 / 0.05);
+    --shadow-card-hover: 0 20px 50px -12px oklch(0 0 0 / 0.7), 0 0 0 1px oklch(1 1 1 / 0.1);
+  }
+}
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+  }
 }
