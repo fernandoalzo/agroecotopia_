@@ -18,7 +18,115 @@ This skill defines the technical standards and architectural patterns for the **
 
 ---
 
-## 2. Language Handling (i18n)
+## 2. Layered Architecture (UI → CTRL → SVC → REPO → DB)
+
+The project follows a strict **layered architecture** to enforce separation of concerns. Each layer has a single responsibility and can **only call the layer immediately below it**.
+
+### 2.1 Layer Overview
+
+```
+┌─────────────────────────────────────────────────────┐
+│  UI   │  Components & Pages (React/Next.js)         │
+├───────┼─────────────────────────────────────────────┤
+│  CTRL │  Server Actions / Route Handlers            │
+├───────┼─────────────────────────────────────────────┤
+│  SVC  │  Business Logic (pure functions/classes)    │
+├───────┼─────────────────────────────────────────────┤
+│  REPO │  Data Access (queries only)                 │
+├───────┼─────────────────────────────────────────────┤
+│  DB   │  Infrastructure (clients, connections)      │
+└───────┴─────────────────────────────────────────────┘
+```
+
+### 2.2 Layer Details & File Locations
+
+| Layer | Sigla | Path | Naming Convention | Description |
+|-------|-------|------|-------------------|-------------|
+| **UI** | `UI` | `src/app/`, `src/components/` | `page.tsx`, `PascalCase.tsx` | Pages, layouts, and React components. |
+| **Controller** | `CTRL` | `src/actions/`, `src/app/api/` | `[entity].actions.ts`, `route.ts` | Server Actions and API Route Handlers. Entry points for backend logic. |
+| **Service** | `SVC` | `src/services/` | `[entity].service.ts` | Pure business logic. No framework dependencies, no DB calls. |
+| **Repository** | `REPO` | `src/repositories/` | `[entity].repository.ts` | Data access only. Contains all database queries. |
+| **Database** | `DB` | `src/db/` | `client.ts`, `server.ts` | Infrastructure clients (Supabase, Stripe, etc.). |
+
+### 2.3 Dependency Rules
+
+> [!CAUTION]
+> **NEVER violate the dependency direction.** Each layer can ONLY import from the layer directly below it:
+> - `UI` → `CTRL` (via Server Actions or fetch to API routes)
+> - `CTRL` → `SVC`
+> - `SVC` → `REPO`
+> - `REPO` → `DB`
+>
+> Cross-layer imports (e.g., `UI` → `REPO`, `CTRL` → `DB`) are **strictly forbidden**.
+
+### 2.4 Shared Resources (Exception)
+
+The following directories are **shared** across all layers:
+- `src/types/` — TypeScript interfaces and type definitions.
+- `src/lib/` — Pure utility functions (e.g., `cn()` from shadcn).
+
+---
+
+## 3. Directory Structure
+
+```
+src/
+├── app/                          ← UI (pages & layouts)
+│   ├── api/                      ← CTRL (API Route Handlers)
+│   │   └── [feature]/
+│   │       └── route.ts
+│   ├── cart/
+│   │   └── page.tsx
+│   ├── products/
+│   │   └── page.tsx
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
+│
+├── actions/                      ← CTRL (Server Actions)
+│   └── [entity].actions.ts
+│
+├── services/                     ← SVC (Business Logic)
+│   └── [entity].service.ts
+│
+├── repositories/                 ← REPO (Data Access)
+│   └── [entity].repository.ts
+│
+├── db/                           ← DB (Infrastructure Clients)
+│   ├── supabase/
+│   │   ├── client.ts             ← Browser client
+│   │   ├── server.ts             ← Server client (SSR)
+│   │   └── middleware.ts         ← Edge client
+│   └── stripe.ts
+│
+├── components/                   ← UI (Shared & Feature Components)
+│   ├── ui/                       ← shadcn / primitivos
+│   ├── home/                     ← Feature: Home page sections
+│   ├── products/                 ← Feature: Product components
+│   ├── checkout/                 ← Feature: Checkout components
+│   ├── Footer.tsx
+│   ├── Navbar.tsx
+│   └── Providers.tsx
+│
+├── architecture/
+│   └── languages/                ← i18n system
+│
+├── assets/                       ← Static asset imports
+├── context/                      ← React Context providers
+├── hooks/                        ← Custom React hooks
+├── lib/                          ← Utility functions
+├── types/                        ← Centralized TypeScript types
+│   ├── domain.types.ts           ← Domain-specific types
+│   ├── database.types.ts         ← Auto-generated DB types
+│   └── index.ts                  ← Barrel export
+└── utils/                        ← Constants & static data
+    ├── constants.ts
+    └── productos/
+```
+
+---
+
+## 4. Language Handling (i18n)
 
 The application uses a custom internationalization (i18n) system based on React Context.
 
@@ -46,7 +154,7 @@ return <h1>{t.hero.title}</h1>;
 
 ---
 
-## 3. Theme & Styling
+## 5. Theme & Styling
 
 The application uses `next-themes` for theme management (Light/Dark mode).
 
@@ -66,7 +174,7 @@ Avoid hardcoding hex colors; prefer Tailwind utility classes or CSS variables de
 
 ---
 
-## 4. Type Centralization
+## 6. Type Centralization
 
 All shared interfaces and types MUST be centralized to avoid circular dependencies and ensure a single source of truth.
 
@@ -83,7 +191,7 @@ All shared interfaces and types MUST be centralized to avoid circular dependenci
 
 ---
 
-## 5. Product Management
+## 7. Product Management
 
 Products are defined as constants to ensure fast loading and easy maintenance without a complex database for the static version.
 
@@ -102,11 +210,16 @@ All products are aggregated in `src/utils/productos/index.ts`. When adding a new
 
 ---
 
-## 6. Component Guidelines
+## 8. Component Guidelines
 
 ### Client vs. Server Components
 - Use **Server Components** by default for static data and SEO-critical sections.
 - Use **Client Components** (`"use client"`) only when using hooks (`useState`, `useEffect`, `useContext`) or event listeners.
+
+### Component Organization
+- **Shared components**: `src/components/` (Navbar, Footer, Providers, etc.).
+- **Feature components**: `src/components/[feature]/` (home/, products/, checkout/).
+- **Primitive UI**: `src/components/ui/` (shadcn/ui components).
 
 ### UI Consistency
 - Use the predefined design system (colors, typography, spacing).
@@ -115,15 +228,16 @@ All products are aggregated in `src/utils/productos/index.ts`. When adding a new
 
 ---
 
-## 7. Best Practices
+## 9. Best Practices
 
 - **Naming**: Use PascalCase for components, camelCase for variables/functions, and kebab-case for filenames.
+- **Backend file naming**: Use `[entity].[layer].ts` pattern (e.g., `product.service.ts`, `order.repository.ts`, `auth.actions.ts`).
 - **Clean Code**: Keep components small and focused. Extract logic to custom hooks if it exceeds 30-40 lines.
 - **Safety**: Always use optional chaining (`?.`) and nullish coalescing (`??`) when dealing with potentially undefined values (like translations or product properties).
 
 ---
 
-## 8. Operational Rules
+## 10. Operational Rules
 
 - **Browser Interaction**: Never interact directly with the browser to test or verify changes. Focus exclusively on the code implementation.
 - **Verification**: Wait for the user to perform manual tests and provide feedback on the changes before proceeding with further adjustments.

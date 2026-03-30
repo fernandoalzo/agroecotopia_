@@ -84,7 +84,7 @@ const Navbar = () => {
               >
                 <Leaf className="h-6 w-6 text-primary md:h-8 md:w-8 transition-transform duration-500 group-hover:rotate-[25deg] group-hover:scale-125" />
               </motion.div>
-              
+
               {/* Subtle aura behind the leaf */}
               <div className="absolute inset-0 -z-10 h-full w-full rounded-full bg-primary/20 blur-xl transition-all duration-500 group-hover:bg-primary/40 group-hover:blur-2xl" />
             </div>
@@ -96,7 +96,7 @@ const Navbar = () => {
                   <motion.span
                     key={i}
                     initial={{ y: 0 }}
-                    whileHover={{ 
+                    whileHover={{
                       y: -2,
                       color: "var(--color-primary)",
                       textShadow: "0 0 8px rgba(34, 197, 94, 0.5)", // Subtle neon glow on hover
@@ -119,11 +119,11 @@ const Navbar = () => {
               <motion.div
                 className="absolute inset-0 z-20 pointer-events-none"
                 initial={{ x: "-100%", opacity: 0 }}
-                whileHover={{ 
+                whileHover={{
                   x: ["-100%", "200%"],
                   opacity: [0, 0.5, 0],
-                  transition: { 
-                    duration: 1, 
+                  transition: {
+                    duration: 1,
                     repeat: Infinity,
                     repeatDelay: 0.2,
                     ease: "easeInOut"
@@ -134,7 +134,7 @@ const Navbar = () => {
               </motion.div>
 
               {/* Luxury Underline */}
-              <motion.div 
+              <motion.div
                 className="absolute -bottom-1 left-0 h-[2px] bg-gradient-to-r from-primary via-accent to-transparent"
                 initial={{ width: 0, opacity: 0 }}
                 whileHover={{ width: "100%", opacity: 1 }}
@@ -316,15 +316,15 @@ const Navbar = () => {
                 <div className="w-full h-full bg-[radial-gradient(circle,transparent_20%,#000_100%)] mix-blend-multiply" />
               </div>
             </div>
-            
+
             <div className="relative flex flex-col h-full px-6 pt-24 pb-10">
               {/* Top Header inside menu */}
               <div className="absolute top-6 left-6 flex items-center gap-2">
-                 <Leaf className="h-6 w-6 text-white/90" />
-                 <span className="font-display text-xl font-bold text-white tracking-tight">Agroecotopia</span>
+                <Leaf className="h-6 w-6 text-white/90" />
+                <span className="font-display text-xl font-bold text-white tracking-tight">Agroecotopia</span>
               </div>
-              
-              <button 
+
+              <button
                 onClick={() => setOpen(false)}
                 className="absolute top-6 right-6 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md border border-white/20 active:scale-90 transition-all"
               >
@@ -352,12 +352,12 @@ const Navbar = () => {
                         {l.label}
                       </span>
                       {isActive(l.href) && (
-                        <motion.div 
+                        <motion.div
                           layoutId="activeIndicator"
                           className="h-2 w-2 rounded-full bg-accent"
                         />
                       )}
-                      
+
                       {/* Hover effect underline */}
                       <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-accent transition-all duration-300 group-hover:w-16" />
                     </Link>
@@ -400,16 +400,16 @@ const Navbar = () => {
                     >
                       {/* Subtle shine effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                      
+
                       <div className="flex items-center gap-5 relative z-10">
                         <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
                           <ShoppingCart className="h-6 w-6 text-white" />
                         </div>
                         <span className="font-display text-2xl font-black tracking-tight uppercase">{t.navbar.miCarrito}</span>
                       </div>
-                      
+
                       <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center relative z-10">
-                         <Leaf className="h-4 w-4 text-white/40 group-hover:text-accent transition-colors" />
+                        <Leaf className="h-4 w-4 text-white/40 group-hover:text-accent transition-colors" />
                       </div>
                     </Link>
 
