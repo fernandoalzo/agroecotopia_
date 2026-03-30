@@ -5,6 +5,7 @@ import { ShoppingCart, Tag } from "lucide-react";
 import { Product } from "@/types";
 import ProductModal from "./ProductModal";
 import Image from "next/image";
+import { formatPrice } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
 
 const ProductCard = ({ p, priority = false, variant = 'grid' }: { p: Product, priority?: boolean, variant?: 'grid' | 'compact' | 'list' }) => {
@@ -46,9 +47,9 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: { p: Product, pr
         <div className={`${isList ? "flex-shrink-0" : "mb-4 flex items-center justify-between"}`}>
           <div className={`flex items-center justify-center rounded-xl bg-primary/10 shadow-inner relative overflow-hidden
             ${isCompact ? "h-14 w-14 text-3xl" : isList ? "h-28 w-28 md:h-36 md:w-36 text-5xl" : "h-16 w-16 text-4xl md:h-20 md:w-20 md:text-5xl"}`}>
-            {p.photos && p.photos.length > 0 ? (
+            {p.images && p.images.length > 0 ? (
               <Image 
-                src={p.photos[0]} 
+                src={p.images[0]} 
                 alt={productTranslation.name} 
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

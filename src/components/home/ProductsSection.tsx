@@ -5,7 +5,6 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import { Product } from "@/types";
-import { products } from "@/utils/constants";
 import { useLanguage } from "@/context/LanguageContext";
 
 interface MarqueeRowProps {
@@ -89,12 +88,16 @@ const MarqueeRow = ({ items, direction = "left", speed = 40 }: MarqueeRowProps) 
   );
 };
 
-const ProductsSection = () => {
+interface ProductsSectionProps {
+  initialProducts: Product[];
+}
+
+const ProductsSection = ({ initialProducts }: ProductsSectionProps) => {
   const { t, language } = useLanguage();
   // Dividir dinámicamente el array de productos en dos filas
-  const midPoint = Math.ceil(products.length / 2);
-  const row1 = products.slice(0, midPoint);
-  const row2 = products.slice(midPoint);
+  const midPoint = Math.ceil(initialProducts.length / 2);
+  const row1 = initialProducts.slice(0, midPoint);
+  const row2 = initialProducts.slice(midPoint);
 
   return (
     <section id="productos" className="relative bg-secondary/30 py-24 md:py-32 overflow-hidden">

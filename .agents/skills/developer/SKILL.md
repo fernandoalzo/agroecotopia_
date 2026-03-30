@@ -52,12 +52,12 @@ The project follows a strict **layered architecture** to enforce separation of c
 
 > [!CAUTION]
 > **NEVER violate the dependency direction.** Each layer can ONLY import from the layer directly below it:
-> - `UI` → `CTRL` (via Server Actions or fetch to API routes)
-> - `CTRL` → `SVC`
-> - `SVC` → `REPO`
+> - `UI` (Client Components) → `CTRL` (Server Actions or API) OR `UI` (Server Components)
+> - `CTRL` / `UI` (Server Components) → `SVC` (Business Logic)
+> - `SVC` → `REPO` (Data Access)
 > - `REPO` → `DB`
 >
-> Cross-layer imports (e.g., `UI` → `REPO`, `CTRL` → `DB`) are **strictly forbidden**.
+> **BOUNDARY RESTRICTION RULE**: Cross-layer imports (e.g., `UI` → `REPO`, `CTRL` → `DB`) are **strictly forbidden**. Server Components and Server Actions MUST ONLY interact with `src/services/`. They are permanently prohibited from importing or invoking `src/repositories/` directly.
 
 ### 2.4 Shared Resources (Exception)
 
@@ -191,22 +191,27 @@ All shared interfaces and types MUST be centralized to avoid circular dependenci
 
 ---
 
-## 7. Product Management
+---
 
-Products are defined as constants to ensure fast loading and easy maintenance without a complex database for the static version.
+## 7. Database & ORM (Prisma)
 
-### Directory Structure
-`src/utils/productos/[product-slug]/index.ts`
+The application uses **Supabase (PostgreSQL)** managed through **Prisma ORM**.
+This removes the necessity for static `index.ts` files inside `utils/productos/`, as all product data now flows through the DB.
 
-Each product folder should contain:
-- `index.ts`: Exported `product` object of type `Product`.
+### Prisma Configuration
+- **Schema File**: `prisma/schema.prisma`
+- **Migrations path**: `prisma/migrations/`
+- **Instance**: A singleton instance exists in `src/db/prisma.ts`. Never instantiate a `new PrismaClient()` directly; always import it from `src/db/prisma`.
 
-### Media Assets
-- Photos are stored in `public/products/[slug]/photos/`.
-- References in code should use the absolute path: `"/products/[slug]/photos/1.png"`.
+### Repositories Concept
+Queries to Prisma must live exclusively in the **Repository Layer** (`src/repositories/`).
+Example for products:
+- `src/repositories/product.repository.ts`
 
-### Aggregation
-All products are aggregated in `src/utils/productos/index.ts`. When adding a new product, it must be imported and added to the `productsList` array in this file.
+### Handling Prices and Images
+- Database stores `price` as `Int` natively.
+- Database stores `images` as a `String[]` of URLs (e.g. Supabase Storage URLs).
+- When rendering prices in the browser, always use `formatPrice(value)` from `@/lib/utils` inside UI components.
 
 ---
 

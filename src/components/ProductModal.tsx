@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { formatPrice } from "@/lib/utils";
 
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -83,10 +84,10 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
                 )}
                 {/* Tag moved to details for a cleaner aesthetic */}
 
-                {product.photos && product.photos.length > 0 ? (
+                {product.images && product.images.length > 0 ? (
                   <Carousel className="w-full max-w-[280px] md:max-w-[320px]" opts={{ align: "center", loop: true }}>
                     <CarouselContent>
-                      {product.photos.map((photo, index) => (
+                      {product.images.map((photo, index) => (
                         <CarouselItem key={index}>
                           <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
@@ -106,7 +107,7 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
                         </CarouselItem>
                       ))}
                     </CarouselContent>
-                    {product.photos.length > 1 && (
+                    {product.images.length > 1 && (
                       <div className="hidden md:block">
                         <CarouselPrevious className="h-10 w-10 -left-6 bg-background/80 backdrop-blur-md border-border/50 text-foreground hover:bg-primary hover:text-primary-foreground shadow-xl transition-all" />
                         <CarouselNext className="h-10 w-10 -right-6 bg-background/80 backdrop-blur-md border-border/50 text-foreground hover:bg-primary hover:text-primary-foreground shadow-xl transition-all" />
@@ -144,7 +145,7 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
                     {productTranslation.name}
                   </DialogTitle>
                   <div className="font-display text-2xl md:text-3xl font-black text-primary mt-4">
-                    {product.price}
+                    {formatPrice(product.price)}
                     <span className="text-sm font-body text-muted-foreground ml-2 font-medium">
                       {t.products.taxesIncluded}
                     </span>

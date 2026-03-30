@@ -10,6 +10,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, Leaf, Tag } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
+import { formatPrice } from "@/lib/utils";
 
 const CartContent = () => {
   const { cart, removeFromCart, updateQuantity, totalPrice } = useCart();
@@ -67,7 +68,7 @@ const CartContent = () => {
         name: item.product.name,
         unit: item.product.unidad
       };
-      return `• ${productTranslation.name} (x${item.quantity} ${productTranslation.unit}) - ${item.product.price}`;
+      return `• ${productTranslation.name} (x${item.quantity} ${productTranslation.unit}) - ${formatPrice(item.product.price)}`;
     }).join("\n");
 
     const message = `🛒 *Nuevo Pedido de Agroecotopia*\n\n` +
@@ -103,9 +104,9 @@ const CartContent = () => {
               >
                 {/* Item Image */}
                 <div className="h-20 w-20 shrink-0 md:h-24 md:w-24 bg-primary/5 rounded-xl flex items-center justify-center text-4xl shadow-inner relative overflow-hidden">
-                  {item.product.photos && item.product.photos.length > 0 ? (
+                  {item.product.images && item.product.images.length > 0 ? (
                     <Image 
-                      src={item.product.photos[0]} 
+                      src={item.product.images[0]} 
                       alt={productTranslation.name} 
                       fill
                       sizes="80px"
@@ -125,7 +126,7 @@ const CartContent = () => {
                       {item.product.categoria}
                     </div>
                     <span className="text-[10px] text-muted-foreground font-medium">
-                      {item.product.price} / ud
+                      {formatPrice(item.product.price)} / ud
                     </span>
                   </div>
                   

@@ -75,14 +75,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
   
-  // Custom price parsing to handle format like "$1'280.000" or "$72.000"
-  const parsePrice = (priceStr: string) => {
-    const numericStr = priceStr.replace(/[^0-9]/g, ""); // Keep only digits
-    return parseInt(numericStr, 10) || 0;
-  };
-
   const totalPrice = cart.reduce((total, item) => {
-    return total + (parsePrice(item.product.price) * item.quantity);
+    return total + (item.product.price * item.quantity);
   }, 0);
 
   return (
