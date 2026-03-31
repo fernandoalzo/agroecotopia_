@@ -3,14 +3,38 @@ import type { Product } from "@prisma/client";
 
 export class ProductService {
   /**
-   * Obtiene la colección completa de productos procesados para la vista pública (Catálogo)
+   * Obtiene la colección paginada de productos para el catálogo
    */
-  static async getCatalog(): Promise<Product[]> {
-    // Si la regla de negocio dicta que "todos los productos están activos", pasamos directo.
-    // Aquí a futuro se añadiría filtrado (ej. solo activos, aplicar descuento).
-    const products = await ProductRepository.getAllProducts();
+  static async getCatalog(page: number = 1, limit: number = 20): Promise<{ products: Product[], total: number, totalPages: number }> {
+    const skip = (page - 1) * limit;
+    const [products, total] = await Promise.all([
+      ProductRepository.getAllProducts(skip, limit),
+      ProductRepository.getTotalCount()
+    ]);
     
-    // Devolvemos la data cruda desde base de datos hacia los Controladores
-    return products;
+    return {
+      products,
+      total,
+      totalPages: Math.ceil(total / limit)
+    };
+  }
+
+  /**
+   * Realiza la búsqueda paginada de productos en la base de datos
+   */
+  static async searchProducts(query: string, page: number = 1, limit: number = 20): Promise<{ products: Product[], total: number, totalPages: number }> {
+    if (!query || query.trim().length === 0) return { products: [], total: 0, totalPages: 0 };
+    
+    const skip = (page - 1) * limit;
+    const [products, total] = await Promise.all([
+      ProductRepository.searchProducts(query, skip, limit),
+      ProductRepository.getSearchCount(query)
+    ]);
+
+    return {
+      products,
+      total,
+      totalPages: Math.ceil(total / limit)
+    };
   }
 }

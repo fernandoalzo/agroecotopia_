@@ -12,8 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
-
 import { useLanguage } from "@/context/LanguageContext";
+import { getDeterministicImage } from "@/lib/image-utils";
 
 interface ProductModalProps {
   product: Product;
@@ -60,15 +60,15 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
       {/* 1. Detail Dialog (Main UI) */}
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <DialogContent
-          className="w-[95vw] sm:max-w-[750px] gap-0 p-0 border-border bg-card shadow-2xl rounded-3xl overflow-hidden"
+          className="w-[95vw] sm:max-w-[750px] gap-0 p-0 border-border bg-card shadow-[0_0_100px_-20px_rgba(var(--primary),0.15)] rounded-3xl overflow-hidden transition-all duration-500"
         >
           <div className="max-h-[96vh] overflow-y-auto scrollbar-hide">
             <div className="grid md:grid-cols-2 relative">
               {/* Left Column: Image / Carousel */}
-              <div className="bg-primary/5 p-4 md:p-8 flex items-center justify-center min-h-[280px] md:min-h-[450px] relative overflow-hidden group/modal">
+              <div className="bg-secondary/30 dark:bg-[#121212] p-4 md:p-8 flex items-center justify-center min-h-[280px] md:min-h-[450px] relative overflow-hidden group/modal transition-all duration-500">
                 {/* Background Decoration */}
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent -z-10" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/10 rounded-full blur-[80px] -z-10 animate-pulse" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/25 dark:bg-primary/20 rounded-full blur-[80px] -z-10 animate-pulse" />
 
                 {product.stock === 0 && (
                   <>
@@ -96,12 +96,12 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
                             className="flex aspect-square items-center justify-center p-2 relative w-full h-full"
                           >
                             <Image
-                              src={photo}
+                              src={getDeterministicImage(photo, `${product.slug}-${index}`)}
                               alt={`${productTranslation.name} - Vista ${index + 1}`}
                               fill
                               sizes="(max-width: 768px) 100vw, 320px"
-                              className="object-cover rounded-2xl shadow-2xl ring-1 ring-white/20 transform transition-transform group-hover/modal:scale-[1.02] duration-500 cursor-zoom-in"
-                              onClick={() => setExpandedImage(photo)}
+                              className="object-cover rounded-2xl shadow-2xl ring-1 ring-white/10 dark:ring-white/5 transform transition-transform group-hover/modal:scale-105 duration-700 ease-out cursor-zoom-in"
+                              onClick={() => setExpandedImage(getDeterministicImage(photo, `${product.slug}-${index}`))}
                             />
                           </motion.div>
                         </CarouselItem>
@@ -130,12 +130,12 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
               <div className="p-6 md:p-8 flex flex-col bg-card">
                 <div className="text-left space-y-0 mb-6 flex-none">
                   <div className="flex flex-wrap items-center gap-4 mb-2">
-                    <div className="flex items-center gap-1.5 text-primary uppercase font-black text-[10px] tracking-[0.2em] opacity-80">
+                    <div className="flex items-center gap-1.5 text-primary dark:text-[#10b981] uppercase font-black text-[10px] tracking-[0.2em] drop-shadow-sm">
                       <Tag className="w-3.5 h-3.5" />
                       {product.categoria}
                     </div>
                     {product.tag && (
-                      <div className="flex items-center gap-1.5 text-accent uppercase font-black text-[10px] tracking-[0.2em]">
+                      <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-600 text-white dark:text-black uppercase font-black text-[10px] tracking-[0.2em] px-2.5 py-1 rounded-md shadow-lg border border-white/20">
                         <Tag className="w-3.5 h-3.5" />
                         {product.tag}
                       </div>
@@ -169,13 +169,13 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
                     <div className="flex items-center justify-between mb-3 px-1">
                       <span className="text-sm font-bold text-foreground uppercase tracking-tight">{t.products.quantity}</span>
                       <div className={`flex items-center gap-2 text-[10px] md:text-xs font-black px-2.5 py-1 rounded-md border transition-all duration-300
-                        ${product.stock > 5 
-                          ? "bg-green-500/10 text-green-600 border-green-500/20" 
-                          : product.stock > 0 
-                          ? "bg-amber-500/10 text-amber-600 border-amber-500/20" 
-                          : "bg-red-500/10 text-red-600 border-red-500/20"}`}>
+                        ${product.stock > 5
+                          ? "bg-green-500/10 text-green-600 border-green-500/20"
+                          : product.stock > 0
+                            ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                            : "bg-red-500/10 text-red-600 border-red-500/20"}`}>
                         <span className={`w-1.5 h-1.5 rounded-full animate-pulse
-                          ${product.stock > 5 ? "bg-green-500" : product.stock > 0 ? "bg-amber-500" : "bg-red-500"}`} 
+                          ${product.stock > 5 ? "bg-green-500" : product.stock > 0 ? "bg-amber-500" : "bg-red-500"}`}
                         />
                         {product.stock > 0 ? `${product.stock} ${t.products.available}` : t.products.outOfStock}
                       </div>
@@ -205,12 +205,12 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
                   <Button
                     onClick={handleAddToCart}
                     disabled={added || product.stock === 0}
-                    className={`w-full py-6 rounded-xl font-display text-lg font-bold shadow-lg transition-all text-[#fefce8]
-                      ${added 
-                        ? "bg-green-600 hover:bg-green-700 shadow-green-600/20 text-[#fefce8]" 
+                    className={`w-full py-6 rounded-xl font-display text-lg font-bold shadow-lg transition-all
+                      ${added
+                        ? "bg-green-600 hover:bg-green-700 shadow-green-600/20 text-[#fefce8]"
                         : product.stock === 0
-                        ? "bg-muted text-muted-foreground cursor-not-allowed"
-                        : "bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-95 shadow-primary/25"}`}
+                          ? "bg-muted text-muted-foreground cursor-not-allowed"
+                          : "bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] active:shadow-inner border border-[#fcd200]"}`}
                   >
                     {added ? (
                       <span className="flex items-center gap-2">
@@ -221,7 +221,7 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
                     ) : (
                       <span className="flex items-center gap-2">
                         <ShoppingCart className="w-5 h-5 transition-transform group-hover:scale-110" />
-                        {t.products.addToOrder}
+                        {t.products.addToCart}
                       </span>
                     )}
                   </Button>
@@ -233,59 +233,59 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
       </Dialog>
       {/* 2. Zoom Overlay (Truly Fullscreen) */}
       <Dialog open={!!expandedImage} onOpenChange={() => { setIsZoomed(false); setExpandedImage(null); }}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md" />
-        <DialogPrimitive.Content 
-          className="fixed inset-0 z-[210] flex items-center justify-center outline-none cursor-zoom-out"
-          onClick={() => { setIsZoomed(false); setExpandedImage(null); }}
-        >
-          <DialogTitle className="sr-only">Imagen de producto ampliada</DialogTitle>
-          <DialogDescription className="sr-only">
-            Vista en detalle del producto {product.name}. Haz doble clic para hacer zoom.
-          </DialogDescription>
-          <button
-            className="fixed top-8 right-8 p-4 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all z-[220] backdrop-blur-md border border-white/20 shadow-2xl group"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsZoomed(false);
-              setExpandedImage(null);
-            }}
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md" />
+          <DialogPrimitive.Content
+            className="fixed inset-0 z-[210] flex items-center justify-center outline-none cursor-zoom-out"
+            onClick={() => { setIsZoomed(false); setExpandedImage(null); }}
           >
-            <X className="w-8 h-8 group-hover:scale-110 transition-transform" />
-          </button>
+            <DialogTitle className="sr-only">Imagen de producto ampliada</DialogTitle>
+            <DialogDescription className="sr-only">
+              Vista en detalle del producto {product.name}. Haz doble clic para hacer zoom.
+            </DialogDescription>
+            <button
+              className="fixed top-8 right-8 p-4 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all z-[220] backdrop-blur-md border border-white/20 shadow-2xl group"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsZoomed(false);
+                setExpandedImage(null);
+              }}
+            >
+              <X className="w-8 h-8 group-hover:scale-110 transition-transform" />
+            </button>
 
-          <AnimatePresence mode="wait">
-            {expandedImage && (
-              <motion.div
-                key={expandedImage}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ 
-                  opacity: 1, 
-                  scale: isZoomed ? 2 : 1, 
-                }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className={`max-w-[95vw] max-h-[90vh] relative shadow-2xl transition-all duration-300 w-full h-full
+            <AnimatePresence mode="wait">
+              {expandedImage && (
+                <motion.div
+                  key={expandedImage}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{
+                    opacity: 1,
+                    scale: isZoomed ? 2 : 1,
+                  }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className={`max-w-[95vw] max-h-[90vh] relative shadow-2xl transition-all duration-300 w-full h-full
                   ${isZoomed ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"}`}
-                onDoubleClick={(e) => { e.stopPropagation(); handleDoubleClick(); }}
-                drag={isZoomed}
-                dragConstraints={{ left: -300, right: 300, top: -300, bottom: 300 }}
-                dragElastic={0.05}
-                onClick={(e) => e.stopPropagation()}
-              >
-                 <Image 
-                    src={expandedImage} 
-                    alt="Producto ampliado" 
+                  onDoubleClick={(e) => { e.stopPropagation(); handleDoubleClick(); }}
+                  drag={isZoomed}
+                  dragConstraints={{ left: -300, right: 300, top: -300, bottom: 300 }}
+                  dragElastic={0.05}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Image
+                    src={expandedImage}
+                    alt="Producto ampliado"
                     fill
                     sizes="100vw"
                     className="object-contain"
                   />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </Dialog>
-  </>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </Dialog>
+    </>
   );
 };
 

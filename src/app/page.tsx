@@ -8,7 +8,7 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 import { ProductService } from "@/services/product.service";
 
 export default async function Home() {
-  const products = await ProductService.getCatalog();
+  const { products } = await ProductService.getCatalog(1, 50);
 
   return (
     <div className="min-h-screen">

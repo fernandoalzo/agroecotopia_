@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowDown } from "lucide-react";
 import heroImg from "@/assets/hero-agro.jpg";
 import Image from "next/image";
+import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 
 const HeroSection = () => {
@@ -43,8 +44,8 @@ const HeroSection = () => {
           {t.hero.description}
         </p>
         <div className="flex flex-col gap-4 sm:flex-row sm:gap-4 items-center md:items-start justify-center md:justify-start">
-          <a
-            href="#productos"
+          <Link
+            href="/products"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 font-body text-sm font-black text-white shadow-[0_10px_30px_rgba(var(--primary),0.3)] transition-all hover:scale-105 active:scale-95 md:text-base group"
           >
             {t.hero.ctaPrimary}
@@ -55,7 +56,7 @@ const HeroSection = () => {
             >
               →
             </motion.div>
-          </a>
+          </Link>
           <a
             href="#nosotros"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border-2 border-primary/20 bg-background/40 px-8 py-4 font-body text-sm font-bold text-foreground backdrop-blur-xl transition-all hover:bg-background/80 md:text-base active:scale-95"
