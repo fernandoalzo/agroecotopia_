@@ -110,6 +110,54 @@ export interface Translations {
     copyright: string;
     whatsappMessage: string;
   };
+  auth: {
+    signIn: string;
+    signInWith: string;
+    signOut: string;
+    myAccount: string;
+    profile: string;
+    welcome: string;
+    email: string;
+    password: string;
+    name: string;
+    loginPrompt: string;
+    loginButton: string;
+    googleButton: string;
+    registerPrompt: string;
+    registerButton: string;
+    createAccount: string;
+    alreadyHaveAccount: string;
+    noAccount: string;
+    invalidCredentials: string;
+    registrationError: string;
+    userExists: string;
+  };
+  checkout: {
+    title: string;
+    shippingInfo: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    address: string;
+    city: string;
+    notes: string;
+    notesPlaceholder: string;
+    orderSummary: string;
+    invoiceTitle: string;
+    invoiceDate: string;
+    invoiceNumber: string;
+    billTo: string;
+    confirmOrder: string;
+    backToCart: string;
+    processing: string;
+    paymentMethod: string;
+    paymentOptionWhatsApp: string;
+    paymentOptionNequi: string;
+    paymentOptionMercadoPago: string;
+    paymentOptionPSE: string;
+    paymentOptionWompi: string;
+    paymentMuteNote: string;
+  };
 }
 
 export type TranslationKey = keyof Translations;

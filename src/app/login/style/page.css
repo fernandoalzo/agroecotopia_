@@ -1,0 +1,152 @@
+@reference "../../globals.css";
+
+@layer components {
+  /* Layout Containers */
+  .login-page-container {
+    @apply min-h-screen w-full relative flex flex-col bg-background;
+  }
+
+  /* Visual Side (Emerald Panel) */
+  .visual-side {
+    @apply hidden relative w-1/2 bg-[#0a1f14] dark:bg-[#050b08] border-r border-border/50 overflow-hidden items-center justify-center p-12;
+  }
+
+  .visual-side-bg-svg {
+    @apply absolute inset-0 opacity-[0.15] mix-blend-overlay pointer-events-none text-emerald-400;
+  }
+
+  .visual-side-content {
+    @apply relative z-10 flex flex-col max-w-lg text-white;
+  }
+
+  .back-link {
+    @apply inline-flex items-center gap-2 mb-16 text-emerald-400 hover:text-emerald-300 transition-colors w-fit;
+  }
+
+  .logo-container {
+    @apply h-16 w-16 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/20 mb-8 shadow-2xl;
+  }
+
+  /* Form Side (Main Content) */
+  .form-side {
+    @apply flex-1 flex flex-col items-center justify-center relative p-6 overflow-hidden bg-background text-foreground;
+  }
+
+  .mobile-nav {
+    @apply absolute top-6 left-6 right-6 flex items-center justify-between z-20;
+  }
+
+  .mobile-nav-back {
+    @apply h-10 w-10 flex items-center justify-center rounded-full bg-secondary border border-border;
+  }
+
+  .form-wrapper {
+    @apply w-full max-w-[420px] mx-auto z-10 mt-12;
+  }
+
+  /* Tabs */
+  .tabs-container {
+    @apply flex p-1 bg-secondary border border-border rounded-xl mb-8 relative;
+  }
+
+  .tab-button {
+    @apply flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 relative z-10;
+  }
+
+  .tab-button-active {
+    @apply text-primary shadow-sm;
+  }
+
+  .tab-button-inactive {
+    @apply text-muted-foreground hover:text-foreground;
+  }
+
+  .active-tab-highlight {
+    @apply absolute inset-0 bg-background rounded-lg border border-border shadow-sm;
+  }
+
+  /* Form Elements */
+  .form-inner {
+    @apply space-y-6;
+  }
+
+  .error-alert {
+    @apply p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium flex items-center gap-2;
+  }
+
+  .field-group {
+    @apply space-y-1.5;
+  }
+
+  .field-label {
+    @apply text-sm font-bold flex justify-between;
+  }
+
+  .field-error-text {
+    @apply text-destructive text-[11px] font-medium;
+  }
+
+  .input-wrapper {
+    @apply relative;
+  }
+
+  .input-icon {
+    @apply absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground;
+  }
+
+  .input-field {
+    @apply w-full pl-11 pr-4 py-3 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all font-medium text-sm text-foreground placeholder:text-muted-foreground;
+  }
+
+  .input-field-error {
+    @apply border-destructive focus:ring-destructive/20 focus:border-destructive;
+  }
+
+  /* Buttons */
+  .submit-button {
+    @apply mt-6 w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground py-3.5 rounded-xl font-bold transition-all disabled:opacity-70 disabled:cursor-not-allowed shadow-[0_4px_14px_0_rgba(16,185,129,0.25)] dark:shadow-none;
+  }
+
+  .provider-button {
+    @apply w-full flex items-center justify-center gap-3 bg-card hover:bg-secondary border border-border text-foreground py-3.5 rounded-xl font-bold transition-all disabled:opacity-70 disabled:cursor-not-allowed shadow-sm;
+  }
+
+  /* Dividers */
+  .divider-container {
+    @apply relative;
+  }
+
+  .divider-line {
+    @apply absolute inset-0 flex items-center;
+  }
+
+  .divider-text-wrapper {
+    @apply relative flex justify-center text-xs uppercase;
+  }
+
+  .divider-text {
+    @apply bg-background px-3 text-muted-foreground font-bold tracking-wider;
+  }
+
+  /* Responsive Variants */
+  @media (min-width: 640px) {
+    .form-side {
+      @apply p-12;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .login-page-container {
+      @apply flex-row;
+    }
+    .visual-side {
+      @apply flex;
+    }
+    .mobile-nav {
+      @apply hidden;
+    }
+    .form-wrapper {
+      @apply mt-0;
+    }
+  }
+}

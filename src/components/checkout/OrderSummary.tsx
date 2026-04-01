@@ -1,0 +1,164 @@
+"use client";
+
+import React from "react";
+import { useCart } from "@/context/CartContext";
+import { useLanguage } from "@/context/LanguageContext";
+import { formatPrice } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Leaf, ShoppingBag, CreditCard, Clock, CheckCircle2 } from "lucide-react";
+import { motion } from "framer-motion";
+
+interface OrderSummaryProps {
+  isSubmitting?: boolean;
+}
+
+export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
+  const { cart, totalPrice } = useCart();
+  const { t, language } = useLanguage();
+
+  const formattedTotal = new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
+    style: "currency",
+    currency: language === 'es' ? "COP" : "USD",
+    maximumFractionDigits: 0,
+  }).format(totalPrice);
+
+  const subtotal = totalPrice; // Assuming no tax/shipping for now as per current cart
+  const formattedSubtotal = new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
+    style: "currency",
+    currency: language === 'es' ? "COP" : "USD",
+    maximumFractionDigits: 0,
+  }).format(subtotal);
+
+  const today = new Date().toLocaleDateString(language === 'es' ? 'es-ES' : 'en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  const orderId = Math.floor(Math.random() * 900000) + 100000;
+
+  return (
+    <div className="bg-card border border-border shadow-2xl rounded-3xl overflow-hidden flex flex-col h-full ring-1 ring-primary/5">
+      {/* Invoice Header */}
+      <div className="p-8 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-b border-primary/10">
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <div className="flex items-center gap-2 text-primary font-display font-black text-xl mb-1">
+              <Leaf className="w-6 h-6" />
+              <span>AGROECOTOPIA</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+              {t.checkout.invoiceTitle}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">
+              {t.checkout.invoiceNumber} <span className="text-foreground">#{orderId}</span>
+            </p>
+            <p className="text-xs font-medium text-muted-foreground">
+              {t.checkout.invoiceDate}: {today}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 py-3 px-4 bg-background/50 rounded-2xl border border-primary/10 shadow-sm backdrop-blur-sm">
+          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+            <ShoppingBag className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-primary/70 uppercase tracking-wider mb-0.5">
+              {t.cart.orderSummary}
+            </p>
+            <p className="text-sm font-bold text-foreground">
+              {cart.length} {cart.length === 1 ? 'item' : 'items'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Invoice Content */}
+      <div className="p-8 flex-1 space-y-6 overflow-y-auto max-h-[400px] scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent">
+        <div className="space-y-4">
+          {cart.map((item) => {
+            const productTranslation = t.products.items[item.product.slug] || {
+              name: item.product.name,
+              unit: item.product.unidad
+            };
+
+            return (
+              <div key={item.product.slug} className="group flex justify-between items-center py-2 transition-all hover:translate-x-1">
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                    {productTranslation.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground font-medium">
+                    {item.quantity} x {formatPrice(item.product.price)}
+                  </p>
+                </div>
+                <div className="text-right ml-4">
+                  <p className="text-sm font-black text-foreground">
+                    {formatPrice(item.product.price * item.quantity)}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Invoice Totals */}
+      <div className="p-8 bg-secondary/30 border-t border-border mt-auto">
+        <div className="space-y-3 mb-8">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground font-medium">{t.cart.subtotal}</span>
+            <span className="text-foreground font-bold">{formattedSubtotal}</span>
+          </div>
+          <div className="flex justify-between text-sm items-center">
+            <span className="text-muted-foreground font-medium">{t.cart.shipping}</span>
+            <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-tighter ring-1 ring-primary/20">
+              {t.cart.toCalculate}
+            </span>
+          </div>
+          <Separator className="bg-primary/10 h-0.5" />
+          <div className="flex justify-between items-end pt-2">
+            <span className="text-base font-black text-foreground uppercase tracking-tight">{t.cart.total}</span>
+            <div className="text-right">
+              <span className="block text-3xl font-display font-black text-primary leading-none">
+                {formattedTotal}
+              </span>
+              <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1 block">
+                {t.products.taxesIncluded}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <Button 
+          type="submit"
+          form="checkout-form"
+          disabled={isSubmitting}
+          className="w-full h-14 rounded-2xl font-display font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all group relative overflow-hidden bg-primary text-primary-foreground hover:bg-primary/90"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:animate-shimmer" />
+          {isSubmitting ? (
+            <div className="flex items-center gap-3">
+              <Clock className="w-5 h-5 animate-spin" />
+              <span>{t.checkout.processing}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <CheckCircle2 className="w-6 h-6" />
+              <span>{t.checkout.confirmOrder}</span>
+            </div>
+          )}
+        </Button>
+        
+        <p className="mt-4 text-center text-[10px] text-muted-foreground font-medium flex items-center justify-center gap-2">
+          <CreditCard className="w-3 h-3 text-primary opacity-60" />
+          {t.cart.securePayment}
+        </p>
+      </div>
+    </div>
+  );
+};

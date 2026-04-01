@@ -5,11 +5,10 @@ import { Leaf, Menu, X, ShoppingCart } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import ThemeToggle from "./ThemeToggle";
 import { useCart } from "@/context/CartContext";
-import { LanguageSelector } from "./ui/LanguageSelector";
 import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
+import UserMenu from "@/components/auth/UserMenu";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -21,39 +20,12 @@ const Navbar = () => {
   const links = [
     { label: t.navbar.inicio, href: "/" },
     { label: t.navbar.productos, href: "/products" },
-    { label: t.navbar.nosotros, href: "/#nosotros" },
-    { label: t.navbar.contacto, href: "/#contacto" },
+    { label: t.navbar.nosotros, href: "/nosotros" },
+    { label: t.navbar.contacto, href: "/contacto" },
   ];
 
   useEffect(() => {
-    if (pathname !== "/") {
-      setActiveSection("");
-      return;
-    }
-
-    const sections = ["hero", "nosotros", "contacto"];
-    const observerOptions = {
-      root: null,
-      rootMargin: "-20% 0px -70% 0px",
-      threshold: 0,
-    };
-
-    const observerCallback = (entries: IntersectionObserverEntry[]) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const id = entry.target.id;
-          setActiveSection(id === "hero" ? "/" : `/#${id}`);
-        }
-      });
-    };
-
-    const observer = new IntersectionObserver(observerCallback, observerOptions);
-    sections.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    });
-
-    return () => observer.disconnect();
+    setActiveSection(pathname);
   }, [pathname]);
 
   const isActive = (href: string) => {
@@ -228,10 +200,10 @@ const Navbar = () => {
             </Link>
           </div>
 
-          <div className="flex items-center gap-2 bg-background/50 backdrop-blur-xl p-1 md:p-1.5 rounded-full border-2 border-primary/10 dark:border-primary/30 shadow-lg md:gap-3 group/pill hover:border-primary/30 dark:hover:border-primary/50 transition-all duration-300">
-            <div className="hidden items-center gap-1 md:flex md:gap-2">
-              <LanguageSelector />
-              <ThemeToggle />
+          <div className="flex items-center gap-1 bg-background/50 backdrop-blur-xl p-1 md:p-1.5 rounded-full border-2 border-primary/10 dark:border-primary/30 shadow-lg md:gap-2 group/pill hover:border-primary/30 dark:hover:border-primary/50 transition-all duration-300">
+            {/* Unified UserMenu for both desktop and mobile */}
+            <div className="flex items-center">
+              <UserMenu />
             </div>
 
             {/* Mobile-only toggle unified in the pill */}
@@ -375,22 +347,6 @@ const Navbar = () => {
                   transition={{ delay: 0.6 }}
                   className="space-y-6"
                 >
-                  {/* Settings Block */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-3 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{t.navbar.idioma}</span>
-                      <div className="flex justify-center -ml-1">
-                        <LanguageSelector />
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-3 p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{t.navbar.tema ?? "Theme"}</span>
-                      <div className="flex justify-center -ml-1">
-                        <ThemeToggle />
-                      </div>
-                    </div>
-                  </div>
-
                   {/* High Contrast Cart Button - Refined to match visual concept */}
                   <div className="relative group">
                     <Link

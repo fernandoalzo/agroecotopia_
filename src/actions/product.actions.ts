@@ -2,6 +2,8 @@
 
 import { ProductService } from "@/services/product.service";
 import { Product } from "@prisma/client";
+import { withAdmin } from "@/lib/auth-guards";
+import { revalidatePath } from "next/cache";
 
 /**
  * Server Action para obtener productos paginados (Catálogo General)
@@ -29,4 +31,22 @@ export async function searchProductsAction(query: string, page: number = 1, limi
     console.error("Error searching products with pagination in DB:", error);
     return { products: [], total: 0, totalPages: 0 };
   }
+}
+
+/**
+ * Server Action: Delete a product (ADMIN ONLY)
+ * Demonstrates the use of the new RBAC guards as an alternative to middleware.
+ */
+export async function deleteProductAction(productId: string) {
+  return withAdmin(async () => {
+    // 1. Perform admin logic safely
+    console.log(`Admin deleting product: ${productId}`);
+    
+    // Example: await ProductService.delete(productId);
+    
+    // 2. Revalidate UI
+    revalidatePath("/products");
+    
+    return { success: true, message: "Producto eliminado correctamente." };
+  });
 }

@@ -1,7 +1,11 @@
 import { PrismaClient } from "@prisma/client";
+import { ensureAdminExists } from "@/lib/admin-init";
 
 const prismaClientSingleton = () => {
-  return new PrismaClient();
+  const client = new PrismaClient();
+  // Run admin initialization check in a non-blocking way
+  ensureAdminExists(client);
+  return client;
 };
 
 declare global {

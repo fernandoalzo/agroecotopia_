@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/context/CartContext";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, Leaf, Tag } from "lucide-react";
@@ -15,6 +17,8 @@ import { formatPrice } from "@/lib/utils";
 const CartContent = () => {
   const { cart, removeFromCart, updateQuantity, totalPrice } = useCart();
   const { t, language } = useLanguage();
+  const { status } = useSession();
+  const router = useRouter();
 
   if (cart.length === 0) {
     return (
@@ -63,23 +67,12 @@ const CartContent = () => {
   }).format(totalPrice);
 
   const handleCompleteOrder = () => {
-    const orderItems = cart.map((item) => {
-      const productTranslation = t.products.items[item.product.slug] || {
-        name: item.product.name,
-        unit: item.product.unidad
-      };
-      return `• ${productTranslation.name} (x${item.quantity} ${productTranslation.unit}) - ${formatPrice(item.product.price)}`;
-    }).join("\n");
-
-    const message = `🛒 *Nuevo Pedido de Agroecotopia*\n\n` +
-      `📦 *Productos:*\n${orderItems}\n\n` +
-      `💰 *Total del Pedido:* ${formattedTotal}\n\n` +
-      `✅ *Gracias por su compra!*`;
-
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/573126690108?text=${encodedMessage}`;
+    if (status === "unauthenticated") {
+      router.push("/login?callbackUrl=/checkout");
+      return;
+    }
     
-    window.open(whatsappUrl, "_blank");
+    router.push("/checkout");
   };
 
   return (
