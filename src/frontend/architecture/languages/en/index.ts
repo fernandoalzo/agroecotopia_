@@ -11,6 +11,7 @@ export const en: Translations = {
     idioma: "Language",
     tema: "Theme",
     pedidos: "My Orders",
+    miCuenta: "My Account",
   },
   hero: {
     badge: "🚜 Agro-inputs & Machinery",

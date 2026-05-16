@@ -11,6 +11,7 @@ export interface Translations {
     idioma: string;
     tema: string;
     pedidos: string;
+    miCuenta: string;
   };
   hero: {
     badge: string;

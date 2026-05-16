@@ -11,6 +11,7 @@ export const es: Translations = {
     idioma: "Idioma",
     tema: "Tema",
     pedidos: "Mis Pedidos",
+    miCuenta: "Mi Cuenta",
   },
   hero: {
     badge: "🚜 Agroinsumos & Maquinaria",
