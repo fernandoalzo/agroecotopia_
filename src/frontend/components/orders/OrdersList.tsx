@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Package, ChevronRight, Calendar, MapPin, CreditCard, Clock, CheckCircle2, Truck, Timer, XCircle } from "lucide-react";
 import { getUserOrdersAction } from "@/backend/modules/orders/orders.actions";
-import { PedidoEstado } from "@prisma/client";
+import { PedidoEstado } from "@/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";

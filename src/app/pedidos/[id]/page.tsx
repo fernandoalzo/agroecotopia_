@@ -9,7 +9,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { motion } from "framer-motion";
 import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText } from "lucide-react";
 import { getOrderDetailAction } from "@/backend/modules/orders/orders.actions";
-import { PedidoEstado } from "@prisma/client";
+import { PedidoEstado } from "@/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";

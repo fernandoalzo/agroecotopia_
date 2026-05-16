@@ -248,7 +248,7 @@ const Navbar = () => {
                     className="flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-4 bg-secondary/40 hover:bg-secondary/60 border border-border/50 hover:border-primary/30 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 transition-all duration-300 group/auth outline-none"
                   >
                     <div className="relative h-7 w-7">
-                      <div className="h-full w-full overflow-hidden rounded-full ring-2 ring-primary/20">
+                      <div className="relative h-full w-full overflow-hidden rounded-full ring-2 ring-primary/20">
                         {userImage ? (
                           <Image src={userImage} alt={userName} fill className="object-cover rounded-full" sizes="28px" />
                         ) : (
@@ -506,7 +506,7 @@ const Navbar = () => {
                       >
                         <div className="flex items-center gap-4">
                           <div className="relative h-10 w-10">
-                            <div className="h-full w-full overflow-hidden rounded-xl ring-2 ring-white/20">
+                            <div className="relative h-full w-full overflow-hidden rounded-xl ring-2 ring-white/20">
                               {userImage ? (
                                 <Image src={userImage} alt={userName} fill className="object-cover rounded-xl" sizes="40px" />
                               ) : (

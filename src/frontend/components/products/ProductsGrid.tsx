@@ -52,7 +52,7 @@ export function ProductsGrid({
                     transition={{ duration: 0.4, delay: index * 0.05 }}
                     className="min-w-[85vw] sm:min-w-[45vw] md:min-w-[32%] lg:min-w-[31%] xl:min-w-[24%] 2xl:min-w-[19%] snap-center"
                   >
-                    <ProductCard p={p as any} priority={index < 3 && rowIndex === 0} variant={viewMode} />
+                    <ProductCard p={p as any} priority={index < 5 && rowIndex === 0} variant={viewMode} />
                   </motion.div>
                 ))}
               </div>
