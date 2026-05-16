@@ -25,7 +25,7 @@ interface Order {
     precioUnitario: number;
     producto: {
       name: string;
-      image: string;
+      images: string[];
     };
   }[];
 }
