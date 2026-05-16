@@ -11,9 +11,19 @@ import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 import UserMenu from "@/components/auth/UserMenu";
 import Image from "next/image";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown } from "lucide-react";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const [activeSection, setActiveSection] = useState("");
   const pathname = usePathname();
   const { totalItems } = useCart();
@@ -41,6 +51,12 @@ const Navbar = () => {
     }
     return pathname === href;
   };
+
+  useEffect(() => {
+    if (!open) {
+      setConfirmLogout(false);
+    }
+  }, [open]);
 
   return (
     <nav className="fixed top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
@@ -199,28 +215,49 @@ const Navbar = () => {
           {/* Auth Button — standalone, outside settings dropdown */}
           <div className="hidden md:block">
             {isAuthenticated ? (
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => signOut({ callbackUrl: "/" })}
-                className="flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-4 bg-secondary/40 hover:bg-destructive/10 border border-border/50 hover:border-destructive/30 dark:bg-white/5 dark:hover:bg-red-500/10 dark:border-white/10 transition-all duration-300 group/auth"
-              >
-                <div className="relative h-7 w-7">
-                  <div className="h-full w-full overflow-hidden rounded-full ring-2 ring-primary/20">
-                    {userImage ? (
-                      <Image src={userImage} alt={userName} fill className="object-cover rounded-full" sizes="28px" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-primary/20 text-primary font-bold text-xs rounded-full">
-                        {userInitial}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-4 bg-secondary/40 hover:bg-secondary/60 border border-border/50 hover:border-primary/30 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 transition-all duration-300 group/auth outline-none"
+                  >
+                    <div className="relative h-7 w-7">
+                      <div className="h-full w-full overflow-hidden rounded-full ring-2 ring-primary/20">
+                        {userImage ? (
+                          <Image src={userImage} alt={userName} fill className="object-cover rounded-full" sizes="28px" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-primary/20 text-primary font-bold text-xs rounded-full">
+                            {userInitial}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
-                <span className="text-xs font-semibold text-foreground/80 group-hover/auth:text-destructive transition-colors">
-                  {userName.split(" ")[0]}
-                </span>
-                <LogOut className="h-3.5 w-3.5 text-muted-foreground group-hover/auth:text-destructive transition-all group-hover/auth:-translate-x-0.5" />
-              </motion.button>
+                    </div>
+                    <span className="text-xs font-semibold text-foreground/80 group-hover/auth:text-primary transition-colors">
+                      {userName.split(" ")[0]}
+                    </span>
+                    <ChevronDown className="h-3 w-3 text-muted-foreground group-hover/auth:text-primary transition-all" />
+                  </motion.button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 rounded-2xl bg-card/95 backdrop-blur-2xl border-border/50 shadow-xl p-2 z-[100]">
+                  <DropdownMenuLabel className="font-normal px-2 py-1.5">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-semibold leading-none">{userName}</p>
+                      <p className="text-xs leading-none text-muted-foreground mt-1">
+                        {session?.user?.email ?? "Usuario registrado"}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-border/50 my-1" />
+                  <DropdownMenuItem 
+                    onClick={() => signOut({ callbackUrl: "/" })}
+                    className="text-red-500 focus:bg-red-500/10 focus:text-red-600 cursor-pointer flex items-center justify-between rounded-xl px-2 py-2 transition-colors"
+                  >
+                    <span className="font-medium text-sm">Cerrar Sesión</span>
+                    <LogOut className="h-4 w-4" />
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <Link href="/login">
                 <motion.div
@@ -378,28 +415,50 @@ const Navbar = () => {
                 >
                   {/* Auth Button — Mobile */}
                   {isAuthenticated ? (
-                    <button
-                      type="button"
-                      onClick={() => { setOpen(false); signOut({ callbackUrl: "/" }); }}
-                      className="flex items-center justify-between gap-4 w-full rounded-3xl bg-[#0f2a1d] hover:bg-red-950 border border-white/10 px-8 py-5 text-white shadow-xl active:scale-95 transition-all"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="relative h-10 w-10">
-                          <div className="h-full w-full overflow-hidden rounded-xl ring-2 ring-white/20">
-                            {userImage ? (
-                              <Image src={userImage} alt={userName} fill className="object-cover rounded-xl" sizes="40px" />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center bg-white/10 text-white font-bold text-lg rounded-xl">{userInitial}</div>
-                            )}
+                    !confirmLogout ? (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmLogout(true)}
+                        className="flex items-center justify-between gap-4 w-full rounded-3xl bg-[#0f2a1d] hover:bg-[#1a3d2c] border border-white/10 px-8 py-5 text-white shadow-xl active:scale-95 transition-all"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="relative h-10 w-10">
+                            <div className="h-full w-full overflow-hidden rounded-xl ring-2 ring-white/20">
+                              {userImage ? (
+                                <Image src={userImage} alt={userName} fill className="object-cover rounded-xl" sizes="40px" />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center bg-white/10 text-white font-bold text-lg rounded-xl">{userInitial}</div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-left">
+                            <span className="block font-display text-lg font-bold tracking-tight">{userName}</span>
+                            <span className="block text-xs text-white/60">Mi Cuenta</span>
                           </div>
                         </div>
-                        <div className="text-left">
-                          <span className="block font-display text-lg font-bold tracking-tight">{userName}</span>
-                          <span className="block text-xs text-red-400">Cerrar Sesión</span>
+                        <LogOut className="h-5 w-5 text-white/40" />
+                      </button>
+                    ) : (
+                      <div className="flex flex-col gap-3 rounded-3xl bg-red-950/50 border border-red-500/20 p-5 shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <p className="text-center text-sm font-medium text-white mb-1">¿Estás seguro de cerrar sesión?</p>
+                        <div className="flex gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setConfirmLogout(false)}
+                            className="flex-1 rounded-xl bg-white/10 py-3 text-sm font-bold text-white transition-all active:scale-95 hover:bg-white/20"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setOpen(false); signOut({ callbackUrl: "/" }); }}
+                            className="flex-1 rounded-xl bg-red-500 py-3 text-sm font-bold text-white transition-all active:scale-95 hover:bg-red-600 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(239,68,68,0.3)]"
+                          >
+                            Salir <LogOut className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
-                      <LogOut className="h-5 w-5 text-red-400" />
-                    </button>
+                    )
                   ) : (
                     <Link href="/login" onClick={() => setOpen(false)}
                       className="flex items-center justify-between gap-4 w-full rounded-3xl bg-white text-primary px-8 py-5 shadow-xl active:scale-95 transition-all"
