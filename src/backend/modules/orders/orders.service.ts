@@ -80,7 +80,7 @@ export class OrdersService {
     if (nuevoEstado === PedidoEstado.CANCELADO && estadoAnterior !== PedidoEstado.CANCELADO) {
       // Solo revertimos si ya había pasado por un estado que descontó stock (CONFIRMADO, PREPARACION, etc.)
       // En este flujo simplificado, asumimos que CONFIRMADO es el punto de descuento.
-      const estadosConStockDescontado = [
+      const estadosConStockDescontado: PedidoEstado[] = [
         PedidoEstado.CONFIRMADO,
         PedidoEstado.EN_PREPARACION,
         PedidoEstado.EN_CAMINO,
