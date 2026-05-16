@@ -23,7 +23,7 @@ export class OrdersService {
       const itemSubtotal = d.cantidad * d.precioUnitario;
       subtotal += itemSubtotal;
       return {
-        productoId: d.productoId,
+        producto: { connect: { id: d.productoId } },
         cantidad: new Prisma.Decimal(d.cantidad),
         precioUnitario: new Prisma.Decimal(d.precioUnitario),
         unidadMedida: d.unidadMedida,
