@@ -7,7 +7,7 @@ export class ProductService {
   /**
    * Obtiene la colección paginada de productos para el catálogo
    */
-  async getCatalog(page: number = 1, limit: number = 20): Promise<{ products: Product[], total: number, totalPages: number }> {
+  async getCatalog(page: number = 1, limit: number = 20): Promise<{ products: any[], total: number, totalPages: number }> {
     try {
       const skip = (page - 1) * limit;
       const [products, total] = await Promise.all([
@@ -16,7 +16,7 @@ export class ProductService {
       ]);
       
       return {
-        products,
+        products: products.map(p => this.serializeProduct(p)),
         total,
         totalPages: Math.ceil(total / limit)
       };
@@ -29,7 +29,7 @@ export class ProductService {
   /**
    * Realiza la búsqueda paginada de productos en la base de datos
    */
-  async searchProducts(query: string, page: number = 1, limit: number = 20): Promise<{ products: Product[], total: number, totalPages: number }> {
+  async searchProducts(query: string, page: number = 1, limit: number = 20): Promise<{ products: any[], total: number, totalPages: number }> {
     if (!query || query.trim().length === 0) return { products: [], total: 0, totalPages: 0 };
     
     const skip = (page - 1) * limit;
@@ -39,9 +39,19 @@ export class ProductService {
     ]);
 
     return {
-      products,
+      products: products.map(p => this.serializeProduct(p)),
       total,
       totalPages: Math.ceil(total / limit)
+    };
+  }
+
+  /**
+   * Convierte objetos Decimal de Prisma a numbers para que sean serializables
+   */
+  private serializeProduct(product: Product) {
+    return {
+      ...product,
+      stock: Number(product.stock),
     };
   }
 }

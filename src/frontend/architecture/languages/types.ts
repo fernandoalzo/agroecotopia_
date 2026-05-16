@@ -10,6 +10,7 @@ export interface Translations {
     miCarrito: string;
     idioma: string;
     tema: string;
+    pedidos: string;
   };
   hero: {
     badge: string;

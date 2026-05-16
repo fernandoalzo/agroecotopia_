@@ -10,6 +10,7 @@ export const en: Translations = {
     miCarrito: "My Cart",
     idioma: "Language",
     tema: "Theme",
+    pedidos: "My Orders",
   },
   hero: {
     badge: "🚜 Agro-inputs & Machinery",

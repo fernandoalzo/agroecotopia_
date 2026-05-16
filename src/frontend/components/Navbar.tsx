@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Leaf, Menu, X, ShoppingCart, LogIn, LogOut } from "lucide-react";
+import { Leaf, Menu, X, ShoppingCart, LogIn, LogOut, Package, ChevronDown, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -19,7 +19,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -166,6 +165,32 @@ const Navbar = () => {
                 </Link>
               ))}
             </div>
+
+            {/* Integrated Orders Link — only visible if logged in */}
+            {isAuthenticated && (
+              <Link
+                href="/pedidos"
+                className={cn(
+                  "group/orders relative flex items-center gap-2.5 px-3 py-1.5 rounded-full transition-all duration-300 hover:bg-primary/5 z-20",
+                  isActive("/pedidos") ? "bg-primary/10 text-primary" : "text-muted-foreground/80"
+                )}
+              >
+                <div className="relative flex items-center justify-center pointer-events-none">
+                  <Package className={cn(
+                    "h-4.5 w-4.5 transition-transform duration-300 group-hover/orders:scale-110",
+                    isActive("/pedidos") ? "text-primary" : "text-primary/70"
+                  )} />
+                </div>
+                <div className="flex flex-col leading-tight pointer-events-none">
+                  <span className={cn(
+                    "text-[10px] font-black uppercase tracking-widest transition-colors",
+                    isActive("/pedidos") ? "text-primary" : "text-primary/60 group-hover/orders:text-primary"
+                  )}>
+                    {t.navbar.pedidos}
+                  </span>
+                </div>
+              </Link>
+            )}
 
             {/* Vertical Separator */}
             <div className="h-6 w-px bg-border/40 mx-1 z-10" />
@@ -333,7 +358,7 @@ const Navbar = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-0 top-0 z-[60] flex h-screen w-full flex-col bg-primary dark:bg-[#0a1f14] md:hidden overflow-hidden"
+            className="fixed inset-0 top-0 z-[60] flex h-screen w-full flex-col bg-primary dark:bg-[#0a1f14] md:hidden overflow-y-auto"
           >
             {/* Background pattern layer - Organic Leaf SVGs from Visual Concept */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.07] mix-blend-overlay">
@@ -356,7 +381,7 @@ const Navbar = () => {
               </div>
             </div>
 
-            <div className="relative flex flex-col h-full px-6 pt-24 pb-10">
+            <div className="relative flex flex-col min-h-full px-6 pt-24 pb-20">
               {/* Top Header inside menu */}
               <div className="absolute top-6 left-6 flex items-center gap-2">
                 <Leaf className="h-6 w-6 text-white/90" />
@@ -413,7 +438,65 @@ const Navbar = () => {
                   transition={{ delay: 0.6 }}
                   className="space-y-4"
                 >
-                  {/* Auth Button — Mobile */}
+
+
+                  {/* Orders Button — only visible if logged in */}
+                  {isAuthenticated && (
+                    <div className="relative group">
+                      <Link href="/pedidos" onClick={() => setOpen(false)}
+                        className="flex items-center justify-between gap-4 rounded-3xl bg-[#0f2a1d] border border-white/10 px-8 py-6 text-white shadow-xl active:scale-95 transition-all overflow-hidden relative"
+                      >
+                        <div className="flex items-center gap-5 relative z-10">
+                          <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
+                            <Package className="h-6 w-6 text-white" />
+                          </div>
+                          <span className="font-display text-2xl font-black tracking-tight uppercase">{t.navbar.pedidos}</span>
+                        </div>
+                        <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center relative z-10">
+                          <ChevronRight className="h-4 w-4 text-white/40" />
+                        </div>
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* Cart Button */}
+                  <div className="relative group">
+                    <Link href="/cart" onClick={() => setOpen(false)}
+                      className="flex items-center justify-between gap-4 rounded-3xl bg-[#0f2a1d] border border-white/10 px-8 py-6 text-white shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 transition-all overflow-hidden relative"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                      <div className="flex items-center gap-5 relative z-10">
+                        <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
+                          <ShoppingCart className="h-6 w-6 text-white" />
+                        </div>
+                        <span className="font-display text-2xl font-black tracking-tight uppercase">{t.navbar.miCarrito}</span>
+                      </div>
+                      <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center relative z-10">
+                        <Leaf className="h-4 w-4 text-white/40 group-hover:text-accent transition-colors" />
+                      </div>
+                    </Link>
+                    <AnimatePresence>
+                      {totalItems > 0 && (
+                        <motion.div
+                          initial={{ scale: 0, x: 10, y: -10 }}
+                          animate={{ scale: 1, x: 0, y: 0 }}
+                          exit={{ scale: 0, x: 10, y: -10 }}
+                          className="absolute -right-3 -top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-[#ff3b30] text-[15px] font-black text-white shadow-[0_10px_20px_rgba(255,59,48,0.5)] border-[3px] border-[#0f2a1d]"
+                        >
+                          {totalItems}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Separator for Auth Section */}
+                  <div className="flex items-center gap-4 pt-4">
+                    <div className="h-px flex-1 bg-white/10" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">{t.navbar.miCuenta || "Mi Cuenta"}</span>
+                    <div className="h-px flex-1 bg-white/10" />
+                  </div>
+
+                  {/* Auth Button — Mobile (Now at the end) */}
                   {isAuthenticated ? (
                     !confirmLogout ? (
                       <button
@@ -433,7 +516,7 @@ const Navbar = () => {
                           </div>
                           <div className="text-left">
                             <span className="block font-display text-lg font-bold tracking-tight">{userName}</span>
-                            <span className="block text-xs text-white/60">Mi Cuenta</span>
+                            <span className="block text-xs text-white/60">Mi Perfil</span>
                           </div>
                         </div>
                         <LogOut className="h-5 w-5 text-white/40" />
@@ -472,36 +555,6 @@ const Navbar = () => {
                       <Leaf className="h-4 w-4 text-primary/40" />
                     </Link>
                   )}
-
-                  {/* Cart Button */}
-                  <div className="relative group">
-                    <Link href="/cart" onClick={() => setOpen(false)}
-                      className="flex items-center justify-between gap-4 rounded-3xl bg-[#0f2a1d] border border-white/10 px-8 py-6 text-white shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 transition-all overflow-hidden relative"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                      <div className="flex items-center gap-5 relative z-10">
-                        <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
-                          <ShoppingCart className="h-6 w-6 text-white" />
-                        </div>
-                        <span className="font-display text-2xl font-black tracking-tight uppercase">{t.navbar.miCarrito}</span>
-                      </div>
-                      <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center relative z-10">
-                        <Leaf className="h-4 w-4 text-white/40 group-hover:text-accent transition-colors" />
-                      </div>
-                    </Link>
-                    <AnimatePresence>
-                      {totalItems > 0 && (
-                        <motion.div
-                          initial={{ scale: 0, x: 10, y: -10 }}
-                          animate={{ scale: 1, x: 0, y: 0 }}
-                          exit={{ scale: 0, x: 10, y: -10 }}
-                          className="absolute -right-3 -top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-[#ff3b30] text-[15px] font-black text-white shadow-[0_10px_20px_rgba(255,59,48,0.5)] border-[3px] border-[#0f2a1d]"
-                        >
-                          {totalItems}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
 
                   <div className="flex justify-center gap-6 pt-4 text-white/30">
                     <div className="text-[10px] uppercase font-bold tracking-widest">© 2024 Agroecotopia</div>

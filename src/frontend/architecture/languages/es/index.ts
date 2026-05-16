@@ -10,6 +10,7 @@ export const es: Translations = {
     miCarrito: "Mi Carrito",
     idioma: "Idioma",
     tema: "Tema",
+    pedidos: "Mis Pedidos",
   },
   hero: {
     badge: "🚜 Agroinsumos & Maquinaria",

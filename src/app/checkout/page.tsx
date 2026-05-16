@@ -16,6 +16,7 @@ import { ArrowLeft, Truck, ShieldCheck, MapPin } from "lucide-react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import { PAYMENT_METHODS, generateWhatsAppUrl } from "@/utils/PaymentsMethods";
+import { placeOrderAction } from "@/backend/modules/orders";
 
 export default function CheckoutPage() {
   const { data: session, status } = useSession();
@@ -53,7 +54,32 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
     
     try {
-      // 1. Handle Payment Method logic
+      const { toast } = await import("sonner");
+      
+      // 1. Create order in Database
+      const orderData = {
+        direccionEntrega: `${values.address}, ${values.city}`,
+        notasCliente: values.notes,
+        costoEnvio: 0, // Simplified for now
+        impuestosPorcentaje: 19, // Standard in many regions, or 0 if included
+        detalles: cart.map(item => ({
+          productoId: item.product.id,
+          cantidad: item.quantity,
+          precioUnitario: item.product.price,
+          unidadMedida: item.product.unidad || "unidad"
+        }))
+      };
+
+      const result = await placeOrderAction(orderData);
+
+      if ("error" in result) {
+        toast.error("Error al crear el pedido", {
+          description: result.error
+        });
+        return;
+      }
+
+      // 2. Handle Payment Method logic (Success flow)
       const selectedMethod = PAYMENT_METHODS.find(m => m.id === values.paymentMethod);
       
       if (selectedMethod?.id === "whatsapp") {
@@ -65,7 +91,6 @@ export default function CheckoutPage() {
         // Handle all other methods (currently mute)
         clearCart();
         
-        const { toast } = await import("sonner");
         toast.success(t.checkout.processing, {
           description: t.checkout.paymentMuteNote,
         });
@@ -77,6 +102,8 @@ export default function CheckoutPage() {
       
     } catch (error) {
       console.error("Checkout error:", error);
+      const { toast } = await import("sonner");
+      toast.error("Ocurrió un error inesperado al procesar tu pedido.");
     } finally {
       setIsSubmitting(false);
     }
