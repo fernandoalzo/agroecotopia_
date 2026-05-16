@@ -198,14 +198,20 @@ const Navbar = () => {
             {/* Integrated Cart Button */}
             <Link
               href="/cart"
-              className="group/cart relative flex items-center gap-2.5 px-3 py-1.5 rounded-full transition-all duration-300 hover:bg-primary/5 z-20"
+              className={cn(
+                "group/cart relative flex items-center gap-2.5 px-3 py-1.5 rounded-full transition-all duration-300 hover:bg-primary/5 z-20",
+                isActive("/cart") ? "bg-primary/10 text-primary" : "text-muted-foreground/80"
+              )}
             >
               <div className="relative flex items-center justify-center pointer-events-none">
                 <motion.div
                   animate={totalItems > 0 ? { scale: [1, 1.1, 1] } : {}}
                   transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                 >
-                  <ShoppingCart className="h-4.5 w-4.5 text-primary transition-transform duration-300 group-hover/cart:scale-110 group-hover/cart:rotate-[-8deg]" />
+                  <ShoppingCart className={cn(
+                    "h-4.5 w-4.5 transition-transform duration-300 group-hover/cart:scale-110 group-hover/cart:rotate-[-8deg]",
+                    isActive("/cart") ? "text-primary" : "text-primary/70"
+                  )} />
                 </motion.div>
 
                 <AnimatePresence>
@@ -222,11 +228,17 @@ const Navbar = () => {
                 </AnimatePresence>
               </div>
               <div className="flex flex-col leading-tight pointer-events-none">
-                <span className="text-[10px] font-black uppercase tracking-widest text-primary/80 group-hover/cart:text-primary transition-colors">
+                <span className={cn(
+                  "text-[10px] font-black uppercase tracking-widest transition-colors",
+                  isActive("/cart") ? "text-primary" : "text-primary/60 group-hover/cart:text-primary"
+                )}>
                   {t.navbar.carrito}
                 </span>
                 {totalItems > 0 && (
-                  <span className="text-[8px] text-muted-foreground/60 font-bold">
+                  <span className={cn(
+                    "text-[8px] font-bold transition-colors",
+                    isActive("/cart") ? "text-primary/70" : "text-muted-foreground/60"
+                  )}>
                     {totalItems} {totalItems === 1 ? "Item" : "Items"}
                   </span>
                 )}
