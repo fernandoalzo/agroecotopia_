@@ -9,7 +9,7 @@ import { CartProvider } from "@/context/CartContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { ThemeProvider } from "next-themes";
 import { useState, Suspense } from "react";
-import ScrollToAnchor from "./ScrollToAnchor";
+import ScrollToAnchor from "@/components/ScrollToAnchor";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
