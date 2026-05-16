@@ -32,7 +32,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
-        
+
         const user = await authService.verifyCredentials(
           credentials.email as string,
           credentials.password as string
