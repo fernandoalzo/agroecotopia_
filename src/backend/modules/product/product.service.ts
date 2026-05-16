@@ -8,17 +8,22 @@ export class ProductService {
    * Obtiene la colección paginada de productos para el catálogo
    */
   async getCatalog(page: number = 1, limit: number = 20): Promise<{ products: Product[], total: number, totalPages: number }> {
-    const skip = (page - 1) * limit;
-    const [products, total] = await Promise.all([
-      this.productRepository.getAllProducts(skip, limit),
-      this.productRepository.getTotalCount()
-    ]);
-    
-    return {
-      products,
-      total,
-      totalPages: Math.ceil(total / limit)
-    };
+    try {
+      const skip = (page - 1) * limit;
+      const [products, total] = await Promise.all([
+        this.productRepository.getAllProducts(skip, limit),
+        this.productRepository.getTotalCount()
+      ]);
+      
+      return {
+        products,
+        total,
+        totalPages: Math.ceil(total / limit)
+      };
+    } catch (error) {
+      console.error("Error in getCatalog (Database connection likely failed):", error);
+      return { products: [], total: 0, totalPages: 0 };
+    }
   }
 
   /**
