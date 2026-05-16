@@ -6,6 +6,8 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 import Link from "next/link";
 import { productService } from "@/backend/modules/product";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const { products } = await productService.getCatalog(1, 40);
 
