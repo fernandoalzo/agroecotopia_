@@ -17,6 +17,7 @@ import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import { PAYMENT_METHODS, generateWhatsAppUrl } from "@/utils/PaymentsMethods";
 import { placeOrderAction } from "@/backend/modules/orders";
+import { Loading } from "@/components/ui/Loading";
 
 export default function CheckoutPage() {
   const { data: session, status } = useSession();
@@ -40,14 +41,7 @@ export default function CheckoutPage() {
   }, [cart.length, status, router]);
 
   if (status === "loading" || cart.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <p className="text-muted-foreground font-medium animate-pulse">{t.common.loading}</p>
-        </div>
-      </div>
-    );
+    return <Loading fullScreen />;
   }
 
   const handleCheckoutSubmit = async (values: CheckoutValues) => {
@@ -63,7 +57,7 @@ export default function CheckoutPage() {
         costoEnvio: 0, // Simplified for now
         impuestosPorcentaje: 19, // Standard in many regions, or 0 if included
         detalles: cart.map(item => ({
-          productoId: item.product.id,
+          productoId: item.product.id!,
           cantidad: item.quantity,
           precioUnitario: item.product.price,
           unidadMedida: item.product.unidad || "unidad"
