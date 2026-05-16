@@ -4,10 +4,10 @@ import ProductsSection from "@/components/home/ProductsSection";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import Link from "next/link";
-import { ProductService } from "@/services/product.service";
+import { productService } from "@/backend/modules/product";
 
 export default async function Home() {
-  const { products } = await ProductService.getCatalog(1, 40);
+  const { products } = await productService.getCatalog(1, 40);
 
   return (
     <div className="min-h-screen bg-background">

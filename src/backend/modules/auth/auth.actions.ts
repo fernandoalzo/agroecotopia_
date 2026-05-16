@@ -2,9 +2,8 @@
 
 import { signIn, signOut } from "@/utils/auth";
 import { AuthError } from "next-auth";
-import { AuthService } from "@/services/auth.service";
+import { authService } from "@/backend/modules/auth";
 import { LoginSchema, RegisterSchema } from "@/lib/validations/auth.schema";
-import { redirect } from "next/navigation";
 
 /**
  * Server Action: Sign in with a provider.
@@ -72,7 +71,7 @@ export async function registerCredentialsAction(formData: FormData) {
   const { name, email, password } = validatedFields.data;
 
   try {
-    await AuthService.registerUser(name, email, password);
+    await authService.registerUser(name, email, password);
     // Log the user in after registration
     await signIn("credentials", {
       email,

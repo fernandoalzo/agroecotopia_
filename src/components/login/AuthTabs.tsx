@@ -12,8 +12,8 @@ interface AuthTabsProps {
 
 export function AuthTabs({ mode, setMode, t }: AuthTabsProps) {
   return (
-    <div className="tabs-container">
-      <div className="flex w-full divide-x divide-transparent">
+    <div className="flex p-1 bg-secondary border border-border rounded-xl mb-8 relative">
+      <div className="flex w-full relative">
         {["login", "register"].map((tab) => {
           const isActive = (mode === tab);
           return (
@@ -22,14 +22,14 @@ export function AuthTabs({ mode, setMode, t }: AuthTabsProps) {
               type="button"
               onClick={() => setMode(tab as AuthMode)}
               className={cn(
-                "tab-button",
-                isActive ? "tab-button-active" : "tab-button-inactive"
+                "flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 relative z-10",
+                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
               )}
             >
               {isActive && (
                 <motion.div
                   layoutId="active-tab"
-                  className="active-tab-highlight"
+                  className="absolute inset-0 bg-background rounded-lg border border-border shadow-sm"
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}

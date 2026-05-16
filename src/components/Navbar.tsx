@@ -1,14 +1,16 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Leaf, Menu, X, ShoppingCart } from "lucide-react";
+import { Leaf, Menu, X, ShoppingCart, LogIn, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 import UserMenu from "@/components/auth/UserMenu";
+import Image from "next/image";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -16,6 +18,11 @@ const Navbar = () => {
   const pathname = usePathname();
   const { totalItems } = useCart();
   const { t } = useLanguage();
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
+  const userName = session?.user?.name ?? "Usuario";
+  const userImage = session?.user?.image;
+  const userInitial = userName.charAt(0).toUpperCase();
 
   const links = [
     { label: t.navbar.inicio, href: "/" },
@@ -38,7 +45,7 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
       <div className="container mx-auto flex h-14 items-center justify-between px-4 md:h-20 md:px-6">
-        <div className="flex-1">
+        <div className="flex flex-1 items-center justify-start">
           <Link href="/" className="group relative flex items-center gap-1.5 font-display text-lg font-bold md:gap-3 md:text-2xl transition-all duration-300">
             {/* Animated Logo Container */}
             <div className="relative flex items-center justify-center">
@@ -87,7 +94,7 @@ const Navbar = () => {
                 ))}
               </div>
 
-              {/* Sophisticated Shine Sweep (Refined for maximum contrast in unified theme) */}
+              {/* Sophisticated Shine Sweep */}
               <motion.div
                 className="absolute inset-0 z-20 pointer-events-none"
                 initial={{ x: "-100%", opacity: 0 }}
@@ -116,97 +123,125 @@ const Navbar = () => {
           </Link>
         </div>
 
-        {/* Desktop Navigation (Center) */}
-        <div className="hidden items-center gap-6 md:flex lg:gap-8 bg-secondary/30 backdrop-blur-sm px-6 py-2 rounded-full border border-border/40 shadow-inner group/nav overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full group-hover/nav:translate-x-full transition-transform duration-1000" />
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={cn(
-                "relative py-1 font-body text-sm font-bold tracking-tight transition-all hover:text-primary z-10",
-                isActive(l.href) ? "text-primary" : "text-muted-foreground/80"
-              )}
-            >
-              {l.label}
-              {isActive(l.href) && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.5)]"
-                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                />
-              )}
-            </Link>
-          ))}
-        </div>
-
-        {/* Action Group (Right) - Unified for both desktop and mobile */}
-        <div className="flex flex-1 items-center justify-end gap-3 md:gap-4 lg:gap-6">
-          {/* Desktop Cart Button (Moved outside the pill) */}
-          <div className="hidden md:block">
-            <Link
-              href="/cart"
-              className="group/cart relative flex items-center transition-all active:scale-95"
-            >
-              <div className="relative flex items-center gap-2 rounded-full px-6 py-2.5 text-xs font-black border shadow-lg overflow-hidden
-                bg-white text-primary border-primary/20 hover:bg-primary hover:text-white
-                dark:bg-primary/10 dark:text-primary dark:border-primary/40 dark:backdrop-blur-md dark:hover:bg-primary dark:hover:text-primary-foreground transition-all duration-300"
+        {/* Right Side Action Group: Contains Nav Pill, Auth, and Settings with homogeneous spacing */}
+        <div className="flex items-center gap-1.5 md:gap-2 lg:gap-3 justify-end">
+          {/* Desktop Navigation (Center Pill) */}
+          <div className="hidden items-center gap-6 md:flex lg:gap-8 bg-secondary/30 backdrop-blur-sm pl-6 pr-4 py-2 rounded-full border border-border/40 shadow-inner group/nav overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full group-hover/nav:translate-x-full transition-transform duration-1000 pointer-events-none" />
+            
+            <div className="flex items-center gap-6 lg:gap-8">
+            {links.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={cn(
+                  "relative py-1 font-body text-sm font-bold tracking-tight transition-all hover:text-primary z-20",
+                  isActive(l.href) ? "text-primary" : "text-muted-foreground/80"
+                )}
               >
-                {/* Dynamic hover background sweep - now constrained to this inner dev */}
-                <motion.div
-                  className="absolute inset-0 bg-primary/20 dark:bg-primary/30 -translate-x-full group-hover/cart:translate-x-full"
-                  transition={{ duration: 0.6 }}
-                />
-
-                <div className="relative z-10 flex items-center gap-2.5 font-display text-[11px] tracking-widest">
+                <span className="relative z-10 pointer-events-none">{l.label}</span>
+                {isActive(l.href) && (
                   <motion.div
-                    className="relative flex items-center justify-center"
-                    animate={totalItems > 0 ? {
-                      scale: [1, 1.15, 1],
-                    } : {}}
-                    transition={{
-                      duration: 3,
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
-                    whileHover={{
-                      scale: 1.3,
-                      rotate: -12,
-                      filter: "drop-shadow(0 0 8px currentColor)",
-                      transition: { type: "spring", stiffness: 400, damping: 15 }
-                    }}
-                  >
-                    <ShoppingCart className="h-4.5 w-4.5 transition-all duration-300" />
-                  </motion.div>
+                    layoutId="activeTab"
+                    className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.5)]"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+              </Link>
+            ))}
+          </div>
 
-                  <span className="transition-colors duration-300 uppercase">
-                    {t.navbar.carrito}
-                  </span>
-                </div>
-              </div>
+          {/* Vertical Separator */}
+          <div className="h-6 w-px bg-border/40 mx-1 z-10" />
 
+          {/* Integrated Cart Button */}
+          <Link
+            href="/cart"
+            className="group/cart relative flex items-center gap-2.5 px-3 py-1.5 rounded-full transition-all duration-300 hover:bg-primary/5 z-20"
+          >
+            <div className="relative flex items-center justify-center pointer-events-none">
+              <motion.div
+                animate={totalItems > 0 ? { scale: [1, 1.1, 1] } : {}}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <ShoppingCart className="h-4.5 w-4.5 text-primary transition-transform duration-300 group-hover/cart:scale-110 group-hover/cart:rotate-[-8deg]" />
+              </motion.div>
+              
               <AnimatePresence>
                 {totalItems > 0 && (
                   <motion.span
-                    initial={{ scale: 0, opacity: 0, x: 5, y: -5 }}
-                    animate={{ scale: 1, opacity: 1, x: 0, y: 0 }}
-                    exit={{ scale: 0, opacity: 0, x: 5, y: -5 }}
-                    className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#ff3b30] text-[10px] font-black text-white shadow-[0_0_15px_rgba(255,59,48,0.5)] ring-2 ring-background z-20 transition-transform group-hover/cart:scale-110"
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    className="absolute -right-2.5 -top-2.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-primary text-[8px] font-black text-primary-foreground shadow-sm ring-2 ring-background/50"
                   >
                     {totalItems}
                   </motion.span>
                 )}
               </AnimatePresence>
-            </Link>
+            </div>
+            <div className="flex flex-col leading-tight pointer-events-none">
+              <span className="text-[10px] font-black uppercase tracking-widest text-primary/80 group-hover/cart:text-primary transition-colors">
+                {t.navbar.carrito}
+              </span>
+              {totalItems > 0 && (
+                <span className="text-[8px] text-muted-foreground/60 font-bold">
+                  {totalItems} {totalItems === 1 ? "Item" : "Items"}
+                </span>
+              )}
+            </div>
+          </Link>
+        </div>
+
+
+
+
+          {/* Auth Button — standalone, outside settings dropdown */}
+          <div className="hidden md:block">
+            {isAuthenticated ? (
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-4 bg-secondary/40 hover:bg-destructive/10 border border-border/50 hover:border-destructive/30 dark:bg-white/5 dark:hover:bg-red-500/10 dark:border-white/10 transition-all duration-300 group/auth"
+              >
+                <div className="relative h-7 w-7">
+                  <div className="h-full w-full overflow-hidden rounded-full ring-2 ring-primary/20">
+                    {userImage ? (
+                      <Image src={userImage} alt={userName} fill className="object-cover rounded-full" sizes="28px" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-primary/20 text-primary font-bold text-xs rounded-full">
+                        {userInitial}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <span className="text-xs font-semibold text-foreground/80 group-hover/auth:text-destructive transition-colors">
+                  {userName.split(" ")[0]}
+                </span>
+                <LogOut className="h-3.5 w-3.5 text-muted-foreground group-hover/auth:text-destructive transition-all group-hover/auth:-translate-x-0.5" />
+              </motion.button>
+            ) : (
+              <Link href="/login">
+                <motion.div
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-black uppercase tracking-wider border shadow-lg overflow-hidden relative
+                    bg-primary text-primary-foreground border-primary/80 hover:shadow-primary/20
+                    dark:bg-primary dark:text-primary-foreground dark:border-primary/60 transition-all duration-300 group/login"
+                >
+                  <LogIn className="h-4 w-4 transition-transform group-hover/login:translate-x-0.5" />
+                  <span>{t.auth?.signIn ?? "Ingresar"}</span>
+                </motion.div>
+              </Link>
+            )}
           </div>
 
+          {/* Settings + Mobile Toggle pill */}
           <div className="flex items-center gap-1 bg-background/50 backdrop-blur-xl p-1 md:p-1.5 rounded-full border-2 border-primary/10 dark:border-primary/30 shadow-lg md:gap-2 group/pill hover:border-primary/30 dark:hover:border-primary/50 transition-all duration-300">
-            {/* Unified UserMenu for both desktop and mobile */}
             <div className="flex items-center">
               <UserMenu />
             </div>
-
-            {/* Mobile-only toggle unified in the pill */}
             <div className="md:hidden px-1">
               <button
                 onClick={() => setOpen(!open)}
@@ -224,35 +259,30 @@ const Navbar = () => {
             </div>
           </div>
 
-          {/* Mobile Cart Button (Separated but visually consistent) */}
+          {/* Mobile Cart Button */}
           <div className="relative md:hidden">
-            <Link
-              href="/cart"
-              className="group flex h-11 w-11 items-center justify-center rounded-full transition-all active:scale-95 shadow-xl border
-                bg-white text-primary border-primary/20
-                dark:bg-primary/20 dark:text-primary dark:border-primary/40 dark:backdrop-blur-md"
-            >
-              <div className="relative z-10 flex items-center justify-center">
-                <motion.div
-                  animate={totalItems > 0 ? { scale: [1, 1.2, 1] } : {}}
-                  whileHover={{ scale: 1.2, rotate: -10 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                </motion.div>
-                <AnimatePresence>
-                  {totalItems > 0 && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      exit={{ scale: 0 }}
-                      className="absolute -right-3 -top-3 flex h-5 w-5 items-center justify-center rounded-full bg-[#ff3b30] text-[10px] font-black text-white shadow-[0_0_10px_rgba(255,59,48,0.4)] ring-2 ring-background z-20"
-                    >
-                      {totalItems}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </div>
+            <Link href="/cart" className="group relative flex items-center">
+              <motion.div
+                whileTap={{ scale: 0.9 }}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-300
+                  bg-card/80 backdrop-blur-xl text-foreground border-border/60
+                  dark:bg-white/5 dark:border-white/10 shadow-sm"
+              >
+                <ShoppingCart className="h-[18px] w-[18px] text-primary" />
+              </motion.div>
+              <AnimatePresence>
+                {totalItems > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                    className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-primary text-[8px] font-black text-primary-foreground ring-2 ring-background z-20"
+                  >
+                    {totalItems}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </Link>
           </div>
         </div>
@@ -338,38 +368,68 @@ const Navbar = () => {
               </div>
 
               <div className="mt-auto space-y-8">
-                {/* Visual Separator */}
                 <div className="h-px w-full bg-gradient-to-r from-white/20 via-white/5 to-transparent" />
 
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 }}
-                  className="space-y-6"
+                  className="space-y-4"
                 >
-                  {/* High Contrast Cart Button - Refined to match visual concept */}
+                  {/* Auth Button — Mobile */}
+                  {isAuthenticated ? (
+                    <button
+                      type="button"
+                      onClick={() => { setOpen(false); signOut({ callbackUrl: "/" }); }}
+                      className="flex items-center justify-between gap-4 w-full rounded-3xl bg-[#0f2a1d] hover:bg-red-950 border border-white/10 px-8 py-5 text-white shadow-xl active:scale-95 transition-all"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="relative h-10 w-10">
+                          <div className="h-full w-full overflow-hidden rounded-xl ring-2 ring-white/20">
+                            {userImage ? (
+                              <Image src={userImage} alt={userName} fill className="object-cover rounded-xl" sizes="40px" />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-white/10 text-white font-bold text-lg rounded-xl">{userInitial}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-left">
+                          <span className="block font-display text-lg font-bold tracking-tight">{userName}</span>
+                          <span className="block text-xs text-red-400">Cerrar Sesión</span>
+                        </div>
+                      </div>
+                      <LogOut className="h-5 w-5 text-red-400" />
+                    </button>
+                  ) : (
+                    <Link href="/login" onClick={() => setOpen(false)}
+                      className="flex items-center justify-between gap-4 w-full rounded-3xl bg-white text-primary px-8 py-5 shadow-xl active:scale-95 transition-all"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary/10">
+                          <LogIn className="h-5 w-5" />
+                        </div>
+                        <span className="font-display text-xl font-bold tracking-tight">{t.auth?.signIn ?? "Ingresar"}</span>
+                      </div>
+                      <Leaf className="h-4 w-4 text-primary/40" />
+                    </Link>
+                  )}
+
+                  {/* Cart Button */}
                   <div className="relative group">
-                    <Link
-                      href="/cart"
-                      onClick={() => setOpen(false)}
+                    <Link href="/cart" onClick={() => setOpen(false)}
                       className="flex items-center justify-between gap-4 rounded-3xl bg-[#0f2a1d] border border-white/10 px-8 py-6 text-white shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 transition-all overflow-hidden relative"
                     >
-                      {/* Subtle shine effect */}
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-
                       <div className="flex items-center gap-5 relative z-10">
                         <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
                           <ShoppingCart className="h-6 w-6 text-white" />
                         </div>
                         <span className="font-display text-2xl font-black tracking-tight uppercase">{t.navbar.miCarrito}</span>
                       </div>
-
                       <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center relative z-10">
                         <Leaf className="h-4 w-4 text-white/40 group-hover:text-accent transition-colors" />
                       </div>
                     </Link>
-
-                    {/* Red Notification Badge - Floating at top-right of button */}
                     <AnimatePresence>
                       {totalItems > 0 && (
                         <motion.div
@@ -384,7 +444,6 @@ const Navbar = () => {
                     </AnimatePresence>
                   </div>
 
-                  {/* Bottom Footer Info */}
                   <div className="flex justify-center gap-6 pt-4 text-white/30">
                     <div className="text-[10px] uppercase font-bold tracking-widest">© 2024 Agroecotopia</div>
                   </div>

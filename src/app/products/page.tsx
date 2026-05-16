@@ -1,4 +1,4 @@
-import { ProductService } from "@/services/product.service";
+import { productService } from "@/backend/modules/product";
 import ProductsPageClient from "./ProductsPageClient";
 
 export default async function ProductsServerPage(props: {
@@ -12,9 +12,9 @@ export default async function ProductsServerPage(props: {
   // Decide if we call search or general catalog based on presence of query
   let initialData;
   if (query.trim()) {
-    initialData = await ProductService.searchProducts(query, page, limit);
+    initialData = await productService.searchProducts(query, page, limit);
   } else {
-    initialData = await ProductService.getCatalog(page, limit);
+    initialData = await productService.getCatalog(page, limit);
   }
 
   return <ProductsPageClient initialData={initialData} />;

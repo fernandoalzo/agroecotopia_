@@ -1,15 +1,17 @@
-import { ProductRepository } from "@/repositories/product.repository";
 import type { Product } from "@prisma/client";
+import { ProductRepository } from "./product.repository";
 
 export class ProductService {
+  constructor(private productRepository: ProductRepository) {}
+
   /**
    * Obtiene la colección paginada de productos para el catálogo
    */
-  static async getCatalog(page: number = 1, limit: number = 20): Promise<{ products: Product[], total: number, totalPages: number }> {
+  async getCatalog(page: number = 1, limit: number = 20): Promise<{ products: Product[], total: number, totalPages: number }> {
     const skip = (page - 1) * limit;
     const [products, total] = await Promise.all([
-      ProductRepository.getAllProducts(skip, limit),
-      ProductRepository.getTotalCount()
+      this.productRepository.getAllProducts(skip, limit),
+      this.productRepository.getTotalCount()
     ]);
     
     return {
@@ -22,13 +24,13 @@ export class ProductService {
   /**
    * Realiza la búsqueda paginada de productos en la base de datos
    */
-  static async searchProducts(query: string, page: number = 1, limit: number = 20): Promise<{ products: Product[], total: number, totalPages: number }> {
+  async searchProducts(query: string, page: number = 1, limit: number = 20): Promise<{ products: Product[], total: number, totalPages: number }> {
     if (!query || query.trim().length === 0) return { products: [], total: 0, totalPages: 0 };
     
     const skip = (page - 1) * limit;
     const [products, total] = await Promise.all([
-      ProductRepository.searchProducts(query, skip, limit),
-      ProductRepository.getSearchCount(query)
+      this.productRepository.searchProducts(query, skip, limit),
+      this.productRepository.getSearchCount(query)
     ]);
 
     return {

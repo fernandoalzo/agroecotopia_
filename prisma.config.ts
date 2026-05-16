@@ -6,9 +6,9 @@ import { defineConfig, env } from "prisma/config";
 
 export default defineConfig({
   // Point Prisma to the folder containing multiple .prisma files
-  schema: "prisma/schema/",
+  schema: "src/backend/prisma/schema/",
   migrations: {
-    path: "prisma/migrations",
+    path: "src/backend/prisma/migrations",
   },
   engine: "classic",
   datasource: {

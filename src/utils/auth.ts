@@ -2,8 +2,8 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import prisma from "@/db/prisma";
-import { AuthService } from "@/services/auth.service";
+import prisma from "@/backend/db/prisma";
+import { authService } from "@/backend/modules/auth";
 
 /**
  * Auth.js configuration — Central auth engine.
@@ -33,7 +33,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
         
-        const user = await AuthService.verifyCredentials(
+        const user = await authService.verifyCredentials(
           credentials.email as string,
           credentials.password as string
         );

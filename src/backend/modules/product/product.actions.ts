@@ -1,6 +1,6 @@
 "use server";
 
-import { ProductService } from "@/services/product.service";
+import { productService } from "@/backend/modules/product";
 import { Product } from "@prisma/client";
 import { withAdmin } from "@/lib/auth-guards";
 import { revalidatePath } from "next/cache";
@@ -10,7 +10,7 @@ import { revalidatePath } from "next/cache";
  */
 export async function getPaginatedProductsAction(page: number = 1, limit: number = 20): Promise<{ products: Product[], total: number, totalPages: number }> {
   try {
-    const result = await ProductService.getCatalog(page, limit);
+    const result = await productService.getCatalog(page, limit);
     return result;
   } catch (error) {
     console.error("Error getting paginated products:", error);
@@ -25,7 +25,7 @@ export async function searchProductsAction(query: string, page: number = 1, limi
   try {
     if (!query || query.trim().length === 0) return { products: [], total: 0, totalPages: 0 };
     
-    const result = await ProductService.searchProducts(query, page, limit);
+    const result = await productService.searchProducts(query, page, limit);
     return result;
   } catch (error) {
     console.error("Error searching products with pagination in DB:", error);
@@ -42,7 +42,7 @@ export async function deleteProductAction(productId: string) {
     // 1. Perform admin logic safely
     console.log(`Admin deleting product: ${productId}`);
     
-    // Example: await ProductService.delete(productId);
+    // Example: await productService.delete(productId);
     
     // 2. Revalidate UI
     revalidatePath("/products");

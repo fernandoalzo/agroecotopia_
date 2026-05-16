@@ -1,4 +1,4 @@
-import { AuthService } from "@/services/auth.service";
+import { authService } from "@/backend/modules/auth";
 
 /**
  * High-Order Function (Guard) to protect Server Actions.
@@ -11,7 +11,7 @@ import { AuthService } from "@/services/auth.service";
  */
 export async function withAuth<T>(action: () => Promise<T>): Promise<T | { error: string }> {
   try {
-    await AuthService.ensureAuthenticated();
+    await authService.ensureAuthenticated();
     return await action();
   } catch (error: any) {
     if (error.message === "UNAUTHORIZED") {
@@ -33,7 +33,7 @@ export async function withAuth<T>(action: () => Promise<T>): Promise<T | { error
  */
 export async function withAdmin<T>(action: () => Promise<T>): Promise<T | { error: string }> {
   try {
-    await AuthService.ensureRole("admin");
+    await authService.ensureRole("admin");
     return await action();
   } catch (error: any) {
     if (error.message === "UNAUTHORIZED") {
@@ -53,7 +53,7 @@ export async function withAdmin<T>(action: () => Promise<T>): Promise<T | { erro
  */
 export async function validateSessionHealth() {
   try {
-    const session = await AuthService.me();
+    const session = await authService.me();
     return !!session;
   } catch {
     return false;

@@ -44,7 +44,7 @@ export function AuthForm({
         >
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {errorMsg && (
-              <div className="error-alert">
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
                 {errorMsg}
               </div>
@@ -59,24 +59,24 @@ export function AuthForm({
                   const error = errors[fieldName];
 
                   return (
-                    <div key={field.name} className="field-group">
-                      <label className="field-label">
+                    <div key={field.name} className="space-y-1.5">
+                      <label className="text-sm font-bold flex justify-between">
                         {field.label}
                         {error && (
-                          <span className="field-error-text">
+                          <span className="text-destructive text-[11px] font-medium">
                             {error.message as string}
                           </span>
                         )}
                       </label>
-                      <div className="input-wrapper">
-                        <Icon className="input-icon" />
+                      <div className="relative">
+                        <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <input
                           {...register(fieldName)}
                           type={field.type}
                           placeholder={field.placeholder}
                           className={cn(
-                            "input-field",
-                            error && "input-field-error"
+                            "w-full pl-11 pr-4 py-3 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all font-medium text-sm text-foreground placeholder:text-muted-foreground",
+                            error && "border-destructive focus:ring-destructive/20 focus:border-destructive"
                           )}
                         />
                       </div>
@@ -88,7 +88,10 @@ export function AuthForm({
             <button
               type="submit"
               disabled={isPending}
-              className={cn("submit-button", "group")}
+              className={cn(
+                "mt-6 w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground py-3.5 rounded-xl font-bold transition-all disabled:opacity-70 disabled:cursor-not-allowed shadow-[0_4px_14px_0_rgba(16,185,129,0.25)] dark:shadow-none",
+                "group"
+              )}
             >
               {isPending ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -103,12 +106,14 @@ export function AuthForm({
             </button>
           </form>
 
-          <div className="divider-container">
-            <div className="divider-line">
+          <div className="relative py-4">
+            <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-border" />
             </div>
-            <div className="divider-text-wrapper">
-              <span className="divider-text">O continuar con</span>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-3 text-muted-foreground font-bold tracking-wider">
+                O continuar con
+              </span>
             </div>
           </div>
 
@@ -116,7 +121,10 @@ export function AuthForm({
             type="button"
             onClick={handleProviderSubmit}
             disabled={isPending}
-            className={cn("provider-button", "group")}
+            className={cn(
+              "w-full flex items-center justify-center gap-3 bg-card hover:bg-secondary border border-border text-foreground py-3.5 rounded-xl font-bold transition-all disabled:opacity-70 disabled:cursor-not-allowed shadow-sm",
+              "group"
+            )}
           >
             {isPending ? (
               <Loader2 className="h-5 w-5 animate-spin" />

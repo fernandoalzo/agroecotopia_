@@ -7,7 +7,7 @@ import { Mail, Lock, User, Leaf, ArrowLeft } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signIn as clientSignIn, useSession } from "next-auth/react";
-import { registerCredentialsAction } from "@/actions/auth.actions";
+import { registerCredentialsAction } from "@/backend/modules/auth/auth.actions";
 import { useLanguage } from "@/context/LanguageContext";
 import { LoginSchema, RegisterSchema } from "@/lib/validations/auth.schema";
 import { AuthMode, FormField } from "@/types/auth.types";
@@ -16,8 +16,6 @@ import { AuthVisualPanel } from "@/components/login/AuthVisualPanel";
 import { AuthHeader } from "@/components/login/AuthHeader";
 import { AuthTabs } from "@/components/login/AuthTabs";
 import { AuthForm } from "@/components/login/AuthForm";
-
-import "./style/page.css";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -122,13 +120,13 @@ export default function LoginPage() {
   if (!mounted) return null;
 
   return (
-    <div className="login-page-container">
+    <div className="min-h-screen w-full relative flex flex-col md:flex-row bg-background text-foreground">
       <AuthVisualPanel />
 
-      <div className="form-side">
+      <div className="flex-1 flex flex-col items-center justify-center relative p-6 sm:p-12 overflow-hidden bg-background">
         {/* Mobile Nav Overlay */}
-        <div className="mobile-nav">
-          <Link href="/" className="mobile-nav-back">
+        <div className="absolute top-6 left-6 right-6 flex items-center justify-between z-20 md:hidden">
+          <Link href="/" className="h-10 w-10 flex items-center justify-center rounded-full bg-secondary border border-border">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div className="flex items-center gap-2">
@@ -137,7 +135,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="form-wrapper">
+        <div className="w-full max-w-[420px] mx-auto z-10 mt-12 md:mt-0">
           <AuthHeader mode={mode} t={t} />
           
           <AuthTabs mode={mode} setMode={setMode} t={t} />
