@@ -43,7 +43,7 @@ The project follows a strict **modular layered architecture**. The backend is en
 
 | Layer | Path | Naming Convention | Description |
 |-------|------|-------------------|-------------|
-| **UI** | `src/app/`, `src/components/` | `page.tsx`, `PascalCase.tsx` | Pages, layouts, and React components. |
+| **UI** | `src/app/`, `src/frontend/components/` | `page.tsx`, `PascalCase.tsx` | Pages, layouts, and React components. |
 | **Controller** | `src/backend/modules/[domain]/` | `[domain].actions.ts` | Server Actions (Transport layer). Exposed to UI. |
 | **Service** | `src/backend/modules/[domain]/` | `[domain].service.ts` | Pure business logic. Agnostic of Next.js HTTP/Actions. |
 | **Repository** | `src/backend/modules/[domain]/` | `[domain].repository.ts` | Data access only (Prisma queries). |
@@ -79,13 +79,17 @@ src/
 │   │       └── [domain].repository.ts   ← REPO layer
 │   └── prisma/                   ← Prisma schema and migrations
 │
-├── components/                   ← UI (Shared & Feature Components)
-│   ├── ui/                       ← shadcn / primitives
-│   ├── [domain]/                 ← Domain specific UI (auth, products, checkout)
+├── frontend/                     ← Encapsulated Frontend Architecture
+│   ├── components/               ← UI (Shared & Feature Components)
+│   │   ├── ui/                   ← shadcn / primitives
+│   │   └── [domain]/             ← Domain specific UI (auth, products, checkout)
+│   ├── context/                  ← React Context providers (sync state)
+│   ├── hooks/                    ← Custom React hooks
+│   ├── assets/                   ← Static assets
+│   ├── architecture/             ← i18n and architectural configurations
+│   └── styles/                   ← Global and component-specific styles
 │
 ├── lib/                          ← Utility functions and guards (auth-guards.ts)
-├── context/                      ← React Context providers (sync state)
-├── hooks/                        ← Custom React hooks
 ├── types/                        ← Centralized TypeScript types
 └── utils/                        ← Constants & static data
 ```
@@ -114,7 +118,7 @@ The app uses `next-auth` (v5 Beta).
 ## 6. Theme, Styling & UI
 
 - The application uses `next-themes` (Light/Dark mode) and Tailwind CSS v4.
-- Use `shadcn/ui` components from `src/components/ui/` as building blocks.
+- Use `shadcn/ui` components from `src/frontend/components/ui/` as building blocks.
 - **Premium Aesthetic Rule**: Do not create generic, simple MVPs. Use smooth gradients, hover effects, and `framer-motion` to maintain a professional, dynamic design.
 - **Form Validation**: Always use `react-hook-form` coupled with `zod` (`@hookform/resolvers`) for robust form state and validation.
 

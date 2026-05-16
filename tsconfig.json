@@ -19,6 +19,13 @@
       }
     ],
     "paths": {
+      "@/frontend/*": ["./src/frontend/*"],
+      "@/components/*": ["./src/frontend/components/*"],
+      "@/context/*": ["./src/frontend/context/*"],
+      "@/hooks/*": ["./src/frontend/hooks/*"],
+      "@/assets/*": ["./src/frontend/assets/*"],
+      "@/architecture/*": ["./src/frontend/architecture/*"],
+      "@/styles/*": ["./src/frontend/styles/*"],
       "@/*": ["./src/*"]
     }
   },

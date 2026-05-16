@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Providers } from "@/components/Providers";
-import "./globals.css";
+import "@/frontend/styles/globals.css";
 
 export const metadata: Metadata = {
   title: "Agroecotopia | Cosecha Sostenible",
