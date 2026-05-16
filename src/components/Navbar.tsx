@@ -144,70 +144,70 @@ const Navbar = () => {
           {/* Desktop Navigation (Center Pill) */}
           <div className="hidden items-center gap-6 md:flex lg:gap-8 bg-secondary/30 backdrop-blur-sm pl-6 pr-4 py-2 rounded-full border border-border/40 shadow-inner group/nav overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full group-hover/nav:translate-x-full transition-transform duration-1000 pointer-events-none" />
-            
+
             <div className="flex items-center gap-6 lg:gap-8">
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={cn(
-                  "relative py-1 font-body text-sm font-bold tracking-tight transition-all hover:text-primary z-20",
-                  isActive(l.href) ? "text-primary" : "text-muted-foreground/80"
-                )}
-              >
-                <span className="relative z-10 pointer-events-none">{l.label}</span>
-                {isActive(l.href) && (
-                  <motion.div
-                    layoutId="activeTab"
-                    className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.5)]"
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                  />
-                )}
-              </Link>
-            ))}
-          </div>
-
-          {/* Vertical Separator */}
-          <div className="h-6 w-px bg-border/40 mx-1 z-10" />
-
-          {/* Integrated Cart Button */}
-          <Link
-            href="/cart"
-            className="group/cart relative flex items-center gap-2.5 px-3 py-1.5 rounded-full transition-all duration-300 hover:bg-primary/5 z-20"
-          >
-            <div className="relative flex items-center justify-center pointer-events-none">
-              <motion.div
-                animate={totalItems > 0 ? { scale: [1, 1.1, 1] } : {}}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <ShoppingCart className="h-4.5 w-4.5 text-primary transition-transform duration-300 group-hover/cart:scale-110 group-hover/cart:rotate-[-8deg]" />
-              </motion.div>
-              
-              <AnimatePresence>
-                {totalItems > 0 && (
-                  <motion.span
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    className="absolute -right-2.5 -top-2.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-primary text-[8px] font-black text-primary-foreground shadow-sm ring-2 ring-background/50"
-                  >
-                    {totalItems}
-                  </motion.span>
-                )}
-              </AnimatePresence>
+              {links.map((l) => (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  className={cn(
+                    "relative py-1 font-body text-sm font-bold tracking-tight transition-all hover:text-primary z-20",
+                    isActive(l.href) ? "text-primary" : "text-muted-foreground/80"
+                  )}
+                >
+                  <span className="relative z-10 pointer-events-none">{l.label}</span>
+                  {isActive(l.href) && (
+                    <motion.div
+                      layoutId="activeTab"
+                      className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.5)]"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                </Link>
+              ))}
             </div>
-            <div className="flex flex-col leading-tight pointer-events-none">
-              <span className="text-[10px] font-black uppercase tracking-widest text-primary/80 group-hover/cart:text-primary transition-colors">
-                {t.navbar.carrito}
-              </span>
-              {totalItems > 0 && (
-                <span className="text-[8px] text-muted-foreground/60 font-bold">
-                  {totalItems} {totalItems === 1 ? "Item" : "Items"}
+
+            {/* Vertical Separator */}
+            <div className="h-6 w-px bg-border/40 mx-1 z-10" />
+
+            {/* Integrated Cart Button */}
+            <Link
+              href="/cart"
+              className="group/cart relative flex items-center gap-2.5 px-3 py-1.5 rounded-full transition-all duration-300 hover:bg-primary/5 z-20"
+            >
+              <div className="relative flex items-center justify-center pointer-events-none">
+                <motion.div
+                  animate={totalItems > 0 ? { scale: [1, 1.1, 1] } : {}}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <ShoppingCart className="h-4.5 w-4.5 text-primary transition-transform duration-300 group-hover/cart:scale-110 group-hover/cart:rotate-[-8deg]" />
+                </motion.div>
+
+                <AnimatePresence>
+                  {totalItems > 0 && (
+                    <motion.span
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      className="absolute -right-2.5 -top-2.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-primary text-[8px] font-black text-primary-foreground shadow-sm ring-2 ring-background/50"
+                    >
+                      {totalItems}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </div>
+              <div className="flex flex-col leading-tight pointer-events-none">
+                <span className="text-[10px] font-black uppercase tracking-widest text-primary/80 group-hover/cart:text-primary transition-colors">
+                  {t.navbar.carrito}
                 </span>
-              )}
-            </div>
-          </Link>
-        </div>
+                {totalItems > 0 && (
+                  <span className="text-[8px] text-muted-foreground/60 font-bold">
+                    {totalItems} {totalItems === 1 ? "Item" : "Items"}
+                  </span>
+                )}
+              </div>
+            </Link>
+          </div>
 
 
 
@@ -249,7 +249,7 @@ const Navbar = () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-border/50 my-1" />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={() => signOut({ callbackUrl: "/" })}
                     className="text-red-500 focus:bg-red-500/10 focus:text-red-600 cursor-pointer flex items-center justify-between rounded-xl px-2 py-2 transition-colors"
                   >

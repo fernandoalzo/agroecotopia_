@@ -144,7 +144,7 @@ const ProductsSection = ({ initialProducts }: ProductsSectionProps) => {
       </div>
 
       <div className="container mx-auto px-4 md:px-6 flex justify-center">
-        <Link 
+        <Link
           href="/products"
           className="group relative inline-flex items-center gap-2 rounded-2xl bg-primary px-8 py-4 font-display text-lg font-bold text-primary-foreground shadow-lg transition-all hover:scale-105 hover:shadow-primary/25 active:scale-95"
         >

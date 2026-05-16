@@ -137,10 +137,10 @@ export default function LoginPage() {
 
         <div className="w-full max-w-[420px] mx-auto z-10 mt-12 md:mt-0">
           <AuthHeader mode={mode} t={t} />
-          
+
           <AuthTabs mode={mode} setMode={setMode} t={t} />
 
-          <AuthForm 
+          <AuthForm
             mode={mode}
             formFields={formFields}
             register={register}
