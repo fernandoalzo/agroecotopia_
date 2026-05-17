@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
 
 interface Order {
   id: string;
@@ -144,15 +145,15 @@ export const OrdersList = () => {
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col items-center justify-center py-20 text-center"
       >
-        <div className="mb-6 rounded-full bg-primary/10 p-6">
+        <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-2xl bg-primary/10">
           <Package className="h-12 w-12 text-primary" />
         </div>
         <h3 className="text-2xl font-bold">Aún no tienes pedidos</h3>
         <p className="mt-2 text-muted-foreground">
           Cuando realices una compra, aparecerá aquí.
         </p>
-        <Button className="mt-8 rounded-full px-8" asChild>
-          <a href="/products">Ir a la tienda</a>
+        <Button className="mt-8 rounded-2xl px-8 h-12 text-base font-bold shadow-xl shadow-primary/20 transition-all hover:scale-105" asChild>
+          <Link href="/products">Ir a la tienda</Link>
         </Button>
       </motion.div>
     );
@@ -242,11 +243,11 @@ export const OrdersList = () => {
                         </p>
                     </div>
                     
-                    <Button variant="ghost" className="mt-6 w-full rounded-2xl group/btn" asChild>
-                      <a href={`/pedidos/${order.id}`}>
+                    <Button variant="ghost" className="mt-6 w-full rounded-2xl group/btn border border-primary/10 hover:bg-primary/5 hover:text-primary transition-all font-bold" asChild>
+                      <Link href={`/pedidos/${order.id}`}>
                         Ver detalles
                         <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
-                      </a>
+                      </Link>
                     </Button>
 
                     {order.estado === PedidoEstado.PENDIENTE && (

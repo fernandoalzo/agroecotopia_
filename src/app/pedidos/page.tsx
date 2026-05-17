@@ -69,7 +69,7 @@ export default function PedidosPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3 }}
             >
-              <Button variant="outline" className="rounded-full px-6 border-primary/20 hover:bg-primary/5 hover:border-primary/50 transition-all" asChild>
+              <Button variant="outline" className="rounded-2xl px-6 h-11 font-bold border-primary/20 hover:bg-primary/5 hover:border-primary/50 hover:text-primary transition-all shadow-sm" asChild>
                 <Link href="/products" className="flex items-center gap-2">
                   <ArrowLeft className="h-4 w-4" />
                   Volver a la tienda
