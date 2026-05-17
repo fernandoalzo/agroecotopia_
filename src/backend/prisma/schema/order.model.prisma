@@ -14,6 +14,8 @@ model Pedido {
   estado                PedidoEstado   @default(PENDIENTE)
   motivoCancelacion     String?        @db.Text
   direccionEntrega      String         @db.Text
+  mercadopagoPreferenceId String?      // Para guardar el ID de la preferencia
+  mercadopagoPaymentId    String?      // Para guardar el ID del pago exitoso
   fechaPedido           DateTime       @default(now())
   fechaEntregaEstimada  DateTime?
   fechaEntregaReal      DateTime?

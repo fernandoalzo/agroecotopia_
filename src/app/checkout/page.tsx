@@ -14,8 +14,7 @@ import { CheckoutValues } from "@/lib/validations/checkout.schema";
 import { motion } from "framer-motion";
 import { ArrowLeft, Truck, ShieldCheck, MapPin } from "lucide-react";
 import Link from "next/link";
-import { formatPrice } from "@/lib/utils";
-import { PAYMENT_METHODS, generateWhatsAppUrl } from "@/utils/PaymentsMethods";
+import { PAYMENT_METHODS, PaymentHandlerFactory } from "@/utils/PaymentsMethods";
 import { placeOrderAction } from "@/backend/modules/orders";
 import { Loading } from "@/components/ui/Loading";
 
@@ -33,23 +32,23 @@ export default function CheckoutPage() {
     }
   }, [status, router]);
 
-  // If cart is empty, redirect back to cart page
+  // If cart is empty, redirect back to cart page (only if not currently submitting an order)
   useEffect(() => {
-    if (cart.length === 0 && status === "authenticated") {
+    if (cart.length === 0 && status === "authenticated" && !isSubmitting) {
       router.push("/cart");
     }
-  }, [cart.length, status, router]);
+  }, [cart.length, status, router, isSubmitting]);
 
-  if (status === "loading" || cart.length === 0) {
+  if (status === "loading" || isSubmitting || (cart.length === 0 && !isSubmitting)) {
     return <Loading fullScreen />;
   }
 
   const handleCheckoutSubmit = async (values: CheckoutValues) => {
     setIsSubmitting(true);
-    
+
     try {
       const { toast } = await import("sonner");
-      
+
       // 1. Create order in Database
       const orderData = {
         direccionEntrega: `${values.address}, ${values.city}`,
@@ -70,35 +69,27 @@ export default function CheckoutPage() {
         toast.error("Error al crear el pedido", {
           description: result.error
         });
+        setIsSubmitting(false);
         return;
       }
 
-      // 2. Handle Payment Method logic (Success flow)
-      const selectedMethod = PAYMENT_METHODS.find(m => m.id === values.paymentMethod);
-      
-      if (selectedMethod?.id === "whatsapp") {
-        const whatsappUrl = generateWhatsAppUrl({ values, cart, totalPrice, language, t });
-        clearCart();
-        window.open(whatsappUrl, "_blank");
-        router.push("/");
-      } else {
-        // Handle all other methods (currently mute)
-        clearCart();
-        
-        toast.success(t.checkout.processing, {
-          description: t.checkout.paymentMuteNote,
-        });
-        
-        setTimeout(() => {
-          router.push("/");
-        }, 3000);
-      }
-      
+      // 2. Handle Payment Method logic via Centralized Factory
+      const paymentHandler = PaymentHandlerFactory.getHandler(values.paymentMethod);
+      await paymentHandler.process({
+        pedidoId: result.pedidoId,
+        values,
+        cart,
+        totalPrice,
+        language,
+        t,
+        clearCart,
+        router,
+      });
+
     } catch (error) {
       console.error("Checkout error:", error);
       const { toast } = await import("sonner");
       toast.error("Ocurrió un error inesperado al procesar tu pedido.");
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -106,7 +97,7 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
       <Navbar />
-      
+
       <main className="flex-1 pt-24 pb-16">
         <div className="container px-4 md:px-6 max-w-7xl mx-auto">
           {/* Header */}
@@ -115,9 +106,9 @@ export default function CheckoutPage() {
           {/* Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
             {/* Form Section */}
-            <CheckoutFormSection 
-              t={t} 
-              onSubmit={handleCheckoutSubmit} 
+            <CheckoutFormSection
+              t={t}
+              onSubmit={handleCheckoutSubmit}
               defaultValues={{
                 fullName: session?.user?.name || "",
                 email: session?.user?.email || "",
@@ -125,7 +116,7 @@ export default function CheckoutPage() {
             />
 
             {/* Summary/Invoice Section */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}

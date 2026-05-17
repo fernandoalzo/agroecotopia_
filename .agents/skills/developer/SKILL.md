@@ -132,7 +132,35 @@ To maintain and scale a professional architecture:
 
 ---
 
-## 8. Operational Rules
+## 8. Modular Payment Methods (Factory & Strategy Pattern)
+
+To keep checkout logic completely decoupled and easily extensible, all payment integrations MUST follow the **Modular Strategy & Factory Pattern**. 
+
+### 8.1 Directory & Submodule Layout
+Every payment method is a self-contained module under `src/utils/PaymentsMethods/` consisting of:
+- `config.ts`: Visual and UI configurations (`PaymentMethodConfig` interface).
+- `handler.ts`: Core processing logic class implementing `PaymentHandler` (`process` method).
+- `index.ts`: Barrel file exporting both configurations and handler classes.
+
+```text
+src/utils/PaymentsMethods/
+├── types.ts          ← Central payment types & contexts
+├── factory.ts        ← Factory class (PaymentHandlerFactory)
+├── index.ts          ← Main index composing & exporting PAYMENT_METHODS array
+└── [payment_id]/     ← Isolated submodule folder (e.g., advisor, mercadopago, wompi)
+    ├── config.ts     ← Visual UI metadata
+    ├── handler.ts    ← Execution logic class
+    └── index.ts      ← Submodule exports barrel
+```
+
+### 8.2 Architectural Principles (STRICT LAW)
+- **SOLID Open-Closed Principle (OCP)**: The Checkout Page (`src/app/checkout/page.tsx`) is closed to modifications when adding or changing payment methods. It MUST only interact with `PaymentHandlerFactory.getHandler(methodId)`.
+- **Explicit Imports (Cache Protection)**: To prevent VSCode/Cursor TypeScript caching conflicts with deleted files, always use explicit path imports for configuration and handlers inside factory and main index (e.g., `import { AdvisorPaymentHandler } from "./advisor/handler"`).
+- **Graceful Failure**: If a payment method is under construction or disabled, it should use a fallback "Mute" handler rather than breaking the build or containing if-else conditionals in the checkout UI.
+
+---
+
+## 9. Operational Rules
 
 - **Browser Interaction**: Never interact directly with the browser to test or verify changes. Focus exclusively on the code implementation.
 - **Verification**: Wait for the user to perform manual tests and provide feedback on the changes before proceeding with further adjustments.

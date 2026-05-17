@@ -1,19 +1,20 @@
 import { PaymentMethodConfig } from "./types";
-import { WhatsAppConfig } from "./whatsapp";
-import { NequiConfig } from "./nequi";
-import { MercadoPagoConfig } from "./mercadopago";
-import { PSEConfig } from "./pse";
-import { WompiConfig } from "./wompi";
+import { AdvisorConfig } from "./advisor/config";
+import { NequiConfig } from "./nequi/config";
+import { MercadoPagoConfig } from "./mercadopago/config";
+import { PSEConfig } from "./pse/config";
+import { WompiConfig } from "./wompi/config";
 
 export * from "./types";
-export * from "./whatsapp";
-export * from "./nequi";
-export * from "./mercadopago";
-export * from "./pse";
-export * from "./wompi";
+export * from "./advisor/index";
+export * from "./nequi/index";
+export * from "./mercadopago/index";
+export * from "./pse/index";
+export * from "./wompi/index";
+export * from "./factory";
 
 export const PAYMENT_METHODS: PaymentMethodConfig[] = [
-  WhatsAppConfig,
+  AdvisorConfig,
   NequiConfig,
   MercadoPagoConfig,
   PSEConfig,

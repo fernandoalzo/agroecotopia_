@@ -1,5 +1,5 @@
 import { Landmark } from "lucide-react";
-import { PaymentMethodConfig } from "./types";
+import { PaymentMethodConfig } from "../types";
 
 export const PSEConfig: PaymentMethodConfig = {
   id: "pse",

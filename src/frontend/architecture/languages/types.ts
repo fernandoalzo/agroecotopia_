@@ -153,12 +153,14 @@ export interface Translations {
     backToCart: string;
     processing: string;
     paymentMethod: string;
-    paymentOptionWhatsApp: string;
+    paymentOptionAdvisor: string;
     paymentOptionNequi: string;
     paymentOptionMercadoPago: string;
     paymentOptionPSE: string;
     paymentOptionWompi: string;
     paymentMuteNote: string;
+    advisorSuccessTitle: string;
+    advisorSuccessMessage: string;
   };
 }
 

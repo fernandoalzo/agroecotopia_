@@ -88,6 +88,25 @@ export default function OrderDetailPage() {
     if (id) fetchOrder();
   }, [id]);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const statusParam = params.get("status");
+      if (statusParam === "success") {
+        toast.success("¡Pago completado exitosamente!", {
+          description: "Hemos recibido tu pago de Mercado Pago. Tu pedido está confirmado."
+        });
+        // Remove query parameters
+        router.replace(`/pedidos/${id}`);
+      } else if (statusParam === "pending") {
+        toast.warning("Pago en proceso", {
+          description: "Mercado Pago está procesando la transacción. Te notificaremos pronto."
+        });
+        router.replace(`/pedidos/${id}`);
+      }
+    }
+  }, [id, router]);
+
   const handleCancelOrder = async () => {
     setCanceling(true);
     try {

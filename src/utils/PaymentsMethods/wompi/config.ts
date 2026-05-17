@@ -1,5 +1,5 @@
 import { Layers } from "lucide-react";
-import { PaymentMethodConfig } from "./types";
+import { PaymentMethodConfig } from "../types";
 
 export const WompiConfig: PaymentMethodConfig = {
   id: "wompi",

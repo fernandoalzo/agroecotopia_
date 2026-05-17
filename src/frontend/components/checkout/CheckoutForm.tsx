@@ -37,7 +37,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
       address: defaultValues?.address || "",
       city: defaultValues?.city || "",
       notes: defaultValues?.notes || "",
-      paymentMethod: (defaultValues?.paymentMethod as any) || "whatsapp",
+      paymentMethod: (defaultValues?.paymentMethod as any) || "advisor",
     },
   });
 

@@ -1,5 +1,5 @@
 import { CreditCard } from "lucide-react";
-import { PaymentMethodConfig } from "./types";
+import { PaymentMethodConfig } from "../types";
 
 export const MercadoPagoConfig: PaymentMethodConfig = {
   id: "mercadopago",
@@ -7,5 +7,5 @@ export const MercadoPagoConfig: PaymentMethodConfig = {
   color: "#009EE3",
   bgColor: "bg-[#009EE3]/10",
   labelKey: "paymentOptionMercadoPago",
-  isMute: true,
+  isMute: false,
 };

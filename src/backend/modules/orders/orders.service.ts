@@ -150,4 +150,12 @@ export class OrdersService {
 
     return await this.ordersRepository.deletePedido(pedidoId);
   }
+
+  async updatePedido(pedidoId: string, data: Prisma.PedidoUpdateInput) {
+    const pedido = await this.ordersRepository.findById(pedidoId);
+    if (!pedido) throw new Error("Pedido no encontrado");
+
+    const pedidoActualizado = await this.ordersRepository.updatePedido(pedidoId, data);
+    return this.serializePedido(pedidoActualizado);
+  }
 }
