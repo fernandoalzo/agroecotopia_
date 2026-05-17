@@ -66,4 +66,10 @@ export class OrdersRepository {
     });
     return product?.stock || 0;
   }
+
+  async deletePedido(id: string) {
+    return await prisma.pedido.delete({
+      where: { id },
+    });
+  }
 }

@@ -8,7 +8,8 @@ import { useSession } from "next-auth/react";
 import { useLanguage } from "@/context/LanguageContext";
 import { motion } from "framer-motion";
 import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText } from "lucide-react";
-import { getOrderDetailAction } from "@/backend/modules/orders/orders.actions";
+import { getOrderDetailAction, cancelUserOrderAction, deleteUserOrderAction } from "@/backend/modules/orders/orders.actions";
+import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -59,6 +60,10 @@ export default function OrderDetailPage() {
   const { t } = useLanguage();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [canceling, setCanceling] = useState(false);
+  const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -82,6 +87,42 @@ export default function OrderDetailPage() {
 
     if (id) fetchOrder();
   }, [id]);
+
+  const handleCancelOrder = async () => {
+    setCanceling(true);
+    try {
+      const result = await cancelUserOrderAction(order.id);
+      if (result && "error" in result) {
+        toast.error("Error", { description: result.error });
+      } else {
+        toast.success("Pedido cancelado", { description: "Tu pedido ha sido cancelado exitosamente." });
+        setOrder({ ...order, estado: PedidoEstado.CANCELADO });
+      }
+    } catch (error) {
+      toast.error("Error", { description: "Hubo un problema al cancelar el pedido." });
+    } finally {
+      setCanceling(false);
+      setIsConfirmingCancel(false);
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    setDeleting(true);
+    try {
+      const result = await deleteUserOrderAction(order.id);
+      if (result && "error" in result) {
+        toast.error("Error", { description: result.error });
+      } else {
+        toast.success("Pedido eliminado", { description: "El pedido ha sido eliminado permanentemente." });
+        router.push("/pedidos");
+      }
+    } catch (error) {
+      toast.error("Error", { description: "Hubo un problema al eliminar el pedido." });
+    } finally {
+      setDeleting(false);
+      setIsConfirmingDelete(false);
+    }
+  };
 
   if (loading || status === "loading") {
     return <Loading fullScreen />;
@@ -223,6 +264,76 @@ export default function OrderDetailPage() {
                       <span className="text-2xl font-black text-primary">${order.total.toLocaleString("es-CO")}</span>
                     </div>
                   </div>
+
+                  {order.estado === PedidoEstado.PENDIENTE && (
+                    isConfirmingCancel ? (
+                      <div className="mt-6 flex gap-2 w-full">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 rounded-2xl"
+                          onClick={() => setIsConfirmingCancel(false)}
+                          disabled={canceling}
+                        >
+                          No
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          className="flex-1 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-md shadow-red-500/20"
+                          onClick={handleCancelOrder}
+                          disabled={canceling}
+                        >
+                          {canceling ? (
+                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          ) : (
+                            "Sí, cancelar"
+                          )}
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        className="mt-6 w-full rounded-2xl text-rose-500 border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-600"
+                        onClick={() => setIsConfirmingCancel(true)}
+                      >
+                        Cancelar pedido
+                      </Button>
+                    )
+                  )}
+
+                  {order.estado === PedidoEstado.CANCELADO && (
+                    isConfirmingDelete ? (
+                      <div className="mt-6 flex gap-2 w-full">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 rounded-2xl"
+                          onClick={() => setIsConfirmingDelete(false)}
+                          disabled={deleting}
+                        >
+                          No
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          className="flex-1 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold"
+                          onClick={handleDeleteOrder}
+                          disabled={deleting}
+                        >
+                          {deleting ? (
+                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          ) : (
+                            "Sí, eliminar"
+                          )}
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        className="mt-6 w-full rounded-2xl text-red-600 border-red-500/20 hover:bg-red-500/10 hover:text-red-700"
+                        onClick={() => setIsConfirmingDelete(true)}
+                      >
+                        Eliminar pedido
+                      </Button>
+                    )
+                  )}
                 </CardContent>
               </Card>
 

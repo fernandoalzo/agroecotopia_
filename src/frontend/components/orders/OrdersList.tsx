@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Package, ChevronRight, Calendar, MapPin, CreditCard, Clock, CheckCircle2, Truck, Timer, XCircle } from "lucide-react";
-import { getUserOrdersAction } from "@/backend/modules/orders/orders.actions";
+import { getUserOrdersAction, cancelUserOrderAction, deleteUserOrderAction } from "@/backend/modules/orders/orders.actions";
+import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -66,6 +67,10 @@ const statusConfig = {
 export const OrdersList = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [confirmingCancelId, setConfirmingCancelId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -83,6 +88,44 @@ export const OrdersList = () => {
 
     fetchOrders();
   }, []);
+
+  const handleCancelOrder = async (orderId: string) => {
+    setCancelingId(orderId);
+    try {
+      const result = await cancelUserOrderAction(orderId);
+      if (result && "error" in result) {
+        toast.error("Error", { description: result.error });
+      } else {
+        toast.success("Pedido cancelado", { description: "Tu pedido ha sido cancelado exitosamente." });
+        setOrders((prev) => 
+          prev.map((o) => (o.id === orderId ? { ...o, estado: PedidoEstado.CANCELADO } : o))
+        );
+      }
+    } catch (error) {
+      toast.error("Error", { description: "Hubo un problema al cancelar el pedido." });
+    } finally {
+      setCancelingId(null);
+      setConfirmingCancelId(null);
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    setDeletingId(orderId);
+    try {
+      const result = await deleteUserOrderAction(orderId);
+      if (result && "error" in result) {
+        toast.error("Error", { description: result.error });
+      } else {
+        toast.success("Pedido eliminado", { description: "El pedido ha sido eliminado permanentemente." });
+        setOrders((prev) => prev.filter((o) => o.id !== orderId));
+      }
+    } catch (error) {
+      toast.error("Error", { description: "Hubo un problema al eliminar el pedido." });
+    } finally {
+      setDeletingId(null);
+      setConfirmingDeleteId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -205,6 +248,76 @@ export const OrdersList = () => {
                         <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
                       </a>
                     </Button>
+
+                    {order.estado === PedidoEstado.PENDIENTE && (
+                      confirmingCancelId === order.id ? (
+                        <div className="mt-2 flex gap-2 w-full">
+                          <Button 
+                            variant="outline" 
+                            className="flex-1 rounded-2xl"
+                            onClick={() => setConfirmingCancelId(null)}
+                            disabled={cancelingId === order.id}
+                          >
+                            No
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            className="flex-1 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-md shadow-red-500/20"
+                            onClick={() => handleCancelOrder(order.id)}
+                            disabled={cancelingId === order.id}
+                          >
+                            {cancelingId === order.id ? (
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            ) : (
+                              "Sí, cancelar"
+                            )}
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          className="mt-2 w-full rounded-2xl text-rose-500 border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-600"
+                          onClick={() => setConfirmingCancelId(order.id)}
+                        >
+                          Cancelar pedido
+                        </Button>
+                      )
+                    )}
+
+                    {order.estado === PedidoEstado.CANCELADO && (
+                      confirmingDeleteId === order.id ? (
+                        <div className="mt-2 flex gap-2 w-full">
+                          <Button 
+                            variant="outline" 
+                            className="flex-1 rounded-2xl"
+                            onClick={() => setConfirmingDeleteId(null)}
+                            disabled={deletingId === order.id}
+                          >
+                            No
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            className="flex-1 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold"
+                            onClick={() => handleDeleteOrder(order.id)}
+                            disabled={deletingId === order.id}
+                          >
+                            {deletingId === order.id ? (
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            ) : (
+                              "Eliminar"
+                            )}
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          className="mt-2 w-full rounded-2xl text-red-600 border-red-500/20 hover:bg-red-500/10 hover:text-red-700"
+                          onClick={() => setConfirmingDeleteId(order.id)}
+                        >
+                          Eliminar pedido
+                        </Button>
+                      )
+                    )}
                   </div>
                 </div>
               </CardContent>

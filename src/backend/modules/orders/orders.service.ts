@@ -139,4 +139,15 @@ export class OrdersService {
       } : undefined
     };
   }
+
+  async deletePedido(pedidoId: string) {
+    const pedido = await this.ordersRepository.findById(pedidoId);
+    if (!pedido) throw new Error("Pedido no encontrado");
+
+    if (pedido.estado !== PedidoEstado.CANCELADO) {
+      throw new Error("Solo se pueden eliminar pedidos en estado Cancelado");
+    }
+
+    return await this.ordersRepository.deletePedido(pedidoId);
+  }
 }

@@ -87,3 +87,72 @@ export async function getOrderDetailAction(pedidoId: string) {
     return pedido;
   });
 }
+
+/**
+ * Cancela un pedido del usuario autenticado (Solo si está en estado PENDIENTE).
+ */
+export async function cancelUserOrderAction(pedidoId: string) {
+  return await withAuth(async () => {
+    const userId = await authService.getCurrentUserId();
+    if (!userId) throw new Error("UNAUTHORIZED");
+
+    const pedido = await ordersService.getPedidoDetallado(pedidoId);
+    if (!pedido) return { error: "Pedido no encontrado" };
+    
+    if (pedido.usuarioId !== userId) {
+      return { error: "No tienes permiso para cancelar este pedido" };
+    }
+
+    if (pedido.estado !== PedidoEstado.PENDIENTE) {
+      return { error: "Solo se pueden cancelar pedidos en estado Pendiente" };
+    }
+
+    try {
+      const pedidoCancelado = await ordersService.updateEstado(
+        pedidoId, 
+        PedidoEstado.CANCELADO, 
+        "Cancelado por el usuario"
+      );
+      
+      revalidatePath("/pedidos");
+      revalidatePath(`/pedidos/${pedidoId}`);
+      revalidatePath("/perfil/pedidos");
+      
+      return { success: true, pedido: pedidoCancelado };
+    } catch (error: any) {
+      return { error: error.message || "Error al cancelar el pedido" };
+    }
+  });
+}
+
+/**
+ * Elimina un pedido del usuario autenticado (Solo si está en estado CANCELADO).
+ */
+export async function deleteUserOrderAction(pedidoId: string) {
+  return await withAuth(async () => {
+    const userId = await authService.getCurrentUserId();
+    if (!userId) throw new Error("UNAUTHORIZED");
+
+    const pedido = await ordersService.getPedidoDetallado(pedidoId);
+    if (!pedido) return { error: "Pedido no encontrado" };
+    
+    if (pedido.usuarioId !== userId) {
+      return { error: "No tienes permiso para eliminar este pedido" };
+    }
+
+    if (pedido.estado !== PedidoEstado.CANCELADO) {
+      return { error: "Solo se pueden eliminar pedidos en estado Cancelado" };
+    }
+
+    try {
+      await ordersService.deletePedido(pedidoId);
+      
+      revalidatePath("/pedidos");
+      revalidatePath("/perfil/pedidos");
+      
+      return { success: true };
+    } catch (error: any) {
+      return { error: error.message || "Error al eliminar el pedido" };
+    }
+  });
+}
