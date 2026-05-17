@@ -2,7 +2,7 @@ import { OrdersRepository } from "./orders.repository";
 import { PedidoEstado, Prisma } from "@prisma/client";
 
 export class OrdersService {
-  constructor(private ordersRepository: OrdersRepository) {}
+  constructor(private ordersRepository: OrdersRepository) { }
 
   async createPedido(data: {
     usuarioId: string;
