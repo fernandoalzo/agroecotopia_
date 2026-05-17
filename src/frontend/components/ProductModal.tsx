@@ -60,12 +60,12 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
       {/* 1. Detail Dialog (Main UI) */}
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <DialogContent
-          className="w-[95vw] sm:max-w-[750px] gap-0 p-0 border-border bg-card shadow-[0_0_100px_-20px_rgba(var(--primary),0.15)] rounded-3xl overflow-hidden transition-all duration-500"
+          className="w-[92vw] sm:max-w-[650px] md:max-w-[700px] gap-0 p-0 border-border bg-card shadow-[0_0_100px_-20px_rgba(var(--primary),0.15)] rounded-3xl overflow-hidden transition-all duration-500"
         >
           <div className="max-h-[96vh] overflow-y-auto scrollbar-hide">
             <div className="grid md:grid-cols-2 relative">
               {/* Left Column: Image / Carousel */}
-              <div className="bg-secondary/30 dark:bg-[#121212] p-4 md:p-8 flex items-center justify-center min-h-[280px] md:min-h-[450px] relative overflow-hidden group/modal transition-all duration-500">
+              <div className="bg-secondary/30 dark:bg-[#121212] p-3 md:p-6 flex items-center justify-center min-h-[240px] md:min-h-[400px] relative overflow-hidden group/modal transition-all duration-500">
                 {/* Background Decoration */}
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent -z-10" />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/25 dark:bg-primary/20 rounded-full blur-[80px] -z-10 animate-pulse" />
@@ -85,7 +85,7 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
                 {/* Tag moved to details for a cleaner aesthetic */}
 
                 {product.images && product.images.length > 0 ? (
-                  <Carousel className="w-full max-w-[280px] md:max-w-[320px]" opts={{ align: "center", loop: true }}>
+                  <Carousel className="w-full max-w-[240px] md:max-w-[300px]" opts={{ align: "center", loop: true }}>
                     <CarouselContent>
                       {product.images.map((photo, index) => (
                         <CarouselItem key={index}>
@@ -127,8 +127,8 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
               </div>
 
               {/* Right Column: Details */}
-              <div className="p-6 md:p-8 flex flex-col bg-card">
-                <div className="text-left space-y-0 mb-6 flex-none">
+              <div className="p-5 md:p-7 flex flex-col bg-card">
+                <div className="text-left space-y-0 mb-4 flex-none">
                   <div className="flex flex-wrap items-center gap-4 mb-2">
                     <div className="flex items-center gap-1.5 text-primary dark:text-[#10b981] uppercase font-black text-[10px] tracking-[0.2em] drop-shadow-sm">
                       <Tag className="w-3.5 h-3.5" />
