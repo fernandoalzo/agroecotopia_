@@ -139,7 +139,7 @@ const Navbar = () => {
         </div>
 
         {/* Right Side Action Group: Contains Nav Pill, Auth, and Settings with homogeneous spacing */}
-        <div className="flex items-center gap-1.5 md:gap-2 lg:gap-3 justify-end">
+        <div className="flex shrink-0 items-center gap-2 md:gap-3 justify-end">
           {/* Desktop Navigation (Center Pill) */}
           <div className="hidden items-center gap-6 md:flex lg:gap-8 bg-secondary/30 backdrop-blur-sm pl-6 pr-4 py-2 rounded-full border border-border/40 shadow-inner group/nav overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full group-hover/nav:translate-x-full transition-transform duration-1000 pointer-events-none" />
@@ -312,7 +312,7 @@ const Navbar = () => {
           </div>
 
           {/* Settings + Mobile Toggle pill */}
-          <div className="flex items-center gap-1 bg-background/50 backdrop-blur-xl p-1 md:p-1.5 rounded-full border-2 border-primary/10 dark:border-primary/30 shadow-lg md:gap-2 group/pill hover:border-primary/30 dark:hover:border-primary/50 transition-all duration-300">
+          <div className="flex shrink-0 items-center gap-1 bg-background/50 backdrop-blur-xl p-1 md:p-1.5 rounded-full border-2 border-primary/10 dark:border-primary/30 shadow-lg md:gap-2 group/pill hover:border-primary/30 dark:hover:border-primary/50 transition-all duration-300">
             <div className="flex items-center">
               <UserMenu />
             </div>
@@ -334,7 +334,7 @@ const Navbar = () => {
           </div>
 
           {/* Mobile Cart Button */}
-          <div className="relative md:hidden">
+          <div className="relative shrink-0 md:hidden">
             <Link href="/cart" className="group relative flex items-center">
               <motion.div
                 whileTap={{ scale: 0.9 }}
