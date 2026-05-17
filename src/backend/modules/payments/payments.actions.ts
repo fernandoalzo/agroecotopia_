@@ -51,7 +51,8 @@ export async function createMercadoPagoPreferenceAction(pedidoId: string) {
       // 5. Guardar preference ID en el pedido
       if (preference.id) {
         await ordersService.updatePedido(pedido.id, {
-          mercadopagoPreferenceId: preference.id,
+          metodoPago: "mercadopago",
+          pagoReferencia: preference.id,
         } as any);
       }
 

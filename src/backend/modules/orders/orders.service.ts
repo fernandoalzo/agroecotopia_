@@ -11,6 +11,7 @@ export class OrdersService {
     notasCliente?: string;
     costoEnvio: number;
     impuestosPorcentaje: number;
+    metodoPago?: string;
     detalles: {
       productoId: string;
       cantidad: number;
@@ -39,6 +40,7 @@ export class OrdersService {
       accountId: data.accountId,
       direccionEntrega: data.direccionEntrega,
       notasCliente: data.notasCliente,
+      metodoPago: data.metodoPago,
       subtotal: new Prisma.Decimal(subtotal),
       impuestos: new Prisma.Decimal(impuestos),
       costoEnvio: new Prisma.Decimal(data.costoEnvio),
@@ -47,7 +49,7 @@ export class OrdersService {
       detalles: {
         create: detallesInput,
       },
-    });
+    } as any);
 
     return this.serializePedido(pedido);
   }

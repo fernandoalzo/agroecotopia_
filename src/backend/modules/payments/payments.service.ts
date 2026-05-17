@@ -86,7 +86,7 @@ export class PaymentsService {
         await ordersService.updateEstado(pedidoId, PedidoEstado.CONFIRMADO);
         // Save the payment ID
         await ordersService.updatePedido(pedidoId, {
-          mercadopagoPaymentId: paymentId
+          pagoId: paymentId
         } as any);
       } else if (status === "rejected" || status === "cancelled") {
         // Update order status to CANCELADO

@@ -14,6 +14,7 @@ export async function placeOrderAction(data: {
   notasCliente?: string;
   costoEnvio: number;
   impuestosPorcentaje: number;
+  metodoPago?: string;
   detalles: {
     productoId: string;
     cantidad: number;

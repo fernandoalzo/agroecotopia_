@@ -55,6 +55,7 @@ export default function CheckoutPage() {
         notasCliente: values.notes,
         costoEnvio: 0, // Simplified for now
         impuestosPorcentaje: 19, // Standard in many regions, or 0 if included
+        metodoPago: values.paymentMethod,
         detalles: cart.map(item => ({
           productoId: item.product.id!,
           cantidad: item.quantity,
