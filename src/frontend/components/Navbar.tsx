@@ -60,7 +60,7 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
       <div className="container mx-auto flex h-14 items-center justify-between px-4 md:h-20 md:px-6">
-        <div className="flex flex-1 items-center justify-start">
+        <div className="flex items-center justify-start">
           <Link href="/" className="group relative flex items-center gap-1.5 font-display text-lg font-bold md:gap-3 md:text-2xl transition-all duration-300">
             {/* Animated Logo Container */}
             <div className="relative flex items-center justify-center">

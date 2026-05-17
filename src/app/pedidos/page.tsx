@@ -30,7 +30,7 @@ export default function PedidosPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background/50 selection:bg-primary/20">
+    <div className="min-h-screen flex flex-col bg-background/50 selection:bg-primary/20 overflow-x-hidden">
       <Navbar />
       
       <main className="flex-1 pt-24 pb-20 md:pt-32">
@@ -81,8 +81,8 @@ export default function PedidosPage() {
           {/* Orders List Component */}
           <div className="relative">
             {/* Background decorative elements */}
-            <div className="absolute -top-24 -right-24 h-64 w-64 bg-primary/5 blur-3xl rounded-full -z-10" />
-            <div className="absolute -bottom-24 -left-24 h-64 w-64 bg-accent/5 blur-3xl rounded-full -z-10" />
+            <div className="hidden md:block absolute -top-24 -right-24 h-64 w-64 bg-primary/5 blur-3xl rounded-full -z-10" />
+            <div className="hidden md:block absolute -bottom-24 -left-24 h-64 w-64 bg-accent/5 blur-3xl rounded-full -z-10" />
             
             <OrdersList />
           </div>
