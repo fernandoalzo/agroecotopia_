@@ -98,10 +98,9 @@ export async function POST(request: Request) {
     let topic = searchParams.get("type") || searchParams.get("topic");
 
     // 3. Si no están en la URL, intentar obtener del cuerpo JSON
-    let body: any = null;
     if (!dataId) {
       try {
-        body = await request.json();
+        const body = await request.json();
         dataId = body.data?.id?.toString() || body.id?.toString();
         topic = body.type || body.action;
       } catch {
@@ -109,33 +108,36 @@ export async function POST(request: Request) {
       }
     }
 
+    // MP docs: si data.id contiene letras, convertir a lowercase para HMAC
+    if (dataId) dataId = dataId.toLowerCase();
+
     console.log(`MercadoPago Webhook recibido: id=${dataId}, tipo/tópico=${topic}`);
 
-    // 4. ✅ VERIFICAR FIRMA HMAC ANTES DE PROCESAR
+    // 4. Filtrar por tipo de evento PRIMERO
+    //    Solo procesamos eventos de pago. Eventos como "merchant_order" u otros
+    //    se confirman con 200 OK para evitar reintentos infinitos de MP.
+    const isPaymentEvent = topic === "payment" || topic === "payment.created" || topic === "payment.updated";
+
+    if (!dataId || !isPaymentEvent) {
+      return NextResponse.json({ received: true });
+    }
+
+    // 5. ✅ VERIFICAR FIRMA HMAC solo para eventos de pago que vamos a procesar
     const isSignatureValid = verifyWebhookSignature(xSignature, xRequestId, dataId);
 
     if (!isSignatureValid) {
-      console.error("🚫 Webhook rechazado: Firma HMAC inválida o ausente.");
+      console.error("🚫 Webhook de pago rechazado: Firma HMAC inválida o ausente.");
       return NextResponse.json(
         { error: "Unauthorized: Invalid webhook signature" },
         { status: 401 }
       );
     }
 
-    // 5. Solo procesamos eventos relacionados con pagos ("payment")
-    // MercadoPago también notifica sobre "merchant_order" u otros tópicos
-    if (dataId && (topic === "payment" || topic === "payment.created" || topic === "payment.updated")) {
-      const result = await paymentsService.processNotification(String(dataId));
-      return NextResponse.json(result);
-    }
-
-    // Retornamos 200 OK para confirmar recepción de cualquier otro webhook y evitar reintentos infinitos
-    return NextResponse.json({ received: true });
+    // 6. Procesar la notificación de pago
+    const result = await paymentsService.processNotification(String(dataId));
+    return NextResponse.json(result);
   } catch (error: any) {
     console.error("Error en Ruta de Webhook:", error);
-    // MercadoPago requiere una respuesta exitosa (incluso si falló el procesamiento)
-    // para evitar que reintente infinitamente. Sin embargo, devolvemos 500 en desarrollo
-    // si el error es grave para alertar al desarrollador, o 200 si queremos silenciarlo.
     // Retornamos 200 para evitar bloqueos del webhook, pero registrando el error.
     return NextResponse.json(
       { error: error.message || "Internal Server Error", processed: false },
