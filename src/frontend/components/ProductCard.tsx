@@ -52,6 +52,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
                 fill
                 sizes="240px"
                 priority={priority}
+                loading={priority ? "eager" : "lazy"}
                 className="object-contain p-4 group-hover:scale-115 transition-transform duration-700 ease-out"
               />
             ) : (
@@ -155,6 +156,8 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
                 alt={productTranslation.name}
                 fill
                 sizes="200px"
+                priority={priority}
+                loading={priority ? "eager" : "lazy"}
                 className="object-contain p-2 group-hover:scale-115 transition-transform duration-700 ease-out"
               />
             ) : (
@@ -238,6 +241,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
               fill
               sizes="300px"
               priority={priority}
+              loading={priority ? "eager" : "lazy"}
               className="object-contain p-4 group-hover:scale-115 transition-transform duration-700 ease-out"
             />
           ) : (

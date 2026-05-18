@@ -6,12 +6,16 @@ import { withAdmin } from "@/lib/auth-guards";
 import { revalidatePath } from "next/cache";
 
 /**
- * Server Action para obtener productos paginados (Catálogo General)
+ * Server Action para obtener productos paginados (Catálogo General con opcional filtro de categoría)
  */
-export async function getPaginatedProductsAction(page: number = 1, limit: number = 20): Promise<{ products: Product[], total: number, totalPages: number }> {
+export async function getPaginatedProductsAction(
+  page: number = 1,
+  limit: number = 20,
+  category?: string
+): Promise<{ products: Product[], total: number, totalPages: number }> {
   try {
-    const result = await productService.getCatalog(page, limit);
-    return result;
+    const result = await productService.getCatalog(page, limit, category);
+    return result as any;
   } catch (error) {
     console.error("Error getting paginated products:", error);
     return { products: [], total: 0, totalPages: 0 };
@@ -19,17 +23,34 @@ export async function getPaginatedProductsAction(page: number = 1, limit: number
 }
 
 /**
- * Server Action para buscar productos paginados en la base de datos (Búsqueda Nivel 2)
+ * Server Action para buscar productos paginados en la base de datos con opcional filtro de categoría
  */
-export async function searchProductsAction(query: string, page: number = 1, limit: number = 20): Promise<{ products: Product[], total: number, totalPages: number }> {
+export async function searchProductsAction(
+  query: string,
+  page: number = 1,
+  limit: number = 20,
+  category?: string
+): Promise<{ products: Product[], total: number, totalPages: number }> {
   try {
     if (!query || query.trim().length === 0) return { products: [], total: 0, totalPages: 0 };
     
-    const result = await productService.searchProducts(query, page, limit);
-    return result;
+    const result = await productService.searchProducts(query, page, limit, category);
+    return result as any;
   } catch (error) {
     console.error("Error searching products with pagination in DB:", error);
     return { products: [], total: 0, totalPages: 0 };
+  }
+}
+
+/**
+ * Server Action para obtener todas las categorías únicas
+ */
+export async function getCategoriesAction(): Promise<string[]> {
+  try {
+    return await productService.getCategories();
+  } catch (error) {
+    console.error("Error getting categories:", error);
+    return [];
   }
 }
 

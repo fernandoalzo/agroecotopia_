@@ -9,7 +9,7 @@ interface ProductsHeaderProps {
 
 export function ProductsHeader({ t }: ProductsHeaderProps) {
   return (
-    <div className="container px-4 md:px-6 mb-12 md:mb-20">
+    <div className="container mx-auto px-4 md:px-6 mb-12 md:mb-20">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

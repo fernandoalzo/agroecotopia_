@@ -28,7 +28,7 @@ export function ProductsGrid({
     <motion.div layout className="transition-all duration-500 w-full space-y-16 md:space-y-24">
       <AnimatePresence mode="popLayout">
         {viewMode === 'grid' ? (
-          // Grid Mode: Home-Style Shelves (Full Width with side gradients)
+          // Grid Mode: Symmetrical Horizontal Scrolling Shelves (100% Container Width)
           chunkedProducts.map((row, rowIndex) => (
             <motion.div
               key={`row-${rowIndex}`}
@@ -37,11 +37,8 @@ export function ProductsGrid({
               transition={{ delay: rowIndex * 0.1, duration: 0.8 }}
               className="relative group w-full"
             >
-              {/* Left/Right Gradients for that "Infinite" look */}
-              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background via-background/50 to-transparent md:w-32" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background via-background/50 to-transparent md:w-32" />
-
-              <div className="flex overflow-x-auto snap-x snap-mandatory pb-8 hide-scrollbar gap-4 md:gap-8 px-6 md:px-[1.5rem] lg:px-[calc((100vw-1280px)/2+1.5rem)]">
+              {/* Symmetrical scrollable row aligned perfectly with parent container edges */}
+              <div className="flex overflow-x-auto snap-x snap-mandatory pb-8 hide-scrollbar gap-6 md:gap-8 px-1">
                 {row.map((p, index) => (
                   <motion.div
                     layout
@@ -50,7 +47,8 @@ export function ProductsGrid({
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.4, delay: index * 0.05 }}
-                    className="min-w-[85vw] sm:min-w-[45vw] md:min-w-[32%] lg:min-w-[31%] xl:min-w-[24%] 2xl:min-w-[19%] snap-center"
+                    // Perfect responsive sizing that sums to exactly 100% container width on large screens
+                    className="min-w-[85vw] sm:min-w-[45vw] md:min-w-[31%] lg:min-w-[23.5%] snap-center"
                   >
                     <ProductCard p={p as any} priority={index < 5 && rowIndex === 0} variant={viewMode} />
                   </motion.div>
