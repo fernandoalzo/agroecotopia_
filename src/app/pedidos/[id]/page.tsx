@@ -7,7 +7,8 @@ import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useLanguage } from "@/context/LanguageContext";
 import { motion } from "framer-motion";
-import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText } from "lucide-react";
+import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw } from "lucide-react";
+import { useCart } from "@/context/CartContext";
 import { getOrderDetailAction, cancelUserOrderAction, deleteUserOrderAction } from "@/backend/modules/orders/orders.actions";
 import { processMercadoPagoPaymentAction } from "@/backend/modules/payments/payments.actions";
 import { toast } from "sonner";
@@ -59,6 +60,7 @@ export default function OrderDetailPage() {
   const { status } = useSession();
   const router = useRouter();
   const { t } = useLanguage();
+  const { addToCart } = useCart();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
@@ -176,6 +178,29 @@ export default function OrderDetailPage() {
     }
   }, [id, router]);
 
+  const handleRepeatOrder = () => {
+    if (!order || !order.detalles) return;
+    
+    let addedCount = 0;
+    order.detalles.forEach((detalle: any) => {
+      if (detalle.producto) {
+        addToCart(detalle.producto, detalle.cantidad);
+        addedCount++;
+      }
+    });
+
+    if (addedCount > 0) {
+      toast.success("Productos agregados al carrito", {
+        description: "Serás redirigido al carrito..."
+      });
+      setTimeout(() => {
+        router.push("/cart");
+      }, 1000);
+    } else {
+      toast.error("No se pudieron agregar los productos al carrito");
+    }
+  };
+
   const handleCancelOrder = async () => {
     setCanceling(true);
     try {
@@ -263,7 +288,18 @@ export default function OrderDetailPage() {
               </p>
             </div>
             
-            <StatusIcon className={cn("h-16 w-16 opacity-20", statusConfig[order.estado as PedidoEstado].color.split(" ")[1])} />
+            <div className="flex flex-col items-end gap-4">
+              <StatusIcon className={cn("h-16 w-16 opacity-20", statusConfig[order.estado as PedidoEstado].color.split(" ")[1])} />
+              
+              <Button 
+                variant="outline" 
+                className="rounded-2xl border-primary/20 text-primary hover:bg-primary/5 shadow-sm"
+                onClick={handleRepeatOrder}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Repetir pedido
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-8 md:grid-cols-3">

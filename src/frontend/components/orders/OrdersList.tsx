@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Package, ChevronRight, Calendar, MapPin, CreditCard, Clock, CheckCircle2, Truck, Timer, XCircle } from "lucide-react";
+import { Package, ChevronRight, Calendar, MapPin, CreditCard, Clock, CheckCircle2, Truck, Timer, XCircle, RefreshCw } from "lucide-react";
 import { getUserOrdersAction, cancelUserOrderAction, deleteUserOrderAction } from "@/backend/modules/orders/orders.actions";
+import { useCart } from "@/context/CartContext";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
 import { format } from "date-fns";
@@ -72,6 +74,8 @@ export const OrdersList = () => {
   const [confirmingCancelId, setConfirmingCancelId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const { addToCart } = useCart();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -125,6 +129,29 @@ export const OrdersList = () => {
     } finally {
       setDeletingId(null);
       setConfirmingDeleteId(null);
+    }
+  };
+
+  const handleRepeatOrder = (order: any) => {
+    if (!order.detalles) return;
+    
+    let addedCount = 0;
+    order.detalles.forEach((detalle: any) => {
+      if (detalle.producto) {
+        addToCart(detalle.producto, detalle.cantidad);
+        addedCount++;
+      }
+    });
+
+    if (addedCount > 0) {
+      toast.success("Productos agregados al carrito", {
+        description: "Serás redirigido al carrito..."
+      });
+      setTimeout(() => {
+        router.push("/cart");
+      }, 1000);
+    } else {
+      toast.error("No se pudieron agregar los productos al carrito");
     }
   };
 
@@ -243,12 +270,25 @@ export const OrdersList = () => {
                         </p>
                     </div>
                     
-                    <Button variant="ghost" className="mt-6 w-full rounded-2xl group/btn border border-primary/10 hover:bg-primary/5 hover:text-primary transition-all font-bold" asChild>
-                      <Link href={`/pedidos/${order.id}`}>
-                        Ver detalles
-                        <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
-                      </Link>
-                    </Button>
+                    <div className="flex flex-col sm:flex-row gap-2 mt-6">
+                      <Button variant="ghost" className="w-full sm:flex-1 rounded-2xl group/btn border border-primary/10 hover:bg-primary/5 hover:text-primary transition-all font-bold" asChild>
+                        <Link href={`/pedidos/${order.id}`}>
+                          Ver detalles
+                          <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+                        </Link>
+                      </Button>
+                      
+                      {(order.estado === PedidoEstado.CONFIRMADO || order.estado === PedidoEstado.ENTREGADO || order.estado === PedidoEstado.CANCELADO) && (
+                        <Button 
+                          variant="outline" 
+                          className="w-full sm:flex-1 rounded-2xl border-primary/20 text-primary hover:bg-primary/5 shadow-sm font-bold"
+                          onClick={() => handleRepeatOrder(order)}
+                        >
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Repetir
+                        </Button>
+                      )}
+                    </div>
 
                     {order.estado === PedidoEstado.PENDIENTE && (
                       confirmingCancelId === order.id ? (
