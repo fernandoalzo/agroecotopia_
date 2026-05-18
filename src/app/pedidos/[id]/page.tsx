@@ -9,7 +9,6 @@ import { useLanguage } from "@/context/LanguageContext";
 import { motion } from "framer-motion";
 import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText } from "lucide-react";
 import { getOrderDetailAction, cancelUserOrderAction, deleteUserOrderAction } from "@/backend/modules/orders/orders.actions";
-import { processMercadoPagoPaymentAction } from "@/backend/modules/payments/payments.actions";
 import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
 import { format } from "date-fns";
@@ -95,39 +94,44 @@ export default function OrderDetailPage() {
 
       const params = new URLSearchParams(window.location.search);
       const statusParam = params.get("status");
-      const paymentId = params.get("payment_id");
 
-      if (statusParam === "success" && paymentId) {
+      if (statusParam === "success") {
         setLoading(true);
         toast.info("Verificando tu pago...", {
           description: "Estamos confirmando los detalles con Mercado Pago."
         });
 
-        try {
-          const result = await processMercadoPagoPaymentAction(paymentId);
-          
-          if (result && "success" in result) {
-            toast.success("¡Pago completado exitosamente!", {
-              description: "Tu pedido ha sido confirmado y tu stock reservado."
-            });
-            
-            // Refrescar los detalles del pedido en pantalla consultando la DB actualizada
-            const updatedOrder = await getOrderDetailAction(id as string);
-            if (updatedOrder && !("error" in updatedOrder)) {
-              setOrder(updatedOrder);
+        // Polling pasivo: esperamos a que el webhook confirme el pedido
+        // en lugar de confirmar desde el cliente (evita race condition de stock)
+        const maxAttempts = 5;
+        const delayMs = 2000;
+        let confirmed = false;
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          const updatedOrder = await getOrderDetailAction(id as string);
+          if (updatedOrder && !("error" in updatedOrder)) {
+            setOrder(updatedOrder);
+            if (updatedOrder.estado === "CONFIRMADO") {
+              toast.success("¡Pago completado exitosamente!", {
+                description: "Tu pedido ha sido confirmado y tu stock reservado."
+              });
+              confirmed = true;
+              break;
             }
-          } else {
-            toast.error("No se pudo verificar el pago", {
-              description: "Si el cobro se realizó, por favor contáctanos para solucionarlo."
-            });
           }
-        } catch (err) {
-          toast.error("Error al confirmar el pago");
-        } finally {
-          setLoading(false);
-          // Limpiar parámetros de la URL para evitar reprocesamientos al recargar
-          router.replace(`/pedidos/${id}`);
+          // Esperar antes del siguiente intento
+          await new Promise(resolve => setTimeout(resolve, delayMs));
         }
+
+        if (!confirmed) {
+          toast.warning("Tu pago está siendo procesado", {
+            description: "Puede tomar unos momentos en confirmarse. Recarga la página pronto."
+          });
+        }
+
+        setLoading(false);
+        // Limpiar parámetros de la URL para evitar reprocesamientos al recargar
+        router.replace(`/pedidos/${id}`);
       } else if (statusParam === "pending") {
         toast.warning("Pago en proceso", {
           description: "Mercado Pago está procesando la transacción. Te notificaremos pronto."

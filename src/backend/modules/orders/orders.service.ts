@@ -55,54 +55,76 @@ export class OrdersService {
   }
 
   async updateEstado(pedidoId: string, nuevoEstado: PedidoEstado, motivoCancelacion?: string) {
-    const pedido = await this.ordersRepository.findById(pedidoId);
-    if (!pedido) throw new Error("Pedido no encontrado");
+    return await this.ordersRepository.executeTransaction(async (tx) => {
+      // 1. Leer pedido actual dentro de la transacción
+      const pedido = await this.ordersRepository.findById(pedidoId, tx);
+      if (!pedido) throw new Error("Pedido no encontrado");
 
-    const estadoAnterior = pedido.estado;
+      const estadoAnterior = pedido.estado;
 
-    // Regla 3: No se puede confirmar si no hay stock
-    if (nuevoEstado === PedidoEstado.CONFIRMADO && estadoAnterior !== PedidoEstado.CONFIRMADO) {
-      for (const detalle of pedido.detalles) {
-        const stockActual = await this.ordersRepository.getProductStock(detalle.productoId);
-        if (new Prisma.Decimal(stockActual).lessThan(detalle.cantidad)) {
-          throw new Error(`Stock insuficiente para el producto ${detalle.producto.name}`);
-        }
+      // 2. Si ya está en el estado destino → retorno idempotente (sin tocar stock)
+      if (estadoAnterior === nuevoEstado) {
+        return this.serializePedido(pedido);
       }
 
-      // Regla 1: Descontar inventario al confirmar
-      for (const detalle of pedido.detalles) {
-        await this.ordersRepository.updateProductStock(
-          detalle.productoId,
-          detalle.cantidad.negated()
-        );
+      // 3. Transición atómica con lock optimista (WHERE estado = estadoAnterior)
+      //    Solo el primer proceso concurrente logra count > 0
+      const transitioned = await this.ordersRepository.tryTransitionEstado(
+        pedidoId,
+        estadoAnterior,
+        nuevoEstado,
+        {
+          motivoCancelacion: nuevoEstado === PedidoEstado.CANCELADO ? motivoCancelacion : undefined,
+          fechaEntregaReal: nuevoEstado === PedidoEstado.ENTREGADO ? new Date() : undefined,
+        },
+        tx
+      );
+
+      // 4. Si no se pudo transicionar, otro proceso ya lo hizo → retorno idempotente
+      if (!transitioned) {
+        const current = await this.ordersRepository.findById(pedidoId, tx);
+        return this.serializePedido(current);
       }
-    }
 
-    // Regla 2: Revertir inventario si se cancela y estaba confirmado
-    if (nuevoEstado === PedidoEstado.CANCELADO && estadoAnterior !== PedidoEstado.CANCELADO) {
-      // Solo revertimos si ya había pasado por un estado que descontó stock (CONFIRMADO, PREPARACION, etc.)
-      // En este flujo simplificado, asumimos que CONFIRMADO es el punto de descuento.
-      const estadosConStockDescontado: PedidoEstado[] = [
-        PedidoEstado.CONFIRMADO,
-        PedidoEstado.EN_PREPARACION,
-        PedidoEstado.EN_CAMINO,
-        PedidoEstado.ENTREGADO,
-      ];
+      // 5. Ganamos la race — ejecutar lógica de stock dentro de la misma transacción
 
-      if (estadosConStockDescontado.includes(estadoAnterior)) {
+      // Regla: Verificar y descontar inventario al confirmar
+      if (nuevoEstado === PedidoEstado.CONFIRMADO) {
         for (const detalle of pedido.detalles) {
-          await this.ordersRepository.updateProductStock(detalle.productoId, detalle.cantidad);
+          const stockActual = await this.ordersRepository.getProductStock(detalle.productoId, tx);
+          if (new Prisma.Decimal(stockActual).lessThan(detalle.cantidad)) {
+            throw new Error(`Stock insuficiente para el producto ${detalle.producto.name}`);
+          }
+        }
+        for (const detalle of pedido.detalles) {
+          await this.ordersRepository.updateProductStock(
+            detalle.productoId,
+            detalle.cantidad.negated(),
+            tx
+          );
         }
       }
-    }
 
-    const pedidoActualizado = await this.ordersRepository.updatePedido(pedidoId, {
-      estado: nuevoEstado,
-      motivoCancelacion: nuevoEstado === PedidoEstado.CANCELADO ? motivoCancelacion : undefined,
-      fechaEntregaReal: nuevoEstado === PedidoEstado.ENTREGADO ? new Date() : undefined,
+      // Regla: Revertir inventario si se cancela desde un estado con stock descontado
+      if (nuevoEstado === PedidoEstado.CANCELADO) {
+        const estadosConStockDescontado: PedidoEstado[] = [
+          PedidoEstado.CONFIRMADO,
+          PedidoEstado.EN_PREPARACION,
+          PedidoEstado.EN_CAMINO,
+          PedidoEstado.ENTREGADO,
+        ];
+
+        if (estadosConStockDescontado.includes(estadoAnterior)) {
+          for (const detalle of pedido.detalles) {
+            await this.ordersRepository.updateProductStock(detalle.productoId, detalle.cantidad, tx);
+          }
+        }
+      }
+
+      // 6. Refrescar pedido con estado actualizado
+      const pedidoActualizado = await this.ordersRepository.findById(pedidoId, tx);
+      return this.serializePedido(pedidoActualizado);
     });
-
-    return this.serializePedido(pedidoActualizado);
   }
 
   async getPedidosPorUsuario(usuarioId: string) {
