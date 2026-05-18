@@ -9,6 +9,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { motion } from "framer-motion";
 import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText } from "lucide-react";
 import { getOrderDetailAction, cancelUserOrderAction, deleteUserOrderAction } from "@/backend/modules/orders/orders.actions";
+import { processMercadoPagoPaymentAction } from "@/backend/modules/payments/payments.actions";
 import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
 import { format } from "date-fns";
@@ -89,21 +90,54 @@ export default function OrderDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    const processPaymentRedirect = async () => {
+      if (typeof window === "undefined") return;
+
       const params = new URLSearchParams(window.location.search);
       const statusParam = params.get("status");
-      if (statusParam === "success") {
-        toast.success("¡Pago completado exitosamente!", {
-          description: "Hemos recibido tu pago de Mercado Pago. Tu pedido está confirmado."
+      const paymentId = params.get("payment_id");
+
+      if (statusParam === "success" && paymentId) {
+        setLoading(true);
+        toast.info("Verificando tu pago...", {
+          description: "Estamos confirmando los detalles con Mercado Pago."
         });
-        // Remove query parameters
-        router.replace(`/pedidos/${id}`);
+
+        try {
+          const result = await processMercadoPagoPaymentAction(paymentId);
+          
+          if (result && "success" in result) {
+            toast.success("¡Pago completado exitosamente!", {
+              description: "Tu pedido ha sido confirmado y tu stock reservado."
+            });
+            
+            // Refrescar los detalles del pedido en pantalla consultando la DB actualizada
+            const updatedOrder = await getOrderDetailAction(id as string);
+            if (updatedOrder && !("error" in updatedOrder)) {
+              setOrder(updatedOrder);
+            }
+          } else {
+            toast.error("No se pudo verificar el pago", {
+              description: "Si el cobro se realizó, por favor contáctanos para solucionarlo."
+            });
+          }
+        } catch (err) {
+          toast.error("Error al confirmar el pago");
+        } finally {
+          setLoading(false);
+          // Limpiar parámetros de la URL para evitar reprocesamientos al recargar
+          router.replace(`/pedidos/${id}`);
+        }
       } else if (statusParam === "pending") {
         toast.warning("Pago en proceso", {
           description: "Mercado Pago está procesando la transacción. Te notificaremos pronto."
         });
         router.replace(`/pedidos/${id}`);
       }
+    };
+
+    if (id) {
+      processPaymentRedirect();
     }
   }, [id, router]);
 

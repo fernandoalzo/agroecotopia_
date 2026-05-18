@@ -63,3 +63,19 @@ export async function createMercadoPagoPreferenceAction(pedidoId: string) {
     }
   });
 }
+
+export async function processMercadoPagoPaymentAction(paymentId: string) {
+  return await withAuth(async () => {
+    const userId = await authService.getCurrentUserId();
+    if (!userId) throw new Error("UNAUTHORIZED");
+
+    try {
+      const result = await paymentsService.processNotification(paymentId);
+      return result;
+    } catch (error: any) {
+      console.error("Error en processMercadoPagoPaymentAction:", error);
+      return { error: error.message || "Error al procesar el pago" };
+    }
+  });
+}
+
