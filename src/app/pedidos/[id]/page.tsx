@@ -95,7 +95,6 @@ export default function OrderDetailPage() {
 
       const params = new URLSearchParams(window.location.search);
       const statusParam = params.get("status");
-
       const paymentId = params.get("payment_id");
 
       if (statusParam === "success") {
@@ -105,8 +104,9 @@ export default function OrderDetailPage() {
         });
 
         let confirmed = false;
+        let verificationError: string | null = null;
 
-        // Estrategia: Polling primero (esperar al webhook), fallback directo si no llega.
+        // Fase 1: Polling — esperar a que el webhook confirme el pedido
         // updateEstado() es idempotente (lock optimista), así que es SEGURO
         // que tanto el webhook como el fallback intenten confirmar.
         const pollingAttempts = 3;
@@ -124,8 +124,8 @@ export default function OrderDetailPage() {
           await new Promise(resolve => setTimeout(resolve, delayMs));
         }
 
-        // Fallback: si el webhook no llegó (ej: desarrollo local sin HTTPS),
-        // confirmar directamente. Es seguro gracias al lock optimista en updateEstado.
+        // Fase 2: Fallback — si el webhook no llegó, verificar directamente con MP API
+        // Es seguro: consulta la API de MercadoPago para validar que el pago es real
         if (!confirmed && paymentId) {
           try {
             const result = await processMercadoPagoPaymentAction(paymentId);
@@ -135,19 +135,29 @@ export default function OrderDetailPage() {
               if (updatedOrder && !("error" in updatedOrder)) {
                 setOrder(updatedOrder);
               }
+            } else if (result && "error" in result) {
+              verificationError = result.error;
             }
           } catch (err) {
             console.error("Fallback confirmation error:", err);
+            verificationError = "No se pudo comunicar con el servidor de pagos.";
           }
         }
 
+        // Resultado visible para el usuario
         if (confirmed) {
           toast.success("¡Pago completado exitosamente!", {
             description: "Tu pedido ha sido confirmado y tu stock reservado."
           });
+        } else if (!paymentId) {
+          toast.error("Error al verificar el pago", {
+            description: "No se recibió un identificador de pago válido de Mercado Pago. Si el cobro se realizó, contáctanos para solucionarlo.",
+            duration: 10000,
+          });
         } else {
-          toast.warning("Tu pago está siendo procesado", {
-            description: "Puede tomar unos momentos en confirmarse. Recarga la página pronto."
+          toast.error("No se pudo confirmar tu pago", {
+            description: verificationError || "Hubo un problema verificando la transacción. Si el cobro se realizó, contáctanos para resolverlo.",
+            duration: 10000,
           });
         }
 
