@@ -4,6 +4,7 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/backend/db/prisma";
 import { authService } from "@/backend/modules/auth";
+import { headers } from "next/headers";
 
 import { config, getRequiredConfig } from "@/config/config";
 
@@ -72,6 +73,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.name = token.name as string;
       }
       return session;
+    },
+    /**
+     * Dynamically resolve the absolute redirect URL in production environments.
+     * Prevents localhost fallback by trusting x-forwarded headers behind reverse proxies.
+     */
+    async redirect({ url, baseUrl }) {
+      let realBaseUrl = baseUrl;
+      try {
+        const headersList = await headers();
+        const host = headersList.get("x-forwarded-host") || headersList.get("host");
+        const proto = headersList.get("x-forwarded-proto") || "https";
+        if (host) {
+          realBaseUrl = `${proto}://${host}`;
+        }
+      } catch (e) {
+        // Fallback during static build/generation if headers are unavailable
+      }
+
+      if (url.startsWith("/")) {
+        return `${realBaseUrl}${url}`;
+      }
+      
+      try {
+        const urlObj = new URL(url);
+        if (urlObj.origin === baseUrl || urlObj.hostname === "localhost" || urlObj.hostname === "127.0.0.1") {
+          return `${realBaseUrl}${urlObj.pathname}${urlObj.search}`;
+        }
+      } catch (e) {
+        // Ignore invalid URLs
+      }
+
+      return url;
     },
   },
   pages: {
