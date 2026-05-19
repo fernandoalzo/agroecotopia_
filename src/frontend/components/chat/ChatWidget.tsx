@@ -280,7 +280,22 @@ export default function ChatWidget() {
   }[language === "es" ? "es" : "en"];
 
   return (
-    <div className="fixed bottom-5 right-5 z-[999] md:bottom-8 md:right-8 font-sans">
+    <>
+      {/* Dynamic backdrop with soft photographic blur (depth of field focus effect) */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            onClick={() => setIsOpen(false)}
+            className="fixed inset-0 bg-black/35 backdrop-blur-[3px] z-[998] cursor-pointer"
+          />
+        )}
+      </AnimatePresence>
+
+      <div className="fixed bottom-5 right-5 z-[999] md:bottom-8 md:right-8 font-sans">
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -554,5 +569,6 @@ export default function ChatWidget() {
         )}
       </button>
     </div>
+    </>
   );
 }
