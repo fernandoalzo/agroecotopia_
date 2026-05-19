@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useSocket } from "@/frontend/context/SocketContext";
-import { MessageSquare, X, Send, Lock, Trash2 } from "lucide-react";
+import { MessageSquare, X, Send, Lock, Trash2, Leaf } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { useLanguage } from "@/context/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -294,8 +294,8 @@ export default function ChatWidget() {
             <div className="p-4 bg-gradient-to-r from-primary/90 to-primary text-primary-foreground flex items-center justify-between border-b border-primary/20">
               <div className="flex items-center gap-2.5">
                 <div className="relative">
-                  <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center font-display font-bold text-lg">
-                    A
+                  <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
+                    <Leaf className="w-5 h-5 text-primary-foreground filter drop-shadow-sm" />
                   </div>
                   <span
                     className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-primary ${
@@ -336,8 +336,74 @@ export default function ChatWidget() {
                   <Loading text="" subtext="" className="py-0 scale-75" />
                 </div>
               ) : messages.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-center p-8 text-muted-foreground text-sm">
-                  {t.noMessages}
+                <div className="h-full flex flex-col items-center justify-center text-center p-8 select-none bg-gradient-to-b from-transparent to-primary/[0.02]">
+                  {(() => {
+                    const { title, subtitle } = (() => {
+                      const parts = t.noMessages.split("! ");
+                      if (parts.length > 1) {
+                        return { title: parts[0] + "!", subtitle: parts[1] };
+                      }
+                      return { title: t.noMessages, subtitle: "" };
+                    })();
+
+                    return (
+                      <div className="flex flex-col items-center justify-center">
+                        {/* Elegant Logo Container with float animation & radial glow */}
+                        <div className="relative mb-6 flex items-center justify-center">
+                          {/* Radial glowing background aura */}
+                          <div className="absolute inset-0 w-20 h-20 bg-primary/10 rounded-full blur-xl animate-pulse" />
+                          
+                          {/* Outer pulsing thin ring */}
+                          <motion.div
+                            initial={{ scale: 0.85, opacity: 0.5 }}
+                            animate={{ scale: 1.15, opacity: 0 }}
+                            transition={{
+                              duration: 3,
+                              repeat: Infinity,
+                              ease: "easeOut"
+                            }}
+                            className="absolute w-16 h-16 rounded-full border border-primary/30"
+                          />
+
+                          {/* Inner glassmorphism badge with floating animation */}
+                          <motion.div
+                            animate={{
+                              y: [0, -6, 0],
+                              rotate: [0, 2, -2, 0]
+                            }}
+                            transition={{
+                              duration: 5,
+                              repeat: Infinity,
+                              ease: "easeInOut"
+                            }}
+                            className="relative z-10 w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 border border-primary/25 flex items-center justify-center shadow-lg backdrop-blur-sm"
+                          >
+                            <Leaf className="w-8 h-8 text-primary filter drop-shadow-[0_2px_8px_rgba(34,197,94,0.3)]" />
+                          </motion.div>
+                        </div>
+
+                        {/* Title - Bold Display font */}
+                        <motion.h4 
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.1, duration: 0.5 }}
+                          className="font-display font-black text-2xl text-foreground tracking-tight mb-2"
+                        >
+                          {title}
+                        </motion.h4>
+
+                        {/* Subtitle - Professional clean font */}
+                        <motion.p
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.2, duration: 0.5 }}
+                          className="font-sans text-sm text-muted-foreground max-w-[245px] leading-relaxed font-medium"
+                        >
+                          {subtitle}
+                        </motion.p>
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : (
                 <>
