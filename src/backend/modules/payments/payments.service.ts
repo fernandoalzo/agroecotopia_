@@ -1,10 +1,11 @@
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import { ordersService } from '@/backend/modules/orders';
 import { PedidoEstado } from '@prisma/client';
+import { config } from '@/config/config';
 
 // Initialize MercadoPago configuration
 const client = new MercadoPagoConfig({
-  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN || '',
+  accessToken: config.mercadopago.accessToken,
   options: { timeout: 5000 }
 });
 
@@ -23,14 +24,14 @@ export class PaymentsService {
       email: string;
     }
   ) {
-    if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
+    if (!config.mercadopago.accessToken) {
       throw new Error("MERCADOPAGO_ACCESS_TOKEN is not configured");
     }
 
     try {
       const preference = new Preference(client);
       
-      const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+      const appUrl = config.app.url;
       const isHttps = appUrl.startsWith("https");
 
       const body = {
@@ -64,7 +65,7 @@ export class PaymentsService {
   }
 
   async processNotification(paymentId: string) {
-    if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
+    if (!config.mercadopago.accessToken) {
       throw new Error("MERCADOPAGO_ACCESS_TOKEN is not configured");
     }
 

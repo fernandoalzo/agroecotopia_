@@ -1,16 +1,18 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 
+import { config } from "@/config/config";
+
 /**
  * Ensures that the default admin user exists in the database.
  * This is called during database client initialization.
  */
 export async function ensureAdminExists(prisma: PrismaClient) {
-  const adminEmail = process.env.ADMIN_EMAIL;
-  const adminPassword = process.env.ADMIN_PASSWORD;
+  const adminEmail = config.auth.admin.email;
+  const adminPassword = config.auth.admin.password;
 
   if (!adminEmail || !adminPassword) {
-    if (process.env.NODE_ENV === "production") {
+    if (config.isProduction) {
       console.warn("⚠️ ADMIN_EMAIL or ADMIN_PASSWORD not set. Admin initialization skipped.");
     }
     return;

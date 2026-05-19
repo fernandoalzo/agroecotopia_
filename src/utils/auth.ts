@@ -5,6 +5,8 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/backend/db/prisma";
 import { authService } from "@/backend/modules/auth";
 
+import { config, getRequiredConfig } from "@/config/config";
+
 /**
  * Auth.js configuration — Central auth engine.
  *
@@ -19,8 +21,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: getRequiredConfig(config.auth.google.clientId, "GOOGLE_CLIENT_ID"),
+      clientSecret: getRequiredConfig(config.auth.google.clientSecret, "GOOGLE_CLIENT_SECRET"),
       checks: ["state"],
     }),
     Credentials({
