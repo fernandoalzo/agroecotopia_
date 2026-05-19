@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "next-auth/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
 import { CartProvider } from "@/context/CartContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { SocketProvider } from "@/frontend/context/SocketContext";
@@ -29,7 +28,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
                   </Suspense>
                   {children}
                   <ChatWidget />
-                  <Toaster />
                   <Sonner />
                 </TooltipProvider>
               </SocketProvider>
@@ -40,4 +38,5 @@ export function Providers({ children }: { children: React.ReactNode }) {
     </SessionProvider>
   );
 }
+
 

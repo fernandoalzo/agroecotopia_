@@ -74,6 +74,7 @@ export const OrdersList = () => {
   const [confirmingCancelId, setConfirmingCancelId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [repeatingId, setRepeatingId] = useState<string | null>(null);
   const { addToCart } = useCart();
   const router = useRouter();
 
@@ -132,26 +133,32 @@ export const OrdersList = () => {
     }
   };
 
-  const handleRepeatOrder = (order: any) => {
-    if (!order.detalles) return;
+  const handleRepeatOrder = (e: React.MouseEvent, order: any) => {
+    e.preventDefault();
+    e.stopPropagation();
     
+    if (!order.detalles || repeatingId === order.id) return;
+    
+    setRepeatingId(order.id);
     let addedCount = 0;
     order.detalles.forEach((detalle: any) => {
       if (detalle.producto) {
-        addToCart(detalle.producto, detalle.cantidad);
+        addToCart(detalle.producto, detalle.cantidad, false);
         addedCount++;
       }
     });
 
     if (addedCount > 0) {
       toast.success("Productos agregados al carrito", {
+        id: "repeat-order-toast",
         description: "Serás redirigido al carrito..."
       });
       setTimeout(() => {
         router.push("/cart");
       }, 1000);
     } else {
-      toast.error("No se pudieron agregar los productos al carrito");
+      toast.error("No se pudieron agregar los productos al carrito", { id: "repeat-order-error" });
+      setRepeatingId(null);
     }
   };
 
@@ -281,11 +288,16 @@ export const OrdersList = () => {
                       {(order.estado === PedidoEstado.CONFIRMADO || order.estado === PedidoEstado.ENTREGADO || order.estado === PedidoEstado.CANCELADO) && (
                         <Button 
                           variant="outline" 
-                          className="w-full sm:flex-1 rounded-2xl border-primary/20 text-primary hover:bg-primary/5 shadow-sm font-bold"
-                          onClick={() => handleRepeatOrder(order)}
+                          className="w-full sm:flex-1 rounded-2xl border-primary/20 text-primary hover:bg-primary/5 shadow-sm font-bold disabled:opacity-70 disabled:cursor-not-allowed"
+                          onClick={(e) => handleRepeatOrder(e, order)}
+                          disabled={repeatingId === order.id}
                         >
-                          <RefreshCw className="mr-2 h-4 w-4" />
-                          Repetir
+                          {repeatingId === order.id ? (
+                            <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          ) : (
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                          )}
+                          {repeatingId === order.id ? "Repitiendo..." : "Repetir"}
                         </Button>
                       )}
                     </div>

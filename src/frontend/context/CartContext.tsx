@@ -30,30 +30,38 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [cart, isInitialized]);
 
-  const addToCart = (product: Product, quantity: number = 1) => {
+  const addToCart = (product: Product, quantity: number = 1, showToast: boolean = true) => {
+    let alreadyExists = false;
+    
     setCart((prev) => {
       const existingProductIndex = prev.findIndex((item) => item.product.slug === product.slug);
       
       if (existingProductIndex >= 0) {
-        // Update existing item
+        alreadyExists = true;
         const updatedCart = [...prev];
         updatedCart[existingProductIndex].quantity += quantity;
-        toast.success(`Se agregaron ${quantity} unidades más de ${product.name} al carrito`);
         return updatedCart;
       } else {
-        // Add new item
-        toast.success(`${product.name} agregado al carrito`);
         return [...prev, { product, quantity }];
       }
     });
+
+    // Disparar toast fuera del actualizador de estado de React si showToast es true
+    if (showToast) {
+      if (alreadyExists) {
+        toast.success(`Se agregaron ${quantity} unidades más de ${product.name} al carrito`);
+      } else {
+        toast.success(`${product.name} agregado al carrito`);
+      }
+    }
   };
 
   const removeFromCart = (productSlug: string) => {
     setCart((prev) => {
-      const newCart = prev.filter((item) => item.product.slug !== productSlug);
-      toast.info("Producto eliminado del carrito");
-      return newCart;
+      return prev.filter((item) => item.product.slug !== productSlug);
     });
+    // Disparar toast fuera del actualizador de estado de React
+    toast.info("Producto eliminado del carrito");
   };
 
   const updateQuantity = (productSlug: string, quantity: number) => {

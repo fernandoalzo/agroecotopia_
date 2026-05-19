@@ -67,6 +67,7 @@ export default function OrderDetailPage() {
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isRepeating, setIsRepeating] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -178,26 +179,32 @@ export default function OrderDetailPage() {
     }
   }, [id, router]);
 
-  const handleRepeatOrder = () => {
-    if (!order || !order.detalles) return;
+  const handleRepeatOrder = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     
+    if (!order || !order.detalles || isRepeating) return;
+    
+    setIsRepeating(true);
     let addedCount = 0;
     order.detalles.forEach((detalle: any) => {
       if (detalle.producto) {
-        addToCart(detalle.producto, detalle.cantidad);
+        addToCart(detalle.producto, detalle.cantidad, false);
         addedCount++;
       }
     });
 
     if (addedCount > 0) {
       toast.success("Productos agregados al carrito", {
+        id: "repeat-order-toast",
         description: "Serás redirigido al carrito..."
       });
       setTimeout(() => {
         router.push("/cart");
       }, 1000);
     } else {
-      toast.error("No se pudieron agregar los productos al carrito");
+      toast.error("No se pudieron agregar los productos al carrito", { id: "repeat-order-error" });
+      setIsRepeating(false);
     }
   };
 
@@ -293,11 +300,16 @@ export default function OrderDetailPage() {
               
               <Button 
                 variant="outline" 
-                className="rounded-2xl border-primary/20 text-primary hover:bg-primary/5 shadow-sm"
+                className="rounded-2xl border-primary/20 text-primary hover:bg-primary/5 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
                 onClick={handleRepeatOrder}
+                disabled={isRepeating}
               >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Repetir pedido
+                {isRepeating ? (
+                  <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                {isRepeating ? "Repitiendo..." : "Repetir pedido"}
               </Button>
             </div>
           </div>
