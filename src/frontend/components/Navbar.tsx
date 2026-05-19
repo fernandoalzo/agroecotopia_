@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Leaf, Menu, X, ShoppingCart, LogIn, LogOut, Package, ChevronDown, ChevronRight } from "lucide-react";
+import { Leaf, Menu, X, ShoppingCart, LogIn, LogOut, Package, ChevronDown, ChevronRight, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -19,6 +19,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useSocket } from "@/frontend/context/SocketContext";
+import { getAdminConversations } from "@/backend/modules/chat/chat.actions";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -28,6 +30,42 @@ const Navbar = () => {
   const { totalItems } = useCart();
   const { t } = useLanguage();
   const { data: session } = useSession();
+  const { socket } = useSocket();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (session?.user?.role !== "admin") return;
+
+    const loadUnreadCount = async () => {
+      try {
+        const res = await getAdminConversations();
+        if (res && !("error" in res)) {
+          const total = res.reduce((acc, conv: any) => acc + (conv.unreadCount || 0), 0);
+          setUnreadCount(total);
+        }
+      } catch (err) {
+        console.error("Error loading navbar unread count:", err);
+      }
+    };
+
+    loadUnreadCount();
+
+    const interval = setInterval(loadUnreadCount, 4000);
+
+    if (socket) {
+      socket.on("new_message_notification", loadUnreadCount);
+      socket.on("conversation_deleted", loadUnreadCount);
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (socket) {
+        socket.off("new_message_notification", loadUnreadCount);
+        socket.off("conversation_deleted", loadUnreadCount);
+      }
+    };
+  }, [session, socket, pathname]);
+
   const isAuthenticated = !!session?.user;
   const userName = session?.user?.name ?? "Usuario";
   const userImage = session?.user?.image;
@@ -269,6 +307,9 @@ const Navbar = () => {
                           </div>
                         )}
                       </div>
+                      {session?.user?.role === "admin" && unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-background animate-pulse" />
+                      )}
                     </div>
                     <span className="text-xs font-semibold text-foreground/80 group-hover/auth:text-primary transition-colors">
                       {userName.split(" ")[0]}
@@ -286,6 +327,24 @@ const Navbar = () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator className="bg-border/50 my-1" />
+                  {session?.user?.role === "admin" && (
+                    <>
+                      <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 transition-colors focus:bg-primary/5 focus:text-primary">
+                        <Link href="/admin/chat" className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">Soporte Chat</span>
+                            {unreadCount > 0 && (
+                              <span className="min-w-[16px] h-[16px] rounded-full flex items-center justify-center text-[9px] font-bold px-1 bg-red-500 text-white animate-pulse shadow-sm shadow-red-500/20">
+                                {unreadCount}
+                              </span>
+                            )}
+                          </div>
+                          <MessageSquare className="h-4 w-4 text-primary" />
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-border/50 my-1" />
+                    </>
+                  )}
                   <DropdownMenuItem
                     onClick={() => signOut({ callbackUrl: "/" })}
                     className="text-red-500 focus:bg-red-500/10 focus:text-red-600 cursor-pointer flex items-center justify-between rounded-xl px-2 py-2 transition-colors"
@@ -466,6 +525,35 @@ const Navbar = () => {
                         </div>
                         <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center relative z-10">
                           <ChevronRight className="h-4 w-4 text-white/40" />
+                        </div>
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* Admin Chat Button — only visible if admin */}
+                  {session?.user?.role === "admin" && (
+                    <div className="relative group">
+                      <Link href="/admin/chat" onClick={() => setOpen(false)}
+                        className="flex items-center justify-between gap-4 rounded-3xl bg-[#0f2a1d] border border-white/10 px-8 py-6 text-white shadow-xl active:scale-95 transition-all overflow-hidden relative"
+                      >
+                        <div className="flex items-center gap-5 relative z-10">
+                          <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
+                            <MessageSquare className="h-6 w-6 text-white" />
+                            {unreadCount > 0 && (
+                              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#0f2a1d] animate-pulse" />
+                            )}
+                          </div>
+                          <span className="font-display text-2xl font-black tracking-tight uppercase">Soporte Chat</span>
+                        </div>
+                        <div className="flex items-center gap-3 relative z-10">
+                          {unreadCount > 0 && (
+                            <span className="min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold px-1.5 bg-red-500 text-white animate-pulse shadow-sm shadow-red-500/20">
+                              {unreadCount}
+                            </span>
+                          )}
+                          <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center">
+                            <ChevronRight className="h-4 w-4 text-white/40" />
+                          </div>
                         </div>
                       </Link>
                     </div>

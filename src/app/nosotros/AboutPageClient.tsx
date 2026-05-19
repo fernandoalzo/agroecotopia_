@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import WhatsAppButton from "@/components/WhatsAppButton";
 import { useLanguage } from "@/context/LanguageContext";
 
 // Modular Components
@@ -47,7 +46,6 @@ export default function AboutPageClient() {
       </main>
 
       <Footer />
-      <WhatsAppButton />
     </div>
   );
 }

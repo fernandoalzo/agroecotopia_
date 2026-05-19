@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node server.js",
     "build": "next build",
-    "start": "next start",
+    "start": "node server.js",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "chat-server": "node scripts/chat-server.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -60,6 +61,8 @@
     "react-hook-form": "^7.72.0",
     "react-resizable-panels": "^4.8.0",
     "recharts": "^3.8.1",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",

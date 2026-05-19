@@ -2,7 +2,6 @@ import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/home/HeroSection";
 import ProductsSection from "@/components/home/ProductsSection";
 import Footer from "@/components/Footer";
-import WhatsAppButton from "@/components/WhatsAppButton";
 import Link from "next/link";
 import { productService } from "@/backend/modules/product";
 
@@ -36,7 +35,6 @@ export default async function Home() {
       </main>
 
       <Footer />
-      <WhatsAppButton />
     </div>
   );
 }

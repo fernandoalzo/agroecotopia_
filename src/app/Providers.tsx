@@ -7,6 +7,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { CartProvider } from "@/context/CartContext";
 import { LanguageProvider } from "@/context/LanguageContext";
+import { SocketProvider } from "@/frontend/context/SocketContext";
+import ChatWidget from "@/frontend/components/chat/ChatWidget";
 import { ThemeProvider } from "next-themes";
 import { useState, Suspense } from "react";
 import ScrollToAnchor from "@/components/ScrollToAnchor";
@@ -20,14 +22,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <LanguageProvider>
           <QueryClientProvider client={queryClient}>
             <CartProvider>
-              <TooltipProvider>
-                <Suspense fallback={null}>
-                  <ScrollToAnchor />
-                </Suspense>
-                {children}
-                <Toaster />
-                <Sonner />
-              </TooltipProvider>
+              <SocketProvider>
+                <TooltipProvider>
+                  <Suspense fallback={null}>
+                    <ScrollToAnchor />
+                  </Suspense>
+                  {children}
+                  <ChatWidget />
+                  <Toaster />
+                  <Sonner />
+                </TooltipProvider>
+              </SocketProvider>
             </CartProvider>
           </QueryClientProvider>
         </LanguageProvider>

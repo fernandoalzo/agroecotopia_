@@ -5,7 +5,6 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import WhatsAppButton from "@/components/WhatsAppButton";
 import { Product } from "@/types";
 import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -316,7 +315,6 @@ export default function ProductsPageClient({ initialData, categories, selectedCa
       </main>
 
       <Footer />
-      <WhatsAppButton />
     </div>
   );
 }
