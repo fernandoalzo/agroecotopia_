@@ -8,6 +8,7 @@ export const config = {
   isProduction: process.env.NODE_ENV === 'production',
   isDevelopment: process.env.NODE_ENV === 'development',
   isTest: process.env.NODE_ENV === 'test',
+  enableLogging: true,
 
   app: {
     url: (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, ''),
@@ -34,6 +35,10 @@ export const config = {
   mercadopago: {
     accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN || '',
     webhookSecret: process.env.MERCADOPAGO_WEBHOOK_SECRET || '',
+  },
+
+  chat: {
+    enableE2EE: true,
   },
 } as const;
 

@@ -3,6 +3,9 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { CartItem, CartContextType, Product } from "@/types";
 import { toast } from "sonner";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/frontend/context/CartContext.tsx");
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
@@ -18,7 +21,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCart(JSON.parse(savedCart));
       }
     } catch (error) {
-      console.error("Error parsing cart from localStorage:", error);
+      log.error("Error parsing cart from localStorage:", error);
     }
     setIsInitialized(true);
   }, []);

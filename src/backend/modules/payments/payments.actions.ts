@@ -4,6 +4,9 @@ import { paymentsService } from "./payments.service";
 import { ordersService } from "@/backend/modules/orders";
 import { authService } from "@/backend/modules/auth";
 import { withAuth } from "@/lib/auth-guards";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/backend/modules/payments/payments.actions.ts");
 
 export async function createMercadoPagoPreferenceAction(pedidoId: string) {
   return await withAuth(async () => {
@@ -73,7 +76,7 @@ export async function processMercadoPagoPaymentAction(paymentId: string) {
       const result = await paymentsService.processNotification(paymentId);
       return result;
     } catch (error: any) {
-      console.error("Error en processMercadoPagoPaymentAction:", error);
+      log.error("Error en processMercadoPagoPaymentAction:", error);
       return { error: error.message || "Error al procesar el pago" };
     }
   });

@@ -5,6 +5,9 @@ import { authService } from "@/backend/modules/auth";
 import { withAuth, withAdmin } from "@/lib/auth-guards";
 import { PedidoEstado } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/backend/modules/orders/orders.actions.ts");
 
 /**
  * Crea un nuevo pedido para el usuario autenticado.
@@ -26,11 +29,13 @@ export async function placeOrderAction(data: {
     const userId = await authService.getCurrentUserId();
     if (!userId) throw new Error("UNAUTHORIZED");
 
+    log.info("Creando nuevo pedido para el usuario:", { userId, metodoPago: data.metodoPago, cantidadItems: data.detalles.length });
     const pedido = await ordersService.createPedido({
       ...data,
       usuarioId: userId,
     });
 
+    log.info("Pedido creado exitosamente:", { pedidoId: pedido.id, userId });
     revalidatePath("/perfil/pedidos");
     return { success: true, pedidoId: pedido.id };
   });
@@ -46,11 +51,14 @@ export async function updateOrderStatusAction(
 ) {
   return await withAdmin(async () => {
     try {
+      log.info("Admin actualizando estado del pedido:", { pedidoId, nuevoEstado, motivoCancelacion });
       const pedido = await ordersService.updateEstado(pedidoId, nuevoEstado, motivoCancelacion);
+      log.info("Estado del pedido actualizado exitosamente:", { pedidoId, nuevoEstado });
       revalidatePath("/admin/pedidos");
       revalidatePath(`/perfil/pedidos/${pedidoId}`);
       return { success: true, pedido };
     } catch (error: any) {
+      log.error("Error al actualizar estado del pedido:", { pedidoId, nuevoEstado, error: error.message });
       return { error: error.message || "Error al actualizar el estado del pedido" };
     }
   });
@@ -64,6 +72,7 @@ export async function getUserOrdersAction() {
     const userId = await authService.getCurrentUserId();
     if (!userId) throw new Error("UNAUTHORIZED");
 
+    log.debug("Obteniendo pedidos del usuario:", { userId });
     return await ordersService.getPedidosPorUsuario(userId);
   });
 }
@@ -76,12 +85,17 @@ export async function getOrderDetailAction(pedidoId: string) {
     const userId = await authService.getCurrentUserId();
     const isAdmin = await authService.isAdmin(await authService.getSession());
     
+    log.debug("Obteniendo detalle del pedido:", { pedidoId, userId, isAdmin });
     const pedido = await ordersService.getPedidoDetallado(pedidoId);
     
-    if (!pedido) return { error: "Pedido no encontrado" };
+    if (!pedido) {
+      log.warn("Pedido no encontrado:", { pedidoId });
+      return { error: "Pedido no encontrado" };
+    }
     
     // Solo el dueño del pedido o un admin pueden verlo
     if (pedido.usuarioId !== userId && !isAdmin) {
+      log.warn("Acceso denegado al detalle del pedido:", { pedidoId, userId, ownerUserId: pedido.usuarioId });
       return { error: "FORBIDDEN" };
     }
 
@@ -98,29 +112,37 @@ export async function cancelUserOrderAction(pedidoId: string) {
     if (!userId) throw new Error("UNAUTHORIZED");
 
     const pedido = await ordersService.getPedidoDetallado(pedidoId);
-    if (!pedido) return { error: "Pedido no encontrado" };
+    if (!pedido) {
+      log.warn("Intento de cancelar pedido inexistente:", { pedidoId, userId });
+      return { error: "Pedido no encontrado" };
+    }
     
     if (pedido.usuarioId !== userId) {
+      log.warn("Intento de cancelar pedido ajeno:", { pedidoId, userId, ownerUserId: pedido.usuarioId });
       return { error: "No tienes permiso para cancelar este pedido" };
     }
 
     if (pedido.estado !== PedidoEstado.PENDIENTE) {
+      log.warn("Intento de cancelar pedido en estado no permitido:", { pedidoId, estadoActual: pedido.estado });
       return { error: "Solo se pueden cancelar pedidos en estado Pendiente" };
     }
 
     try {
+      log.info("Cancelando pedido del usuario:", { pedidoId, userId });
       const pedidoCancelado = await ordersService.updateEstado(
         pedidoId, 
         PedidoEstado.CANCELADO, 
         "Cancelado por el usuario"
       );
       
+      log.info("Pedido cancelado exitosamente:", { pedidoId });
       revalidatePath("/pedidos");
       revalidatePath(`/pedidos/${pedidoId}`);
       revalidatePath("/perfil/pedidos");
       
       return { success: true, pedido: pedidoCancelado };
     } catch (error: any) {
+      log.error("Error al cancelar pedido:", { pedidoId, error: error.message });
       return { error: error.message || "Error al cancelar el pedido" };
     }
   });
@@ -135,24 +157,32 @@ export async function deleteUserOrderAction(pedidoId: string) {
     if (!userId) throw new Error("UNAUTHORIZED");
 
     const pedido = await ordersService.getPedidoDetallado(pedidoId);
-    if (!pedido) return { error: "Pedido no encontrado" };
+    if (!pedido) {
+      log.warn("Intento de eliminar pedido inexistente:", { pedidoId, userId });
+      return { error: "Pedido no encontrado" };
+    }
     
     if (pedido.usuarioId !== userId) {
+      log.warn("Intento de eliminar pedido ajeno:", { pedidoId, userId, ownerUserId: pedido.usuarioId });
       return { error: "No tienes permiso para eliminar este pedido" };
     }
 
     if (pedido.estado !== PedidoEstado.CANCELADO) {
+      log.warn("Intento de eliminar pedido en estado no permitido:", { pedidoId, estadoActual: pedido.estado });
       return { error: "Solo se pueden eliminar pedidos en estado Cancelado" };
     }
 
     try {
+      log.info("Eliminando pedido del usuario:", { pedidoId, userId });
       await ordersService.deletePedido(pedidoId);
       
+      log.info("Pedido eliminado exitosamente:", { pedidoId });
       revalidatePath("/pedidos");
       revalidatePath("/perfil/pedidos");
       
       return { success: true };
     } catch (error: any) {
+      log.error("Error al eliminar pedido:", { pedidoId, error: error.message });
       return { error: error.message || "Error al eliminar el pedido" };
     }
   });

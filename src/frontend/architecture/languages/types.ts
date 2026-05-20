@@ -12,6 +12,13 @@ export interface Translations {
     tema: string;
     pedidos: string;
     miCuenta: string;
+    soporteChat: string;
+    miPerfil: string;
+    cerrarSesion: string;
+    confirmarCerrarSesion: string;
+    cancelar: string;
+    salir: string;
+    usuario: string;
   };
   hero: {
     badge: string;

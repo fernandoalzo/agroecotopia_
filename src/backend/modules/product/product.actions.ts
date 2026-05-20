@@ -4,6 +4,9 @@ import { productService } from "@/backend/modules/product";
 import { Product } from "@prisma/client";
 import { withAdmin } from "@/lib/auth-guards";
 import { revalidatePath } from "next/cache";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/backend/modules/product/product.actions.ts");
 
 /**
  * Server Action para obtener productos paginados (Catálogo General con opcional filtro de categoría)
@@ -17,7 +20,7 @@ export async function getPaginatedProductsAction(
     const result = await productService.getCatalog(page, limit, category);
     return result as any;
   } catch (error) {
-    console.error("Error getting paginated products:", error);
+    log.error("Error getting paginated products:", error);
     return { products: [], total: 0, totalPages: 0 };
   }
 }
@@ -37,7 +40,7 @@ export async function searchProductsAction(
     const result = await productService.searchProducts(query, page, limit, category);
     return result as any;
   } catch (error) {
-    console.error("Error searching products with pagination in DB:", error);
+    log.error("Error searching products with pagination in DB:", error);
     return { products: [], total: 0, totalPages: 0 };
   }
 }
@@ -49,7 +52,7 @@ export async function getCategoriesAction(): Promise<string[]> {
   try {
     return await productService.getCategories();
   } catch (error) {
-    console.error("Error getting categories:", error);
+    log.error("Error getting categories:", error);
     return [];
   }
 }
@@ -61,7 +64,7 @@ export async function getCategoriesAction(): Promise<string[]> {
 export async function deleteProductAction(productId: string) {
   return withAdmin(async () => {
     // 1. Perform admin logic safely
-    console.log(`Admin deleting product: ${productId}`);
+    log.info(`Admin deleting product: ${productId}`);
     
     // Example: await productService.delete(productId);
     

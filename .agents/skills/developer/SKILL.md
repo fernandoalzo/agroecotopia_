@@ -169,6 +169,7 @@ src/utils/PaymentsMethods/
 - **Verification**: Wait for the user to perform manual tests and provide feedback on the changes before proceeding with further adjustments.
 - **New Modules**: When creating a new backend domain module, always follow the full pattern: `index.ts` (IoC) → `[domain].repository.ts` → `[domain].service.ts` → `[domain].actions.ts`.
 - **Server Actions**: All Server Actions must be in files marked with `"use server"` at the top and wrapped with appropriate auth guards.
+- **Centralized Logging (STRICT LAW)**: Never use `console.log`, `console.warn`, or `console.error` directly in the application code. Always import the centralized logger from `@/utils/logger` and instantiate a contextualized child logger at the top of the file simply using `const log = logger.child();`. The logger will automatically detect and extract the calling filename from the stack trace *exactly once* during module initialization (avoiding any performance overhead during log calls). Then, use this child logger (`log.info`, `log.warn`, `log.error`, `log.debug`, or `log.log`) to display all messages in the console. This guarantees maximum performance, absolute context transparency, and clean logging with zero hardcoded file names.
 
 ---
 
@@ -288,6 +289,28 @@ SessionProvider → ThemeProvider → LanguageProvider → QueryClientProvider
     → ChatWidget (global, self-hides for admin/unauthenticated)
     → Sonner (toast notifications)
 ```
+
+### 11.5 Multi-Device E2EE Encryption & Self-Healing Recovery
+
+To ensure absolute confidentiality of support conversations, the chat implements End-to-End Encryption (E2EE) using Curve25519 (X25519) for key agreement and XSalsa20-Poly1305 for authenticated symmetric encryption via the `tweetnacl` library.
+
+To solve the classic out-of-sync key issue when switching browsers or using incognito tabs (where IndexedDB is empty), a **Self-Healing Recovery Escrow** system is implemented:
+- **Private Key Backup**: Upon first-time device registration, the client uploads base64-encoded copies of its `identityPrivateKey` and `signedPreKeyPrivateKey` to PostgreSQL securely via `/api/chat/e2ee/register`.
+- **Automatic Detection and Recovery**: In `SignalService.registerDevice()`, if the browser detects an empty IndexedDB or a signature mismatch with the server, it does not generate brand-new keys. Instead, it makes a secure query to `/api/chat/e2ee/bundle/[userId]`.
+- **Security Gateway (`isSelf`)**: The Next.js API route only exposes the recovery `privateKeys` block if the authenticated session user (`session.user.id`) matches the requested bundle. No third party can ever retrieve another user's private keys.
+- **Transparent Restoration**: The client downloads its private keys, writes them locally into IndexedDB, and restores the ability to decrypt message history automatically. This prevents invalidating other active browsers or breaking the communication channel.
+- **One-Time PreKeys**: The client generates and hosts 20 one-time PreKeys on the server to allow asynchronous offline key agreement. These keys are consumed and deleted instantly upon session initiation to preserve Perfect Forward Secrecy (PFS).
+
+### 11.6 On-Demand Encryption Toggle (Centralized Configuration)
+
+The E2EE encryption features a global switch controllable by developers via environment variables (`NEXT_PUBLIC_ENABLE_E2EE`):
+- **Centralized Access**: Exposed in `src/config/config.ts` via `config.chat.enableE2EE`.
+- **Behavior when Disabled**:
+  - `SignalService.registerDevice()` immediately exits (preventing unnecessary DB/server writes).
+  - `SignalService.encryptMessage()` returns the original plaintext message with type `0` (`type: 0`), bypassing the E2EE pipeline.
+  - The frontend (`ChatWidget` and `AdminChatPage`) detects E2EE is disabled and sends messages directly over Socket.IO in plaintext (`isEncrypted: false`).
+- **Fail-Closed Security**: If E2EE is **enabled** in the configuration, the chat components block message delivery until `isE2EEReady` is `true`, and abort sending if encryption fails. Silent fallback to plaintext is never allowed when E2EE is active.
+- **Backward Compatibility**: Even if encryption is disabled for new messages, the frontend will still attempt to decrypt historical encrypted messages stored in the database if the corresponding local keys are available in IndexedDB.
 
 ---
 

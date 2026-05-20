@@ -12,6 +12,13 @@ export const en: Translations = {
     tema: "Theme",
     pedidos: "My Orders",
     miCuenta: "My Account",
+    soporteChat: "Chat Support",
+    miPerfil: "My Profile",
+    cerrarSesion: "Sign Out",
+    confirmarCerrarSesion: "Are you sure you want to sign out?",
+    cancelar: "Cancel",
+    salir: "Exit",
+    usuario: "User",
   },
   hero: {
     badge: "🚜 Agro-inputs & Machinery",

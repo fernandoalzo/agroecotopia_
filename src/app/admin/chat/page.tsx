@@ -6,9 +6,15 @@ import { useRouter } from "next/navigation";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { getAdminConversations, getConversationMessages, markAsRead, deleteConversationAction, getAdminUsersList, getOrCreateConversationForAdmin } from "@/backend/modules/chat/chat.actions";
 import { Message } from "@/frontend/components/chat/ChatWidget";
-import { Send, MessageSquare, ShieldAlert, ArrowLeft, User, Sparkles, Trash2, Search, ChevronLeft, ChevronRight, UserPlus, X, Copy, Check } from "lucide-react";
+import { SignalService } from "@/frontend/lib/signalService";
+import { signalStore } from "@/frontend/lib/signalStore";
+import { config } from "@/config/config";
+import { Send, MessageSquare, ShieldAlert, ArrowLeft, User, Sparkles, Trash2, Search, ChevronLeft, ChevronRight, UserPlus, X, Copy, Check, Lock } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { motion, AnimatePresence } from "framer-motion";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/app/admin/chat/page.tsx");
 
 export default function AdminChatPage() {
   const { data: session, status } = useSession();
@@ -26,6 +32,7 @@ export default function AdminChatPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isE2EEReady, setIsE2EEReady] = useState(false);
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -45,6 +52,18 @@ export default function AdminChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const firstUnreadRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const hasNewKeysRef = useRef(false);
+
+  const conversationsRef = useRef(conversations);
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
+
+  const activeConvRef = useRef(activeConv);
+  useEffect(() => {
+    activeConvRef.current = activeConv;
+  }, [activeConv]);
 
   // Guard routing: redirect if not admin
   useEffect(() => {
@@ -53,30 +72,75 @@ export default function AdminChatPage() {
     }
   }, [status, router]);
 
-  // Load conversations list
+  // Load conversations list and init E2EE
+  // IMPORTANT: Use stable primitive deps to prevent re-running on every render
+  const sessionUserId = session?.user?.id;
+  const sessionUserRole = session?.user?.role;
+
   useEffect(() => {
-    if (status !== "authenticated" || session?.user?.role !== "admin") return;
+    if (status !== "authenticated" || sessionUserRole !== "admin" || !sessionUserId) return;
+
+    let isCancelled = false;
+
+    const initE2EE = async () => {
+      try {
+        signalStore.setUserId(sessionUserId);
+        const didRegister = await SignalService.registerDevice();
+        if (didRegister) {
+          hasNewKeysRef.current = true;
+        }
+        if (!isCancelled) setIsE2EEReady(config.chat.enableE2EE);
+      } catch (err) {
+        log.error("Error al registrar dispositivo E2EE Admin:", err);
+      }
+    };
+    initE2EE();
 
     const loadConversations = async () => {
       try {
         const res = await getAdminConversations();
-        console.log("DEBUG: Admin conversations loaded:", JSON.stringify(res, null, 2));
+        if (isCancelled) return;
+        log.debug("DEBUG: Admin conversations loaded:", JSON.stringify(res, null, 2));
         if (res && !("error" in res)) {
-          setConversations(res);
+          // Decrypt the last message of each conversation
+          const decryptedConversations = await Promise.all(res.map(async (conv: any) => {
+            const lastMsg = conv.messages?.[0];
+            if (lastMsg && lastMsg.isEncrypted) {
+              try {
+                const targetId = lastMsg.senderId === sessionUserId ? conv.userId : lastMsg.senderId;
+                const decryptedContent = await SignalService.decryptMessage(targetId, lastMsg.content, lastMsg.encryptionType || 1);
+                return {
+                  ...conv,
+                  messages: [{ ...lastMsg, content: decryptedContent }]
+                };
+              } catch (e) {
+                return {
+                  ...conv,
+                  messages: [{ ...lastMsg, content: "🔒 Mensaje cifrado" }]
+                };
+              }
+            }
+            return conv;
+          }));
+          if (!isCancelled) setConversations(decryptedConversations);
         }
       } catch (err) {
-        console.error("Error loading admin conversations:", err);
+        log.error("Error loading admin conversations:", err);
       } finally {
-        setIsLoadingConvs(false);
+        if (!isCancelled) setIsLoadingConvs(false);
       }
     };
 
     loadConversations();
-  }, [status, session]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [status, sessionUserId, sessionUserRole]);
 
   // Load users list when user searches or paginates
   useEffect(() => {
-    if (status !== "authenticated" || session?.user?.role !== "admin" || sidebarTab !== "users") return;
+    if (status !== "authenticated" || sessionUserRole !== "admin" || sidebarTab !== "users") return;
 
     const loadUsers = async () => {
       setIsLoadingUsers(true);
@@ -88,7 +152,7 @@ export default function AdminChatPage() {
           setTotalUsers(res.totalCount);
         }
       } catch (err) {
-        console.error("Error loading users list:", err);
+        log.error("Error loading users list:", err);
       } finally {
         setIsLoadingUsers(false);
       }
@@ -99,7 +163,7 @@ export default function AdminChatPage() {
     }, searchQuery ? 300 : 0);
 
     return () => clearTimeout(delayDebounce);
-  }, [searchQuery, usersPage, sidebarTab, status, session]);
+  }, [searchQuery, usersPage, sidebarTab, status, sessionUserRole]);
 
   // Reset page to 1 when search query changes
   useEffect(() => {
@@ -108,44 +172,137 @@ export default function AdminChatPage() {
 
   // Load messages when active conversation changes
   useEffect(() => {
-    if (!activeConv || !session?.user?.id) return;
+    if (!activeConv || !sessionUserId) return;
+
+    let isCancelled = false;
 
     const loadMessages = async () => {
       setIsLoadingMsgs(true);
       try {
+        signalStore.setUserId(sessionUserId);
+
         const res = await getConversationMessages(activeConv.id);
+        if (isCancelled) return;
         if (res && !("error" in res)) {
-          setMessages(res);
+          // Descifrar historial de mensajes
+          const decryptedMsgs = await Promise.all(res.map(async (m: Message) => {
+            let decryptedContent = m.content;
+            let decryptedReplyContent = m.replyTo?.content;
+
+            if (m.isEncrypted) {
+              try {
+                const targetId = m.senderId === sessionUserId ? activeConv.userId : m.senderId;
+                decryptedContent = await SignalService.decryptMessage(targetId, m.content, m.encryptionType || 1);
+              } catch (e) {
+                decryptedContent = "🔒 Mensaje de otra sesión";
+              }
+            }
+
+            if (m.replyTo && m.replyTo.isEncrypted && m.replyTo.content) {
+              try {
+                const replyTargetId = m.replyTo.senderId === sessionUserId ? activeConv.userId : m.replyTo.senderId;
+                decryptedReplyContent = await SignalService.decryptMessage(replyTargetId, m.replyTo.content, m.replyTo.encryptionType || 1);
+              } catch (e) {
+                decryptedReplyContent = "🔒 Mensaje de otra sesión";
+              }
+            }
+
+            return {
+              ...m,
+              content: decryptedContent,
+              replyTo: m.replyTo ? {
+                ...m.replyTo,
+                content: decryptedReplyContent || ""
+              } : null
+            };
+          }));
+          if (!isCancelled) setMessages(decryptedMsgs);
         }
         await markAsRead(activeConv.id);
         
         // Reset unread indicator locally in conversations list
-        setConversations((prev) =>
-          prev.map((c) => (c.id === activeConv.id ? { ...c, unreadCount: 0 } : c))
-        );
+        if (!isCancelled) {
+          setConversations((prev) =>
+            prev.map((c) => (c.id === activeConv.id ? { ...c, unreadCount: 0 } : c))
+          );
+        }
       } catch (err) {
-        console.error("Error loading messages:", err);
+        log.error("Error loading messages:", err);
       } finally {
-        setIsLoadingMsgs(false);
+        if (!isCancelled) setIsLoadingMsgs(false);
       }
     };
 
     loadMessages();
-  }, [activeConv, session]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeConv, sessionUserId]);
 
   // Handle Socket events
   useEffect(() => {
-    if (!socket || status !== "authenticated" || session?.user?.role !== "admin") return;
+    if (!socket || status !== "authenticated" || sessionUserRole !== "admin" || !sessionUserId) return;
 
     // Listen for global notifications (new messages in any conversation)
-    const handleNewMessageNotification = ({ conversationId, message }: { conversationId: string; message: Message }) => {
-      // Update conversations list (move to top, set last message)
+    const handleNewMessageNotification = async ({ conversationId, message }: { conversationId: string; message: Message }) => {
+      let decryptedMessage = { ...message };
+      
+      // Decrypt the live incoming message if encrypted
+      if (message.isEncrypted) {
+        try {
+          // Find the active conversation in the current state to know its target user ID
+          const targetConv = conversationsRef.current.find((c) => c.id === conversationId);
+          const userId = targetConv ? targetConv.userId : message.senderId;
+          const targetId = message.senderId === sessionUserId ? userId : message.senderId;
+          
+          signalStore.setUserId(sessionUserId);
+          const decryptedContent = await SignalService.decryptMessage(targetId, message.content, message.encryptionType || 1);
+          decryptedMessage.content = decryptedContent;
+        } catch (e) {
+          decryptedMessage.content = "🔒 Mensaje cifrado";
+        }
+      }
+
+      // Decrypt quoted message if exists inside the socket payload
+      if (message.replyTo && message.replyTo.isEncrypted && message.replyTo.content) {
+        try {
+          const replyTargetId = message.replyTo.senderId === sessionUserId ? activeConvRef.current?.userId || message.replyTo.senderId : message.replyTo.senderId;
+          const decryptedReplyContent = await SignalService.decryptMessage(replyTargetId, message.replyTo.content, message.replyTo.encryptionType || 1);
+          decryptedMessage.replyTo = {
+            ...message.replyTo,
+            content: decryptedReplyContent
+          };
+        } catch (e) {
+          decryptedMessage.replyTo = {
+            ...message.replyTo,
+            content: "🔒 Mensaje de otra sesión"
+          };
+        }
+      }
+
+      // Update conversations list (move to top, set decrypted last message)
       setConversations((prev) => {
         const index = prev.findIndex((c) => c.id === conversationId);
         if (index === -1) {
-          // If we don't have this conversation in list, reload all of them
-          getAdminConversations().then((res) => {
-            if (res && !("error" in res)) setConversations(res);
+          // If we don't have this conversation in list, reload and decrypt all of them
+          getAdminConversations().then(async (res) => {
+            if (res && !("error" in res)) {
+              const decrypted = await Promise.all(res.map(async (c: any) => {
+                const lm = c.messages?.[0];
+                if (lm && lm.isEncrypted) {
+                  try {
+                    const tId = lm.senderId === sessionUserId ? c.userId : lm.senderId;
+                    const content = await SignalService.decryptMessage(tId, lm.content, lm.encryptionType || 1);
+                    return { ...c, messages: [{ ...lm, content }] };
+                  } catch {
+                    return { ...c, messages: [{ ...lm, content: "🔒 Mensaje cifrado" }] };
+                  }
+                }
+                return c;
+              }));
+              setConversations(decrypted);
+            }
           });
           return prev;
         }
@@ -153,12 +310,13 @@ export default function AdminChatPage() {
         const updated = [...prev];
         const conv = { ...updated[index] };
         
-        // Update last message
-        conv.messages = [message];
-        conv.updatedAt = message.createdAt;
+        // Update last message with the decrypted variant
+        conv.messages = [decryptedMessage];
+        conv.updatedAt = decryptedMessage.createdAt;
         
         // Increment unread count if it's not the active conversation and not sent by me
-        if ((!activeConv || activeConv.id !== conversationId) && message.senderRole !== "admin") {
+        const currentActiveConv = activeConvRef.current;
+        if ((!currentActiveConv || currentActiveConv.id !== conversationId) && message.senderRole !== "admin") {
           conv.unreadCount = (conv.unreadCount || 0) + 1;
         }
 
@@ -168,10 +326,11 @@ export default function AdminChatPage() {
       });
 
       // If this message belongs to the active conversation, append it
-      if (activeConv && activeConv.id === conversationId) {
+      const currentActiveConv = activeConvRef.current;
+      if (currentActiveConv && currentActiveConv.id === conversationId) {
         setMessages((prev) => {
-          if (prev.some((m) => m.id === message.id)) return prev;
-          return [...prev, message];
+          if (prev.some((m) => m.id === decryptedMessage.id)) return prev;
+          return [...prev, decryptedMessage];
         });
         
         // Mark as read immediately
@@ -183,7 +342,8 @@ export default function AdminChatPage() {
 
     // Listen for user typing
     const handleUserTyping = ({ senderId, isTyping }: { senderId: string; isTyping: boolean }) => {
-      if (activeConv && activeConv.userId === senderId) {
+      const currentActiveConv = activeConvRef.current;
+      if (currentActiveConv && currentActiveConv.userId === senderId) {
         setIsUserTyping(isTyping);
       }
     };
@@ -191,22 +351,41 @@ export default function AdminChatPage() {
     // Listen for conversation deleted by user in real time
     const handleConversationDeleted = ({ conversationId }: { conversationId: string }) => {
       setConversations((prev) => prev.filter((c) => c.id !== conversationId));
-      if (activeConv && activeConv.id === conversationId) {
+      const currentActiveConv = activeConvRef.current;
+      if (currentActiveConv && currentActiveConv.id === conversationId) {
         setActiveConv(null);
         setMessages([]);
+      }
+    };
+
+    // Listen for key synchronization requests from other users
+    const handleKeySyncNeeded = async ({ userId }: { userId: string }) => {
+      if (userId !== sessionUserId) {
+        log.info(`Clearing E2EE session for ${userId} because they changed device/key`);
+        await signalStore.removeSession(userId);
+        try {
+          const bundle = await SignalService.fetchBundle(userId);
+          const encoder = new TextEncoder();
+          await signalStore.storeSession(userId, encoder.encode(bundle.signedPreKey.publicKey));
+          log.info(`Successfully updated E2EE key for ${userId}`);
+        } catch (e) {
+          log.error(`Failed to refresh key for ${userId} during sync:`, e);
+        }
       }
     };
 
     socket.on("new_message_notification", handleNewMessageNotification);
     socket.on("user_typing", handleUserTyping);
     socket.on("conversation_deleted", handleConversationDeleted);
+    socket.on("key_sync_needed", handleKeySyncNeeded);
 
     return () => {
       socket.off("new_message_notification", handleNewMessageNotification);
       socket.off("user_typing", handleUserTyping);
       socket.off("conversation_deleted", handleConversationDeleted);
+      socket.off("key_sync_needed", handleKeySyncNeeded);
     };
-  }, [socket, activeConv, status, session]);
+  }, [socket, status, sessionUserId, sessionUserRole]);
 
   // Join/leave room on active conversation change
   useEffect(() => {
@@ -214,11 +393,18 @@ export default function AdminChatPage() {
 
     socket.emit("join_room", { conversationId: activeConv.id });
 
+    // Request key sync if we registered a new key during initialization
+    if (hasNewKeysRef.current && sessionUserId) {
+      log.info("Emitting request_key_sync due to new device registration");
+      socket.emit("request_key_sync", { conversationId: activeConv.id, userId: sessionUserId });
+      hasNewKeysRef.current = false;
+    }
+
     return () => {
       socket.emit("leave_room", { conversationId: activeConv.id });
       setIsUserTyping(false);
     };
-  }, [socket, activeConv]);
+  }, [socket, activeConv?.id, sessionUserId]);
 
   // Scroll to first unread message or bottom on message change
   useEffect(() => {
@@ -258,7 +444,7 @@ export default function AdminChatPage() {
   };
 
   // Send message
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim() || !socket || !activeConv || !session?.user?.id) return;
 
@@ -269,9 +455,32 @@ export default function AdminChatPage() {
       isTyping: false,
     });
 
+    let finalContent = inputMessage.trim();
+    let isEncrypted = false;
+    let encryptionType = 0;
+
+    // Cifrar el mensaje antes de enviarlo
+    if (config.chat.enableE2EE && activeConv.userId) {
+      if (!isE2EEReady) {
+        log.warn("E2EE está activado pero no está listo aún en Admin. Esperando...");
+        return;
+      }
+      try {
+        const encrypted = await SignalService.encryptMessage(activeConv.userId, finalContent);
+        finalContent = encrypted.ciphertext;
+        isEncrypted = encrypted.type !== 0;
+        encryptionType = encrypted.type;
+      } catch (err) {
+        log.error("Error cifrando el mensaje admin:", err);
+        return; // Previene el envío en texto plano si falla
+      }
+    }
+
     socket.emit("send_message", {
       conversationId: activeConv.id,
-      content: inputMessage.trim(),
+      content: finalContent,
+      isEncrypted,
+      encryptionType,
       senderId: session.user.id,
       senderRole: "admin",
       ...(replyingTo ? { replyToId: replyingTo.id } : {}),
@@ -288,7 +497,7 @@ export default function AdminChatPage() {
     try {
       const res = await deleteConversationAction(activeConv.id);
       if (res && "error" in (res as any)) {
-        console.error("Error deleting conversation:", (res as any).error);
+        log.error("Error deleting conversation:", (res as any).error);
       } else {
         // Emit socket event to notify other participants in real-time
         socket.emit("delete_conversation", { conversationId: activeConv.id });
@@ -300,7 +509,7 @@ export default function AdminChatPage() {
         setShowDeleteConfirm(false);
       }
     } catch (err) {
-      console.error("Error executing deleteConversationAction:", err);
+      log.error("Error executing deleteConversationAction:", err);
     } finally {
       setIsDeleting(false);
     }
@@ -333,7 +542,7 @@ export default function AdminChatPage() {
         setSidebarTab("chats");
       }
     } catch (err) {
-      console.error("Error initiating chat with user:", err);
+      log.error("Error initiating chat with user:", err);
     } finally {
       setIsLoadingMsgs(false);
     }
@@ -385,7 +594,10 @@ export default function AdminChatPage() {
               <MessageSquare className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="font-semibold text-base leading-none font-display">Soporte Chat</h1>
+              <div className="flex items-center gap-1.5">
+                <h1 className="font-semibold text-base leading-none font-display">Soporte Chat</h1>
+                {isE2EEReady && <span title="Cifrado de Extremo a Extremo Activado"><Lock className="w-3.5 h-3.5 text-primary opacity-80" /></span>}
+              </div>
               <span className="text-xs text-muted-foreground/70 mt-1 block">Panel de Administración</span>
             </div>
           </div>
@@ -668,7 +880,10 @@ export default function AdminChatPage() {
                               {copiedId === msg.id ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
                             <button
-                              onClick={() => setReplyingTo(msg)}
+                              onClick={() => {
+                                setReplyingTo(msg);
+                                setTimeout(() => inputRef.current?.focus(), 50);
+                              }}
                               className="p-1.5 rounded-full hover:bg-secondary/80 text-muted-foreground transition-colors cursor-pointer"
                               title="Responder"
                             >
@@ -729,6 +944,7 @@ export default function AdminChatPage() {
               )}
               <form onSubmit={handleSendMessage} className="p-4 flex items-center gap-3">
                 <input
+                  ref={inputRef}
                   type="text"
                   value={inputMessage}
                   onChange={handleInputChange}

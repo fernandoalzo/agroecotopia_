@@ -10,6 +10,9 @@ import { Check, Copy, ShoppingBag, ArrowRight, PhoneCall, Database, Truck, FileT
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/app/checkout/advisor-success/page.tsx");
 
 function AdvisorSuccessContent() {
   const searchParams = useSearchParams();
@@ -47,7 +50,7 @@ function AdvisorSuccessContent() {
       );
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error("Failed to copy text: ", err);
+      log.error("Failed to copy text: ", err);
     }
   };
 

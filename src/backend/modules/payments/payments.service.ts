@@ -2,6 +2,9 @@ import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import { ordersService } from '@/backend/modules/orders';
 import { PedidoEstado } from '@prisma/client';
 import { config } from '@/config/config';
+import logger from '@/utils/logger';
+
+const log = logger.child("src/backend/modules/payments/payments.service.ts");
 
 // Initialize MercadoPago configuration
 const client = new MercadoPagoConfig({
@@ -59,7 +62,7 @@ export class PaymentsService {
       const result = await preference.create({ body });
       return result;
     } catch (error) {
-      console.error("MercadoPago Preference Error:", error);
+      log.error("MercadoPago Preference Error:", error);
       throw new Error("No se pudo crear la preferencia de pago en MercadoPago");
     }
   }
@@ -80,7 +83,7 @@ export class PaymentsService {
         throw new Error("external_reference not found in payment details");
       }
 
-      console.log(`MercadoPago webhook payment status update: Order ${pedidoId} is ${status}`);
+      log.info(`MercadoPago webhook payment status update: Order ${pedidoId} is ${status}`);
 
       if (status === "approved") {
         // Update order status to CONFIRMADO
@@ -96,7 +99,7 @@ export class PaymentsService {
 
       return { success: true, pedidoId, status };
     } catch (error) {
-      console.error("Error processing MercadoPago webhook:", error);
+      log.error("Error processing MercadoPago webhook:", error);
       throw error;
     }
   }

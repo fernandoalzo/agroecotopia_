@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createHmac } from "crypto";
 import { paymentsService } from "@/backend/modules/payments";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/app/api/webhooks/mercadopago/route.ts");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HMAC-SHA256 Signature Verification for MercadoPago Webhooks
@@ -27,15 +30,15 @@ function verifyWebhookSignature(
 
   // Si no hay secret configurado, no podemos verificar
   if (!secret) {
-    console.warn(
-      "⚠️ MERCADOPAGO_WEBHOOK_SECRET no está configurado. " +
+    log.warn(
+      "MERCADOPAGO_WEBHOOK_SECRET no está configurado. " +
       "La verificación HMAC está deshabilitada. Configúrala en producción."
     );
     return true; // Permite pasar en desarrollo sin secret
   }
 
   if (!xSignature || !xRequestId || !dataId) {
-    console.error("❌ Webhook HMAC: Faltan headers o data.id requeridos para verificación.");
+    log.error("Webhook HMAC: Faltan headers o data.id requeridos para verificación.");
     return false;
   }
 
@@ -55,7 +58,7 @@ function verifyWebhookSignature(
   const receivedHash = signatureParts["v1"];
 
   if (!ts || !receivedHash) {
-    console.error("❌ Webhook HMAC: x-signature no contiene ts o v1 válidos.", { xSignature });
+    log.error("Webhook HMAC: x-signature no contiene ts o v1 válidos.", { xSignature });
     return false;
   }
 
@@ -72,7 +75,7 @@ function verifyWebhookSignature(
   const isValid = generatedHash === receivedHash;
 
   if (!isValid) {
-    console.error("❌ Webhook HMAC: Firma inválida.", {
+    log.error("Webhook HMAC: Firma inválida.", {
       expected: generatedHash,
       received: receivedHash,
       manifest,
@@ -111,7 +114,7 @@ export async function POST(request: Request) {
     // MP docs: si data.id contiene letras, convertir a lowercase para HMAC
     if (dataId) dataId = dataId.toLowerCase();
 
-    console.log(`MercadoPago Webhook recibido: id=${dataId}, tipo/tópico=${topic}`);
+    log.info(`MercadoPago Webhook recibido: id=${dataId}, tipo/tópico=${topic}`);
 
     // 4. Filtrar por tipo de evento PRIMERO
     //    Solo procesamos eventos de pago. Eventos como "merchant_order" u otros
@@ -126,7 +129,7 @@ export async function POST(request: Request) {
     const isSignatureValid = verifyWebhookSignature(xSignature, xRequestId, dataId);
 
     if (!isSignatureValid) {
-      console.error("🚫 Webhook de pago rechazado: Firma HMAC inválida o ausente.");
+      log.error("Webhook de pago rechazado: Firma HMAC inválida o ausente.");
       return NextResponse.json(
         { error: "Unauthorized: Invalid webhook signature" },
         { status: 401 }
@@ -137,7 +140,7 @@ export async function POST(request: Request) {
     const result = await paymentsService.processNotification(String(dataId));
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error("Error en Ruta de Webhook:", error);
+    log.error("Error en Ruta de Webhook:", error);
     // Retornamos 200 para evitar bloqueos del webhook, pero registrando el error.
     return NextResponse.json(
       { error: error.message || "Internal Server Error", processed: false },

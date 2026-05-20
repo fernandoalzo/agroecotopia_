@@ -1,0 +1,23 @@
+model E2EEDevice {
+  id              String       @id @default(cuid())
+  userId          String       @unique
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  registrationId  Int
+  identityKey            String       // Base64 public key
+  identityPrivateKey     String?      // Base64 private key (for recovery)
+  signedPreKeyId         Int
+  signedPreKey           String       // Base64 public key
+  signedPreKeyPrivateKey String?      // Base64 private key (for recovery)
+  signedPreKeySig        String       // Base64 signature
+  preKeys                E2EEPreKey[]
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+}
+
+model E2EEPreKey {
+  id        String     @id @default(cuid())
+  deviceId  String
+  device    E2EEDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  keyId     Int
+  publicKey String     // Base64
+}

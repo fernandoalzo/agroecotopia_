@@ -8,6 +8,13 @@ import { Loading } from "@/components/ui/Loading";
 import { useLanguage } from "@/context/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { getOrCreateMyConversation, getConversationMessages, markAsRead, deleteConversationAction } from "@/backend/modules/chat/chat.actions";
+import { SignalService } from "@/frontend/lib/signalService";
+import { signalStore } from "@/frontend/lib/signalStore";
+import { config } from "@/config/config";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/frontend/components/chat/ChatWidget.tsx");
+
 export interface Message {
   id: string;
   content: string;
@@ -15,6 +22,8 @@ export interface Message {
   senderRole: string;
   conversationId: string;
   isRead: boolean;
+  isEncrypted?: boolean;
+  encryptionType?: number;
   createdAt: Date | string;
   updatedAt: Date | string;
   replyToId?: string | null;
@@ -23,12 +32,15 @@ export interface Message {
     content: string;
     senderId: string;
     senderRole: string;
+    isEncrypted?: boolean;
+    encryptionType?: number;
   } | null;
 }
 
 export default function ChatWidget() {
   const { data: session, status } = useSession();
   const isAdminUser = session?.user?.role === "admin";
+  const chatUserId = session?.user?.id;
   const { socket, isConnected } = useSocket();
   const { language } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
@@ -42,6 +54,7 @@ export default function ChatWidget() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isE2EEReady, setIsE2EEReady] = useState(false);
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -52,6 +65,13 @@ export default function ChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const firstUnreadRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const hasNewKeysRef = useRef(false);
+
+  const isOpenRef = useRef(isOpen);
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
 
   // Lock body scroll when chat is open on mobile
   useEffect(() => {
@@ -73,9 +93,28 @@ export default function ChatWidget() {
 
   const isRouteAdmin = isClient && window.location.pathname.startsWith("/admin");
 
+  useEffect(() => {
+    if (status !== "authenticated" || !chatUserId || isRouteAdmin || isAdminUser) return;
+    const initE2EE = async () => {
+      try {
+        signalStore.setUserId(chatUserId);
+        const didRegister = await SignalService.registerDevice();
+        if (didRegister) {
+          hasNewKeysRef.current = true;
+        }
+        setIsE2EEReady(config.chat.enableE2EE);
+      } catch (err) {
+        log.error("Fallo al inicializar Signal E2EE:", err);
+      }
+    };
+    initE2EE();
+  }, [chatUserId, status, isRouteAdmin, isAdminUser]);
+
   // Load conversation ID and calculate initial unread count on mount
   useEffect(() => {
-    if (!session?.user || isRouteAdmin || isAdminUser) return;
+    if (!chatUserId || isRouteAdmin || isAdminUser) return;
+
+    let isCancelled = false;
 
     const initChat = async () => {
       // Show loading indicator only when opening the chat for the first time
@@ -83,32 +122,75 @@ export default function ChatWidget() {
         setIsLoading(true);
       }
       try {
+        signalStore.setUserId(chatUserId);
+
         const res = await getOrCreateMyConversation();
+        if (isCancelled) return;
         if (res && !("error" in res)) {
           setConversation(res);
           
           // Fetch existing messages to count unread ones
           const msgsRes = await getConversationMessages(res.id);
+          if (isCancelled) return;
           if (msgsRes && !("error" in msgsRes)) {
-            setMessages(msgsRes);
-            if (isOpen) {
-              await markAsRead(res.id);
-              setUnreadCount(0);
-            } else {
-              const unread = msgsRes.filter((m: Message) => !m.isRead && m.senderRole === "admin").length;
-              setUnreadCount(unread);
+            // Descifrar historial de mensajes
+            const decryptedMsgs = await Promise.all(msgsRes.map(async (m: Message) => {
+              let decryptedContent = m.content;
+              let decryptedReplyContent = m.replyTo?.content;
+
+              if (m.isEncrypted) {
+                try {
+                  const targetId = m.senderId === chatUserId ? "admin" : m.senderId;
+                  decryptedContent = await SignalService.decryptMessage(targetId, m.content, m.encryptionType || 1);
+                } catch (e) {
+                  decryptedContent = "🔒 Mensaje de otra sesión";
+                }
+              }
+
+              if (m.replyTo && m.replyTo.isEncrypted && m.replyTo.content) {
+                try {
+                  const replyTargetId = m.replyTo.senderId === chatUserId ? "admin" : m.replyTo.senderId;
+                  decryptedReplyContent = await SignalService.decryptMessage(replyTargetId, m.replyTo.content, m.replyTo.encryptionType || 1);
+                } catch (e) {
+                  decryptedReplyContent = "🔒 Mensaje de otra sesión";
+                }
+              }
+
+              return {
+                ...m,
+                content: decryptedContent,
+                replyTo: m.replyTo ? {
+                  ...m.replyTo,
+                  content: decryptedReplyContent || ""
+                } : null
+              };
+            }));
+
+            if (!isCancelled) {
+              setMessages(decryptedMsgs);
+              if (isOpen) {
+                await markAsRead(res.id);
+                setUnreadCount(0);
+              } else {
+                const unread = msgsRes.filter((m: Message) => !m.isRead && m.senderRole === "admin").length;
+                setUnreadCount(unread);
+              }
             }
           }
         }
       } catch (err) {
-        console.error("Error preloading conversation:", err);
+        log.error("Error preloading conversation:", err);
       } finally {
-        setIsLoading(false);
+        if (!isCancelled) setIsLoading(false);
       }
     };
 
     initChat();
-  }, [session, isRouteAdmin, isAdminUser, isOpen]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [chatUserId, isRouteAdmin, isAdminUser, isOpen]);
 
   // Handle WebSockets connection and event subscriptions
   useEffect(() => {
@@ -117,17 +199,70 @@ export default function ChatWidget() {
     // Join room
     socket.emit("join_room", { conversationId: conversation.id });
 
+    // Request key sync if we registered a new key during initialization
+    if (hasNewKeysRef.current && chatUserId) {
+      log.info("Emitting request_key_sync due to new device registration");
+      socket.emit("request_key_sync", { conversationId: conversation.id, userId: chatUserId });
+      hasNewKeysRef.current = false;
+    }
+
+    // Listen for key synchronization requests from other users
+    const handleKeySyncNeeded = async ({ userId }: { userId: string }) => {
+      if (userId !== chatUserId) {
+        log.info(`Clearing E2EE session for ${userId} because they changed device/key`);
+        await signalStore.removeSession(userId);
+        try {
+          const bundle = await SignalService.fetchBundle(userId);
+          const encoder = new TextEncoder();
+          await signalStore.storeSession(userId, encoder.encode(bundle.signedPreKey.publicKey));
+          log.info(`Successfully updated E2EE key for ${userId}`);
+        } catch (e) {
+          log.error(`Failed to refresh key for ${userId} during sync:`, e);
+        }
+      }
+    };
+
     // Listen for new messages
-    const handleReceiveMessage = (message: Message) => {
+    const handleReceiveMessage = async (message: Message) => {
       if (message.conversationId === conversation.id) {
+        let finalMessage = { ...message };
+        
+        // Descifrar mensaje entrante si está encriptado
+        if (message.isEncrypted) {
+           try {
+             const targetId = message.senderId === chatUserId ? "admin" : message.senderId;
+             const decryptedContent = await SignalService.decryptMessage(targetId, message.content, message.encryptionType || 1);
+             finalMessage.content = decryptedContent;
+           } catch (e) {
+             finalMessage.content = "🔒 Mensaje de otra sesión";
+           }
+        }
+
+        // Descifrar mensaje citado si existe y está cifrado
+        if (message.replyTo && message.replyTo.isEncrypted && message.replyTo.content) {
+           try {
+             const replyTargetId = message.replyTo.senderId === chatUserId ? "admin" : message.replyTo.senderId;
+             const decryptedReplyContent = await SignalService.decryptMessage(replyTargetId, message.replyTo.content, message.replyTo.encryptionType || 1);
+             finalMessage.replyTo = {
+               ...message.replyTo,
+               content: decryptedReplyContent
+             };
+           } catch (e) {
+             finalMessage.replyTo = {
+               ...message.replyTo,
+               content: "🔒 Mensaje de otra sesión"
+             };
+           }
+        }
+
         setMessages((prev) => {
           // Prevent duplicates
-          if (prev.some((m) => m.id === message.id)) return prev;
-          return [...prev, message];
+          if (prev.some((m) => m.id === finalMessage.id)) return prev;
+          return [...prev, finalMessage];
         });
 
         // Mark as read if open, otherwise increment unread count
-        if (isOpen) {
+        if (isOpenRef.current) {
           markAsRead(conversation.id);
         } else if (message.senderRole === "admin") {
           setUnreadCount((prev) => prev + 1);
@@ -137,7 +272,7 @@ export default function ChatWidget() {
 
     // Listen for typing events
     const handleUserTyping = ({ senderId, isTyping }: { senderId: string; isTyping: boolean }) => {
-      if (senderId !== session?.user?.id) {
+      if (senderId !== chatUserId) {
         setIsAdminTyping(isTyping);
       }
     };
@@ -155,14 +290,16 @@ export default function ChatWidget() {
     socket.on("receive_message", handleReceiveMessage);
     socket.on("user_typing", handleUserTyping);
     socket.on("conversation_deleted", handleConversationDeleted);
+    socket.on("key_sync_needed", handleKeySyncNeeded);
 
     return () => {
       socket.emit("leave_room", { conversationId: conversation.id });
       socket.off("receive_message", handleReceiveMessage);
       socket.off("user_typing", handleUserTyping);
       socket.off("conversation_deleted", handleConversationDeleted);
+      socket.off("key_sync_needed", handleKeySyncNeeded);
     };
-  }, [socket, conversation, isOpen, session, isRouteAdmin, isAdminUser]);
+  }, [socket, conversation?.id, chatUserId, isRouteAdmin, isAdminUser]);
 
   // Scroll to first unread message or bottom whenever messages or typing state changes
   useEffect(() => {
@@ -206,7 +343,7 @@ export default function ChatWidget() {
   };
 
   // Send message
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim() || !socket || !conversation?.id || !session?.user?.id) return;
 
@@ -218,10 +355,33 @@ export default function ChatWidget() {
       isTyping: false,
     });
 
+    let finalContent = inputMessage.trim();
+    let isEncrypted = false;
+    let encryptionType = 0;
+
+    // Cifrar el mensaje antes de enviarlo
+    if (config.chat.enableE2EE) {
+      if (!isE2EEReady) {
+        log.warn("E2EE está activado pero no está listo aún. Esperando...");
+        return;
+      }
+      try {
+        const encrypted = await SignalService.encryptMessage("admin", finalContent);
+        finalContent = encrypted.ciphertext;
+        isEncrypted = encrypted.type !== 0;
+        encryptionType = encrypted.type;
+      } catch (err) {
+        log.error("Error cifrando el mensaje, no se enviará en texto plano por seguridad:", err);
+        return; // Previene el envío en texto plano si falla
+      }
+    }
+
     // Emit send_message event
     socket.emit("send_message", {
       conversationId: conversation.id,
-      content: inputMessage.trim(),
+      content: finalContent,
+      isEncrypted,
+      encryptionType,
       senderId: session.user.id,
       senderRole: session.user.role || "user",
       ...(replyingTo ? { replyToId: replyingTo.id } : {}),
@@ -238,7 +398,7 @@ export default function ChatWidget() {
     try {
       const res = await deleteConversationAction(conversation.id);
       if (res && "error" in (res as any)) {
-        console.error("Error deleting user conversation:", (res as any).error);
+        log.error("Error deleting user conversation:", (res as any).error);
       } else {
         // Emit socket event to notify other participants in real-time
         socket.emit("delete_conversation", { conversationId: conversation.id });
@@ -251,7 +411,7 @@ export default function ChatWidget() {
         setUnreadCount(0);
       }
     } catch (err) {
-      console.error("Error executing deleteConversationAction for user:", err);
+      log.error("Error executing deleteConversationAction for user:", err);
     } finally {
       setIsDeleting(false);
     }
@@ -338,7 +498,10 @@ export default function ChatWidget() {
                   />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm leading-none">{t.title}</h3>
+                  <h3 className="font-semibold text-sm leading-none flex items-center gap-1.5">
+                    {t.title}
+                    {isE2EEReady && <span title="Cifrado de extremo a extremo"><Lock className="w-3.5 h-3.5 text-primary-foreground/80" /></span>}
+                  </h3>
                   <span className="text-[11px] opacity-80">
                     {isConnected ? t.online : t.offline}
                   </span>
@@ -487,7 +650,10 @@ export default function ChatWidget() {
                                 {copiedId === msg.id ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
                               </button>
                               <button
-                                onClick={() => setReplyingTo(msg)}
+                                onClick={() => {
+                                  setReplyingTo(msg);
+                                  setTimeout(() => inputRef.current?.focus(), 50);
+                                }}
                                 className="p-1.5 rounded-full hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
                                 title="Responder"
                               >
@@ -546,6 +712,7 @@ export default function ChatWidget() {
               )}
               <form onSubmit={handleSendMessage} className="p-3 flex items-center gap-2">
                 <input
+                  ref={inputRef}
                   type="text"
                   value={inputMessage}
                   onChange={handleInputChange}

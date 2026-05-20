@@ -21,6 +21,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { getAdminConversations } from "@/backend/modules/chat/chat.actions";
+import logger from "@/utils/logger";
+
+const log = logger.child();
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -33,24 +36,39 @@ const Navbar = () => {
   const { socket } = useSocket();
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Polling interval for admin unread count.
+  // IMPORTANT: Dependencies use stable primitive values to avoid re-running
+  // on every render (session is a new object reference each time from NextAuth).
+  const isAdmin = session?.user?.role === "admin";
+  const userId = session?.user?.id;
+
   useEffect(() => {
-    if (session?.user?.role !== "admin") return;
+    if (!isAdmin) {
+      setUnreadCount(0);
+      return;
+    }
+
+    let isCancelled = false;
 
     const loadUnreadCount = async () => {
+      if (isCancelled) return;
       try {
         const res = await getAdminConversations();
-        if (res && !("error" in res)) {
+        if (!isCancelled && res && !("error" in res)) {
           const total = res.reduce((acc, conv: any) => acc + (conv.unreadCount || 0), 0);
           setUnreadCount(total);
         }
       } catch (err) {
-        console.error("Error loading navbar unread count:", err);
+        if (!isCancelled) {
+          log.error("Error loading navbar unread count:", err);
+        }
       }
     };
 
     loadUnreadCount();
 
-    const interval = setInterval(loadUnreadCount, 4000);
+    // Poll every 15 seconds instead of 4 — socket events handle real-time updates
+    const interval = setInterval(loadUnreadCount, 15000);
 
     if (socket) {
       socket.on("new_message_notification", loadUnreadCount);
@@ -58,16 +76,17 @@ const Navbar = () => {
     }
 
     return () => {
+      isCancelled = true;
       clearInterval(interval);
       if (socket) {
         socket.off("new_message_notification", loadUnreadCount);
         socket.off("conversation_deleted", loadUnreadCount);
       }
     };
-  }, [session, socket, pathname]);
+  }, [isAdmin, userId, socket]);
 
   const isAuthenticated = !!session?.user;
-  const userName = session?.user?.name ?? "Usuario";
+  const userName = session?.user?.name ?? (t.navbar?.usuario ?? "Usuario");
   const userImage = session?.user?.image;
   const userInitial = userName.charAt(0).toUpperCase();
 
@@ -131,7 +150,7 @@ const Navbar = () => {
                     whileHover={{
                       y: -2,
                       color: "var(--color-primary)",
-                      textShadow: "0 0 8px rgba(34, 197, 94, 0.5)", // Subtle neon glow on hover
+                      textShadow: "0 0 8px oklch(var(--color-primary) / 0.5)", // Subtle neon glow on hover
                       transition: { duration: 0.1 }
                     }}
                     className={cn(
@@ -196,7 +215,7 @@ const Navbar = () => {
                   {isActive(l.href) && (
                     <motion.div
                       layoutId="activeTab"
-                      className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.5)]"
+                      className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full shadow-[0_0_8px_oklch(var(--color-primary)/0.5)]"
                       transition={{ type: "spring", stiffness: 380, damping: 30 }}
                     />
                   )}
@@ -332,7 +351,7 @@ const Navbar = () => {
                       <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 transition-colors focus:bg-primary/5 focus:text-primary">
                         <Link href="/admin/chat" className="flex items-center justify-between w-full">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">Soporte Chat</span>
+                            <span className="font-medium text-sm">{t.navbar?.soporteChat ?? "Soporte Chat"}</span>
                             {unreadCount > 0 && (
                               <span className="min-w-[16px] h-[16px] rounded-full flex items-center justify-center text-[9px] font-bold px-1 bg-red-500 text-white animate-pulse shadow-sm shadow-red-500/20">
                                 {unreadCount}
@@ -349,7 +368,7 @@ const Navbar = () => {
                     onClick={() => signOut({ callbackUrl: "/" })}
                     className="text-red-500 focus:bg-red-500/10 focus:text-red-600 cursor-pointer flex items-center justify-between rounded-xl px-2 py-2 transition-colors"
                   >
-                    <span className="font-medium text-sm">Cerrar Sesión</span>
+                    <span className="font-medium text-sm">{t.navbar?.cerrarSesion ?? "Cerrar Sesión"}</span>
                     <LogOut className="h-4 w-4" />
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -543,7 +562,7 @@ const Navbar = () => {
                               <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#0f2a1d] animate-pulse" />
                             )}
                           </div>
-                          <span className="font-display text-2xl font-black tracking-tight uppercase">Soporte Chat</span>
+                          <span className="font-display text-2xl font-black tracking-tight uppercase">{t.navbar?.soporteChat ?? "Soporte Chat"}</span>
                         </div>
                         <div className="flex items-center gap-3 relative z-10">
                           {unreadCount > 0 && (
@@ -616,28 +635,28 @@ const Navbar = () => {
                           </div>
                           <div className="text-left">
                             <span className="block font-display text-lg font-bold tracking-tight">{userName}</span>
-                            <span className="block text-xs text-white/60">Mi Perfil</span>
+                            <span className="block text-xs text-white/60">{t.navbar?.miPerfil ?? "Mi Perfil"}</span>
                           </div>
                         </div>
                         <LogOut className="h-5 w-5 text-white/40" />
                       </button>
                     ) : (
                       <div className="flex flex-col gap-3 rounded-3xl bg-red-950/50 border border-red-500/20 p-5 shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <p className="text-center text-sm font-medium text-white mb-1">¿Estás seguro de cerrar sesión?</p>
+                        <p className="text-center text-sm font-medium text-white mb-1">{t.navbar?.confirmarCerrarSesion ?? "¿Estás seguro de cerrar sesión?"}</p>
                         <div className="flex gap-3">
                           <button
                             type="button"
                             onClick={() => setConfirmLogout(false)}
                             className="flex-1 rounded-xl bg-white/10 py-3 text-sm font-bold text-white transition-all active:scale-95 hover:bg-white/20"
                           >
-                            Cancelar
+                            {t.navbar?.cancelar ?? "Cancelar"}
                           </button>
                           <button
                             type="button"
                             onClick={() => { setOpen(false); signOut({ callbackUrl: "/" }); }}
                             className="flex-1 rounded-xl bg-red-500 py-3 text-sm font-bold text-white transition-all active:scale-95 hover:bg-red-600 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(239,68,68,0.3)]"
                           >
-                            Salir <LogOut className="h-4 w-4" />
+                            {t.navbar?.salir ?? "Salir"} <LogOut className="h-4 w-4" />
                           </button>
                         </div>
                       </div>

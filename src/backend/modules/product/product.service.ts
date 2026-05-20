@@ -1,5 +1,8 @@
 import type { Product } from "@prisma/client";
 import { ProductRepository } from "./product.repository";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/backend/modules/product/product.service.ts");
 
 export class ProductService {
   constructor(private productRepository: ProductRepository) {}
@@ -23,7 +26,7 @@ export class ProductService {
         totalPages: Math.ceil(total / limit)
       };
     } catch (error) {
-      console.error("Error in getCatalog (Database connection likely failed):", error);
+      log.error("Error in getCatalog (Database connection likely failed):", error);
       return { products: [], total: 0, totalPages: 0 };
     }
   }
@@ -56,7 +59,7 @@ export class ProductService {
     try {
       return await this.productRepository.getCategories();
     } catch (error) {
-      console.error("Error in getCategories:", error);
+      log.error("Error in getCategories:", error);
       return [];
     }
   }

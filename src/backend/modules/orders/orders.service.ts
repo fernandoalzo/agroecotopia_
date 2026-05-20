@@ -1,5 +1,8 @@
 import { OrdersRepository } from "./orders.repository";
 import { PedidoEstado, Prisma } from "@prisma/client";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/backend/modules/orders/orders.service.ts");
 
 export class OrdersService {
   constructor(private ordersRepository: OrdersRepository) { }
@@ -35,6 +38,8 @@ export class OrdersService {
     const impuestos = subtotal * (data.impuestosPorcentaje / 100);
     const total = subtotal + impuestos + data.costoEnvio;
 
+    log.info("Creando pedido en base de datos:", { usuarioId: data.usuarioId, subtotal, impuestos, total, cantidadItems: data.detalles.length });
+
     const pedido = await this.ordersRepository.createPedido({
       usuario: { connect: { id: data.usuarioId } },
       accountId: data.accountId,
@@ -51,24 +56,31 @@ export class OrdersService {
       },
     } as any);
 
+    log.info("Pedido creado exitosamente:", { pedidoId: pedido.id });
     return this.serializePedido(pedido);
   }
 
   async updateEstado(pedidoId: string, nuevoEstado: PedidoEstado, motivoCancelacion?: string) {
+    log.info("Iniciando transición de estado del pedido:", { pedidoId, nuevoEstado });
     return await this.ordersRepository.executeTransaction(async (tx) => {
       // 1. Leer pedido actual dentro de la transacción
       const pedido = await this.ordersRepository.findById(pedidoId, tx);
-      if (!pedido) throw new Error("Pedido no encontrado");
+      if (!pedido) {
+        log.error("Pedido no encontrado durante transición de estado:", { pedidoId });
+        throw new Error("Pedido no encontrado");
+      }
 
       const estadoAnterior = pedido.estado;
 
       // 2. Si ya está en el estado destino → retorno idempotente (sin tocar stock)
       if (estadoAnterior === nuevoEstado) {
+        log.debug("Transición idempotente: el pedido ya está en el estado destino:", { pedidoId, estado: nuevoEstado });
         return this.serializePedido(pedido);
       }
 
       // 3. Transición atómica con lock optimista (WHERE estado = estadoAnterior)
       //    Solo el primer proceso concurrente logra count > 0
+      log.debug("Intentando transición atómica con lock optimista:", { pedidoId, de: estadoAnterior, a: nuevoEstado });
       const transitioned = await this.ordersRepository.tryTransitionEstado(
         pedidoId,
         estadoAnterior,
@@ -82,17 +94,22 @@ export class OrdersService {
 
       // 4. Si no se pudo transicionar, otro proceso ya lo hizo → retorno idempotente
       if (!transitioned) {
+        log.warn("Transición fallida (race condition detectada). Otro proceso ya transicionó el pedido:", { pedidoId });
         const current = await this.ordersRepository.findById(pedidoId, tx);
         return this.serializePedido(current);
       }
+
+      log.info("Transición de estado exitosa:", { pedidoId, de: estadoAnterior, a: nuevoEstado });
 
       // 5. Ganamos la race — ejecutar lógica de stock dentro de la misma transacción
 
       // Regla: Verificar y descontar inventario al confirmar
       if (nuevoEstado === PedidoEstado.CONFIRMADO) {
+        log.debug("Verificando y descontando stock al confirmar pedido:", { pedidoId });
         for (const detalle of pedido.detalles) {
           const stockActual = await this.ordersRepository.getProductStock(detalle.productoId, tx);
           if (new Prisma.Decimal(stockActual).lessThan(detalle.cantidad)) {
+            log.error("Stock insuficiente para confirmar pedido:", { pedidoId, productoId: detalle.productoId, stockActual: Number(stockActual), cantidadRequerida: Number(detalle.cantidad) });
             throw new Error(`Stock insuficiente para el producto ${detalle.producto.name}`);
           }
         }
@@ -103,6 +120,7 @@ export class OrdersService {
             tx
           );
         }
+        log.debug("Stock descontado exitosamente para pedido confirmado:", { pedidoId });
       }
 
       // Regla: Revertir inventario si se cancela desde un estado con stock descontado
@@ -115,9 +133,11 @@ export class OrdersService {
         ];
 
         if (estadosConStockDescontado.includes(estadoAnterior)) {
+          log.debug("Revirtiendo stock por cancelación desde estado con stock descontado:", { pedidoId, estadoAnterior });
           for (const detalle of pedido.detalles) {
             await this.ordersRepository.updateProductStock(detalle.productoId, detalle.cantidad, tx);
           }
+          log.debug("Stock revertido exitosamente:", { pedidoId });
         }
       }
 
@@ -128,11 +148,14 @@ export class OrdersService {
   }
 
   async getPedidosPorUsuario(usuarioId: string) {
+    log.debug("Obteniendo pedidos del usuario:", { usuarioId });
     const pedidos = await this.ordersRepository.findByUsuarioId(usuarioId);
+    log.debug("Pedidos encontrados:", { usuarioId, count: pedidos.length });
     return pedidos.map(p => this.serializePedido(p));
   }
 
   async getPedidoDetallado(pedidoId: string) {
+    log.debug("Obteniendo pedido detallado:", { pedidoId });
     const pedido = await this.ordersRepository.findById(pedidoId);
     return pedido ? this.serializePedido(pedido) : null;
   }
@@ -165,21 +188,33 @@ export class OrdersService {
   }
 
   async deletePedido(pedidoId: string) {
+    log.info("Eliminando pedido:", { pedidoId });
     const pedido = await this.ordersRepository.findById(pedidoId);
-    if (!pedido) throw new Error("Pedido no encontrado");
+    if (!pedido) {
+      log.error("Pedido no encontrado para eliminación:", { pedidoId });
+      throw new Error("Pedido no encontrado");
+    }
 
     if (pedido.estado !== PedidoEstado.CANCELADO) {
+      log.warn("Intento de eliminar pedido en estado no cancelado:", { pedidoId, estado: pedido.estado });
       throw new Error("Solo se pueden eliminar pedidos en estado Cancelado");
     }
 
-    return await this.ordersRepository.deletePedido(pedidoId);
+    const result = await this.ordersRepository.deletePedido(pedidoId);
+    log.info("Pedido eliminado exitosamente:", { pedidoId });
+    return result;
   }
 
   async updatePedido(pedidoId: string, data: Prisma.PedidoUpdateInput) {
+    log.debug("Actualizando pedido:", { pedidoId });
     const pedido = await this.ordersRepository.findById(pedidoId);
-    if (!pedido) throw new Error("Pedido no encontrado");
+    if (!pedido) {
+      log.error("Pedido no encontrado para actualización:", { pedidoId });
+      throw new Error("Pedido no encontrado");
+    }
 
     const pedidoActualizado = await this.ordersRepository.updatePedido(pedidoId, data);
+    log.debug("Pedido actualizado exitosamente:", { pedidoId });
     return this.serializePedido(pedidoActualizado);
   }
 }

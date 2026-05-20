@@ -18,6 +18,8 @@ model Message {
   replyTo        Message?     @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
   replies        Message[]    @relation("MessageReplies")
   isRead         Boolean      @default(false)
+  isEncrypted    Boolean      @default(false)
+  encryptionType Int          @default(0) // 0: plain, 1: prekey signal, 3: signal message
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @default(now()) @updatedAt
 }

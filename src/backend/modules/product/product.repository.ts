@@ -1,5 +1,8 @@
 import prisma from "@/backend/db/prisma";
 import type { Product } from "@prisma/client";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/backend/modules/product/product.repository.ts");
 
 export class ProductRepository {
   /**
@@ -7,6 +10,7 @@ export class ProductRepository {
    */
   async getAllProducts(skip: number = 0, take: number = 20, categories?: string[]): Promise<Product[]> {
     const where = categories && categories.length > 0 ? { categoria: { in: categories } } : {};
+    log.debug("Obteniendo productos paginados:", { skip, take, categories });
     return prisma.product.findMany({
       where,
       skip,
@@ -20,6 +24,7 @@ export class ProductRepository {
    */
   async getTotalCount(categories?: string[]): Promise<number> {
     const where = categories && categories.length > 0 ? { categoria: { in: categories } } : {};
+    log.debug("Obteniendo total de productos con filtros:", { categories });
     return prisma.product.count({ where });
   }
 
@@ -27,6 +32,7 @@ export class ProductRepository {
    * Obtiene un producto por su slug
    */
   async getProductBySlug(slug: string): Promise<Product | null> {
+    log.debug("Buscando producto por slug:", { slug });
     return prisma.product.findUnique({
       where: { slug },
     });
@@ -48,6 +54,7 @@ export class ProductRepository {
       ? { AND: [{ OR: searchConditions }, { categoria: { in: categories } }] }
       : { OR: searchConditions };
 
+    log.debug("Buscando productos:", { query, skip, take, categories });
     return prisma.product.findMany({
       where: where as any,
       skip,
@@ -72,6 +79,7 @@ export class ProductRepository {
       ? { AND: [{ OR: searchConditions }, { categoria: { in: categories } }] }
       : { OR: searchConditions };
 
+    log.debug("Obteniendo conteo de búsqueda de productos:", { query, categories });
     return prisma.product.count({
       where: where as any,
     });
@@ -81,6 +89,7 @@ export class ProductRepository {
    * Crea un nuevo producto (solo para seeding o uso interno)
    */
   async createProduct(data: Omit<Product, "id" | "createdAt" | "updatedAt">): Promise<Product> {
+    log.info("Creando nuevo producto:", { name: data.name, slug: data.slug });
     return prisma.product.create({
       data,
     });
@@ -90,6 +99,7 @@ export class ProductRepository {
    * Obtiene todas las categorías únicas de la tabla de productos.
    */
   async getCategories(): Promise<string[]> {
+    log.debug("Obteniendo categorías únicas de productos");
     const result = await prisma.product.findMany({
       select: { categoria: true },
       distinct: ["categoria"],

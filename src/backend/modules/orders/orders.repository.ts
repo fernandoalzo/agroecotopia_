@@ -1,5 +1,8 @@
 import prisma from "@/backend/db/prisma";
 import { PedidoEstado, Prisma } from "@prisma/client";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/backend/modules/orders/orders.repository.ts");
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type TxClient = any;
@@ -9,6 +12,7 @@ export class OrdersRepository {
    * Ejecuta operaciones dentro de una transacción atómica de base de datos.
    */
   async executeTransaction<T>(fn: (tx: TxClient) => Promise<T>): Promise<T> {
+    log.debug("Iniciando transacción atómica de base de datos.");
     return await prisma.$transaction(fn);
   }
 
@@ -25,14 +29,18 @@ export class OrdersRepository {
     tx?: TxClient
   ): Promise<boolean> {
     const client = tx || prisma;
+    log.debug("Intentando transición de estado:", { pedidoId: id, de: fromEstado, a: toEstado });
     const result = await client.pedido.updateMany({
       where: { id, estado: fromEstado },
       data: { estado: toEstado, ...extraData }
     });
-    return result.count > 0;
+    const success = result.count > 0;
+    log.debug("Resultado de transición:", { pedidoId: id, success, affectedCount: result.count });
+    return success;
   }
 
   async createPedido(data: Prisma.PedidoCreateInput) {
+    log.debug("Creando pedido en la base de datos.");
     return await prisma.pedido.create({
       data,
       include: {
@@ -43,6 +51,7 @@ export class OrdersRepository {
 
   async findById(id: string, tx?: TxClient) {
     const client = tx || prisma;
+    log.debug("Buscando pedido por ID:", { pedidoId: id });
     return await client.pedido.findUnique({
       where: { id },
       include: {
@@ -57,6 +66,7 @@ export class OrdersRepository {
 
   async updatePedido(id: string, data: Prisma.PedidoUpdateInput, tx?: TxClient) {
     const client = tx || prisma;
+    log.debug("Actualizando pedido en la base de datos:", { pedidoId: id });
     return await client.pedido.update({
       where: { id },
       data,
@@ -67,6 +77,7 @@ export class OrdersRepository {
   }
 
   async findByUsuarioId(usuarioId: string) {
+    log.debug("Buscando pedidos por usuario:", { usuarioId });
     return await prisma.pedido.findMany({
       where: { usuarioId },
       orderBy: { fechaPedido: "desc" },
@@ -82,6 +93,7 @@ export class OrdersRepository {
 
   async updateProductStock(productoId: string, cantidad: number | Prisma.Decimal, tx?: TxClient) {
     const client = tx || prisma;
+    log.debug("Actualizando stock del producto:", { productoId, incremento: Number(cantidad) });
     return await client.product.update({
       where: { id: productoId },
       data: {
@@ -102,6 +114,7 @@ export class OrdersRepository {
   }
 
   async deletePedido(id: string) {
+    log.info("Eliminando pedido de la base de datos:", { pedidoId: id });
     return await prisma.pedido.delete({
       where: { id },
     });

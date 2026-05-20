@@ -4,6 +4,9 @@ import { MercadoPagoPaymentHandler } from "./mercadopago/handler";
 import { NequiPaymentHandler } from "./nequi/handler";
 import { PSEPaymentHandler } from "./pse/handler";
 import { WompiPaymentHandler } from "./wompi/handler";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/utils/PaymentsMethods/factory.ts");
 
 /**
  * Fábrica Centralizada de Procesadores de Pago (Payment Handlers).
@@ -23,8 +26,10 @@ export class PaymentHandlerFactory {
    * @param methodId Identificador del método de pago
    */
   static getHandler(methodId: string): PaymentHandler {
+    log.debug(`Obteniendo procesador de pago para el método: ${methodId}`);
     const handler = this.handlers[methodId];
     if (!handler) {
+      log.error(`Fallo al obtener el procesador. No se encontró un procesador registrado para el método: ${methodId}`);
       throw new Error(`No se encontró un procesador registrado para el método de pago: ${methodId}`);
     }
     return handler;
@@ -36,6 +41,7 @@ export class PaymentHandlerFactory {
    * @param handler Instancia del procesador de pago
    */
   static registerHandler(methodId: string, handler: PaymentHandler): void {
+    log.info(`Registrando dinámicamente procesador de pago para el método: ${methodId}`);
     this.handlers[methodId] = handler;
   }
 }

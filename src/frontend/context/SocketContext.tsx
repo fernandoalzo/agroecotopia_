@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { io as ClientIO, Socket } from "socket.io-client";
+import logger from "@/utils/logger";
+const log = logger.child("src/frontend/context/SocketContext.tsx");
 
 type SocketContextType = {
   socket: Socket | null;
@@ -25,7 +27,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Default to the current page origin (same port) since Next.js and Socket.IO are unified
     const socketUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
-    console.log("Connecting to socket server at:", socketUrl);
+    log.info("Connecting to socket server at:", socketUrl);
 
     // Connect to the unified socket.io server
     const socketInstance = ClientIO(socketUrl, {
@@ -34,12 +36,12 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     socketInstance.on("connect", () => {
-      console.log("Socket connected client-side");
+      log.info("Socket connected client-side");
       setIsConnected(true);
     });
 
     socketInstance.on("disconnect", () => {
-      console.log("Socket disconnected client-side");
+      log.info("Socket disconnected client-side");
       setIsConnected(false);
     });
 

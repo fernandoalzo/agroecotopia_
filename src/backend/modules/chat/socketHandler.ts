@@ -1,6 +1,8 @@
 import { Server } from "socket.io";
 import type { Server as HTTPServer } from "http";
 import type { PrismaClient } from "@prisma/client";
+import logger from "@/utils/logger";
+const log = logger.child("src/backend/modules/chat/socketHandler.ts");
 
 /**
  * Initializes the Socket.IO server on top of the given HTTP server.
@@ -19,13 +21,13 @@ export function initSocketServer(httpServer: HTTPServer, prisma: PrismaClient): 
   });
 
   io.on("connection", (socket) => {
-    console.log("Socket connected:", socket.id);
+    log.info("Socket connected:", socket.id);
 
     // Join room
     socket.on("join_room", ({ conversationId }: { conversationId: string }) => {
       if (conversationId) {
         socket.join(`conversation_${conversationId}`);
-        console.log(`Socket ${socket.id} joined room: conversation_${conversationId}`);
+        log.debug(`Socket ${socket.id} joined room: conversation_${conversationId}`);
       }
     });
 
@@ -33,7 +35,7 @@ export function initSocketServer(httpServer: HTTPServer, prisma: PrismaClient): 
     socket.on("leave_room", ({ conversationId }: { conversationId: string }) => {
       if (conversationId) {
         socket.leave(`conversation_${conversationId}`);
-        console.log(`Socket ${socket.id} left room: conversation_${conversationId}`);
+        log.debug(`Socket ${socket.id} left room: conversation_${conversationId}`);
       }
     });
 
@@ -46,7 +48,7 @@ export function initSocketServer(httpServer: HTTPServer, prisma: PrismaClient): 
     });
 
     // Handle sending messages
-    socket.on("send_message", async ({ conversationId, content, senderId, senderRole, replyToId }: { conversationId: string; content: string; senderId: string; senderRole: string; replyToId?: string }) => {
+    socket.on("send_message", async ({ conversationId, content, isEncrypted, encryptionType, senderId, senderRole, replyToId }: { conversationId: string; content: string; isEncrypted?: boolean; encryptionType?: number; senderId: string; senderRole: string; replyToId?: string }) => {
       try {
         if (!conversationId || !content || !senderId) return;
 
@@ -54,6 +56,8 @@ export function initSocketServer(httpServer: HTTPServer, prisma: PrismaClient): 
         const message = await prisma.message.create({
           data: {
             content,
+            isEncrypted: isEncrypted || false,
+            encryptionType: encryptionType || 0,
             senderId,
             senderRole: senderRole as any,
             conversationId,
@@ -66,6 +70,8 @@ export function initSocketServer(httpServer: HTTPServer, prisma: PrismaClient): 
                 content: true,
                 senderId: true,
                 senderRole: true,
+                isEncrypted: true,
+                encryptionType: true,
               },
             },
           },
@@ -79,7 +85,7 @@ export function initSocketServer(httpServer: HTTPServer, prisma: PrismaClient): 
 
         // Broadcast the message to the room
         io.to(`conversation_${conversationId}`).emit("receive_message", message);
-        
+
         // Emit a global event to notify the admin
         io.emit("new_message_notification", {
           conversationId,
@@ -87,20 +93,27 @@ export function initSocketServer(httpServer: HTTPServer, prisma: PrismaClient): 
         });
 
       } catch (error) {
-        console.error("Error saving/sending message:", error);
+        log.error("Error saving/sending message:", error);
         socket.emit("error", { message: "Error enviando el mensaje" });
-
       }
     });
 
     // Handle deleting conversation
     socket.on("delete_conversation", ({ conversationId }: { conversationId: string }) => {
-      console.log(`Conversation deleted: ${conversationId}, broadcasting to room...`);
+      log.info(`Conversation deleted: ${conversationId}, broadcasting to room...`);
       io.to(`conversation_${conversationId}`).emit("conversation_deleted", { conversationId });
     });
 
+    // Handle E2EE key synchronization request (e.g., on new device login or decryption failure)
+    socket.on("request_key_sync", ({ conversationId, userId }: { conversationId: string; userId: string }) => {
+      if (conversationId && userId) {
+        log.info(`Key sync requested by ${userId} in conversation ${conversationId}`);
+        socket.to(`conversation_${conversationId}`).emit("key_sync_needed", { userId });
+      }
+    });
+
     socket.on("disconnect", () => {
-      console.log("Socket disconnected:", socket.id);
+      log.info("Socket disconnected:", socket.id);
     });
   });
 

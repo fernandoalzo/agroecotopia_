@@ -21,6 +21,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Loading } from "@/components/ui/Loading";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/app/pedidos/[id]/page.tsx");
 
 const statusConfig = {
   [PedidoEstado.PENDIENTE]: {
@@ -84,7 +87,7 @@ export default function OrderDetailPage() {
           setOrder(result);
         }
       } catch (error) {
-        console.error("Error fetching order detail:", error);
+        log.error("Error fetching order detail:", error);
       } finally {
         setLoading(false);
       }
@@ -143,7 +146,7 @@ export default function OrderDetailPage() {
               verificationError = result.error;
             }
           } catch (err) {
-            console.error("Fallback confirmation error:", err);
+            log.error("Fallback confirmation error:", err);
             verificationError = "No se pudo comunicar con el servidor de pagos.";
           }
         }

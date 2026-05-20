@@ -12,6 +12,13 @@ export const es: Translations = {
     tema: "Tema",
     pedidos: "Mis Pedidos",
     miCuenta: "Mi Cuenta",
+    soporteChat: "Soporte Chat",
+    miPerfil: "Mi Perfil",
+    cerrarSesion: "Cerrar Sesión",
+    confirmarCerrarSesion: "¿Estás seguro de cerrar sesión?",
+    cancelar: "Cancelar",
+    salir: "Salir",
+    usuario: "Usuario",
   },
   hero: {
     badge: "🚜 Agroinsumos & Maquinaria",

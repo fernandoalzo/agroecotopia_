@@ -7,6 +7,9 @@ import { authService } from "@/backend/modules/auth";
 import { headers } from "next/headers";
 
 import { config, getRequiredConfig } from "@/config/config";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/utils/auth.ts");
 
 /**
  * Auth.js configuration — Central auth engine.
@@ -34,13 +37,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          log.warn("Auth authorize: credenciales vacías recibidas.");
           return null;
         }
 
+        log.debug("Auth authorize: intentando autorizar credenciales para:", { email: credentials.email });
         const user = await authService.verifyCredentials(
           credentials.email as string,
           credentials.password as string
         );
+
+        if (!user) {
+          log.warn("Auth authorize: verificación fallida para el email:", { email: credentials.email });
+        } else {
+          log.info("Auth authorize: verificación exitosa para el email:", { email: credentials.email, userId: user.id });
+        }
 
         return user;
       },
@@ -55,6 +66,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      */
     async jwt({ token, user }) {
       if (user) {
+        log.debug("Auth callback jwt: poblando token con información del usuario:", { userId: user.id, email: user.email });
         token.id = user.id as string;
         token.role = (user as any).role;
         token.email = user.email;
@@ -67,6 +79,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      */
     async session({ session, token }) {
       if (token?.id && session.user) {
+        log.debug("Auth callback session: asignando token al objeto session de NextAuth:", { userId: token.id, email: token.email });
         session.user.id = token.id as string;
         session.user.role = token.role as any;
         session.user.email = token.email as string;
@@ -86,25 +99,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const proto = headersList.get("x-forwarded-proto") || "https";
         if (host) {
           realBaseUrl = `${proto}://${host}`;
+          // Silenced to avoid log flooding; uncomment if debugging proxy redirect issues
+          // log.debug("Auth callback redirect: realBaseUrl resuelto a partir de cabeceras:", { realBaseUrl });
         }
       } catch (e) {
         // Fallback during static build/generation if headers are unavailable
       }
 
+      let resolvedUrl = url;
       if (url.startsWith("/")) {
-        return `${realBaseUrl}${url}`;
-      }
-      
-      try {
-        const urlObj = new URL(url);
-        if (urlObj.origin === baseUrl || urlObj.hostname === "localhost" || urlObj.hostname === "127.0.0.1") {
-          return `${realBaseUrl}${urlObj.pathname}${urlObj.search}`;
+        resolvedUrl = `${realBaseUrl}${url}`;
+      } else {
+        try {
+          const urlObj = new URL(url);
+          if (urlObj.origin === baseUrl || urlObj.hostname === "localhost" || urlObj.hostname === "127.0.0.1") {
+            resolvedUrl = `${realBaseUrl}${urlObj.pathname}${urlObj.search}`;
+          }
+        } catch (e) {
+          // Ignore invalid URLs
         }
-      } catch (e) {
-        // Ignore invalid URLs
       }
 
-      return url;
+      // Silenced to avoid log flooding; uncomment if debugging proxy redirect issues
+      // log.debug("Auth callback redirect: resolvedUrl final calculado:", { url, baseUrl, resolvedUrl });
+      return resolvedUrl;
     },
   },
   pages: {

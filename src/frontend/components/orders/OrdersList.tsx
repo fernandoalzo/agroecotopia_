@@ -16,6 +16,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/frontend/components/orders/OrdersList.tsx");
 
 interface Order {
   id: string;
@@ -87,7 +90,7 @@ export const OrdersList = () => {
           setOrders(result as any);
         }
       } catch (error) {
-        console.error("Error fetching orders:", error);
+        log.error("Error fetching orders:", error);
       } finally {
         setLoading(false);
       }

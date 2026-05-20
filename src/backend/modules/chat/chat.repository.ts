@@ -1,8 +1,12 @@
 import prisma from "@/backend/db/prisma";
 import { Role } from "@prisma/client";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/backend/modules/chat/chat.repository.ts");
 
 export class ChatRepository {
   async findConversationById(id: string) {
+    log.debug("Buscando conversación por ID:", { conversationId: id });
     return prisma.conversation.findUnique({
       where: { id },
       include: {
@@ -18,6 +22,7 @@ export class ChatRepository {
   }
 
   async findConversationByUserId(userId: string) {
+    log.debug("Buscando conversación por userId:", { userId });
     return prisma.conversation.findUnique({
       where: { userId },
       include: {
@@ -33,6 +38,7 @@ export class ChatRepository {
   }
 
   async createConversation(userId: string) {
+    log.info("Creando nueva conversación para el usuario:", { userId });
     return prisma.conversation.create({
       data: {
         userId,
@@ -50,6 +56,7 @@ export class ChatRepository {
   }
 
   async findAllConversations() {
+    log.debug("Obteniendo todas las conversaciones con último mensaje y conteo de no leídos.");
     const conversations = await prisma.conversation.findMany({
       include: {
         user: {
@@ -87,10 +94,12 @@ export class ChatRepository {
       })
     );
 
+    log.debug("Conversaciones obtenidas:", { count: mappedConversations.length });
     return mappedConversations;
   }
 
   async findMessagesByConversationId(conversationId: string) {
+    log.debug("Obteniendo mensajes de la conversación:", { conversationId });
     return prisma.message.findMany({
       where: { conversationId },
       include: {
@@ -100,6 +109,8 @@ export class ChatRepository {
             content: true,
             senderId: true,
             senderRole: true,
+            isEncrypted: true,
+            encryptionType: true,
           },
         },
       },
@@ -110,6 +121,7 @@ export class ChatRepository {
   }
 
   async createMessage(conversationId: string, content: string, senderId: string, senderRole: Role) {
+    log.info("Creando mensaje en conversación:", { conversationId, senderId, senderRole });
     return prisma.message.create({
       data: {
         content,
@@ -121,6 +133,7 @@ export class ChatRepository {
   }
 
   async markMessagesAsRead(conversationId: string, excludeSenderId: string) {
+    log.debug("Marcando mensajes como leídos en conversación:", { conversationId, excludeSenderId });
     return prisma.message.updateMany({
       where: {
         conversationId,
@@ -136,6 +149,7 @@ export class ChatRepository {
   }
 
   async deleteConversation(id: string) {
+    log.info("Eliminando conversación de la base de datos:", { conversationId: id });
     return prisma.conversation.delete({
       where: { id },
     });
@@ -153,6 +167,7 @@ export class ChatRepository {
       ];
     }
 
+    log.debug("Buscando usuarios paginados:", { searchQuery, page, skip, take });
     const [users, totalCount] = await Promise.all([
       prisma.user.findMany({
         where,
@@ -171,6 +186,7 @@ export class ChatRepository {
       prisma.user.count({ where }),
     ]);
 
+    log.debug("Usuarios encontrados:", { totalCount, totalPages: Math.ceil(totalCount / take), currentPage: page });
     return {
       users,
       totalCount,

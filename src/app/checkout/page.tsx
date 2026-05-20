@@ -17,6 +17,9 @@ import Link from "next/link";
 import { PAYMENT_METHODS, PaymentHandlerFactory } from "@/utils/PaymentsMethods";
 import { placeOrderAction } from "@/backend/modules/orders";
 import { Loading } from "@/components/ui/Loading";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/app/checkout/page.tsx");
 
 export default function CheckoutPage() {
   const { data: session, status } = useSession();
@@ -88,7 +91,7 @@ export default function CheckoutPage() {
       });
 
     } catch (error) {
-      console.error("Checkout error:", error);
+      log.error("Checkout error:", error);
       const { toast } = await import("sonner");
       toast.error("Ocurrió un error inesperado al procesar tu pedido.");
       setIsSubmitting(false);

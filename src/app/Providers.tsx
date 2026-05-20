@@ -9,8 +9,29 @@ import { LanguageProvider } from "@/context/LanguageContext";
 import { SocketProvider } from "@/frontend/context/SocketContext";
 import ChatWidget from "@/frontend/components/chat/ChatWidget";
 import { ThemeProvider } from "next-themes";
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import ScrollToAnchor from "@/components/ScrollToAnchor";
+import { usePathname } from "next/navigation";
+
+function PageFocusTracker() {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log(`[Page Focus] Estoy en la página: ${pathname}`);
+    };
+
+    // Log on initial load / pathname navigation
+    handleFocus();
+
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [pathname]);
+
+  return null;
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -26,6 +47,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                   <Suspense fallback={null}>
                     <ScrollToAnchor />
                   </Suspense>
+                  <PageFocusTracker />
                   {children}
                   <ChatWidget />
                   <Sonner />

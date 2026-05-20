@@ -4,11 +4,24 @@ import ProductsSection from "@/components/home/ProductsSection";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 import { productService } from "@/backend/modules/product";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/app/page.tsx");
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const { products } = await productService.getCatalog(1, 40);
+  log.info("Renderizando página de inicio (Home Page).");
+  
+  let products: any[] = [];
+  try {
+    log.debug("Página de inicio: consultando catálogo de productos.");
+    const result = await productService.getCatalog(1, 40);
+    products = result.products;
+    log.debug("Página de inicio: catálogo de productos cargado exitosamente.", { totalProductos: products.length });
+  } catch (error) {
+    log.error("Página de inicio: error al cargar el catálogo de productos:", error);
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -33,7 +46,7 @@ export default async function Home() {
           </div>
         </div>
       </main>
-
+      
       <Footer />
     </div>
   );
