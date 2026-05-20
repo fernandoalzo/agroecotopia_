@@ -55,6 +55,9 @@ export default function AdminChatPage() {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hasNewKeysRef = useRef(false);
+  const pageContainerRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
+  const sidebarScrollRef = useRef<HTMLDivElement>(null);
 
   const conversationsRef = useRef(conversations);
   useEffect(() => {
@@ -127,6 +130,25 @@ export default function AdminChatPage() {
         vv.removeEventListener("scroll", handleResize);
       }
       window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  // Prevent touchmove on non-scrollable areas to stop page panning on mobile
+  useEffect(() => {
+    const container = pageContainerRef.current;
+    if (!container || typeof window === "undefined" || window.innerWidth >= 768) return;
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const target = e.target as Node;
+      // Allow scrolling inside messages area or sidebar list
+      if (messagesScrollRef.current?.contains(target)) return;
+      if (sidebarScrollRef.current?.contains(target)) return;
+      e.preventDefault();
+    };
+
+    container.addEventListener("touchmove", handleTouchMove, { passive: false });
+    return () => {
+      container.removeEventListener("touchmove", handleTouchMove);
     };
   }, []);
 
@@ -644,6 +666,7 @@ export default function AdminChatPage() {
 
   return (
     <div 
+      ref={pageContainerRef}
       className="fixed inset-x-0 top-0 flex bg-background text-foreground overflow-hidden font-sans pt-14 md:pt-20"
       style={{ height: viewportHeight }}
     >
@@ -718,7 +741,7 @@ export default function AdminChatPage() {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-3 space-y-1 overscroll-y-contain">
+        <div ref={sidebarScrollRef} className="flex-1 overflow-y-auto p-3 space-y-1 overscroll-y-contain">
           {sidebarTab === "chats" ? (
             isLoadingConvs ? (
               <div className="h-40 flex items-center justify-center">
@@ -895,7 +918,7 @@ export default function AdminChatPage() {
             </div>
 
             {/* Chat Messages */}
-            <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-secondary/5 min-h-0 overscroll-y-contain">
+            <div ref={messagesScrollRef} className="flex-1 p-6 overflow-y-auto space-y-4 bg-secondary/5 min-h-0 overscroll-y-contain">
               {isLoadingMsgs ? (
                 <div className="h-full flex items-center justify-center">
                   <Loading text="" subtext="" className="py-0" />

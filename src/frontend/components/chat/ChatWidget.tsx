@@ -69,6 +69,8 @@ export default function ChatWidget() {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hasNewKeysRef = useRef(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
 
   const isOpenRef = useRef(isOpen);
   useEffect(() => {
@@ -138,6 +140,25 @@ export default function ChatWidget() {
         vv.removeEventListener("scroll", handleResize);
       }
       window.removeEventListener("scroll", handleScroll);
+    };
+  }, [isOpen]);
+
+  // Prevent touchmove on non-scrollable areas (header, input) to stop page panning
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined" || window.innerWidth >= 768) return;
+    const container = chatContainerRef.current;
+    if (!container) return;
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const scrollable = messagesScrollRef.current;
+      // Allow scrolling only inside the messages area
+      if (scrollable && scrollable.contains(e.target as Node)) return;
+      e.preventDefault();
+    };
+
+    container.addEventListener("touchmove", handleTouchMove, { passive: false });
+    return () => {
+      container.removeEventListener("touchmove", handleTouchMove);
     };
   }, [isOpen]);
 
@@ -544,6 +565,7 @@ export default function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            ref={chatContainerRef}
             className="relative w-full h-full md:absolute md:inset-auto md:bottom-20 md:right-0 md:w-[380px] md:h-[580px] md:rounded-2xl md:border md:border-border/80 md:shadow-2xl flex flex-col overflow-hidden bg-background z-50"
           >
             {/* Header */}
@@ -589,7 +611,7 @@ export default function ChatWidget() {
             </div>
 
             {/* Chat Body */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-secondary/5 min-h-0 overscroll-y-contain">
+            <div ref={messagesScrollRef} className="flex-1 p-4 overflow-y-auto space-y-3 bg-secondary/5 min-h-0 overscroll-y-contain">
               {isLoading ? (
                 <div className="h-full flex items-center justify-center">
                   <Loading text="" subtext="" className="py-0 scale-75" />
