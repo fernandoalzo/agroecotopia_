@@ -530,10 +530,13 @@ export default function ChatWidget() {
         )}
       </AnimatePresence>
 
-      <div className={isClient && isOpen && window.innerWidth < 768
-        ? "fixed inset-x-0 top-0 bottom-auto z-[999] font-sans"
-        : "fixed bottom-5 right-5 z-[999] md:bottom-8 md:right-8 font-sans"
-      }>
+      <div 
+        className={isClient && isOpen && window.innerWidth < 768
+          ? "fixed inset-x-0 top-0 bottom-auto z-[999] font-sans"
+          : "fixed bottom-5 right-5 z-[999] md:bottom-8 md:right-8 font-sans"
+        }
+        style={isClient && isOpen && window.innerWidth < 768 ? { height: viewportHeight } : undefined}
+      >
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -541,10 +544,7 @@ export default function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed inset-x-0 top-0 bottom-auto w-full md:absolute md:inset-auto md:bottom-20 md:right-0 md:w-[380px] md:h-[580px] md:rounded-2xl md:border md:border-border/80 md:shadow-2xl flex flex-col overflow-hidden bg-background z-50"
-            style={{
-              height: isClient && window.innerWidth < 768 ? viewportHeight : undefined
-            }}
+            className="relative w-full h-full md:absolute md:inset-auto md:bottom-20 md:right-0 md:w-[380px] md:h-[580px] md:rounded-2xl md:border md:border-border/80 md:shadow-2xl flex flex-col overflow-hidden bg-background z-50"
           >
             {/* Header */}
             <div className="p-4 bg-gradient-to-r from-primary/90 to-primary text-primary-foreground flex items-center justify-between border-b border-primary/20">
@@ -814,6 +814,15 @@ export default function ChatWidget() {
                   type="text"
                   value={inputMessage}
                   onChange={handleInputChange}
+                  onFocus={() => {
+                    // Force viewport scroll reset during keyboard show
+                    let count = 0;
+                    const interval = setInterval(() => {
+                      window.scrollTo(0, 0);
+                      count++;
+                      if (count > 10) clearInterval(interval);
+                    }, 50);
+                  }}
                   disabled={!isConnected}
                   placeholder={isConnected ? t.placeholder : t.disconnectedPlaceholder}
                   className="flex-1 h-10 px-3 border border-border hover:border-border/80 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm outline-none bg-secondary/10 transition-all disabled:opacity-50"

@@ -1016,6 +1016,15 @@ export default function AdminChatPage() {
                   type="text"
                   value={inputMessage}
                   onChange={handleInputChange}
+                  onFocus={() => {
+                    // Force viewport scroll reset during keyboard show
+                    let count = 0;
+                    const interval = setInterval(() => {
+                      window.scrollTo(0, 0);
+                      count++;
+                      if (count > 10) clearInterval(interval);
+                    }, 50);
+                  }}
                   disabled={!isConnected}
                   placeholder={isConnected ? "Escribe tu respuesta..." : "Chat desconectado..."}
                   className="flex-1 h-12 px-4 border border-border/60 hover:border-border/80 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm outline-none bg-secondary/20 transition-all text-foreground disabled:opacity-50"
