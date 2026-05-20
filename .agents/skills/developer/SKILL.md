@@ -15,7 +15,9 @@ This skill defines the technical standards and architectural patterns for the **
 - **State Management**: `@tanstack/react-query` (Async state) + React Context API (Sync state).
 - **Components**: [shadcn/ui](https://ui.shadcn.com/) (base) + Radix UI + Custom Components.
 - **Auth**: NextAuth.js (v5 Beta) + `@auth/prisma-adapter`.
-- **Database**: Prisma ORM (`@prisma/client`).
+- **Database**: PostgreSQL + Prisma ORM (`@prisma/client`, `prismaSchemaFolder` preview feature).
+- **Real-time**: [Socket.IO](https://socket.io/) v4.8 (`socket.io` + `socket.io-client`).
+- **Server**: Custom `server.js` — Monolithic HTTP server unifying Next.js + Socket.IO on a single port.
 
 ---
 
@@ -111,6 +113,7 @@ The app uses `next-auth` (v5 Beta).
 
 - **Asynchronous State (Server Data)**: Always use `@tanstack/react-query` for fetching, caching, and synchronizing server data in client components.
 - **Synchronous State (UI/Local)**: Use React Context (e.g., `CartContext`, `LanguageContext`) only for global synchronous UI state that doesn't originate directly from the database.
+- **Real-time State**: Use Socket.IO via `useSocket()` from `SocketContext` for WebSocket-driven live data (chat messages, typing indicators, notifications).
 - **Data Mutations**: Use Server Actions (`.actions.ts`) triggered either natively via form `action` or via React Query's `useMutation`.
 
 ---
@@ -164,3 +167,204 @@ src/utils/PaymentsMethods/
 
 - **Browser Interaction**: Never interact directly with the browser to test or verify changes. Focus exclusively on the code implementation.
 - **Verification**: Wait for the user to perform manual tests and provide feedback on the changes before proceeding with further adjustments.
+- **File Extensions**: The `socketHandler.js` MUST remain as `.js` since it's required by `server.js` via `require()`. Do not convert it to TypeScript unless `server.js` is also migrated.
+- **New Modules**: When creating a new backend domain module, always follow the full pattern: `index.ts` (IoC) → `[domain].repository.ts` → `[domain].service.ts` → `[domain].actions.ts`.
+- **Server Actions**: All Server Actions must be in files marked with `"use server"` at the top and wrapped with appropriate auth guards.
+
+---
+
+## 10. Custom `server.js` — Monolithic Server Architecture
+
+> [!CAUTION]
+> The application does **NOT** use `next dev` or `next start`. It runs through a **custom Node.js HTTP server** at the project root (`server.js`). This is the most important architectural decision in the project.
+
+### 10.1 How It Works
+
+`server.js` (28 lines) creates a single HTTP server that:
+1. Delegates all HTTP requests to the Next.js request handler (`app.getRequestHandler()`).
+2. Mounts a Socket.IO server on the **same HTTP server** via `initSocketServer(httpServer, prisma)`.
+3. Listens on a **single port** (3000 by default) for both HTTP and WebSocket traffic.
+
+### 10.2 Why This Approach (Alternatives Rejected)
+
+| Alternative | Why Rejected |
+|---|---|
+| Separate Socket.IO server (different port) | Requires CORS config, 2 processes, 2 ports, complex deployment |
+| Next.js API Route for WebSockets | Not officially supported in App Router, unstable |
+| **Custom `server.js`** ✅ | One process, one port, shared Prisma, simple deployment |
+
+### 10.3 Scripts
+
+```json
+{
+  "dev": "node server.js",
+  "build": "next build",
+  "start": "node server.js"
+}
+```
+
+> [!IMPORTANT]
+> The script `"chat-server": "node scripts/chat-server.js"` in `package.json` is a **legacy artifact** from the old separated architecture. It is NOT used. Do NOT reference it.
+
+### 10.4 Prisma Dual-Instance Pattern
+
+- **`server.js`**: Creates its own `new PrismaClient()` and injects it into `initSocketServer(httpServer, prisma)` — used exclusively for WebSocket event persistence.
+- **Server Actions / Service Layer**: Uses the singleton from `src/backend/db/prisma.ts` (with `globalThis` pattern).
+
+Both instances connect to the same database.
+
+---
+
+## 11. Real-Time Chat System Architecture
+
+The chat implements a **1-to-1 support model**: each user has exactly one conversation with the admin team.
+
+### 11.1 Data Models (Prisma)
+
+Defined in `src/backend/prisma/schema/chat.model.prisma`:
+
+**`Conversation`** — One per user (`userId @unique`):
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | `String @id @default(cuid())` | Unique ID |
+| `userId` | `String @unique` | **1 conversation per user** (1:1 relation) |
+| `user` | `User` | Relation with `onDelete: Cascade` |
+| `messages` | `Message[]` | All messages in the conversation |
+
+**`Message`** — Belongs to a conversation:
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | `String @id @default(cuid())` | Unique ID |
+| `content` | `String` | Message body |
+| `senderId` | `String` | ID of sender (user or admin) |
+| `senderRole` | `Role @default(user)` | Enum: `user` or `admin` |
+| `conversationId` | `String` | FK to `Conversation` |
+| `isRead` | `Boolean @default(false)` | Read status |
+
+### 11.2 Socket Handler (`src/backend/modules/chat/socketHandler.js`)
+
+> [!IMPORTANT]
+> This file is **plain JavaScript** (`.js`), not TypeScript. This is intentional: `server.js` runs with `node` directly (no `ts-node`), and this module is imported via `require()`.
+
+**Client → Server Events:**
+
+| Event | Payload | Behavior |
+|---|---|---|
+| `join_room` | `{ conversationId }` | Socket joins room `conversation_{id}` |
+| `leave_room` | `{ conversationId }` | Socket leaves room |
+| `typing` | `{ conversationId, senderId, isTyping }` | Forwards `user_typing` to room (excludes sender) |
+| `send_message` | `{ conversationId, content, senderId, senderRole }` | **Persists** message to DB via injected Prisma + broadcasts |
+| `delete_conversation` | `{ conversationId }` | Emits `conversation_deleted` to room |
+
+**Server → Client Events:**
+
+| Event | Target | Description |
+|---|---|---|
+| `receive_message` | Room `conversation_{id}` | New message (emitted after DB persist) |
+| `new_message_notification` | **GLOBAL** (`io.emit`) | Notifies ALL clients (used by admin panel + navbar badge) |
+| `user_typing` | Room (excluding sender) | Typing status |
+| `conversation_deleted` | Room `conversation_{id}` | Conversation was deleted |
+| `error` | Sender socket only | Error sending message |
+
+**Critical Design Decisions:**
+- **Persistence in socket handler**: Messages are created inside the socket handler using the injected Prisma client, NOT through Server Actions. Server Actions handle only reads and conversation management (create, delete, mark as read).
+- **Dual Emission on `send_message`**: Emits `receive_message` to the room AND `new_message_notification` globally, so the admin panel tracks all conversations without joining every room.
+
+### 11.3 Frontend Chat Components
+
+| Component | File | Role |
+|---|---|---|
+| **SocketProvider** | `src/frontend/context/SocketContext.tsx` | Global React Context. Single WebSocket connection per browser session. Connects to `window.location.origin` (same port as Next.js thanks to the monolithic server) |
+| **ChatWidget** | `src/frontend/components/chat/ChatWidget.tsx` | Floating chat widget for **regular users**. Rendered globally from `Providers.tsx`. Self-hides on `/admin/*` routes and for admin users |
+| **AdminChatPage** | `src/app/admin/chat/page.tsx` | Full admin chat panel. Two-panel layout: sidebar (conversations list + user search with pagination) + message area |
+| **Navbar** | `src/frontend/components/Navbar.tsx` | Integrates unread badge for admins via `new_message_notification` events + 4-second polling fallback |
+
+### 11.4 Provider Tree (`Providers.tsx`)
+
+The `SocketProvider` wraps the entire application and the `ChatWidget` is rendered globally:
+
+```
+SessionProvider → ThemeProvider → LanguageProvider → QueryClientProvider
+  → CartProvider → SocketProvider → TooltipProvider
+    → {children}
+    → ChatWidget (global, self-hides for admin/unauthenticated)
+    → Sonner (toast notifications)
+```
+
+---
+
+## 12. Database Architecture (Prisma Multi-Schema)
+
+The project uses the `prismaSchemaFolder` preview feature to split schemas into domain-specific files:
+
+```
+src/backend/prisma/schema/
+├── schema.prisma          ← Generator + Datasource config (PostgreSQL)
+├── auth.model.prisma      ← User, Account, Role enum
+├── product.model.prisma   ← Product
+├── order.model.prisma     ← Pedido, DetallePedido, PedidoEstado enum
+└── chat.model.prisma      ← Conversation, Message
+```
+
+**Key enums:**
+- `Role`: `admin | user`
+- `PedidoEstado`: `PENDIENTE | CONFIRMADO | EN_PREPARACION | EN_CAMINO | ENTREGADO | CANCELADO`
+
+**Prisma singleton** (`src/backend/db/prisma.ts`):
+- Uses `globalThis` pattern to prevent multiple instances in development.
+- Automatically runs `ensureAdminExists()` on initialization (non-blocking).
+
+---
+
+## 13. IoC Container Pattern (Dependency Injection)
+
+Every domain module has an `index.ts` that instantiates the layers with manual DI:
+
+```typescript
+// src/backend/modules/[domain]/index.ts
+import { DomainRepository } from "./domain.repository";
+import { DomainService } from "./domain.service";
+
+export const domainRepository = new DomainRepository();
+export const domainService = new DomainService(domainRepository);
+```
+
+**Active domain modules and their layers:**
+
+| Module | Repository | Service | Actions | Socket Handler | IoC (`index.ts`) |
+|---|---|---|---|---|---|
+| `auth` | ✗ (uses `user.repository`) | `auth.service.ts` | `auth.actions.ts` | ✗ | ✓ |
+| `user` | `user.repository.ts` | ✗ | ✗ | ✗ | ✓ |
+| `product` | `product.repository.ts` | `product.service.ts` | `product.actions.ts` | ✗ | ✓ |
+| `orders` | `orders.repository.ts` | `orders.service.ts` | `orders.actions.ts` | ✗ | ✓ |
+| `payments` | ✗ | `payments.service.ts` | `payments.actions.ts` | ✗ | ✓ |
+| `chat` | `chat.repository.ts` | `chat.service.ts` | `chat.actions.ts` | `socketHandler.js` | ✓ |
+
+---
+
+## 14. Centralized Configuration
+
+All environment variables are accessed through `src/config/config.ts`:
+
+```typescript
+export const config = {
+  env, isProduction, isDevelopment, isTest,
+  app: { url },
+  auth: { secret, trustHost, google: { clientId, clientSecret }, admin: { email, password } },
+  database: { url, directUrl },
+  mercadopago: { accessToken, webhookSecret },
+};
+```
+
+**Rule**: Never use `process.env.VARIABLE` directly in application code. Always access through `config.*` or use `getRequiredConfig()` for mandatory values.
+
+---
+
+## 15. Internationalization (i18n)
+
+- The app supports **Spanish (es)** and **English (en)** via `LanguageContext`.
+- Translation files live in `src/frontend/architecture/languages/`.
+- All user-facing text MUST use the `t` object from `useLanguage()`, never hardcoded strings.
+- The chat system has its own inline translations (inside `ChatWidget.tsx`).
