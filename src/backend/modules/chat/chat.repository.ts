@@ -93,6 +93,16 @@ export class ChatRepository {
   async findMessagesByConversationId(conversationId: string) {
     return prisma.message.findMany({
       where: { conversationId },
+      include: {
+        replyTo: {
+          select: {
+            id: true,
+            content: true,
+            senderId: true,
+            senderRole: true,
+          },
+        },
+      },
       orderBy: {
         createdAt: "asc",
       },

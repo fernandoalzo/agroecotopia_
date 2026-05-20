@@ -46,17 +46,28 @@ export function initSocketServer(httpServer: HTTPServer, prisma: PrismaClient): 
     });
 
     // Handle sending messages
-    socket.on("send_message", async ({ conversationId, content, senderId, senderRole }: { conversationId: string; content: string; senderId: string; senderRole: string }) => {
+    socket.on("send_message", async ({ conversationId, content, senderId, senderRole, replyToId }: { conversationId: string; content: string; senderId: string; senderRole: string; replyToId?: string }) => {
       try {
         if (!conversationId || !content || !senderId) return;
 
-        // Save message to database
+        // Save message to database (with optional reply reference)
         const message = await prisma.message.create({
           data: {
             content,
             senderId,
             senderRole: senderRole as any,
             conversationId,
+            ...(replyToId ? { replyToId } : {}),
+          },
+          include: {
+            replyTo: {
+              select: {
+                id: true,
+                content: true,
+                senderId: true,
+                senderRole: true,
+              },
+            },
           },
         });
 
@@ -78,6 +89,7 @@ export function initSocketServer(httpServer: HTTPServer, prisma: PrismaClient): 
       } catch (error) {
         console.error("Error saving/sending message:", error);
         socket.emit("error", { message: "Error enviando el mensaje" });
+
       }
     });
 

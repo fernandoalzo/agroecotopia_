@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useSocket } from "@/frontend/context/SocketContext";
-import { MessageSquare, X, Send, Lock, Trash2, Leaf } from "lucide-react";
+import { MessageSquare, X, Send, Lock, Trash2, Leaf, Copy, Check } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { useLanguage } from "@/context/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,6 +17,13 @@ export interface Message {
   isRead: boolean;
   createdAt: Date | string;
   updatedAt: Date | string;
+  replyToId?: string | null;
+  replyTo?: {
+    id: string;
+    content: string;
+    senderId: string;
+    senderRole: string;
+  } | null;
 }
 
 export default function ChatWidget() {
@@ -33,6 +40,14 @@ export default function ChatWidget() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopy = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const firstUnreadRef = useRef<HTMLDivElement>(null);
@@ -209,9 +224,11 @@ export default function ChatWidget() {
       content: inputMessage.trim(),
       senderId: session.user.id,
       senderRole: session.user.role || "user",
+      ...(replyingTo ? { replyToId: replyingTo.id } : {}),
     });
 
     setInputMessage("");
+    setReplyingTo(null);
   };
 
   // Delete/Clear my own conversation as a user
@@ -259,6 +276,7 @@ export default function ChatWidget() {
       tooltipClear: "Limpiar chat",
       disconnectedWarning: "Servidor de chat desconectado. Reconectando...",
       disconnectedPlaceholder: "Desconectado...",
+      replyingTo: "Respondiendo a",
     },
     en: {
       title: "Agroecotopia Support",
@@ -276,6 +294,7 @@ export default function ChatWidget() {
       tooltipClear: "Clear chat",
       disconnectedWarning: "Chat server disconnected. Reconnecting...",
       disconnectedPlaceholder: "Disconnected...",
+      replyingTo: "Replying to",
     },
   }[language === "es" ? "es" : "en"];
 
@@ -438,13 +457,43 @@ export default function ChatWidget() {
                           }`}
                         >
                           <div
-                            className={`p-3 rounded-2xl text-sm shadow-sm ${
+                            className={`p-3 rounded-2xl text-sm shadow-sm relative group/msg ${
                               isMe
                                 ? "bg-primary text-primary-foreground rounded-tr-none"
                                 : "bg-card text-card-foreground border border-border/60 rounded-tl-none"
                             }`}
                           >
+                            {msg.replyTo && (
+                              <div className={`mb-1.5 p-2 rounded-lg text-xs border-l-2 ${
+                                isMe 
+                                  ? "bg-primary-foreground/10 border-primary-foreground/40 text-primary-foreground/80" 
+                                  : "bg-muted/50 border-primary/40 text-muted-foreground"
+                              }`}>
+                                <div className={`font-semibold mb-0.5 ${isMe ? "text-primary-foreground" : "text-primary/80"}`}>
+                                  {msg.replyTo.senderId === session?.user?.id ? "Tú" : t.title}
+                                </div>
+                                <div className="truncate opacity-90">{msg.replyTo.content}</div>
+                              </div>
+                            )}
                             {msg.content}
+                            <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-0.5 ${
+                              isMe ? "-left-[60px]" : "-right-[60px]"
+                            }`}>
+                              <button
+                                onClick={() => handleCopy(msg.id, msg.content)}
+                                className="p-1.5 rounded-full hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+                                title="Copiar"
+                              >
+                                {copiedId === msg.id ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                              </button>
+                              <button
+                                onClick={() => setReplyingTo(msg)}
+                                className="p-1.5 rounded-full hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+                                title="Responder"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                              </button>
+                            </div>
                           </div>
                           <span className="text-[10px] text-muted-foreground mt-1 px-1">
                             {new Date(msg.createdAt).toLocaleTimeString([], {
@@ -477,6 +526,22 @@ export default function ChatWidget() {
                 <div className="px-3 py-1 bg-amber-500/10 border-b border-amber-500/15 text-amber-500 text-[10px] font-medium flex items-center gap-1.5 animate-pulse">
                   <span className="w-1 h-1 bg-amber-500 rounded-full" />
                   {t.disconnectedWarning}
+                </div>
+              )}
+              {replyingTo && (
+                <div className="px-3 py-2 bg-secondary/20 border-b border-border flex items-center justify-between">
+                  <div className="flex-1 min-w-0 pr-2 border-l-2 border-primary pl-2">
+                    <div className="text-[10px] font-semibold text-primary">
+                      {t.replyingTo} {replyingTo.senderId === session?.user?.id ? "ti" : t.title}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">{replyingTo.content}</div>
+                  </div>
+                  <button
+                    onClick={() => setReplyingTo(null)}
+                    className="p-1 hover:bg-secondary rounded-full transition-colors"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </button>
                 </div>
               )}
               <form onSubmit={handleSendMessage} className="p-3 flex items-center gap-2">
