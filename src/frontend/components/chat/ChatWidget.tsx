@@ -84,22 +84,29 @@ export default function ChatWidget() {
 
     const originalHtmlHeight = html.style.height;
     const originalHtmlOverflow = html.style.overflow;
+    const originalHtmlOverscroll = html.style.overscrollBehavior;
     const originalBodyHeight = body.style.height;
     const originalBodyOverflow = body.style.overflow;
     const originalBodyPosition = body.style.position;
     const originalBodyWidth = body.style.width;
+    const originalBodyOverscroll = body.style.overscrollBehavior;
 
     html.style.height = "100%";
     html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
     body.style.height = "100%";
     body.style.overflow = "hidden";
     body.style.position = "fixed";
     body.style.width = "100%";
+    body.style.overscrollBehavior = "none";
 
     const vv = window.visualViewport;
     const handleResize = () => {
       if (vv) {
         setViewportHeight(`${vv.height}px`);
+        if (vv.offsetTop !== 0 || vv.offsetLeft !== 0) {
+          window.scrollTo(0, 0);
+        }
       }
     };
 
@@ -119,10 +126,12 @@ export default function ChatWidget() {
     return () => {
       html.style.height = originalHtmlHeight;
       html.style.overflow = originalHtmlOverflow;
+      html.style.overscrollBehavior = originalHtmlOverscroll;
       body.style.height = originalBodyHeight;
       body.style.overflow = originalBodyOverflow;
       body.style.position = originalBodyPosition;
       body.style.width = originalBodyWidth;
+      body.style.overscrollBehavior = originalBodyOverscroll;
 
       if (vv) {
         vv.removeEventListener("resize", handleResize);
@@ -577,7 +586,7 @@ export default function ChatWidget() {
             </div>
 
             {/* Chat Body */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-secondary/5 min-h-0">
+            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-secondary/5 min-h-0 overscroll-y-contain">
               {isLoading ? (
                 <div className="h-full flex items-center justify-center">
                   <Loading text="" subtext="" className="py-0 scale-75" />
