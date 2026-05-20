@@ -65,6 +65,35 @@ export default function AdminChatPage() {
     activeConvRef.current = activeConv;
   }, [activeConv]);
 
+  // Lock body/html scroll to prevent mobile keyboard from pushing layout out of view
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+
+    const originalHtmlHeight = html.style.height;
+    const originalHtmlOverflow = html.style.overflow;
+    const originalBodyHeight = body.style.height;
+    const originalBodyOverflow = body.style.overflow;
+    const originalBodyPosition = body.style.position;
+    const originalBodyWidth = body.style.width;
+
+    html.style.height = "100%";
+    html.style.overflow = "hidden";
+    body.style.height = "100%";
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.width = "100%";
+
+    return () => {
+      html.style.height = originalHtmlHeight;
+      html.style.overflow = originalHtmlOverflow;
+      body.style.height = originalBodyHeight;
+      body.style.overflow = originalBodyOverflow;
+      body.style.position = originalBodyPosition;
+      body.style.width = originalBodyWidth;
+    };
+  }, []);
+
   // Guard routing: redirect if not admin
   useEffect(() => {
     if (status === "unauthenticated") {
