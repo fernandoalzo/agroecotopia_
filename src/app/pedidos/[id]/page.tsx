@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useLanguage } from "@/context/LanguageContext";
 import { motion } from "framer-motion";
-import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw } from "lucide-react";
+import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw, Copy, Check } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { getOrderDetailAction, cancelUserOrderAction, deleteUserOrderAction } from "@/backend/modules/orders/orders.actions";
 import { processMercadoPagoPaymentAction } from "@/backend/modules/payments/payments.actions";
@@ -68,6 +68,7 @@ export default function OrderDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -281,10 +282,30 @@ export default function OrderDetailPage() {
           {/* Header */}
           <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl md:text-4xl font-black tracking-tight">
-                  Pedido #{order.id.slice(-6).toUpperCase()}
-                </h1>
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-3xl md:text-4xl font-black tracking-tight">
+                    Pedido #{order.id.slice(-6).toUpperCase()}
+                  </h1>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-primary rounded-full mt-1"
+                    onClick={() => {
+                      navigator.clipboard.writeText(order.id);
+                      setIsCopied(true);
+                      toast.success("ID copiado", { description: "El ID del pedido ha sido copiado al portapapeles." });
+                      setTimeout(() => setIsCopied(false), 2000);
+                    }}
+                    title="Copiar ID del pedido"
+                  >
+                    {isCopied ? (
+                      <Check className="h-5 w-5 text-emerald-500" />
+                    ) : (
+                      <Copy className="h-5 w-5" />
+                    )}
+                  </Button>
+                </div>
                 <Badge className={cn("rounded-full border px-4 py-1 font-bold", statusConfig[order.estado as PedidoEstado].color)}>
                   {statusConfig[order.estado as PedidoEstado].label}
                 </Badge>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Package, ChevronRight, Calendar, MapPin, CreditCard, Clock, CheckCircle2, Truck, Timer, XCircle, RefreshCw } from "lucide-react";
+import { Package, ChevronRight, Calendar, MapPin, CreditCard, Clock, CheckCircle2, Truck, Timer, XCircle, RefreshCw, Copy, Check } from "lucide-react";
 import { getUserOrdersAction, cancelUserOrderAction, deleteUserOrderAction } from "@/backend/modules/orders/orders.actions";
 import { useCart } from "@/context/CartContext";
 import { useRouter } from "next/navigation";
@@ -75,6 +75,7 @@ export const OrdersList = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [repeatingId, setRepeatingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const { addToCart } = useCart();
   const router = useRouter();
 
@@ -214,9 +215,31 @@ export const OrdersList = () => {
                           <Calendar className="h-4 w-4" />
                           {format(new Date(order.fechaPedido), "PPP", { locale: es })}
                         </div>
-                        <h4 className="text-xl font-bold tracking-tight">
-                          Pedido #{order.id.slice(-6).toUpperCase()}
-                        </h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xl font-bold tracking-tight">
+                            Pedido #{order.id.slice(-6).toUpperCase()}
+                          </h4>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 rounded-full text-muted-foreground hover:text-primary"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(order.id);
+                              setCopiedId(order.id);
+                              toast.success("ID copiado", { description: "El ID del pedido ha sido copiado al portapapeles." });
+                              setTimeout(() => setCopiedId(null), 2000);
+                            }}
+                            title="Copiar ID del pedido"
+                          >
+                            {copiedId === order.id ? (
+                              <Check className="h-3 w-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                       
                       <Badge className={cn("rounded-full border px-4 py-1.5 font-bold transition-all group-hover:scale-105", statusConfig[order.estado].color)}>
