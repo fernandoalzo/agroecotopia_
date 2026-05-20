@@ -558,7 +558,7 @@ export default function AdminChatPage() {
   // Guard access denied
   if (status === "unauthenticated" || session?.user?.role !== "admin") {
     return (
-      <div className="h-screen w-full flex flex-col items-center justify-center bg-background p-6 text-center text-foreground">
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-background p-6 text-center text-foreground pt-14 md:pt-20">
         <div className="p-4 bg-destructive/15 rounded-full text-destructive mb-6">
           <ShieldAlert className="w-12 h-12" />
         </div>
@@ -578,7 +578,7 @@ export default function AdminChatPage() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden font-sans">
+    <div className="flex h-screen w-full bg-background text-foreground overflow-hidden font-sans pt-14 md:pt-20">
       {/* Sidebar - list of conversations */}
       <div className={`w-full md:w-[380px] border-r border-border/40 flex flex-col bg-card/40 h-full ${activeConv ? "hidden md:flex" : "flex"}`}>
         <div className="p-5 border-b border-border/40 flex items-center justify-between">
