@@ -33,6 +33,7 @@ export default function AdminChatPage() {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isE2EEReady, setIsE2EEReady] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState("100vh");
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -65,7 +66,7 @@ export default function AdminChatPage() {
     activeConvRef.current = activeConv;
   }, [activeConv]);
 
-  // Lock body/html scroll to prevent mobile keyboard from pushing layout out of view
+  // Lock body/html scroll and track visual viewport height to avoid keyboard layout shifts on mobile
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -84,6 +85,26 @@ export default function AdminChatPage() {
     body.style.position = "fixed";
     body.style.width = "100%";
 
+    const vv = window.visualViewport;
+    const handleResize = () => {
+      if (vv) {
+        setViewportHeight(`${vv.height}px`);
+      }
+    };
+
+    if (vv) {
+      vv.addEventListener("resize", handleResize);
+      vv.addEventListener("scroll", handleResize);
+      handleResize();
+    }
+
+    const handleScroll = () => {
+      if (window.scrollY > 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+
     return () => {
       html.style.height = originalHtmlHeight;
       html.style.overflow = originalHtmlOverflow;
@@ -91,6 +112,12 @@ export default function AdminChatPage() {
       body.style.overflow = originalBodyOverflow;
       body.style.position = originalBodyPosition;
       body.style.width = originalBodyWidth;
+
+      if (vv) {
+        vv.removeEventListener("resize", handleResize);
+        vv.removeEventListener("scroll", handleResize);
+      }
+      window.removeEventListener("scroll", handleScroll);
     };
   }, []);
 
@@ -607,7 +634,10 @@ export default function AdminChatPage() {
   }
 
   return (
-    <div className="fixed inset-0 flex bg-background text-foreground overflow-hidden font-sans pt-14 md:pt-20">
+    <div 
+      className="fixed inset-x-0 top-0 flex bg-background text-foreground overflow-hidden font-sans pt-14 md:pt-20"
+      style={{ height: viewportHeight }}
+    >
       {/* Sidebar - list of conversations */}
       <div className={`w-full md:w-[380px] border-r border-border/40 flex flex-col bg-card/40 h-full ${activeConv ? "hidden md:flex" : "flex"}`}>
         <div className="p-5 border-b border-border/40 flex items-center justify-between">

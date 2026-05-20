@@ -56,6 +56,7 @@ export default function ChatWidget() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [isE2EEReady, setIsE2EEReady] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState("100vh");
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -74,15 +75,60 @@ export default function ChatWidget() {
     isOpenRef.current = isOpen;
   }, [isOpen]);
 
-  // Lock body scroll when chat is open on mobile
+  // Lock body/html scroll and track visual viewport height when chat is open on mobile
   useEffect(() => {
-    if (isOpen && typeof window !== "undefined" && window.innerWidth < 768) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
+    if (!isOpen || typeof window === "undefined" || window.innerWidth >= 768) return;
+
+    const html = document.documentElement;
+    const body = document.body;
+
+    const originalHtmlHeight = html.style.height;
+    const originalHtmlOverflow = html.style.overflow;
+    const originalBodyHeight = body.style.height;
+    const originalBodyOverflow = body.style.overflow;
+    const originalBodyPosition = body.style.position;
+    const originalBodyWidth = body.style.width;
+
+    html.style.height = "100%";
+    html.style.overflow = "hidden";
+    body.style.height = "100%";
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.width = "100%";
+
+    const vv = window.visualViewport;
+    const handleResize = () => {
+      if (vv) {
+        setViewportHeight(`${vv.height}px`);
+      }
+    };
+
+    if (vv) {
+      vv.addEventListener("resize", handleResize);
+      vv.addEventListener("scroll", handleResize);
+      handleResize();
     }
+
+    const handleScroll = () => {
+      if (window.scrollY > 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+
     return () => {
-      document.body.style.overflow = "";
+      html.style.height = originalHtmlHeight;
+      html.style.overflow = originalHtmlOverflow;
+      body.style.height = originalBodyHeight;
+      body.style.overflow = originalBodyOverflow;
+      body.style.position = originalBodyPosition;
+      body.style.width = originalBodyWidth;
+
+      if (vv) {
+        vv.removeEventListener("resize", handleResize);
+        vv.removeEventListener("scroll", handleResize);
+      }
+      window.removeEventListener("scroll", handleScroll);
     };
   }, [isOpen]);
 
@@ -483,7 +529,10 @@ export default function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed inset-0 w-full h-full md:absolute md:inset-auto md:bottom-20 md:right-0 md:w-[380px] md:h-[580px] md:rounded-2xl md:border md:border-border/80 md:shadow-2xl flex flex-col overflow-hidden bg-background z-50"
+            className="fixed inset-x-0 top-0 bottom-auto w-full md:absolute md:inset-auto md:bottom-20 md:right-0 md:w-[380px] md:h-[580px] md:rounded-2xl md:border md:border-border/80 md:shadow-2xl flex flex-col overflow-hidden bg-background z-50"
+            style={{
+              height: isClient && window.innerWidth < 768 ? viewportHeight : undefined
+            }}
           >
             {/* Header */}
             <div className="p-4 bg-gradient-to-r from-primary/90 to-primary text-primary-foreground flex items-center justify-between border-b border-primary/20">
