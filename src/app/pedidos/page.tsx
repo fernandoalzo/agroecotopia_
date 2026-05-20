@@ -13,6 +13,8 @@ import { OrdersList } from "@/components/orders/OrdersList";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/Loading";
 
+import { config } from "@/config/config";
+
 export default function PedidosPage() {
   const { status } = useSession();
   const router = useRouter();
@@ -60,7 +62,7 @@ export default function PedidosPage() {
                 transition={{ delay: 0.2 }}
                 className="text-muted-foreground text-lg max-w-xl"
               >
-                Gestiona y haz seguimiento a todos tus pedidos realizados en Agroecotopia.
+                Gestiona y haz seguimiento a todos tus pedidos realizados en {config.app.name}.
               </motion.p>
             </div>
 

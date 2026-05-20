@@ -8,6 +8,7 @@ import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
 import { getDeterministicImage } from "@/lib/image-utils";
+import { config } from "@/config/config";
 
 interface ProductCardProps {
   p: Product;
@@ -78,7 +79,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
               )}
               {isAgroChoice && (
                 <div className="bg-gradient-to-r from-[#f59e0b] to-[#d97706] dark:from-[#fbbf24] dark:to-[#f59e0b] text-white dark:text-black text-[10px] font-black px-2.5 py-1 rounded-sm shadow-lg flex items-center gap-1.5 border border-white/20 dark:border-black/10">
-                  <span className="uppercase tracking-tighter">Agroecotopia's</span> 
+                  <span className="uppercase tracking-tighter">{config.app.name}'s</span> 
                   <span className="uppercase tracking-widest text-[#fefce8] dark:text-black/80 font-black">Choice</span>
                 </div>
               )}
@@ -226,7 +227,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
           )}
           {isAgroChoice && (
             <div className="bg-[#232f3e] text-white text-[10px] font-bold px-2 py-0.5 rounded-sm shadow-sm flex items-center gap-1">
-              <span className="text-primary-foreground">Agroecotopia's</span>
+              <span className="text-primary-foreground">{config.app.name}'s</span>
               <span className="text-[#e47911]">Choice</span>
             </div>
           )}

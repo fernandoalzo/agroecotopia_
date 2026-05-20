@@ -9,6 +9,8 @@ import { Separator } from "@/components/ui/separator";
 import { Leaf, ShoppingBag, CreditCard, Clock, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 
+import { config } from "@/config/config";
+
 interface OrderSummaryProps {
   isSubmitting?: boolean;
 }
@@ -46,7 +48,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
           <div>
             <div className="flex items-center gap-2 text-primary font-display font-black text-xl mb-1">
               <Leaf className="w-6 h-6" />
-              <span>AGROECOTOPIA</span>
+              <span>{config.app.name.toUpperCase()}</span>
             </div>
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
               {t.checkout.invoiceTitle}

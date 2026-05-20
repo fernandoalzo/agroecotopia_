@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { ArrowLeft, Leaf } from "lucide-react";
 
+import { config } from "@/config/config";
+
 export function AuthVisualPanel() {
   return (
     <div className="hidden relative w-1/2 bg-[#0a1f14] dark:bg-[#050b08] border-r border-border/50 overflow-hidden items-center justify-center p-12 md:flex">
@@ -26,7 +28,7 @@ export function AuthVisualPanel() {
           <span className="text-emerald-400">cosechamos futuro.</span>
         </h1>
         <p className="text-lg text-white/70 leading-relaxed font-medium">
-          Únete a la comunidad de Agroecotopia. Accede a los mejores productos ecológicos y sustentables para tu cultivo, directo del campo a tus manos.
+          Únete a la comunidad de {config.app.name}. Accede a los mejores productos ecológicos y sustentables para tu cultivo, directo del campo a tus manos.
         </p>
       </div>
     </div>

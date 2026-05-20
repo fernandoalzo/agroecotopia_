@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Moon, Sun, Check, Settings, X, Leaf, Sparkles, Globe } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { config } from "@/config/config";
 
 const languages = [
   { code: "es", label: "Español", flagEmoji: "🇨🇴", region: "Colombia" },
@@ -218,7 +219,7 @@ export default function UserMenu() {
       <div className="h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
       <div className="px-4 py-2.5 bg-muted/20 dark:bg-white/[0.02]">
         <p className="text-[9px] text-center uppercase tracking-[0.2em] text-muted-foreground/40 font-bold">
-          Agroecotopia · Ajustes
+          {config.app.name} · Ajustes
         </p>
       </div>
     </motion.div>
@@ -260,7 +261,7 @@ export default function UserMenu() {
         {/* Top Header */}
         <div className="absolute top-6 left-6 flex items-center gap-2">
           <Leaf className="h-6 w-6 text-white/90" />
-          <span className="font-display text-xl font-bold text-white tracking-tight">Agroecotopia</span>
+          <span className="font-display text-xl font-bold text-white tracking-tight">{config.app.name}</span>
         </div>
 
         <button

@@ -1,4 +1,5 @@
 import { Translations } from "../types";
+import { config } from "@/config/config";
 
 export const es: Translations = {
   navbar: {
@@ -31,8 +32,8 @@ export const es: Translations = {
   },
   about: {
     badge: "Nuestra Esencia",
-    title: "Agroecotopia: Un Sueño Cultivado con Amor",
-    description1: "Agroecotopia nació bajo la sombra de un viejo roble, como un sueño compartido de devolverle a la tierra lo que con tanto amor nos ha dado. No somos solo una tienda, somos un refugio para quienes creen que la alimentación es el acto más revolucionario de cuidado.",
+    title: `${config.app.name}: Un Sueño Cultivado con Amor`,
+    description1: `${config.app.name} nació bajo la sombra de un viejo roble, como un sueño compartido de devolverle a la tierra lo que con tanto amor nos ha dado. No somos solo una tienda, somos un refugio para quienes creen que la alimentación es el acto más revolucionario de cuidado.`,
     description2: "Nuestra historia comenzó en los pequeños surcos de un huerto familiar, donde entendimos que el respeto por los ciclos naturales no es una opción, sino un legado. Hoy, unimos manos con agricultores locales para llevar a tu mesa la esencia pura de la vida, cultivada sin prisa y con la convicción de que un mundo más verde es posible, un bocado a la vez.",
     tagline: "Cosechando Futuro",
     pillars: {

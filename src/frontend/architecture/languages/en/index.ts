@@ -1,4 +1,5 @@
 import { Translations } from "../types";
+import { config } from "@/config/config";
 
 export const en: Translations = {
   navbar: {
@@ -31,8 +32,8 @@ export const en: Translations = {
   },
   about: {
     badge: "Our Essence",
-    title: "Agroecotopia: A Dream Cultivated with Love",
-    description1: "Agroecotopia was born under the shade of an old oak tree, as a shared dream of giving back to the earth what it has given us with so much love. We are not just a store, we are a refuge for those who believe that food is the most revolutionary act of care.",
+    title: `${config.app.name}: A Dream Cultivated with Love`,
+    description1: `${config.app.name} was born under the shade of an old oak tree, as a shared dream of giving back to the earth what it has given us with so much love. We are not just a store, we are a refuge for those who believe that food is the most revolutionary act of care.`,
     description2: "Our story began in the small furrows of a family garden, where we understood that respect for natural cycles is not an option, but a legacy. Today, we join hands with local farmers to bring the pure essence of life to your table, cultivated without haste and with the conviction that a greener world is possible, one bite at a time.",
     tagline: "Harvesting the Future",
     pillars: {

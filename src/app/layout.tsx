@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Providers } from "./Providers";
 import "@/frontend/styles/globals.css";
+import { config } from "@/config/config";
 
 export const metadata: Metadata = {
-  title: "Agroecotopia | Cosecha Sostenible",
+  title: `${config.app.name} | Cosecha Sostenible`,
   description: "Productos agroecológicos cultivados con amor y respeto por la tierra.",
 };
 

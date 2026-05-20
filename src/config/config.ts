@@ -11,6 +11,7 @@ export const config = {
   enableLogging: true,
 
   app: {
+    name: process.env.NEXT_PUBLIC_APP_NAME || 'Agroecotopia',
     url: (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, ''),
   },
 

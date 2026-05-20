@@ -22,6 +22,7 @@ import {
 import { useSocket } from "@/frontend/context/SocketContext";
 import { getAdminConversations } from "@/backend/modules/chat/chat.actions";
 import logger from "@/utils/logger";
+import { config } from "@/config/config";
 
 const log = logger.child();
 
@@ -143,7 +144,7 @@ const Navbar = () => {
             {/* Premium Typography Container */}
             <div className="relative overflow-hidden">
               <div className="flex items-center tracking-tight md:tracking-tighter">
-                {"Agroecotopia".split("").map((letter, i) => (
+                {config.app.name.split("").map((letter, i) => (
                   <motion.span
                     key={i}
                     initial={{ y: 0 }}
@@ -475,7 +476,7 @@ const Navbar = () => {
               {/* Top Header inside menu */}
               <div className="absolute top-6 left-6 flex items-center gap-2">
                 <Leaf className="h-6 w-6 text-white/90" />
-                <span className="font-display text-xl font-bold text-white tracking-tight">Agroecotopia</span>
+                <span className="font-display text-xl font-bold text-white tracking-tight">{config.app.name}</span>
               </div>
 
               <button
@@ -676,7 +677,7 @@ const Navbar = () => {
                   )}
 
                   <div className="flex justify-center gap-6 pt-4 text-white/30">
-                    <div className="text-[10px] uppercase font-bold tracking-widest">© 2024 Agroecotopia</div>
+                    <div className="text-[10px] uppercase font-bold tracking-widest">© 2024 {config.app.name}</div>
                   </div>
                 </motion.div>
               </div>

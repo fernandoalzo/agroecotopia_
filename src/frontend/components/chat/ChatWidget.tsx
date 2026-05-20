@@ -422,7 +422,7 @@ export default function ChatWidget() {
 
   const t = {
     es: {
-      title: "Soporte Agroecotopia",
+      title: `Soporte ${config.app.name}`,
       online: "En línea",
       offline: "Desconectado",
       placeholder: "Escribe tu mensaje...",
@@ -440,7 +440,7 @@ export default function ChatWidget() {
       replyingTo: "Respondiendo a",
     },
     en: {
-      title: "Agroecotopia Support",
+      title: `${config.app.name} Support`,
       online: "Online",
       offline: "Offline",
       placeholder: "Type your message...",

@@ -16,6 +16,7 @@ import { AuthVisualPanel } from "@/components/login/AuthVisualPanel";
 import { AuthHeader } from "@/components/login/AuthHeader";
 import { AuthTabs } from "@/components/login/AuthTabs";
 import { AuthForm } from "@/components/login/AuthForm";
+import { config } from "@/config/config";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -131,7 +132,7 @@ export default function LoginPage() {
           </Link>
           <div className="flex items-center gap-2">
             <Leaf className="h-5 w-5 text-primary" />
-            <span className="font-bold">Agroecotopia</span>
+            <span className="font-bold">{config.app.name}</span>
           </div>
         </div>
 
