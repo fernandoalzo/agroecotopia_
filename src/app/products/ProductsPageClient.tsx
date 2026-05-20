@@ -38,10 +38,11 @@ interface ProductsPageClientProps {
     totalPages: number;
   };
   categories: string[];
+  categoryCounts?: Record<string, number>;
   selectedCategory: string;
 }
 
-export default function ProductsPageClient({ initialData, categories, selectedCategory }: ProductsPageClientProps) {
+export default function ProductsPageClient({ initialData, categories, categoryCounts = {}, selectedCategory }: ProductsPageClientProps) {
   const { t, language } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -158,6 +159,7 @@ export default function ProductsPageClient({ initialData, categories, selectedCa
           queryParam={queryParam}
           t={t}
           categories={categories}
+          categoryCounts={categoryCounts}
           categoryParam={categoryParam}
         />
 
@@ -224,6 +226,7 @@ export default function ProductsPageClient({ initialData, categories, selectedCa
                       <div className="flex flex-col gap-2.5 pl-1">
                         {categories.map((cat) => {
                           const isChecked = selectedCategories.includes(cat);
+                          const count = categoryCounts[cat] || 0;
                           return (
                             <button
                               key={cat}
@@ -262,12 +265,22 @@ export default function ProductsPageClient({ initialData, categories, selectedCa
                                 </span>
                               </div>
 
-                              {/* Elegant micro-arrow indicator that slides on hover */}
-                              <div className={cn(
-                                "text-xs font-semibold select-none transition-all duration-300 opacity-0 group-hover:opacity-100 group-hover:translate-x-1",
-                                isChecked ? "text-primary/70" : "text-muted-foreground/50"
-                              )}>
-                                →
+                              <div className="flex items-center gap-2">
+                                <span className={cn(
+                                  "text-xs px-2 py-0.5 rounded-full font-semibold transition-colors duration-350",
+                                  isChecked 
+                                    ? "bg-primary/20 text-primary" 
+                                    : "bg-muted text-muted-foreground/70 group-hover:bg-primary/10 group-hover:text-primary"
+                                )}>
+                                  {count}
+                                </span>
+                                {/* Elegant micro-arrow indicator that slides on hover */}
+                                <div className={cn(
+                                  "text-xs font-semibold select-none transition-all duration-300 opacity-0 group-hover:opacity-100 group-hover:translate-x-1",
+                                  isChecked ? "text-primary/70" : "text-muted-foreground/50"
+                                )}>
+                                  →
+                                </div>
                               </div>
                             </button>
                           );

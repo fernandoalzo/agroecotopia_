@@ -15,9 +15,10 @@ export default async function ProductsServerPage(props: {
 
   log.info("Renderizando catálogo de productos (ProductsServerPage):", { query, page, limit, category });
 
-  // Fetch unique categories and products with category filtering in parallel
-  const [categories, initialData] = await Promise.all([
+  // Fetch unique categories, category counts and products in parallel
+  const [categories, categoryCounts, initialData] = await Promise.all([
     productService.getCategories(),
+    productService.getCategoryCounts(),
     query.trim()
       ? (async () => {
           log.debug("Catálogo de productos: realizando búsqueda de texto:", { query, page, limit, category });
@@ -33,13 +34,15 @@ export default async function ProductsServerPage(props: {
     categoriesCount: categories.length,
     productsReturned: initialData?.products?.length,
     totalProducts: initialData?.total,
-    totalPages: initialData?.totalPages
+    totalPages: initialData?.totalPages,
+    categoryCounts
   });
 
   return (
     <ProductsPageClient 
       initialData={initialData} 
       categories={categories} 
+      categoryCounts={categoryCounts}
       selectedCategory={category} 
     />
   );

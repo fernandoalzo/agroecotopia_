@@ -33,6 +33,7 @@ interface ProductsToolbarProps {
   queryParam: string;
   t: any;
   categories: string[];
+  categoryCounts?: Record<string, number>;
   categoryParam: string;
 }
 
@@ -48,6 +49,7 @@ export function ProductsToolbar({
   queryParam,
   t,
   categories,
+  categoryCounts = {},
   categoryParam,
 }: ProductsToolbarProps) {
   const { language } = useLanguage();
@@ -165,6 +167,7 @@ export function ProductsToolbar({
                   <div className="grid grid-cols-2 gap-2 pb-2">
                     {categories.map((cat) => {
                       const isChecked = selectedCategories.includes(cat);
+                      const count = categoryCounts[cat] || 0;
                       return (
                         <button
                           key={cat}
@@ -176,7 +179,7 @@ export function ProductsToolbar({
                               : "bg-card/25 border-border/50 text-muted-foreground"
                           )}
                         >
-                          <div className="flex items-center gap-2 max-w-[85%] overflow-hidden">
+                          <div className="flex items-center gap-2 max-w-[75%] overflow-hidden">
                             <div className={cn(
                               "w-4 h-4 rounded-full border transition-all duration-200 flex items-center justify-center shrink-0",
                               isChecked ? "border-primary bg-primary text-primary-foreground" : "border-border/80 bg-background/60"
@@ -191,6 +194,12 @@ export function ProductsToolbar({
                               {getCategoryLabel(cat)}
                             </span>
                           </div>
+                          <span className={cn(
+                            "text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0 ml-1 transition-colors duration-200",
+                            isChecked ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground/60"
+                          )}>
+                            {count}
+                          </span>
                         </button>
                       );
                     })}

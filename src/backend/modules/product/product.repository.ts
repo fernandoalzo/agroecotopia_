@@ -107,4 +107,23 @@ export class ProductRepository {
     });
     return result.map(p => p.categoria).filter(Boolean);
   }
+
+  /**
+   * Obtiene el conteo de productos por categoría usando groupBy.
+   */
+  async getCategoryCounts(): Promise<Record<string, number>> {
+    log.debug("Obteniendo conteo de productos por categoría");
+    const result = await prisma.product.groupBy({
+      by: ["categoria"],
+      _count: { _all: true },
+      orderBy: { categoria: "asc" },
+    });
+    const counts: Record<string, number> = {};
+    for (const row of result) {
+      if (row.categoria) {
+        counts[row.categoria] = row._count._all;
+      }
+    }
+    return counts;
+  }
 }

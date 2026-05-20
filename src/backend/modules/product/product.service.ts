@@ -65,6 +65,18 @@ export class ProductService {
   }
 
   /**
+   * Obtiene el conteo de productos por cada categoría.
+   */
+  async getCategoryCounts(): Promise<Record<string, number>> {
+    try {
+      return await this.productRepository.getCategoryCounts();
+    } catch (error) {
+      log.error("Error in getCategoryCounts:", error);
+      return {};
+    }
+  }
+
+  /**
    * Convierte objetos Decimal de Prisma a numbers para que sean serializables
    */
   private serializeProduct(product: Product) {
