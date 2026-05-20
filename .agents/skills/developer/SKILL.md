@@ -17,7 +17,7 @@ This skill defines the technical standards and architectural patterns for the **
 - **Auth**: NextAuth.js (v5 Beta) + `@auth/prisma-adapter`.
 - **Database**: PostgreSQL + Prisma ORM (`@prisma/client`, `prismaSchemaFolder` preview feature).
 - **Real-time**: [Socket.IO](https://socket.io/) v4.8 (`socket.io` + `socket.io-client`).
-- **Server**: Custom `server.js` — Monolithic HTTP server unifying Next.js + Socket.IO on a single port.
+- **Server**: Custom `server.ts` — Monolithic HTTP server unifying Next.js + Socket.IO on a single port (runs via `tsx`).
 
 ---
 
@@ -167,20 +167,19 @@ src/utils/PaymentsMethods/
 
 - **Browser Interaction**: Never interact directly with the browser to test or verify changes. Focus exclusively on the code implementation.
 - **Verification**: Wait for the user to perform manual tests and provide feedback on the changes before proceeding with further adjustments.
-- **File Extensions**: The `socketHandler.js` MUST remain as `.js` since it's required by `server.js` via `require()`. Do not convert it to TypeScript unless `server.js` is also migrated.
 - **New Modules**: When creating a new backend domain module, always follow the full pattern: `index.ts` (IoC) → `[domain].repository.ts` → `[domain].service.ts` → `[domain].actions.ts`.
 - **Server Actions**: All Server Actions must be in files marked with `"use server"` at the top and wrapped with appropriate auth guards.
 
 ---
 
-## 10. Custom `server.js` — Monolithic Server Architecture
+## 10. Custom `server.ts` — Monolithic Server Architecture
 
 > [!CAUTION]
-> The application does **NOT** use `next dev` or `next start`. It runs through a **custom Node.js HTTP server** at the project root (`server.js`). This is the most important architectural decision in the project.
+> The application does **NOT** use `next dev` or `next start`. It runs through a **custom TypeScript HTTP server** at the project root (`server.ts`) executed via `tsx`. This is the most important architectural decision in the project.
 
 ### 10.1 How It Works
 
-`server.js` (28 lines) creates a single HTTP server that:
+`server.ts` creates a single HTTP server that:
 1. Delegates all HTTP requests to the Next.js request handler (`app.getRequestHandler()`).
 2. Mounts a Socket.IO server on the **same HTTP server** via `initSocketServer(httpServer, prisma)`.
 3. Listens on a **single port** (3000 by default) for both HTTP and WebSocket traffic.
@@ -197,9 +196,9 @@ src/utils/PaymentsMethods/
 
 ```json
 {
-  "dev": "node server.js",
+  "dev": "tsx server.ts",
   "build": "next build",
-  "start": "node server.js"
+  "start": "tsx server.ts"
 }
 ```
 
@@ -208,7 +207,7 @@ src/utils/PaymentsMethods/
 
 ### 10.4 Prisma Dual-Instance Pattern
 
-- **`server.js`**: Creates its own `new PrismaClient()` and injects it into `initSocketServer(httpServer, prisma)` — used exclusively for WebSocket event persistence.
+- **`server.ts`**: Creates its own `new PrismaClient()` and injects it into `initSocketServer(httpServer, prisma)` — used exclusively for WebSocket event persistence.
 - **Server Actions / Service Layer**: Uses the singleton from `src/backend/db/prisma.ts` (with `globalThis` pattern).
 
 Both instances connect to the same database.
@@ -243,10 +242,7 @@ Defined in `src/backend/prisma/schema/chat.model.prisma`:
 | `conversationId` | `String` | FK to `Conversation` |
 | `isRead` | `Boolean @default(false)` | Read status |
 
-### 11.2 Socket Handler (`src/backend/modules/chat/socketHandler.js`)
-
-> [!IMPORTANT]
-> This file is **plain JavaScript** (`.js`), not TypeScript. This is intentional: `server.js` runs with `node` directly (no `ts-node`), and this module is imported via `require()`.
+### 11.2 Socket Handler (`src/backend/modules/chat/socketHandler.ts`)
 
 **Client → Server Events:**
 
@@ -340,7 +336,7 @@ export const domainService = new DomainService(domainRepository);
 | `product` | `product.repository.ts` | `product.service.ts` | `product.actions.ts` | ✗ | ✓ |
 | `orders` | `orders.repository.ts` | `orders.service.ts` | `orders.actions.ts` | ✗ | ✓ |
 | `payments` | ✗ | `payments.service.ts` | `payments.actions.ts` | ✗ | ✓ |
-| `chat` | `chat.repository.ts` | `chat.service.ts` | `chat.actions.ts` | `socketHandler.js` | ✓ |
+| `chat` | `chat.repository.ts` | `chat.service.ts` | `chat.actions.ts` | `socketHandler.ts` | ✓ |
 
 ---
 
