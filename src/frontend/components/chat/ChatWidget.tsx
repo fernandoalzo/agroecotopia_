@@ -530,7 +530,10 @@ export default function ChatWidget() {
         )}
       </AnimatePresence>
 
-      <div className="fixed bottom-5 right-5 z-[999] md:bottom-8 md:right-8 font-sans">
+      <div className={isClient && isOpen && window.innerWidth < 768
+        ? "fixed inset-x-0 top-0 bottom-auto z-[999] font-sans"
+        : "fixed bottom-5 right-5 z-[999] md:bottom-8 md:right-8 font-sans"
+      }>
       <AnimatePresence>
         {isOpen && (
           <motion.div
