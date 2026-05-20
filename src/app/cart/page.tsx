@@ -1,6 +1,5 @@
 "use client";
 
-import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -202,7 +201,6 @@ export default function CartPage() {
   
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
       <main className="flex-1 pt-24 pb-16">
         <div className="container px-4 md:px-6 max-w-6xl mx-auto">
           <div className="mb-8">

@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Product } from "@/types";
 import { useLanguage } from "@/context/LanguageContext";
@@ -142,7 +141,6 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 overflow-x-hidden font-body">
-      <Navbar />
 
       <main className="pt-24 pb-16 md:pt-32 md:pb-32">
         <ProductsHeader t={t} />

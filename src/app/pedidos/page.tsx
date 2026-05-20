@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect } from "react";
-import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -33,7 +32,6 @@ export default function PedidosPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background/50 selection:bg-primary/20 overflow-x-hidden">
-      <Navbar />
       
       <main className="flex-1 pt-24 pb-20 md:pt-32">
         <div className="container px-4 md:px-6 max-w-5xl mx-auto">

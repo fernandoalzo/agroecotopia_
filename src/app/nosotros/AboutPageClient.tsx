@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -22,7 +21,6 @@ export default function AboutPageClient() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background selection:bg-primary/30">
-      <Navbar />
 
       <main className="flex-grow pt-24 md:pt-32">
         {/* About Hero Section */}

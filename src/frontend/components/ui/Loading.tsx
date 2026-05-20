@@ -16,7 +16,7 @@ export function Loading({
 }: LoadingProps) {
   const containerClasses = cn(
     "flex flex-col items-center justify-center",
-    fullScreen ? "fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm" : "py-20 w-full",
+    fullScreen ? "fixed inset-x-0 top-14 md:top-20 bottom-0 z-40 bg-background/80 backdrop-blur-sm" : "py-20 w-full",
     className
   );
 

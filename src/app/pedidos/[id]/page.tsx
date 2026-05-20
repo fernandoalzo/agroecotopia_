@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useLanguage } from "@/context/LanguageContext";
@@ -266,7 +265,6 @@ export default function OrderDetailPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background/50 selection:bg-primary/20">
-      <Navbar />
       
       <main className="flex-1 pt-24 pb-20 md:pt-32">
         <div className="container px-4 md:px-6 max-w-4xl mx-auto">

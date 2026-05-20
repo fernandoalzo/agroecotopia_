@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -100,7 +99,6 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
-      <Navbar />
 
       <main className="flex-1 pt-24 pb-16">
         <div className="container px-4 md:px-6 max-w-7xl mx-auto">

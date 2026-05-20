@@ -8,6 +8,7 @@ import { CartProvider } from "@/context/CartContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { SocketProvider } from "@/frontend/context/SocketContext";
 import ChatWidget from "@/frontend/components/chat/ChatWidget";
+import GlobalNavbar from "@/frontend/components/GlobalNavbar";
 import { ThemeProvider } from "next-themes";
 import { useState, Suspense, useEffect } from "react";
 import ScrollToAnchor from "@/components/ScrollToAnchor";
@@ -48,6 +49,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                     <ScrollToAnchor />
                   </Suspense>
                   <PageFocusTracker />
+                  <GlobalNavbar />
                   {children}
                   <ChatWidget />
                   <Sonner />
@@ -60,5 +62,3 @@ export function Providers({ children }: { children: React.ReactNode }) {
     </SessionProvider>
   );
 }
-
-

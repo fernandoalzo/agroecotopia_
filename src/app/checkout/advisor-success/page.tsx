@@ -2,7 +2,6 @@
 
 import React, { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/context/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -324,7 +323,6 @@ function AdvisorSuccessLoading() {
 export default function AdvisorSuccessPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background/50 selection:bg-primary/20">
-      <Navbar />
       
       <main className="flex-1 pt-28 pb-20 md:pt-36 flex items-center">
         <Suspense fallback={<AdvisorSuccessLoading />}>
