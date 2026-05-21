@@ -1111,11 +1111,13 @@ function AdminChatPageContent() {
                   type="text"
                   value={inputMessage}
                   onChange={handleInputChange}
-                  onFocus={(e) => {
-                    window.setTimeout(() => {
-                      e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
-                    }, 400);
-                  }}
+                   onFocus={(e) => {
+                     window.setTimeout(() => {
+                       if (e.currentTarget) {
+                         e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
+                       }
+                     }, 400);
+                   }}
                   disabled={!isConnected}
                   placeholder={isConnected ? "Escribe tu respuesta..." : "Chat desconectado..."}
                   className="flex-1 h-12 px-4 border border-border/60 hover:border-border/80 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm outline-none bg-secondary/20 transition-all text-foreground disabled:opacity-50"
