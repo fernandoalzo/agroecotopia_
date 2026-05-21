@@ -106,7 +106,7 @@ export default function ChatWidget() {
     const handleResize = () => {
       if (vv) {
         setViewportHeight(`${vv.height}px`);
-        if (vv.offsetTop !== 0 || vv.offsetLeft !== 0) {
+        if (window.scrollY !== 0) {
           window.scrollTo(0, 0);
         }
       }
@@ -420,10 +420,10 @@ export default function ChatWidget() {
   };
 
   // Send message
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendMessage = async (e?: React.FormEvent | React.PointerEvent) => {
+    if (e) e.preventDefault();
     if (!inputMessage.trim() || !socket || !conversation?.id || !session?.user?.id) {
-      inputRef.current?.focus();
+      inputRef.current?.focus({ preventScroll: true });
       return;
     }
 
@@ -443,7 +443,7 @@ export default function ChatWidget() {
     if (config.chat.enableE2EE) {
       if (!isE2EEReady) {
         log.warn("E2EE está activado pero no está listo aún. Esperando...");
-        inputRef.current?.focus();
+        inputRef.current?.focus({ preventScroll: true });
         return;
       }
       try {
@@ -453,7 +453,7 @@ export default function ChatWidget() {
         encryptionType = encrypted.type;
       } catch (err) {
         log.error("Error cifrando el mensaje, no se enviará en texto plano por seguridad:", err);
-        inputRef.current?.focus();
+        inputRef.current?.focus({ preventScroll: true });
         return; // Previene el envío en texto plano si falla
       }
     }
@@ -473,9 +473,11 @@ export default function ChatWidget() {
     setReplyingTo(null);
 
     // Mantiene el foco en el input para evitar que se cierre el teclado en móviles
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 50);
+    if (document.activeElement !== inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.focus({ preventScroll: true });
+      }, 50);
+    }
   };
 
   // Delete/Clear my own conversation as a user
@@ -840,22 +842,18 @@ export default function ChatWidget() {
                     type="text"
                     value={inputMessage}
                     onChange={handleInputChange}
-                    onFocus={() => {
-                      // Force viewport scroll reset during keyboard show
-                      let count = 0;
-                      const interval = setInterval(() => {
-                        window.scrollTo(0, 0);
-                        count++;
-                        if (count > 10) clearInterval(interval);
-                      }, 50);
-                    }}
                     disabled={!isConnected}
                     placeholder={isConnected ? t.placeholder : t.disconnectedPlaceholder}
                     className="flex-1 h-10 px-3 border border-border hover:border-border/80 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm outline-none bg-secondary/10 transition-all disabled:opacity-50"
                   />
                   <button
-                    type="submit"
-                    onMouseDown={(e) => e.preventDefault()}
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      if (inputMessage.trim() && isConnected && !(config.chat.enableE2EE && !isE2EEReady)) {
+                        handleSendMessage(e);
+                      }
+                    }}
                     disabled={!inputMessage.trim() || !isConnected || (config.chat.enableE2EE && !isE2EEReady)}
                     className="h-10 w-10 flex items-center justify-center rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground disabled:opacity-40 disabled:hover:bg-primary shadow-sm transition-all cursor-pointer"
                   >

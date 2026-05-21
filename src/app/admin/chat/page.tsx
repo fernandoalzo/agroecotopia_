@@ -97,7 +97,7 @@ export default function AdminChatPage() {
     const handleResize = () => {
       if (vv) {
         setViewportHeight(`${vv.height}px`);
-        if (vv.offsetTop !== 0 || vv.offsetLeft !== 0) {
+        if (window.scrollY !== 0) {
           window.scrollTo(0, 0);
         }
       }
@@ -307,7 +307,7 @@ export default function AdminChatPage() {
           if (!isCancelled) setMessages(decryptedMsgs);
         }
         await markAsRead(activeConv.id);
-        
+
         // Reset unread indicator locally in conversations list
         if (!isCancelled) {
           setConversations((prev) =>
@@ -335,7 +335,7 @@ export default function AdminChatPage() {
     // Listen for global notifications (new messages in any conversation)
     const handleNewMessageNotification = async ({ conversationId, message }: { conversationId: string; message: Message }) => {
       let decryptedMessage = { ...message };
-      
+
       // Decrypt the live incoming message if encrypted
       if (message.isEncrypted) {
         try {
@@ -343,7 +343,7 @@ export default function AdminChatPage() {
           const targetConv = conversationsRef.current.find((c) => c.id === conversationId);
           const userId = targetConv ? targetConv.userId : message.senderId;
           const targetId = message.senderId === sessionUserId ? userId : message.senderId;
-          
+
           signalStore.setUserId(sessionUserId);
           const decryptedContent = await SignalService.decryptMessage(targetId, message.content, message.encryptionType || 1);
           decryptedMessage.content = decryptedContent;
@@ -397,11 +397,11 @@ export default function AdminChatPage() {
 
         const updated = [...prev];
         const conv = { ...updated[index] };
-        
+
         // Update last message with the decrypted variant
         conv.messages = [decryptedMessage];
         conv.updatedAt = decryptedMessage.createdAt;
-        
+
         // Increment unread count if it's not the active conversation and not sent by me
         const currentActiveConv = activeConvRef.current;
         if ((!currentActiveConv || currentActiveConv.id !== conversationId) && message.senderRole !== "admin") {
@@ -420,7 +420,7 @@ export default function AdminChatPage() {
           if (prev.some((m) => m.id === decryptedMessage.id)) return prev;
           return [...prev, decryptedMessage];
         });
-        
+
         // Mark as read immediately
         if (message.senderRole !== "admin") {
           markAsRead(conversationId);
@@ -532,8 +532,8 @@ export default function AdminChatPage() {
   };
 
   // Send message
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendMessage = async (e?: React.FormEvent | React.PointerEvent) => {
+    if (e) e.preventDefault();
     if (!inputMessage.trim() || !socket || !activeConv || !session?.user?.id) {
       inputRef.current?.focus({ preventScroll: true });
       return;
@@ -623,7 +623,7 @@ export default function AdminChatPage() {
       if (res && !("error" in res)) {
         // Find if this conversation is already in our list
         const existingConv = conversations.find((c) => c.id === res.id);
-        
+
         const fullConv = existingConv || {
           ...res,
           messages: [],
@@ -637,7 +637,7 @@ export default function AdminChatPage() {
 
         // Set as active
         setActiveConv(fullConv);
-        
+
         // Return to chats tab
         setSidebarTab("chats");
       }
@@ -678,7 +678,7 @@ export default function AdminChatPage() {
   }
 
   return (
-    <div 
+    <div
       ref={pageContainerRef}
       className="fixed inset-x-0 top-0 flex bg-background text-foreground overflow-hidden font-sans pt-14 md:pt-20"
       style={{ height: viewportHeight }}
@@ -706,9 +706,8 @@ export default function AdminChatPage() {
             </div>
           </div>
           <span
-            className={`w-2.5 h-2.5 rounded-full ${
-              isConnected ? "bg-green-500" : "bg-muted animate-pulse"
-            }`}
+            className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-green-500" : "bg-muted animate-pulse"
+              }`}
             title={isConnected ? "WebSocket Conectado" : "Buscando conexión..."}
           />
         </div>
@@ -717,22 +716,20 @@ export default function AdminChatPage() {
         <div className="px-4 py-2.5 border-b border-border/40 flex gap-2 bg-card/20">
           <button
             onClick={() => setSidebarTab("chats")}
-            className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-              sidebarTab === "chats"
+            className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${sidebarTab === "chats"
                 ? "bg-primary text-primary-foreground shadow-sm shadow-primary/10"
                 : "bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80"
-            }`}
+              }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
             Chats Activos
           </button>
           <button
             onClick={() => setSidebarTab("users")}
-            className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-              sidebarTab === "users"
+            className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${sidebarTab === "users"
                 ? "bg-primary text-primary-foreground shadow-sm shadow-primary/10"
                 : "bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80"
-            }`}
+              }`}
           >
             <UserPlus className="w-3.5 h-3.5" />
             Buscar Usuarios
@@ -774,17 +771,15 @@ export default function AdminChatPage() {
                   <button
                     key={conv.id}
                     onClick={() => setActiveConv(conv)}
-                    className={`w-full text-left p-4 rounded-xl transition-all flex items-start gap-3.5 border ${
-                      isActive
+                    className={`w-full text-left p-4 rounded-xl transition-all flex items-start gap-3.5 border ${isActive
                         ? "bg-primary border-primary/20 text-primary-foreground shadow-md"
                         : "bg-transparent border-transparent hover:bg-secondary/40 hover:border-border/40"
-                    }`}
+                      }`}
                   >
                     <div className="relative flex-shrink-0">
                       <div
-                        className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm shadow-inner ${
-                          isActive ? "bg-primary-foreground/15 text-primary-foreground" : "bg-secondary text-secondary-foreground"
-                        }`}
+                        className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm shadow-inner ${isActive ? "bg-primary-foreground/15 text-primary-foreground" : "bg-secondary text-secondary-foreground"
+                          }`}
                       >
                         {conv.user?.name?.[0]?.toUpperCase() || <User className="w-5 h-5" />}
                       </div>
@@ -793,17 +788,15 @@ export default function AdminChatPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <h3
-                          className={`text-sm font-semibold truncate ${
-                            isActive ? "text-primary-foreground" : "text-foreground"
-                          }`}
+                          className={`text-sm font-semibold truncate ${isActive ? "text-primary-foreground" : "text-foreground"
+                            }`}
                         >
                           {conv.user?.name || "Usuario"}
                         </h3>
                         {conv.updatedAt && (
                           <span
-                            className={`text-[10px] flex-shrink-0 ${
-                              isActive ? "text-primary-foreground/75" : "text-muted-foreground/60"
-                            }`}
+                            className={`text-[10px] flex-shrink-0 ${isActive ? "text-primary-foreground/75" : "text-muted-foreground/60"
+                              }`}
                           >
                             {new Date(conv.updatedAt).toLocaleTimeString([], {
                               hour: "2-digit",
@@ -814,9 +807,8 @@ export default function AdminChatPage() {
                       </div>
                       <div className="flex items-center justify-between gap-2 mt-1">
                         <p
-                          className={`text-xs truncate ${
-                            isActive ? "text-primary-foreground/90 font-medium" : "text-muted-foreground"
-                          } ${hasUnread && !isActive ? "text-foreground font-bold" : ""}`}
+                          className={`text-xs truncate ${isActive ? "text-primary-foreground/90 font-medium" : "text-muted-foreground"
+                            } ${hasUnread && !isActive ? "text-foreground font-bold" : ""}`}
                         >
                           {lastMsg?.content || "Inicia una conversación..."}
                         </p>
@@ -949,98 +941,93 @@ export default function AdminChatPage() {
                         <div
                           key={msg.id}
                           ref={isFirstUnread ? firstUnreadRef : null}
-                          className={`flex flex-col max-w-[70%] ${
-                            isMe ? "ml-auto items-end" : "mr-auto items-start"
-                          }`}
+                          className={`flex flex-col max-w-[70%] ${isMe ? "ml-auto items-end" : "mr-auto items-start"
+                            }`}
                         >
-                        <div
-                          onClick={() => setActiveMessageId(activeMessageId === msg.id ? null : msg.id)}
-                          className={`p-3.5 rounded-2xl text-sm shadow-sm relative group/msg ${
-                            isMe
-                              ? "bg-primary text-primary-foreground rounded-tr-none"
-                              : "bg-secondary text-secondary-foreground border border-border/40 rounded-tl-none"
-                          } md:cursor-default cursor-pointer`}
-                        >
-                          {msg.replyTo && (
-                            <div className={`mb-1.5 p-2 rounded-lg text-xs border-l-2 ${
-                              isMe 
-                                ? "bg-primary-foreground/10 border-primary-foreground/40 text-primary-foreground/80" 
-                                : "bg-background/50 border-primary/40 text-muted-foreground"
-                            }`}>
-                              <div className={`font-semibold mb-0.5 ${isMe ? "text-primary-foreground" : "text-primary/80"}`}>
-                                {msg.replyTo.senderRole === "admin" ? "Tú" : (activeConv?.user?.name || "Cliente")}
+                          <div
+                            onClick={() => setActiveMessageId(activeMessageId === msg.id ? null : msg.id)}
+                            className={`p-3.5 rounded-2xl text-sm shadow-sm relative group/msg ${isMe
+                                ? "bg-primary text-primary-foreground rounded-tr-none"
+                                : "bg-secondary text-secondary-foreground border border-border/40 rounded-tl-none"
+                              } md:cursor-default cursor-pointer`}
+                          >
+                            {msg.replyTo && (
+                              <div className={`mb-1.5 p-2 rounded-lg text-xs border-l-2 ${isMe
+                                  ? "bg-primary-foreground/10 border-primary-foreground/40 text-primary-foreground/80"
+                                  : "bg-background/50 border-primary/40 text-muted-foreground"
+                                }`}>
+                                <div className={`font-semibold mb-0.5 ${isMe ? "text-primary-foreground" : "text-primary/80"}`}>
+                                  {msg.replyTo.senderRole === "admin" ? "Tú" : (activeConv?.user?.name || "Cliente")}
+                                </div>
+                                <div className="truncate opacity-90">{msg.replyTo.content}</div>
                               </div>
-                              <div className="truncate opacity-90">{msg.replyTo.content}</div>
-                            </div>
-                          )}
-                          {msg.content}
-                          {/* Desktop: hover-based side buttons */}
-                          <div className={`hidden md:flex absolute top-1/2 -translate-y-1/2 opacity-0 group-hover/msg:opacity-100 transition-opacity items-center gap-0.5 ${
-                            isMe ? "-left-[60px]" : "-right-[60px]"
-                          }`}>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleCopy(msg.id, msg.content); }}
-                              className="p-1.5 rounded-full hover:bg-secondary/80 text-muted-foreground transition-colors cursor-pointer"
-                              title="Copiar"
-                            >
-                              {copiedId === msg.id ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setReplyingTo(msg);
-                                setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50);
-                              }}
-                              className="p-1.5 rounded-full hover:bg-secondary/80 text-muted-foreground transition-colors cursor-pointer"
-                              title="Responder"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-                            </button>
-                          </div>
-                        </div>
-                        {/* Mobile: tap-toggled inline buttons below the bubble */}
-                        <AnimatePresence>
-                          {activeMessageId === msg.id && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0, y: -4 }}
-                              animate={{ opacity: 1, height: "auto", y: 0 }}
-                              exit={{ opacity: 0, height: 0, y: -4 }}
-                              transition={{ duration: 0.15 }}
-                              className={`flex md:hidden items-center gap-1 mt-1 overflow-hidden ${
-                                isMe ? "justify-end" : "justify-start"
-                              }`}
-                            >
+                            )}
+                            {msg.content}
+                            {/* Desktop: hover-based side buttons */}
+                            <div className={`hidden md:flex absolute top-1/2 -translate-y-1/2 opacity-0 group-hover/msg:opacity-100 transition-opacity items-center gap-0.5 ${isMe ? "-left-[60px]" : "-right-[60px]"
+                              }`}>
                               <button
-                                onClick={() => handleCopy(msg.id, msg.content)}
-                                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/60 hover:bg-secondary text-muted-foreground text-[11px] font-medium transition-colors"
+                                onClick={(e) => { e.stopPropagation(); handleCopy(msg.id, msg.content); }}
+                                className="p-1.5 rounded-full hover:bg-secondary/80 text-muted-foreground transition-colors cursor-pointer"
+                                title="Copiar"
                               >
-                                {copiedId === msg.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                                {copiedId === msg.id ? "✓" : "Copiar"}
+                                {copiedId === msg.id ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
                               </button>
                               <button
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setReplyingTo(msg);
-                                  setActiveMessageId(null);
-                                  setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50);
+                                  setTimeout(() => inputRef.current?.focus(), 50);
                                 }}
-                                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/60 hover:bg-secondary text-muted-foreground text-[11px] font-medium transition-colors"
+                                className="p-1.5 rounded-full hover:bg-secondary/80 text-muted-foreground transition-colors cursor-pointer"
+                                title="Responder"
                               >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-                                Responder
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>
                               </button>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                        <span className="text-[10px] text-muted-foreground/70 mt-1 px-1">
-                          {new Date(msg.createdAt).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                    );
-                  });
-                })()}
+                            </div>
+                          </div>
+                          {/* Mobile: tap-toggled inline buttons below the bubble */}
+                          <AnimatePresence>
+                            {activeMessageId === msg.id && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0, y: -4 }}
+                                animate={{ opacity: 1, height: "auto", y: 0 }}
+                                exit={{ opacity: 0, height: 0, y: -4 }}
+                                transition={{ duration: 0.15 }}
+                                className={`flex md:hidden items-center gap-1 mt-1 overflow-hidden ${isMe ? "justify-end" : "justify-start"
+                                  }`}
+                              >
+                                <button
+                                  onClick={() => handleCopy(msg.id, msg.content)}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/60 hover:bg-secondary text-muted-foreground text-[11px] font-medium transition-colors"
+                                >
+                                  {copiedId === msg.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                  {copiedId === msg.id ? "✓" : "Copiar"}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setReplyingTo(msg);
+                                    setActiveMessageId(null);
+                                    setTimeout(() => inputRef.current?.focus(), 50);
+                                  }}
+                                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/60 hover:bg-secondary text-muted-foreground text-[11px] font-medium transition-colors"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>
+                                  Responder
+                                </button>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                          <span className="text-[10px] text-muted-foreground/70 mt-1 px-1">
+                            {new Date(msg.createdAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                      );
+                    });
+                  })()}
 
                   {isUserTyping && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground italic px-1">
@@ -1088,22 +1075,18 @@ export default function AdminChatPage() {
                   type="text"
                   value={inputMessage}
                   onChange={handleInputChange}
-                  onFocus={() => {
-                    // Force viewport scroll reset during keyboard show
-                    let count = 0;
-                    const interval = setInterval(() => {
-                      window.scrollTo(0, 0);
-                      count++;
-                      if (count > 10) clearInterval(interval);
-                    }, 50);
-                  }}
                   disabled={!isConnected}
                   placeholder={isConnected ? "Escribe tu respuesta..." : "Chat desconectado..."}
                   className="flex-1 h-12 px-4 border border-border/60 hover:border-border/80 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm outline-none bg-secondary/20 transition-all text-foreground disabled:opacity-50"
                 />
                 <button
-                  type="submit"
-                  onMouseDown={(e) => e.preventDefault()}
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    if (inputMessage.trim() && isConnected && !(config.chat.enableE2EE && !isE2EEReady)) {
+                      handleSendMessage(e);
+                    }
+                  }}
                   disabled={!inputMessage.trim() || !isConnected || (config.chat.enableE2EE && !isE2EEReady)}
                   className="h-12 w-12 flex items-center justify-center rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground disabled:opacity-40 disabled:hover:bg-primary shadow-md transition-all flex-shrink-0 cursor-pointer"
                 >
@@ -1138,7 +1121,7 @@ export default function AdminChatPage() {
               onClick={() => setShowDeleteConfirm(false)}
               className="absolute inset-0 bg-background/80 backdrop-blur-sm"
             />
-            
+
             {/* Modal Container */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -1157,7 +1140,7 @@ export default function AdminChatPage() {
                 <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
                   Esta acción es permanente. Se eliminarán en cascada todos los mensajes y el historial del chat para siempre.
                 </p>
-                
+
                 <div className="flex w-full gap-3">
                   <button
                     type="button"
