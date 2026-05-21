@@ -106,7 +106,7 @@ export default function ChatWidget() {
     const handleResize = () => {
       if (vv) {
         setViewportHeight(`${vv.height}px`);
-        if (window.scrollY !== 0) {
+        if (vv.offsetTop !== 0 || vv.offsetLeft !== 0) {
           window.scrollTo(0, 0);
         }
       }
@@ -383,10 +383,24 @@ export default function ChatWidget() {
     if (isLoading || messages.length === 0) return;
 
     const timer = setTimeout(() => {
+      const container = messagesScrollRef.current;
+      if (!container) return;
+
       if (firstUnreadRef.current) {
-        firstUnreadRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-      } else if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        const element = firstUnreadRef.current;
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const relativeTop = elementRect.top - containerRect.top + container.scrollTop;
+        const targetScrollTop = relativeTop - (containerRect.height / 2) + (elementRect.height / 2);
+        container.scrollTo({
+          top: Math.max(0, targetScrollTop),
+          behavior: "smooth"
+        });
+      } else {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth"
+        });
       }
     }, 100);
 
@@ -420,10 +434,10 @@ export default function ChatWidget() {
   };
 
   // Send message
-  const handleSendMessage = async (e?: React.FormEvent | React.PointerEvent) => {
-    if (e) e.preventDefault();
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!inputMessage.trim() || !socket || !conversation?.id || !session?.user?.id) {
-      inputRef.current?.focus({ preventScroll: true });
+      inputRef.current?.focus();
       return;
     }
 
@@ -443,7 +457,7 @@ export default function ChatWidget() {
     if (config.chat.enableE2EE) {
       if (!isE2EEReady) {
         log.warn("E2EE está activado pero no está listo aún. Esperando...");
-        inputRef.current?.focus({ preventScroll: true });
+        inputRef.current?.focus();
         return;
       }
       try {
@@ -453,7 +467,7 @@ export default function ChatWidget() {
         encryptionType = encrypted.type;
       } catch (err) {
         log.error("Error cifrando el mensaje, no se enviará en texto plano por seguridad:", err);
-        inputRef.current?.focus({ preventScroll: true });
+        inputRef.current?.focus();
         return; // Previene el envío en texto plano si falla
       }
     }
@@ -473,11 +487,9 @@ export default function ChatWidget() {
     setReplyingTo(null);
 
     // Mantiene el foco en el input para evitar que se cierre el teclado en móviles
-    if (document.activeElement !== inputRef.current) {
-      setTimeout(() => {
-        inputRef.current?.focus({ preventScroll: true });
-      }, 50);
-    }
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 50);
   };
 
   // Delete/Clear my own conversation as a user
@@ -842,18 +854,22 @@ export default function ChatWidget() {
                     type="text"
                     value={inputMessage}
                     onChange={handleInputChange}
+                    onFocus={() => {
+                      // Force viewport scroll reset during keyboard show
+                      let count = 0;
+                      const interval = setInterval(() => {
+                        window.scrollTo(0, 0);
+                        count++;
+                        if (count > 10) clearInterval(interval);
+                      }, 50);
+                    }}
                     disabled={!isConnected}
                     placeholder={isConnected ? t.placeholder : t.disconnectedPlaceholder}
                     className="flex-1 h-10 px-3 border border-border hover:border-border/80 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm outline-none bg-secondary/10 transition-all disabled:opacity-50"
                   />
                   <button
-                    type="button"
-                    onPointerDown={(e) => {
-                      e.preventDefault();
-                      if (inputMessage.trim() && isConnected && !(config.chat.enableE2EE && !isE2EEReady)) {
-                        handleSendMessage(e);
-                      }
-                    }}
+                    type="submit"
+                    onMouseDown={(e) => e.preventDefault()}
                     disabled={!inputMessage.trim() || !isConnected || (config.chat.enableE2EE && !isE2EEReady)}
                     className="h-10 w-10 flex items-center justify-center rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground disabled:opacity-40 disabled:hover:bg-primary shadow-sm transition-all cursor-pointer"
                   >

@@ -97,7 +97,7 @@ export default function AdminChatPage() {
     const handleResize = () => {
       if (vv) {
         setViewportHeight(`${vv.height}px`);
-        if (window.scrollY !== 0) {
+        if (vv.offsetTop !== 0 || vv.offsetLeft !== 0) {
           window.scrollTo(0, 0);
         }
       }
@@ -499,10 +499,24 @@ export default function AdminChatPage() {
     if (isLoadingMsgs || messages.length === 0) return;
 
     const timer = setTimeout(() => {
+      const container = messagesScrollRef.current;
+      if (!container) return;
+
       if (firstUnreadRef.current) {
-        firstUnreadRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-      } else if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        const element = firstUnreadRef.current;
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const relativeTop = elementRect.top - containerRect.top + container.scrollTop;
+        const targetScrollTop = relativeTop - (containerRect.height / 2) + (elementRect.height / 2);
+        container.scrollTo({
+          top: Math.max(0, targetScrollTop),
+          behavior: "smooth"
+        });
+      } else {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth"
+        });
       }
     }, 100);
 
@@ -532,10 +546,10 @@ export default function AdminChatPage() {
   };
 
   // Send message
-  const handleSendMessage = async (e?: React.FormEvent | React.PointerEvent) => {
-    if (e) e.preventDefault();
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!inputMessage.trim() || !socket || !activeConv || !session?.user?.id) {
-      inputRef.current?.focus({ preventScroll: true });
+      inputRef.current?.focus();
       return;
     }
 
@@ -554,7 +568,7 @@ export default function AdminChatPage() {
     if (config.chat.enableE2EE && activeConv.userId) {
       if (!isE2EEReady) {
         log.warn("E2EE está activado pero no está listo aún en Admin. Esperando...");
-        inputRef.current?.focus({ preventScroll: true });
+        inputRef.current?.focus();
         return;
       }
       try {
@@ -564,7 +578,7 @@ export default function AdminChatPage() {
         encryptionType = encrypted.type;
       } catch (err) {
         log.error("Error cifrando el mensaje admin:", err);
-        inputRef.current?.focus({ preventScroll: true });
+        inputRef.current?.focus();
         return; // Previene el envío en texto plano si falla
       }
     }
@@ -583,11 +597,9 @@ export default function AdminChatPage() {
     setReplyingTo(null);
 
     // Mantiene el foco en el input para evitar que se cierre el teclado en móviles
-    if (document.activeElement !== inputRef.current) {
-      setTimeout(() => {
-        inputRef.current?.focus({ preventScroll: true });
-      }, 50);
-    }
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 50);
   };
 
   // Delete active conversation
@@ -717,8 +729,8 @@ export default function AdminChatPage() {
           <button
             onClick={() => setSidebarTab("chats")}
             className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${sidebarTab === "chats"
-                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/10"
-                : "bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+              ? "bg-primary text-primary-foreground shadow-sm shadow-primary/10"
+              : "bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80"
               }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
@@ -727,8 +739,8 @@ export default function AdminChatPage() {
           <button
             onClick={() => setSidebarTab("users")}
             className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${sidebarTab === "users"
-                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/10"
-                : "bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+              ? "bg-primary text-primary-foreground shadow-sm shadow-primary/10"
+              : "bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80"
               }`}
           >
             <UserPlus className="w-3.5 h-3.5" />
@@ -772,8 +784,8 @@ export default function AdminChatPage() {
                     key={conv.id}
                     onClick={() => setActiveConv(conv)}
                     className={`w-full text-left p-4 rounded-xl transition-all flex items-start gap-3.5 border ${isActive
-                        ? "bg-primary border-primary/20 text-primary-foreground shadow-md"
-                        : "bg-transparent border-transparent hover:bg-secondary/40 hover:border-border/40"
+                      ? "bg-primary border-primary/20 text-primary-foreground shadow-md"
+                      : "bg-transparent border-transparent hover:bg-secondary/40 hover:border-border/40"
                       }`}
                   >
                     <div className="relative flex-shrink-0">
@@ -947,14 +959,14 @@ export default function AdminChatPage() {
                           <div
                             onClick={() => setActiveMessageId(activeMessageId === msg.id ? null : msg.id)}
                             className={`p-3.5 rounded-2xl text-sm shadow-sm relative group/msg ${isMe
-                                ? "bg-primary text-primary-foreground rounded-tr-none"
-                                : "bg-secondary text-secondary-foreground border border-border/40 rounded-tl-none"
+                              ? "bg-primary text-primary-foreground rounded-tr-none"
+                              : "bg-secondary text-secondary-foreground border border-border/40 rounded-tl-none"
                               } md:cursor-default cursor-pointer`}
                           >
                             {msg.replyTo && (
                               <div className={`mb-1.5 p-2 rounded-lg text-xs border-l-2 ${isMe
-                                  ? "bg-primary-foreground/10 border-primary-foreground/40 text-primary-foreground/80"
-                                  : "bg-background/50 border-primary/40 text-muted-foreground"
+                                ? "bg-primary-foreground/10 border-primary-foreground/40 text-primary-foreground/80"
+                                : "bg-background/50 border-primary/40 text-muted-foreground"
                                 }`}>
                                 <div className={`font-semibold mb-0.5 ${isMe ? "text-primary-foreground" : "text-primary/80"}`}>
                                   {msg.replyTo.senderRole === "admin" ? "Tú" : (activeConv?.user?.name || "Cliente")}
@@ -1075,18 +1087,22 @@ export default function AdminChatPage() {
                   type="text"
                   value={inputMessage}
                   onChange={handleInputChange}
+                  onFocus={() => {
+                    // Force viewport scroll reset during keyboard show
+                    let count = 0;
+                    const interval = setInterval(() => {
+                      window.scrollTo(0, 0);
+                      count++;
+                      if (count > 10) clearInterval(interval);
+                    }, 50);
+                  }}
                   disabled={!isConnected}
                   placeholder={isConnected ? "Escribe tu respuesta..." : "Chat desconectado..."}
                   className="flex-1 h-12 px-4 border border-border/60 hover:border-border/80 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm outline-none bg-secondary/20 transition-all text-foreground disabled:opacity-50"
                 />
                 <button
-                  type="button"
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    if (inputMessage.trim() && isConnected && !(config.chat.enableE2EE && !isE2EEReady)) {
-                      handleSendMessage(e);
-                    }
-                  }}
+                  type="submit"
+                  onMouseDown={(e) => e.preventDefault()}
                   disabled={!inputMessage.trim() || !isConnected || (config.chat.enableE2EE && !isE2EEReady)}
                   className="h-12 w-12 flex items-center justify-center rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground disabled:opacity-40 disabled:hover:bg-primary shadow-md transition-all flex-shrink-0 cursor-pointer"
                 >
