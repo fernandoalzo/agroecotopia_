@@ -535,7 +535,7 @@ export default function AdminChatPage() {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim() || !socket || !activeConv || !session?.user?.id) {
-      inputRef.current?.focus();
+      inputRef.current?.focus({ preventScroll: true });
       return;
     }
 
@@ -554,7 +554,7 @@ export default function AdminChatPage() {
     if (config.chat.enableE2EE && activeConv.userId) {
       if (!isE2EEReady) {
         log.warn("E2EE está activado pero no está listo aún en Admin. Esperando...");
-        inputRef.current?.focus();
+        inputRef.current?.focus({ preventScroll: true });
         return;
       }
       try {
@@ -564,7 +564,7 @@ export default function AdminChatPage() {
         encryptionType = encrypted.type;
       } catch (err) {
         log.error("Error cifrando el mensaje admin:", err);
-        inputRef.current?.focus();
+        inputRef.current?.focus({ preventScroll: true });
         return; // Previene el envío en texto plano si falla
       }
     }
@@ -583,9 +583,11 @@ export default function AdminChatPage() {
     setReplyingTo(null);
 
     // Mantiene el foco en el input para evitar que se cierre el teclado en móviles
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 50);
+    if (document.activeElement !== inputRef.current) {
+      setTimeout(() => {
+        inputRef.current?.focus({ preventScroll: true });
+      }, 50);
+    }
   };
 
   // Delete active conversation
@@ -987,7 +989,7 @@ export default function AdminChatPage() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setReplyingTo(msg);
-                                setTimeout(() => inputRef.current?.focus(), 50);
+                                setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50);
                               }}
                               className="p-1.5 rounded-full hover:bg-secondary/80 text-muted-foreground transition-colors cursor-pointer"
                               title="Responder"
@@ -1019,7 +1021,7 @@ export default function AdminChatPage() {
                                 onClick={() => {
                                   setReplyingTo(msg);
                                   setActiveMessageId(null);
-                                  setTimeout(() => inputRef.current?.focus(), 50);
+                                  setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50);
                                 }}
                                 className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/60 hover:bg-secondary text-muted-foreground text-[11px] font-medium transition-colors"
                               >
