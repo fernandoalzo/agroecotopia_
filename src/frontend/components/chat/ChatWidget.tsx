@@ -472,20 +472,46 @@ export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidg
         return;
       }
 
-      let content = `¡Hola! Estoy a la espera de un asesor para tomar mi pedido.\n\nDetalles del pedido:\n`;
+      // Crear contenido formateado como tabla para mejor visualización
+      let content = `¡Hola! Estoy a la espera de un asesor para tomar mi pedido.\n\n`;
+      content += `DETALLES DEL PEDIDO\n`;
+      content += `===================\n\n`;
+
       if (cart && Array.isArray(cart)) {
-         cart.forEach((item: any) => {
-           const itemName = item.product?.name || item.name;
-           content += `- ${item.quantity}x ${itemName}\n`;
-         });
+        content += `CANTIDAD\tPRODUCTO\t\tPRECIO UNIT.\tSUBTOTAL\n`;
+        content += `--------\t--------\t\t------------\t--------\n`;
+
+        let totalCalculado = 0;
+        cart.forEach((item: any) => {
+          const itemName = item.product?.name || item.name || 'Producto';
+          const precioUnitario = item.product?.price || 0;
+          const subtotal = item.quantity * precioUnitario;
+          totalCalculado += subtotal;
+
+          // Formatear con tabulaciones para alineación
+          content += `${item.quantity}\t\t${itemName}\t\t$${precioUnitario.toLocaleString()}\t\t$${subtotal.toLocaleString()}\n`;
+        });
+
+        content += `\n`;
+        content += `TOTAL\t\t\t\t$${totalCalculado.toLocaleString()}\n`;
       }
-      content += `\nTotal: $${totalPrice.toLocaleString()}\n`;
+
       if (values) {
-         const name = values.fullName || values.nombres || "";
-         const phone = values.phone || values.telefono || "";
-         content += `Nombre: ${name}\n`;
-         content += `Teléfono: ${phone}\n`;
+        content += `\nINFORMACIÓN DE CONTACTO\n`;
+        content += `======================\n\n`;
+        const name = values.fullName || values.nombres || "";
+        const phone = values.phone || values.telefono || "";
+        const email = values.email || "";
+        const address = values.address || values.direccion || "";
+
+        if (name) content += `Nombre: ${name}\n`;
+        if (email) content += `Email: ${email}\n`;
+        if (phone) content += `Teléfono: ${phone}\n`;
+        if (address) content += `Dirección: ${address}\n`;
       }
+
+      content += `\nID DEL PEDIDO: ${pedidoId}\n`;
+      content += `==================\n`;
 
       const sendSocketMessage = async (textToEncrypt: string) => {
         let finalContent = textToEncrypt;
@@ -520,13 +546,13 @@ export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidg
 
       // 1. Send the details message
       await sendSocketMessage(content);
-      
+
       // 2. Wait a little bit to ensure message order
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       // 3. Send the order ID as a separate message for easy copying
       await sendSocketMessage(pedidoId);
-      
+
     };
 
     window.addEventListener("send_advisor_chat_message", handleAdvisorMessageEvent);
@@ -722,55 +748,55 @@ export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidg
               ref={chatContainerRef}
               className="relative w-full h-full md:absolute md:inset-auto md:bottom-20 md:right-0 md:w-[380px] md:h-[580px] md:rounded-2xl md:border md:border-border/80 md:shadow-2xl flex flex-col overflow-hidden bg-background z-50"
             >
-               {/* Header */}
-               <div className="p-4 bg-gradient-to-r from-primary/90 to-primary text-primary-foreground flex items-center justify-between border-b border-primary/20">
-                 <div className="flex items-center gap-2.5">
-                   <div className="relative">
-                     <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-                       <Leaf className="w-5 h-5 text-primary-foreground filter drop-shadow-sm" />
-                     </div>
-                     <span
-                       className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-primary ${isConnected ? "bg-green-500" : "bg-zinc-400"
-                       }`}
-                     />
-                   </div>
-                   <div>
-                     <h3 className="font-semibold text-sm leading-none flex items-center gap-1.5">
-                       {isAdminUser && targetUserId ? (
-                         <>
-                           {targetUserName || "Cargando..."}
-                           {isE2EEReady && <span title="Cifrado de extremo a extremo"><Lock className="w-3.5 h-3.5 text-primary-foreground/80" /></span>}
-                         </>
-                       ) : (
-                         <>
-                           {t.title}
-                           {isE2EEReady && <span title="Cifrado de extremo a extremo"><Lock className="w-3.5 h-3.5 text-primary-foreground/80" /></span>}
-                         </>
-                       )}
-                     </h3>
-                     <span className="text-[11px] opacity-80">
-                       {isConnected ? t.online : t.offline}
-                     </span>
-                   </div>
-                 </div>
-                 <div className="flex items-center gap-1">
-                   {conversation?.id && (
-                     <button
-                       onClick={() => setShowDeleteConfirm(true)}
-                       className="p-1.5 hover:bg-primary-foreground/15 rounded-full transition-colors cursor-pointer"
-                       title={t.tooltipClear}
-                     >
-                       <Trash2 className="w-4 h-4" />
-                     </button>
-                   )}
-                   <button
-                     onClick={() => setIsOpen(false)}
-                     className="p-1.5 hover:bg-primary-foreground/15 rounded-full transition-colors cursor-pointer"
-                   >
-                     <X className="w-5 h-5" />
-                   </button>
-                 </div>
-               </div>
+              {/* Header */}
+              <div className="p-4 bg-gradient-to-r from-primary/90 to-primary text-primary-foreground flex items-center justify-between border-b border-primary/20">
+                <div className="flex items-center gap-2.5">
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
+                      <Leaf className="w-5 h-5 text-primary-foreground filter drop-shadow-sm" />
+                    </div>
+                    <span
+                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-primary ${isConnected ? "bg-green-500" : "bg-zinc-400"
+                        }`}
+                    />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm leading-none flex items-center gap-1.5">
+                      {isAdminUser && targetUserId ? (
+                        <>
+                          {targetUserName || "Cargando..."}
+                          {isE2EEReady && <span title="Cifrado de extremo a extremo"><Lock className="w-3.5 h-3.5 text-primary-foreground/80" /></span>}
+                        </>
+                      ) : (
+                        <>
+                          {t.title}
+                          {isE2EEReady && <span title="Cifrado de extremo a extremo"><Lock className="w-3.5 h-3.5 text-primary-foreground/80" /></span>}
+                        </>
+                      )}
+                    </h3>
+                    <span className="text-[11px] opacity-80">
+                      {isConnected ? t.online : t.offline}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  {conversation?.id && (
+                    <button
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="p-1.5 hover:bg-primary-foreground/15 rounded-full transition-colors cursor-pointer"
+                      title={t.tooltipClear}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setIsOpen(false)}
+                    className="p-1.5 hover:bg-primary-foreground/15 rounded-full transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
 
               {/* Chat Body */}
               <div ref={messagesScrollRef} className="flex-1 p-4 overflow-y-auto space-y-3 bg-secondary/5 min-h-0 overscroll-y-contain">
