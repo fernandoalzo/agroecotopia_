@@ -91,6 +91,23 @@ function AdminDashboardPageContent() {
     };
   }, [isAdmin, userId, socket]);
 
+  // Prevent parent page jump when mobile keyboard opens on chat tab (iframe inside)
+  useEffect(() => {
+    if (activeTab !== "chat") return;
+    const vv = window.visualViewport;
+    const lockScroll = () => {
+      if (window.scrollY !== 0) window.scrollTo(0, 0);
+    };
+    vv?.addEventListener("resize", lockScroll);
+    vv?.addEventListener("scroll", lockScroll);
+    window.addEventListener("scroll", lockScroll, { passive: true });
+    return () => {
+      vv?.removeEventListener("resize", lockScroll);
+      vv?.removeEventListener("scroll", lockScroll);
+      window.removeEventListener("scroll", lockScroll);
+    };
+  }, [activeTab]);
+
   // Sync tab with URL
   const handleTabChange = (tab: DashboardTab) => {
     setActiveTab(tab);

@@ -38,7 +38,9 @@ function AdminChatPageContent() {
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [isE2EEReady, setIsE2EEReady] = useState(false);
   const [viewportHeight, setViewportHeight] = useState("100vh");
-  const [keyboardInset, setKeyboardInset] = useState(0);
+  /** Gap between layout bottom and visual viewport bottom (keyboard height) */
+  const [keyboardBottom, setKeyboardBottom] = useState(0);
+  const [inputBarHeight, setInputBarHeight] = useState(72);
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -59,6 +61,7 @@ function AdminChatPageContent() {
   const firstUnreadRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputBarRef = useRef<HTMLDivElement>(null);
   const hasNewKeysRef = useRef(false);
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const messagesScrollRef = useRef<HTMLDivElement>(null);
@@ -81,7 +84,7 @@ function AdminChatPageContent() {
     activeConvRef.current = activeConv;
   }, [activeConv]);
 
-   // Lock body/html scroll; track viewport for standalone mobile; keyboard inset for embedded iframe
+   // Lock body scroll; on mobile embedded: fix body in place so keyboard does not push the page up
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -91,6 +94,10 @@ function AdminChatPageContent() {
     const originalHtmlOverscroll = html.style.overscrollBehavior;
     const originalBodyHeight = body.style.height;
     const originalBodyOverflow = body.style.overflow;
+    const originalBodyPosition = body.style.position;
+    const originalBodyTop = body.style.top;
+    const originalBodyLeft = body.style.left;
+    const originalBodyRight = body.style.right;
     const originalBodyWidth = body.style.width;
     const originalBodyOverscroll = body.style.overscrollBehavior;
 
@@ -102,23 +109,38 @@ function AdminChatPageContent() {
     body.style.width = "100%";
     body.style.overscrollBehavior = "none";
 
-    const vv = window.visualViewport;
     const isMobile = () => typeof window !== "undefined" && window.innerWidth < 768;
+    const useFixedBody = isEmbedded && isMobile();
+
+    if (useFixedBody) {
+      body.style.position = "fixed";
+      body.style.top = "0";
+      body.style.left = "0";
+      body.style.right = "0";
+    }
+
+    const vv = window.visualViewport;
 
     const updateViewport = () => {
+      if (window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
+
       if (!vv) {
-        setKeyboardInset(0);
+        setKeyboardBottom(0);
         return;
       }
 
       if (isEmbedded && isMobile()) {
-        // Keep container at iframe height; lift input above on-screen keyboard
-        const inset = Math.max(0, Math.round(window.innerHeight - vv.height - (vv.offsetTop || 0)));
-        setKeyboardInset(inset);
+        const bottomGap = Math.max(
+          0,
+          Math.round(window.innerHeight - vv.height - (vv.offsetTop || 0)),
+        );
+        setKeyboardBottom(bottomGap);
         return;
       }
 
-      setKeyboardInset(0);
+      setKeyboardBottom(0);
       if (!isEmbedded && isMobile()) {
         setViewportHeight(`${Math.round(vv.height)}px`);
       }
@@ -138,9 +160,13 @@ function AdminChatPageContent() {
       html.style.overscrollBehavior = originalHtmlOverscroll;
       body.style.height = originalBodyHeight;
       body.style.overflow = originalBodyOverflow;
+      body.style.position = originalBodyPosition;
+      body.style.top = originalBodyTop;
+      body.style.left = originalBodyLeft;
+      body.style.right = originalBodyRight;
       body.style.width = originalBodyWidth;
       body.style.overscrollBehavior = originalBodyOverscroll;
-      setKeyboardInset(0);
+      setKeyboardBottom(0);
 
       if (vv) {
         vv.removeEventListener("resize", updateViewport);
@@ -149,6 +175,19 @@ function AdminChatPageContent() {
       window.removeEventListener("resize", updateViewport);
     };
   }, [isEmbedded]);
+
+  // Measure input bar height for messages padding when input is position:fixed on mobile
+  useEffect(() => {
+    const el = inputBarRef.current;
+    if (!el) return;
+
+    const measure = () => setInputBarHeight(el.offsetHeight || 72);
+    measure();
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [activeConv, replyingTo, keyboardBottom]);
 
   // Prevent touchmove on non-scrollable areas to stop page panning on mobile
   useEffect(() => {
@@ -972,8 +1011,14 @@ function AdminChatPageContent() {
             {/* Chat Messages */}
             <div
               ref={messagesScrollRef}
-              className="flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto space-y-4 bg-secondary/5 min-h-0 overscroll-y-contain"
-              style={keyboardInset > 0 ? { paddingBottom: keyboardInset + 16 } : undefined}
+              className="flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto space-y-4 bg-secondary/5 min-h-0 overscroll-y-contain max-md:pb-24"
+              style={
+                isEmbedded && keyboardBottom > 0
+                  ? { paddingBottom: inputBarHeight + keyboardBottom + 8 }
+                  : isEmbedded
+                    ? { paddingBottom: inputBarHeight + 8 }
+                    : undefined
+              }
             >
               {isLoadingMsgs ? (
                 <div className="h-full flex items-center justify-center">
@@ -1098,17 +1143,19 @@ function AdminChatPageContent() {
               )}
             </div>
 
-            {/* Input Box */}
+            {/* Input Box — fixed above keyboard on mobile embedded; in-flow on desktop */}
             <div
-              className="border-t border-border/40 bg-card/20 shrink-0 z-20"
-              style={
-                keyboardInset > 0
-                  ? {
-                      transform: `translateY(-${keyboardInset}px)`,
-                      paddingBottom: "env(safe-area-inset-bottom, 0px)",
-                    }
-                  : { paddingBottom: "env(safe-area-inset-bottom, 0px)" }
-              }
+              ref={inputBarRef}
+              className={cn(
+                "border-t border-border/40 bg-card/20 z-30",
+                isEmbedded
+                  ? "max-md:fixed max-md:left-0 max-md:right-0 max-md:shrink-0 md:relative md:shrink-0"
+                  : "shrink-0",
+              )}
+              style={{
+                bottom: isEmbedded ? keyboardBottom : undefined,
+                paddingBottom: "env(safe-area-inset-bottom, 0px)",
+              }}
             >
               {!isConnected && (
                 <div className="px-4 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-amber-500 text-[11px] font-medium flex items-center gap-1.5 animate-pulse">
@@ -1139,9 +1186,11 @@ function AdminChatPageContent() {
                   value={inputMessage}
                   onChange={handleInputChange}
                   onFocus={() => {
-                    requestAnimationFrame(() => {
-                      inputRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
-                    });
+                    if (!isEmbedded && window.innerWidth < 768) {
+                      requestAnimationFrame(() => {
+                        inputRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+                      });
+                    }
                   }}
                   disabled={!isConnected}
                   placeholder={isConnected ? "Escribe tu respuesta..." : "Chat desconectado..."}
