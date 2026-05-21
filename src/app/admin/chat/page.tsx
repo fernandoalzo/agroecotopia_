@@ -23,7 +23,7 @@ function AdminChatPageContent() {
   const { socket, isConnected } = useSocket();
   const isEmbedded = searchParams.get("embedded") === "true";
 
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [activeConv, setActiveConv] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
@@ -79,7 +79,7 @@ function AdminChatPageContent() {
     activeConvRef.current = activeConv;
   }, [activeConv]);
 
-  // Lock body/html scroll and track visual viewport height to avoid keyboard layout shifts on mobile
+   // Lock body/html scroll and track visual viewport height to avoid keyboard layout shifts on mobile
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -89,7 +89,6 @@ function AdminChatPageContent() {
     const originalHtmlOverscroll = html.style.overscrollBehavior;
     const originalBodyHeight = body.style.height;
     const originalBodyOverflow = body.style.overflow;
-    const originalBodyPosition = body.style.position;
     const originalBodyWidth = body.style.width;
     const originalBodyOverscroll = body.style.overscrollBehavior;
 
@@ -98,32 +97,29 @@ function AdminChatPageContent() {
     html.style.overscrollBehavior = "none";
     body.style.height = "100%";
     body.style.overflow = "hidden";
-    body.style.position = "fixed";
     body.style.width = "100%";
     body.style.overscrollBehavior = "none";
 
     const vv = window.visualViewport;
-    const handleResize = () => {
+    const updateViewportHeight = () => {
       if (vv) {
+        // vv.height = visual area excluding the on-screen keyboard;
+        // set container to this height so the input box stays visible.
         setViewportHeight(`${vv.height}px`);
-        if (vv.offsetTop !== 0 || vv.offsetLeft !== 0) {
-          window.scrollTo(0, 0);
-        }
       }
     };
 
     if (vv) {
-      vv.addEventListener("resize", handleResize);
-      vv.addEventListener("scroll", handleResize);
-      handleResize();
+      vv.addEventListener("resize", updateViewportHeight);
+      vv.addEventListener("scroll", updateViewportHeight);
+      updateViewportHeight();
     }
 
-    const handleScroll = () => {
-      if (window.scrollY > 0) {
-        window.scrollTo(0, 0);
-      }
-    };
-    window.addEventListener("scroll", handleScroll);
+    // window.resize also fires on some mobile browsers when the keyboard changes
+    // the visual viewport; update height from visualViewport in that case as well.
+    window.addEventListener("resize", () => {
+      if (vv) setViewportHeight(`${vv.height}px`);
+    });
 
     return () => {
       html.style.height = originalHtmlHeight;
@@ -131,15 +127,14 @@ function AdminChatPageContent() {
       html.style.overscrollBehavior = originalHtmlOverscroll;
       body.style.height = originalBodyHeight;
       body.style.overflow = originalBodyOverflow;
-      body.style.position = originalBodyPosition;
       body.style.width = originalBodyWidth;
       body.style.overscrollBehavior = originalBodyOverscroll;
 
       if (vv) {
-        vv.removeEventListener("resize", handleResize);
-        vv.removeEventListener("scroll", handleResize);
+        vv.removeEventListener("resize", updateViewportHeight);
+        vv.removeEventListener("scroll", updateViewportHeight);
       }
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", updateViewportHeight);
     };
   }, []);
 
@@ -153,6 +148,9 @@ function AdminChatPageContent() {
       // Allow scrolling inside messages area or sidebar list
       if (messagesScrollRef.current?.contains(target)) return;
       if (sidebarScrollRef.current?.contains(target)) return;
+      // Allow interaction with the input form and its children (buttons, etc.)
+      const inputForm = inputRef.current?.closest("form");
+      if (inputForm && inputForm.contains(target)) return;
       e.preventDefault();
     };
 
@@ -710,11 +708,11 @@ function AdminChatPageContent() {
   }
 
    return (
-     <div
-       ref={pageContainerRef}
-       className={`fixed inset-x-0 top-0 flex bg-background text-foreground overflow-y-auto font-sans ${isEmbedded ? "" : "pt-14 md:pt-20"}`}
-       style={{ height: viewportHeight }}
-     >
+      <div
+        ref={pageContainerRef}
+        className={`flex flex-col md:flex-row bg-background text-foreground overflow-y-auto font-sans h-full ${isEmbedded ? "" : "pt-14 md:pt-20"}`}
+        style={{ height: viewportHeight }}
+      >
       {/* Sidebar - list of conversations */}
       <div className={`w-full md:w-[380px] border-r border-border/40 flex flex-col bg-card/40 h-full ${activeConv ? "hidden md:flex" : "flex"}`}>
         {!isEmbedded && (
@@ -912,8 +910,8 @@ function AdminChatPageContent() {
         )}
       </div>
 
-      {/* Main Area - active conversation detail */}
-      <div className={`flex-1 flex flex-col bg-background relative h-full ${activeConv ? "flex" : "hidden md:flex"}`}>
+       {/* Main Area - active conversation detail */}
+       <div className={`flex-1 flex flex-col bg-background relative min-h-0 ${activeConv ? "flex" : "hidden md:flex"}`}>
         {activeConv ? (
           <>
             {/* Header */}
