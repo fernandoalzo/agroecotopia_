@@ -2,7 +2,6 @@
 
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/context/CartContext";
 import { useSession } from "next-auth/react";
@@ -155,11 +154,24 @@ const CartContent = () => {
               </motion.div>
             );
           })}
-        </AnimatePresence>
-      </div>
-
-      {/* Summary Sidebar */}
-      <div className="lg:col-span-1">
+         </AnimatePresence>
+         
+          {/* Agregar mas productos button */}
+          <div className="pt-6">
+            <Link href="/products">
+              <Button 
+                size="lg"
+                className="w-full rounded-2xl py-6 font-display font-bold text-lg hover:scale-[1.02] transition-transform active:scale-95 shadow-lg shadow-primary/20 text-[#fefce8] flex items-center justify-center gap-3"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                Agregar mas productos
+              </Button>
+            </Link>
+          </div>
+       </div>
+ 
+       {/* Summary Sidebar */}
+       <div className="lg:col-span-1">
         <div className="sticky top-24 rounded-3xl border border-border bg-card p-6 shadow-xl">
           <h3 className="font-display text-xl font-bold mb-6">{t.cart.orderSummary}</h3>
           
@@ -176,17 +188,17 @@ const CartContent = () => {
           
           <div className="h-px bg-border w-full mb-6" />
           
-          <div className="flex justify-between items-center mb-8">
-            <span className="font-bold text-foreground">{t.cart.total}</span>
-            <span className="font-display text-2xl font-black text-primary">{formattedTotal}</span>
-          </div>
-
-          <Button 
-            onClick={handleCompleteOrder}
-            className="w-full rounded-2xl py-6 font-display font-bold text-lg hover:scale-[1.02] transition-transform active:scale-95 shadow-lg shadow-primary/20 text-[#fefce8]"
-          >
-            {t.cart.completeOrder}
-          </Button>
+            <div className="flex justify-between items-center mb-8">
+              <span className="font-bold text-foreground">{t.cart.total}</span>
+              <span className="font-display text-2xl font-black text-primary">{formattedTotal}</span>
+            </div>
+ 
+            <Button 
+              onClick={handleCompleteOrder}
+              className="w-full rounded-2xl py-6 font-display font-bold text-lg hover:scale-[1.02] transition-transform active:scale-95 shadow-lg shadow-primary/20 text-[#fefce8]"
+            >
+              {t.cart.completeOrder}
+            </Button>
           <p className="text-center text-xs text-muted-foreground mt-4 flex items-center justify-center gap-1.5">
              <Leaf className="w-3 h-3 text-primary" /> {t.cart.securePayment}
           </p>

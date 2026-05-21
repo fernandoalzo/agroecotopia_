@@ -216,7 +216,7 @@ export class SignalService {
   static async decryptMessage(userId: string, ciphertextBase64: string, type: number, isRetry = false): Promise<string> {
     log.info(`[E2EE:Decrypt] Initiating decryption pipeline for message from sender: ${userId} (Attempt: ${isRetry ? '2/2 - Cache Bypassed' : '1/2 - Cache Enabled'}).`);
 
-    let sessionPubKeyRecord = await signalStore.loadSession(userId);
+    const sessionPubKeyRecord = await signalStore.loadSession(userId);
     let sessionPubKeyBase64: string;
 
     if (!sessionPubKeyRecord) {

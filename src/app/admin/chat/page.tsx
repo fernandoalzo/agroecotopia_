@@ -345,7 +345,7 @@ function AdminChatPageContent() {
 
     // Listen for global notifications (new messages in any conversation)
     const handleNewMessageNotification = async ({ conversationId, message }: { conversationId: string; message: Message }) => {
-      let decryptedMessage = { ...message };
+      const decryptedMessage = { ...message };
 
       // Decrypt the live incoming message if encrypted
       if (message.isEncrypted) {

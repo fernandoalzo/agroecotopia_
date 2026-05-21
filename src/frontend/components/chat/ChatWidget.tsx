@@ -347,7 +347,7 @@ export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidg
     // Listen for new messages
     const handleReceiveMessage = async (message: Message) => {
       if (message.conversationId === conversation.id) {
-        let finalMessage = { ...message };
+        const finalMessage = { ...message };
 
         // Descifrar mensaje entrante si está encriptado
         if (message.isEncrypted) {
