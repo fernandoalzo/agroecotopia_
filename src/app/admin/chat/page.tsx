@@ -38,9 +38,9 @@ function AdminChatPageContent() {
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [isE2EEReady, setIsE2EEReady] = useState(false);
   const [viewportHeight, setViewportHeight] = useState("100vh");
-  /** Gap between layout bottom and visual viewport bottom (keyboard height) */
-  const [keyboardBottom, setKeyboardBottom] = useState(0);
-  const [inputBarHeight, setInputBarHeight] = useState(72);
+  /** When keyboard is open on mobile embedded: fit chat panel to visible viewport */
+  const [mobileVv, setMobileVv] = useState<{ top: number; height: number } | null>(null);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -61,7 +61,7 @@ function AdminChatPageContent() {
   const firstUnreadRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const inputBarRef = useRef<HTMLDivElement>(null);
+  const isInputFocusedRef = useRef(false);
   const hasNewKeysRef = useRef(false);
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const messagesScrollRef = useRef<HTMLDivElement>(null);
@@ -84,7 +84,7 @@ function AdminChatPageContent() {
     activeConvRef.current = activeConv;
   }, [activeConv]);
 
-   // Lock body scroll; on mobile embedded: fix body in place so keyboard does not push the page up
+   // Lock body scroll; shrink chat panel to visual viewport when keyboard is open (embedded mobile)
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -94,10 +94,6 @@ function AdminChatPageContent() {
     const originalHtmlOverscroll = html.style.overscrollBehavior;
     const originalBodyHeight = body.style.height;
     const originalBodyOverflow = body.style.overflow;
-    const originalBodyPosition = body.style.position;
-    const originalBodyTop = body.style.top;
-    const originalBodyLeft = body.style.left;
-    const originalBodyRight = body.style.right;
     const originalBodyWidth = body.style.width;
     const originalBodyOverscroll = body.style.overscrollBehavior;
 
@@ -110,15 +106,6 @@ function AdminChatPageContent() {
     body.style.overscrollBehavior = "none";
 
     const isMobile = () => typeof window !== "undefined" && window.innerWidth < 768;
-    const useFixedBody = isEmbedded && isMobile();
-
-    if (useFixedBody) {
-      body.style.position = "fixed";
-      body.style.top = "0";
-      body.style.left = "0";
-      body.style.right = "0";
-    }
-
     const vv = window.visualViewport;
 
     const updateViewport = () => {
@@ -127,20 +114,29 @@ function AdminChatPageContent() {
       }
 
       if (!vv) {
-        setKeyboardBottom(0);
+        setMobileVv(null);
         return;
       }
 
       if (isEmbedded && isMobile()) {
-        const bottomGap = Math.max(
-          0,
-          Math.round(window.innerHeight - vv.height - (vv.offsetTop || 0)),
-        );
-        setKeyboardBottom(bottomGap);
+        const vvShrunk = vv.height < window.innerHeight * 0.92;
+        const keyboardOpen = vvShrunk || isInputFocusedRef.current;
+
+        if (keyboardOpen) {
+          const height = vvShrunk
+            ? Math.round(vv.height)
+            : Math.round(window.innerHeight * 0.48);
+          setMobileVv({
+            top: Math.round(vv.offsetTop || 0),
+            height,
+          });
+        } else {
+          setMobileVv(null);
+        }
         return;
       }
 
-      setKeyboardBottom(0);
+      setMobileVv(null);
       if (!isEmbedded && isMobile()) {
         setViewportHeight(`${Math.round(vv.height)}px`);
       }
@@ -160,13 +156,9 @@ function AdminChatPageContent() {
       html.style.overscrollBehavior = originalHtmlOverscroll;
       body.style.height = originalBodyHeight;
       body.style.overflow = originalBodyOverflow;
-      body.style.position = originalBodyPosition;
-      body.style.top = originalBodyTop;
-      body.style.left = originalBodyLeft;
-      body.style.right = originalBodyRight;
       body.style.width = originalBodyWidth;
       body.style.overscrollBehavior = originalBodyOverscroll;
-      setKeyboardBottom(0);
+      setMobileVv(null);
 
       if (vv) {
         vv.removeEventListener("resize", updateViewport);
@@ -176,18 +168,22 @@ function AdminChatPageContent() {
     };
   }, [isEmbedded]);
 
-  // Measure input bar height for messages padding when input is position:fixed on mobile
   useEffect(() => {
-    const el = inputBarRef.current;
-    if (!el) return;
+    isInputFocusedRef.current = isInputFocused;
+    if (!isEmbedded || typeof window === "undefined" || window.innerWidth >= 768) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
 
-    const measure = () => setInputBarHeight(el.offsetHeight || 72);
-    measure();
-
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [activeConv, replyingTo, keyboardBottom]);
+    const vvShrunk = vv.height < window.innerHeight * 0.92;
+    if (isInputFocused) {
+      const height = vvShrunk
+        ? Math.round(vv.height)
+        : Math.round(window.innerHeight * 0.48);
+      setMobileVv({ top: Math.round(vv.offsetTop || 0), height });
+    } else if (!vvShrunk) {
+      setMobileVv(null);
+    }
+  }, [isInputFocused, isEmbedded]);
 
   // Prevent touchmove on non-scrollable areas to stop page panning on mobile
   useEffect(() => {
@@ -590,7 +586,7 @@ function AdminChatPageContent() {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [messages, isUserTyping, isLoadingMsgs, viewportHeight]);
+  }, [messages, isUserTyping, isLoadingMsgs, viewportHeight, mobileVv]);
 
   // Handle input change & typing status
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -977,7 +973,17 @@ function AdminChatPageContent() {
          )}
        >
         {activeConv ? (
-          <>
+          <div
+            className={cn(
+              "flex flex-1 flex-col min-h-0 h-full w-full overflow-hidden bg-background",
+              mobileVv && "max-md:absolute max-md:left-0 max-md:right-0 max-md:z-10",
+            )}
+            style={
+              mobileVv
+                ? { top: mobileVv.top, height: mobileVv.height }
+                : undefined
+            }
+          >
             {/* Header */}
             <div className="px-3 py-3 sm:px-4 md:px-5 md:py-4 border-b border-border/40 flex items-center gap-2 bg-card/20 backdrop-blur-sm z-10 shrink-0">
               <button
@@ -1011,14 +1017,7 @@ function AdminChatPageContent() {
             {/* Chat Messages */}
             <div
               ref={messagesScrollRef}
-              className="flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto space-y-4 bg-secondary/5 min-h-0 overscroll-y-contain max-md:pb-24"
-              style={
-                isEmbedded && keyboardBottom > 0
-                  ? { paddingBottom: inputBarHeight + keyboardBottom + 8 }
-                  : isEmbedded
-                    ? { paddingBottom: inputBarHeight + 8 }
-                    : undefined
-              }
+              className="flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto space-y-4 bg-secondary/5 min-h-0 overscroll-y-contain"
             >
               {isLoadingMsgs ? (
                 <div className="h-full flex items-center justify-center">
@@ -1143,19 +1142,10 @@ function AdminChatPageContent() {
               )}
             </div>
 
-            {/* Input Box — fixed above keyboard on mobile embedded; in-flow on desktop */}
+            {/* Input Box — in document flow, pinned at bottom of flex column */}
             <div
-              ref={inputBarRef}
-              className={cn(
-                "border-t border-border/40 bg-card/20 z-30",
-                isEmbedded
-                  ? "max-md:fixed max-md:left-0 max-md:right-0 max-md:shrink-0 md:relative md:shrink-0"
-                  : "shrink-0",
-              )}
-              style={{
-                bottom: isEmbedded ? keyboardBottom : undefined,
-                paddingBottom: "env(safe-area-inset-bottom, 0px)",
-              }}
+              className="border-t border-border/40 bg-card/20 shrink-0"
+              style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
             >
               {!isConnected && (
                 <div className="px-4 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-amber-500 text-[11px] font-medium flex items-center gap-1.5 animate-pulse">
@@ -1185,13 +1175,8 @@ function AdminChatPageContent() {
                   type="text"
                   value={inputMessage}
                   onChange={handleInputChange}
-                  onFocus={() => {
-                    if (!isEmbedded && window.innerWidth < 768) {
-                      requestAnimationFrame(() => {
-                        inputRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
-                      });
-                    }
-                  }}
+                  onFocus={() => setIsInputFocused(true)}
+                  onBlur={() => setIsInputFocused(false)}
                   disabled={!isConnected}
                   placeholder={isConnected ? "Escribe tu respuesta..." : "Chat desconectado..."}
                   className="flex-1 h-12 px-4 border border-border/60 hover:border-border/80 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm outline-none bg-secondary/20 transition-all text-foreground disabled:opacity-50"
@@ -1206,7 +1191,7 @@ function AdminChatPageContent() {
                 </button>
               </form>
             </div>
-          </>
+          </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-muted-foreground">
             <div className="p-5 bg-secondary/50 rounded-full text-muted-foreground/80 mb-5 relative">

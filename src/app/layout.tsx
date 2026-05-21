@@ -8,11 +8,11 @@ export const metadata: Metadata = {
   description: "Productos agroecológicos cultivados con amor y respeto por la tierra.",
 };
 
-/** Keyboard overlays the page instead of resizing/pushing layout (mobile chat UX) */
+/** Visual viewport resizes with keyboard; layout viewport stays stable (mobile chat UX) */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  interactiveWidget: "overlays-content",
+  interactiveWidget: "resizes-visual",
 };
 
 export default function RootLayout({
