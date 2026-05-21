@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, Suspense } from "react";
+import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSocket } from "@/frontend/context/SocketContext";
@@ -40,7 +40,6 @@ function AdminChatPageContent() {
   const [viewportHeight, setViewportHeight] = useState("100vh");
   /** When keyboard is open on mobile embedded: fit chat panel to visible viewport */
   const [mobileVv, setMobileVv] = useState<{ top: number; height: number } | null>(null);
-  const [isInputFocused, setIsInputFocused] = useState(false);
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -61,7 +60,7 @@ function AdminChatPageContent() {
   const firstUnreadRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const isInputFocusedRef = useRef(false);
+  const keyboardClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasNewKeysRef = useRef(false);
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const messagesScrollRef = useRef<HTMLDivElement>(null);
@@ -108,6 +107,12 @@ function AdminChatPageContent() {
     const isMobile = () => typeof window !== "undefined" && window.innerWidth < 768;
     const vv = window.visualViewport;
 
+    /** Only true when the on-screen keyboard is actually visible */
+    const isKeyboardOpen = () => {
+      if (!vv) return false;
+      return vv.height < window.innerHeight * 0.85;
+    };
+
     const updateViewport = () => {
       if (window.scrollY !== 0) {
         window.scrollTo(0, 0);
@@ -119,16 +124,10 @@ function AdminChatPageContent() {
       }
 
       if (isEmbedded && isMobile()) {
-        const vvShrunk = vv.height < window.innerHeight * 0.92;
-        const keyboardOpen = vvShrunk || isInputFocusedRef.current;
-
-        if (keyboardOpen) {
-          const height = vvShrunk
-            ? Math.round(vv.height)
-            : Math.round(window.innerHeight * 0.48);
+        if (isKeyboardOpen()) {
           setMobileVv({
             top: Math.round(vv.offsetTop || 0),
-            height,
+            height: Math.round(vv.height),
           });
         } else {
           setMobileVv(null);
@@ -165,25 +164,50 @@ function AdminChatPageContent() {
         vv.removeEventListener("scroll", updateViewport);
       }
       window.removeEventListener("resize", updateViewport);
+      if (keyboardClearTimerRef.current) {
+        clearTimeout(keyboardClearTimerRef.current);
+      }
     };
   }, [isEmbedded]);
 
-  useEffect(() => {
-    isInputFocusedRef.current = isInputFocused;
-    if (!isEmbedded || typeof window === "undefined" || window.innerWidth >= 768) return;
-    const vv = window.visualViewport;
-    if (!vv) return;
-
-    const vvShrunk = vv.height < window.innerHeight * 0.92;
-    if (isInputFocused) {
-      const height = vvShrunk
-        ? Math.round(vv.height)
-        : Math.round(window.innerHeight * 0.48);
-      setMobileVv({ top: Math.round(vv.offsetTop || 0), height });
-    } else if (!vvShrunk) {
-      setMobileVv(null);
+  const resetMobileKeyboardLayout = useCallback(() => {
+    if (keyboardClearTimerRef.current) {
+      clearTimeout(keyboardClearTimerRef.current);
     }
-  }, [isInputFocused, isEmbedded]);
+    keyboardClearTimerRef.current = setTimeout(() => {
+      const vv = window.visualViewport;
+      const keyboardClosed = !vv || vv.height >= window.innerHeight * 0.85;
+      if (keyboardClosed) {
+        setMobileVv(null);
+        window.scrollTo(0, 0);
+      }
+      keyboardClearTimerRef.current = null;
+    }, 120);
+  }, []);
+
+  // When keyboard is dismissed without blur (Android back), reset layout on viewport restore
+  useEffect(() => {
+    if (!isEmbedded || typeof window === "undefined" || window.innerWidth >= 768) return;
+
+    const vv = window.visualViewport;
+    const onViewportChange = () => {
+      if (!vv || vv.height >= window.innerHeight * 0.85) {
+        setMobileVv(null);
+        window.scrollTo(0, 0);
+      }
+    };
+
+    vv?.addEventListener("resize", onViewportChange);
+    document.addEventListener("focusout", resetMobileKeyboardLayout);
+
+    return () => {
+      vv?.removeEventListener("resize", onViewportChange);
+      document.removeEventListener("focusout", resetMobileKeyboardLayout);
+      if (keyboardClearTimerRef.current) {
+        clearTimeout(keyboardClearTimerRef.current);
+      }
+    };
+  }, [isEmbedded, resetMobileKeyboardLayout]);
 
   // Prevent touchmove on non-scrollable areas to stop page panning on mobile
   useEffect(() => {
@@ -1175,8 +1199,7 @@ function AdminChatPageContent() {
                   type="text"
                   value={inputMessage}
                   onChange={handleInputChange}
-                  onFocus={() => setIsInputFocused(true)}
-                  onBlur={() => setIsInputFocused(false)}
+                  onBlur={resetMobileKeyboardLayout}
                   disabled={!isConnected}
                   placeholder={isConnected ? "Escribe tu respuesta..." : "Chat desconectado..."}
                   className="flex-1 h-12 px-4 border border-border/60 hover:border-border/80 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm outline-none bg-secondary/20 transition-all text-foreground disabled:opacity-50"
