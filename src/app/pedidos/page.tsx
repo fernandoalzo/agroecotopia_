@@ -27,7 +27,11 @@ export default function PedidosPage() {
     if (status === "unauthenticated") {
       router.push("/login?callbackUrl=/pedidos");
     }
-  }, [status, router]);
+    // Admin users are redirected to the unified dashboard
+    if (status === "authenticated" && isAdmin) {
+      router.replace("/admin/dashboard");
+    }
+  }, [status, isAdmin, router]);
 
   if (status === "loading") {
     return <Loading fullScreen />;

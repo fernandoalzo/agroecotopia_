@@ -12,6 +12,7 @@ export const en: Translations = {
     idioma: "Language",
     tema: "Theme",
     pedidos: "My Orders",
+    dashboard: "Dashboard",
     miCuenta: "My Account",
     soporteChat: "Chat Support",
     miPerfil: "My Profile",

@@ -19,9 +19,10 @@ interface ProductModalProps {
   product: Product;
   isOpen: boolean;
   onClose: () => void;
+  viewOnly?: boolean;
 }
 
-const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
+const ProductModal = ({ product, isOpen, onClose, viewOnly = false }: ProductModalProps) => {
   const { addToCart } = useCart();
   const { t } = useLanguage();
   const [quantity, setQuantity] = useState(1);
@@ -165,66 +166,79 @@ const ProductModal = ({ product, isOpen, onClose }: ProductModalProps) => {
 
                 {/* Action Area */}
                 <div className="mt-8 md:mt-auto pt-6 space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-3 px-1">
-                      <span className="text-sm font-bold text-foreground uppercase tracking-tight">{t.products.quantity}</span>
-                      <div className={`flex items-center gap-2 text-[10px] md:text-xs font-black px-2.5 py-1 rounded-md border transition-all duration-300
-                        ${product.stock > 5
-                          ? "bg-green-500/10 text-green-600 border-green-500/20"
-                          : product.stock > 0
-                            ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                            : "bg-red-500/10 text-red-600 border-red-500/20"}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full animate-pulse
-                          ${product.stock > 5 ? "bg-green-500" : product.stock > 0 ? "bg-amber-500" : "bg-red-500"}`}
-                        />
-                        {product.stock > 0 ? `${product.stock} ${t.products.available}` : t.products.outOfStock}
+                  {viewOnly ? (
+                    <Button
+                      onClick={handleClose}
+                      className="w-full py-6 rounded-xl font-display text-lg font-bold shadow-sm transition-all bg-secondary/80 hover:bg-secondary text-foreground border border-border/50"
+                    >
+                      <span className="flex items-center gap-2">
+                        <CheckCircle2 className="w-5 h-5 text-primary" /> Entendido
+                      </span>
+                    </Button>
+                  ) : (
+                    <>
+                      <div>
+                        <div className="flex items-center justify-between mb-3 px-1">
+                          <span className="text-sm font-bold text-foreground uppercase tracking-tight">{t.products.quantity}</span>
+                          <div className={`flex items-center gap-2 text-[10px] md:text-xs font-black px-2.5 py-1 rounded-md border transition-all duration-300
+                            ${product.stock > 5
+                              ? "bg-green-500/10 text-green-600 border-green-500/20"
+                              : product.stock > 0
+                                ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                : "bg-red-500/10 text-red-600 border-red-500/20"}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full animate-pulse
+                              ${product.stock > 5 ? "bg-green-500" : product.stock > 0 ? "bg-amber-500" : "bg-red-500"}`}
+                            />
+                            {product.stock > 0 ? `${product.stock} ${t.products.available}` : t.products.outOfStock}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center bg-secondary rounded-xl overflow-hidden border border-border/50 shadow-inner">
+                            <button
+                              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                              className="p-3 hover:bg-black/5 active:bg-black/10 transition-colors rounded-l-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-inset"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </button>
+                            <span className="w-10 text-center font-bold text-base select-none">
+                              {quantity}
+                            </span>
+                            <button
+                              onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                              disabled={quantity >= product.stock}
+                              className="p-3 hover:bg-black/5 active:bg-black/10 transition-colors rounded-r-xl disabled:opacity-20 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-inset"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center bg-secondary rounded-xl overflow-hidden border border-border/50 shadow-inner">
-                        <button
-                          onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                          className="p-3 hover:bg-black/5 active:bg-black/10 transition-colors rounded-l-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-inset"
-                        >
-                          <Minus className="w-4 h-4" />
-                        </button>
-                        <span className="w-10 text-center font-bold text-base select-none">
-                          {quantity}
-                        </span>
-                        <button
-                          onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                          disabled={quantity >= product.stock}
-                          className="p-3 hover:bg-black/5 active:bg-black/10 transition-colors rounded-r-xl disabled:opacity-20 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-inset"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
 
-                  <Button
-                    onClick={handleAddToCart}
-                    disabled={added || product.stock === 0}
-                    className={`w-full py-6 rounded-xl font-display text-lg font-bold shadow-lg transition-all
-                      ${added
-                        ? "bg-green-600 hover:bg-green-700 shadow-green-600/20 text-[#fefce8]"
-                        : product.stock === 0
-                          ? "bg-muted text-muted-foreground cursor-not-allowed"
-                          : "bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] active:shadow-inner border border-[#fcd200]"}`}
-                  >
-                    {added ? (
-                      <span className="flex items-center gap-2">
-                        <CheckCircle2 className="w-5 h-5" /> {t.products.added}
-                      </span>
-                    ) : product.stock === 0 ? (
-                      <span>{t.products.noStock}</span>
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        <ShoppingCart className="w-5 h-5 transition-transform group-hover:scale-110" />
-                        {t.products.addToCart}
-                      </span>
-                    )}
-                  </Button>
+                      <Button
+                        onClick={handleAddToCart}
+                        disabled={added || product.stock === 0}
+                        className={`w-full py-6 rounded-xl font-display text-lg font-bold shadow-lg transition-all
+                          ${added
+                            ? "bg-green-600 hover:bg-green-700 shadow-green-600/20 text-[#fefce8]"
+                            : product.stock === 0
+                              ? "bg-muted text-muted-foreground cursor-not-allowed"
+                              : "bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] active:shadow-inner border border-[#fcd200]"}`}
+                      >
+                        {added ? (
+                          <span className="flex items-center gap-2">
+                            <CheckCircle2 className="w-5 h-5" /> {t.products.added}
+                          </span>
+                        ) : product.stock === 0 ? (
+                          <span>{t.products.noStock}</span>
+                        ) : (
+                          <span className="flex items-center gap-2">
+                            <ShoppingCart className="w-5 h-5 transition-transform group-hover:scale-110" />
+                            {t.products.addToCart}
+                          </span>
+                        )}
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

@@ -12,6 +12,7 @@ export const es: Translations = {
     idioma: "Idioma",
     tema: "Tema",
     pedidos: "Mis Pedidos",
+    dashboard: "Dashboard",
     miCuenta: "Mi Cuenta",
     soporteChat: "Soporte Chat",
     miPerfil: "Mi Perfil",

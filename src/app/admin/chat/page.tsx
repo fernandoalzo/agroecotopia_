@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { getAdminConversations, getConversationMessages, markAsRead, deleteConversationAction, getAdminUsersList, getOrCreateConversationForAdmin } from "@/backend/modules/chat/chat.actions";
 import { Message } from "@/frontend/components/chat/ChatWidget";
@@ -19,7 +19,9 @@ const log = logger.child("src/app/admin/chat/page.tsx");
 export default function AdminChatPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { socket, isConnected } = useSocket();
+  const isEmbedded = searchParams.get("embedded") === "true";
 
   const [conversations, setConversations] = useState<any[]>([]);
   const [activeConv, setActiveConv] = useState<any>(null);
@@ -164,8 +166,10 @@ export default function AdminChatPage() {
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
+    } else if (status === "authenticated" && session?.user?.role === "admin" && !isEmbedded) {
+      router.replace("/admin/dashboard?tab=chat");
     }
-  }, [status, router]);
+  }, [status, router, isEmbedded, session?.user?.role]);
 
   // Load conversations list and init E2EE
   // IMPORTANT: Use stable primitive deps to prevent re-running on every render
@@ -708,37 +712,31 @@ export default function AdminChatPage() {
   return (
     <div
       ref={pageContainerRef}
-      className="fixed inset-x-0 top-0 flex bg-background text-foreground overflow-hidden font-sans pt-14 md:pt-20"
+      className={`fixed inset-x-0 top-0 flex bg-background text-foreground overflow-hidden font-sans ${isEmbedded ? "" : "pt-14 md:pt-20"}`}
       style={{ height: viewportHeight }}
     >
       {/* Sidebar - list of conversations */}
       <div className={`w-full md:w-[380px] border-r border-border/40 flex flex-col bg-card/40 h-full ${activeConv ? "hidden md:flex" : "flex"}`}>
-        <div className="p-5 border-b border-border/40 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => router.push("/")}
-              className="p-2 hover:bg-secondary rounded-xl transition-all text-muted-foreground hover:text-foreground flex items-center justify-center cursor-pointer"
-              title="Volver al Inicio"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="p-2.5 bg-primary/10 rounded-xl text-primary hidden md:block">
-              <MessageSquare className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h1 className="font-semibold text-base leading-none font-display">Soporte Chat</h1>
-                {isE2EEReady && <span title="Cifrado de Extremo a Extremo Activado"><Lock className="w-3.5 h-3.5 text-primary opacity-80" /></span>}
+        {!isEmbedded && (
+          <div className="p-5 border-b border-border/40 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
+                <MessageSquare className="w-5 h-5" />
               </div>
-              <span className="text-xs text-muted-foreground/70 mt-1 block">Panel de Administración</span>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h1 className="font-semibold text-base leading-none font-display">Soporte Chat</h1>
+                  {isE2EEReady && <span title="Cifrado de Extremo a Extremo Activado"><Lock className="w-3.5 h-3.5 text-primary opacity-80" /></span>}
+                </div>
+                <span className="text-xs text-muted-foreground/70 mt-1 block">Panel de Administración</span>
+              </div>
             </div>
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-green-500" : "bg-muted animate-pulse"}`}
+              title={isConnected ? "WebSocket Conectado" : "Buscando conexión..."}
+            />
           </div>
-          <span
-            className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-green-500" : "bg-muted animate-pulse"
-              }`}
-            title={isConnected ? "WebSocket Conectado" : "Buscando conexión..."}
-          />
-        </div>
+        )}
 
         {/* Tabs Bar */}
         <div className="px-4 py-2.5 border-b border-border/40 flex gap-2 bg-card/20">

@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useLanguage } from "@/context/LanguageContext";
 import { motion } from "framer-motion";
-import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw, Copy, Check } from "lucide-react";
+import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw, Copy, Check, ChevronRight } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { getOrderDetailAction, cancelUserOrderAction, deleteUserOrderAction } from "@/backend/modules/orders/orders.actions";
 import { processMercadoPagoPaymentAction } from "@/backend/modules/payments/payments.actions";
@@ -20,6 +20,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Loading } from "@/components/ui/Loading";
+import ProductModal from "@/components/ProductModal";
+import ChatWidget from "@/components/chat/ChatWidget";
+import { Product } from "@/types";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/app/pedidos/[id]/page.tsx");
@@ -71,6 +74,7 @@ export default function OrderDetailPage() {
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -185,9 +189,9 @@ export default function OrderDetailPage() {
   const handleRepeatOrder = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!order || !order.detalles || isRepeating) return;
-    
+
     setIsRepeating(true);
     let addedCount = 0;
     order.detalles.forEach((detalle: any) => {
@@ -264,8 +268,8 @@ export default function OrderDetailPage() {
   const StatusIcon = statusConfig[order.estado as PedidoEstado].icon;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background/50 selection:bg-primary/20">
-      
+    <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
+
       <main className="flex-1 pt-24 pb-20 md:pt-32">
         <div className="container px-4 md:px-6 max-w-4xl mx-auto">
           {/* Back Button */}
@@ -316,12 +320,12 @@ export default function OrderDetailPage() {
                 Realizado el {format(new Date(order.fechaPedido), "PPP 'a las' p", { locale: es })}
               </p>
             </div>
-            
+
             <div className="flex flex-col items-end gap-4">
               <StatusIcon className={cn("h-16 w-16 opacity-20", statusConfig[order.estado as PedidoEstado].color.split(" ")[1])} />
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 className="rounded-2xl border-primary/20 text-primary hover:bg-primary/5 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
                 onClick={handleRepeatOrder}
                 disabled={isRepeating}
@@ -339,103 +343,126 @@ export default function OrderDetailPage() {
           <div className="grid gap-8 md:grid-cols-3">
             {/* Main Content */}
             <div className="md:col-span-2 space-y-8">
-              {/* Items Card */}
-              <Card className="rounded-3xl border-border/50 bg-card/50 backdrop-blur-md overflow-hidden">
-                <div className="p-6 border-b border-border/50 bg-secondary/10">
-                  <h3 className="font-bold flex items-center gap-2">
-                    <Package className="h-4 w-4 text-primary" />
-                    Productos en este pedido
+              {/* Items Card (Invoice Style Flat) */}
+              <div className="relative">
+                <div className="pb-4 border-b border-dashed border-border/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <h3 className="font-black text-xl tracking-tight flex items-center gap-2 text-foreground/90">
+                    <Package className="h-6 w-6 text-primary" />
+                    Detalle de Productos
                   </h3>
+                  <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
+                    {order.detalles.length} artículo(s)
+                  </div>
                 </div>
-                <CardContent className="p-0">
-                  <div className="divide-y divide-border/50">
+
+                <div className="p-0">
+                  <div className="divide-y-2 divide-dashed divide-border/30">
                     {order.detalles.map((detalle: any) => (
-                      <div key={detalle.id} className="p-6 flex items-center gap-4 transition-all hover:bg-primary/5">
-                        <div className="h-16 w-16 rounded-2xl bg-muted overflow-hidden border border-border/50 flex-shrink-0">
+                      <div
+                        key={detalle.id}
+                        className="group p-5 md:p-6 flex items-start sm:items-center gap-4 transition-all hover:bg-primary/[0.05] cursor-pointer active:scale-[0.99]"
+                        onClick={() => setSelectedProduct(detalle.producto)}
+                      >
+                        <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-muted overflow-hidden border border-border/40 flex-shrink-0">
                           {detalle.producto.images && detalle.producto.images.length > 0 ? (
                             <img src={detalle.producto.images[0]} alt={detalle.producto.name} className="h-full w-full object-cover" />
                           ) : (
                             <div className="h-full w-full flex items-center justify-center text-primary font-bold">{detalle.producto.name.charAt(0)}</div>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-sm md:text-base truncate">{detalle.producto.name}</h4>
-                          <p className="text-xs text-muted-foreground">
-                            {detalle.cantidad} {detalle.unidadMedida} x ${detalle.precioUnitario.toLocaleString("es-CO")}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-sm md:text-base">${detalle.subtotal.toLocaleString("es-CO")}</p>
+                        <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-sm md:text-base leading-tight text-foreground/90 mb-1.5 group-hover:text-primary transition-colors">{detalle.producto.name}</h4>
+                            <p className="text-xs font-bold text-muted-foreground">
+                              {detalle.cantidad} {detalle.unidadMedida} <span className="mx-1 text-muted-foreground/50">×</span> ${(detalle.precioUnitario || 0).toLocaleString("es-CO")}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-4 mt-2 sm:mt-0 shrink-0">
+                            <p className="font-black text-base md:text-lg text-foreground/90">${(detalle.subtotal || 0).toLocaleString("es-CO")}</p>
+                            <ChevronRight className="w-5 h-5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Delivery Info */}
-              <Card className="rounded-3xl border-border/50 bg-card/50 backdrop-blur-md">
-                <CardContent className="p-6 space-y-6">
-                  <h3 className="font-bold flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    Información de entrega
+              <div className="pt-6">
+                <div className="space-y-6">
+                  <h3 className="font-black text-xl tracking-tight flex items-center gap-2 text-foreground/90">
+                    <MapPin className="h-6 w-6 text-primary" />
+                    Información de Entrega
                   </h3>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-1">
-                      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">Dirección</p>
-                      <p className="font-medium">{order.direccionEntrega}</p>
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/60">Dirección</p>
+                      <p className="font-bold text-sm text-foreground/80">{order.direccionEntrega}</p>
                     </div>
                     {order.notasCliente && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">Notas</p>
-                        <p className="font-medium italic">"{order.notasCliente}"</p>
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/60">Notas</p>
+                        <p className="font-medium text-sm italic text-muted-foreground">"{order.notasCliente}"</p>
                       </div>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
             {/* Sidebar Summary */}
-            <div className="space-y-8">
-              <Card className="rounded-3xl border-border/50 bg-primary/5 border-primary/20">
-                <CardContent className="p-6 space-y-4">
-                  <h3 className="font-bold flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-primary" />
-                    Resumen de pago
+            <div className="space-y-8 md:pl-8 md:border-l md:border-dashed md:border-border/40">
+              <div className="relative">
+                <div className="pb-4 border-b border-dashed border-border/50">
+                  <h3 className="font-black text-xl tracking-tight flex items-center gap-2 text-foreground/90">
+                    <FileText className="h-6 w-6 text-primary" />
+                    Resumen de Pago
                   </h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Subtotal</span>
-                      <span className="font-medium">${order.subtotal.toLocaleString("es-CO")}</span>
+                </div>
+
+
+                <div className="py-6 space-y-4">
+                  <div className="space-y-3.5 text-base">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground font-semibold">Subtotal</span>
+                      <span className="font-bold text-foreground/80">${order.subtotal.toLocaleString("es-CO")}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Impuestos</span>
-                      <span className="font-medium">${order.impuestos.toLocaleString("es-CO")}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground font-semibold">Impuestos</span>
+                      <span className="font-bold text-foreground/80">${order.impuestos.toLocaleString("es-CO")}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Envío</span>
-                      <span className="font-medium">${order.costoEnvio.toLocaleString("es-CO")}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground font-semibold">Envío</span>
+                      <span className="font-bold text-foreground/80">${order.costoEnvio.toLocaleString("es-CO")}</span>
                     </div>
-                    <div className="pt-3 border-t border-border/50 flex justify-between items-end">
-                      <span className="font-bold">Total</span>
-                      <span className="text-2xl font-black text-primary">${order.total.toLocaleString("es-CO")}</span>
-                    </div>
+                  </div>
+                </div>
+
+                {/* Receipt Dashed Divider with Cutouts (Optional, adjust if needed) */}
+                <div className="relative h-px w-full my-4">
+                  <div className="absolute inset-0 border-t-2 border-dashed border-border/40" />
+                </div>
+
+                <div className="pt-4 pb-6">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground/60">Total a Pagar</span>
+                    <span className="text-4xl font-black tracking-tight text-primary">${order.total.toLocaleString("es-CO")}</span>
                   </div>
 
                   {order.estado === PedidoEstado.PENDIENTE && (
                     isConfirmingCancel ? (
                       <div className="mt-6 flex gap-2 w-full">
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="flex-1 rounded-2xl"
                           onClick={() => setIsConfirmingCancel(false)}
                           disabled={canceling}
                         >
                           No
                         </Button>
-                        <Button 
-                          variant="destructive" 
+                        <Button
+                          variant="destructive"
                           className="flex-1 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-md shadow-red-500/20"
                           onClick={handleCancelOrder}
                           disabled={canceling}
@@ -448,8 +475,8 @@ export default function OrderDetailPage() {
                         </Button>
                       </div>
                     ) : (
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         className="mt-6 w-full rounded-2xl text-rose-500 border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-600"
                         onClick={() => setIsConfirmingCancel(true)}
                       >
@@ -461,16 +488,16 @@ export default function OrderDetailPage() {
                   {order.estado === PedidoEstado.CANCELADO && (
                     isConfirmingDelete ? (
                       <div className="mt-6 flex gap-2 w-full">
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="flex-1 rounded-2xl"
                           onClick={() => setIsConfirmingDelete(false)}
                           disabled={deleting}
                         >
                           No
                         </Button>
-                        <Button 
-                          variant="destructive" 
+                        <Button
+                          variant="destructive"
                           className="flex-1 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold"
                           onClick={handleDeleteOrder}
                           disabled={deleting}
@@ -483,8 +510,8 @@ export default function OrderDetailPage() {
                         </Button>
                       </div>
                     ) : (
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         className="mt-6 w-full rounded-2xl text-red-600 border-red-500/20 hover:bg-red-500/10 hover:text-red-700"
                         onClick={() => setIsConfirmingDelete(true)}
                       >
@@ -492,9 +519,8 @@ export default function OrderDetailPage() {
                       </Button>
                     )
                   )}
-                </CardContent>
-              </Card>
-
+                </div>
+              </div>
               <div className="rounded-3xl bg-secondary/30 p-6 space-y-4">
                 <div className="flex items-center gap-3 text-primary">
                   <ShieldCheck className="h-5 w-5" />
@@ -510,22 +536,32 @@ export default function OrderDetailPage() {
       </main>
 
       <Footer />
+
+      {selectedProduct && (
+        <ProductModal
+          product={selectedProduct}
+          isOpen={!!selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          viewOnly={true}
+        />
+      )}
+      <ChatWidget forceShow={true} targetUserId={order?.usuarioId} />
     </div>
   );
 }
 
 // Re-using ShieldCheck icon locally as it was not imported
 const ShieldCheck = ({ className }: { className?: string }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width="24" 
-    height="24" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
     className={className}
   >
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />

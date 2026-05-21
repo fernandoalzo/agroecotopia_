@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Leaf, Menu, X, ShoppingCart, LogIn, LogOut, Package, ChevronDown, ChevronRight, MessageSquare } from "lucide-react";
+import { Leaf, Menu, X, ShoppingCart, LogIn, LogOut, Package, ChevronDown, ChevronRight, MessageSquare, LayoutDashboard } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -227,26 +227,38 @@ const Navbar = () => {
             {/* Integrated Orders Link — only visible if logged in */}
             {isAuthenticated && (
               <Link
-                href="/pedidos"
+                href={isAdmin ? "/admin/dashboard" : "/pedidos"}
                 className={cn(
                   "group/orders relative flex items-center gap-2.5 px-3 py-1.5 rounded-full transition-all duration-300 hover:bg-primary/5 z-20",
-                  isActive("/pedidos") ? "bg-primary/10 text-primary" : "text-muted-foreground/80"
+                  (isAdmin ? pathname?.startsWith("/admin/dashboard") : isActive("/pedidos")) ? "bg-primary/10 text-primary" : "text-muted-foreground/80"
                 )}
               >
                 <div className="relative flex items-center justify-center pointer-events-none">
-                  <Package className={cn(
-                    "h-4.5 w-4.5 transition-transform duration-300 group-hover/orders:scale-110",
-                    isActive("/pedidos") ? "text-primary" : "text-primary/70"
-                  )} />
+                  {isAdmin ? (
+                    <LayoutDashboard className={cn(
+                      "h-4.5 w-4.5 transition-transform duration-300 group-hover/orders:scale-110",
+                      pathname?.startsWith("/admin/dashboard") ? "text-primary" : "text-primary/70"
+                    )} />
+                  ) : (
+                    <Package className={cn(
+                      "h-4.5 w-4.5 transition-transform duration-300 group-hover/orders:scale-110",
+                      isActive("/pedidos") ? "text-primary" : "text-primary/70"
+                    )} />
+                  )}
                 </div>
                 <div className="flex flex-col leading-tight pointer-events-none">
                   <span className={cn(
                     "text-[10px] font-black uppercase tracking-widest transition-colors",
-                    isActive("/pedidos") ? "text-primary" : "text-primary/60 group-hover/orders:text-primary"
+                    (isAdmin ? pathname?.startsWith("/admin/dashboard") : isActive("/pedidos")) ? "text-primary" : "text-primary/60 group-hover/orders:text-primary"
                   )}>
-                    {isAdmin ? "Pedidos" : t.navbar.pedidos}
+                    {isAdmin ? t.navbar.dashboard : t.navbar.pedidos}
                   </span>
                 </div>
+                {isAdmin && unreadCount > 0 && (
+                  <span className="min-w-[16px] h-[16px] rounded-full flex items-center justify-center text-[8px] font-bold px-1 bg-red-500 text-white animate-pulse shadow-sm shadow-red-500/20 pointer-events-none">
+                    {unreadCount}
+                  </span>
+                )}
               </Link>
             )}
 
@@ -350,16 +362,11 @@ const Navbar = () => {
                   {session?.user?.role === "admin" && (
                     <>
                       <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 transition-colors focus:bg-primary/5 focus:text-primary">
-                        <Link href="/admin/chat" className="flex items-center justify-between w-full">
+                        <Link href="/admin/dashboard" className="flex items-center justify-between w-full">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">{t.navbar?.soporteChat ?? "Soporte Chat"}</span>
-                            {unreadCount > 0 && (
-                              <span className="min-w-[16px] h-[16px] rounded-full flex items-center justify-center text-[9px] font-bold px-1 bg-red-500 text-white animate-pulse shadow-sm shadow-red-500/20">
-                                {unreadCount}
-                              </span>
-                            )}
+                            <span className="font-medium text-sm">{t.navbar?.dashboard ?? "Dashboard"}</span>
                           </div>
-                          <MessageSquare className="h-4 w-4 text-primary" />
+                          <LayoutDashboard className="h-4 w-4 text-primary" />
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-border/50 my-1" />
@@ -531,42 +538,29 @@ const Navbar = () => {
                 >
 
 
-                  {/* Orders Button — only visible if logged in */}
+                  {/* Orders / Dashboard Button — visible if logged in */}
                   {isAuthenticated && (
                     <div className="relative group">
-                      <Link href="/pedidos" onClick={() => setOpen(false)}
+                      <Link href={isAdmin ? "/admin/dashboard" : "/pedidos"} onClick={() => setOpen(false)}
                         className="flex items-center justify-between gap-4 rounded-3xl bg-[#0f2a1d] border border-white/10 px-8 py-6 text-white shadow-xl active:scale-95 transition-all overflow-hidden relative"
                       >
                         <div className="flex items-center gap-5 relative z-10">
                           <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
-                            <Package className="h-6 w-6 text-white" />
-                          </div>
-                          <span className="font-display text-2xl font-black tracking-tight uppercase">{isAdmin ? "Pedidos" : t.navbar.pedidos}</span>
-                        </div>
-                        <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center relative z-10">
-                          <ChevronRight className="h-4 w-4 text-white/40" />
-                        </div>
-                      </Link>
-                    </div>
-                  )}
-
-                  {/* Admin Chat Button — only visible if admin */}
-                  {session?.user?.role === "admin" && (
-                    <div className="relative group">
-                      <Link href="/admin/chat" onClick={() => setOpen(false)}
-                        className="flex items-center justify-between gap-4 rounded-3xl bg-[#0f2a1d] border border-white/10 px-8 py-6 text-white shadow-xl active:scale-95 transition-all overflow-hidden relative"
-                      >
-                        <div className="flex items-center gap-5 relative z-10">
-                          <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
-                            <MessageSquare className="h-6 w-6 text-white" />
-                            {unreadCount > 0 && (
+                            {isAdmin ? (
+                              <LayoutDashboard className="h-6 w-6 text-white" />
+                            ) : (
+                              <Package className="h-6 w-6 text-white" />
+                            )}
+                            {isAdmin && unreadCount > 0 && (
                               <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#0f2a1d] animate-pulse" />
                             )}
                           </div>
-                          <span className="font-display text-2xl font-black tracking-tight uppercase">{t.navbar?.soporteChat ?? "Soporte Chat"}</span>
+                          <span className="font-display text-2xl font-black tracking-tight uppercase">
+                            {isAdmin ? t.navbar.dashboard : t.navbar.pedidos}
+                          </span>
                         </div>
                         <div className="flex items-center gap-3 relative z-10">
-                          {unreadCount > 0 && (
+                          {isAdmin && unreadCount > 0 && (
                             <span className="min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold px-1.5 bg-red-500 text-white animate-pulse shadow-sm shadow-red-500/20">
                               {unreadCount}
                             </span>

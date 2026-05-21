@@ -7,7 +7,7 @@ import { MessageSquare, X, Send, Lock, Trash2, Leaf, Copy, Check } from "lucide-
 import { Loading } from "@/components/ui/Loading";
 import { useLanguage } from "@/context/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { getOrCreateMyConversation, getConversationMessages, markAsRead, deleteConversationAction } from "@/backend/modules/chat/chat.actions";
+import { getOrCreateMyConversation, getConversationMessages, markAsRead, deleteConversationAction, getOrCreateConversationForAdmin } from "@/backend/modules/chat/chat.actions";
 import { SignalService } from "@/frontend/lib/signalService";
 import { signalStore } from "@/frontend/lib/signalStore";
 import { config } from "@/config/config";
@@ -37,7 +37,12 @@ export interface Message {
   } | null;
 }
 
-export default function ChatWidget() {
+export interface ChatWidgetProps {
+  forceShow?: boolean;
+  targetUserId?: string;
+}
+
+export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidgetProps = {}) {
   const { data: session, status } = useSession();
   const isAdminUser = session?.user?.role === "admin";
   const chatUserId = session?.user?.id;
@@ -178,7 +183,8 @@ export default function ChatWidget() {
   const isRouteAdmin = isClient && window.location.pathname.startsWith("/admin");
 
   useEffect(() => {
-    if (status !== "authenticated" || !chatUserId || isRouteAdmin || isAdminUser) return;
+    if (status !== "authenticated" || !chatUserId) return;
+    if (!forceShow && (isRouteAdmin || isAdminUser)) return;
     const initE2EE = async () => {
       try {
         signalStore.setUserId(chatUserId);
@@ -196,7 +202,8 @@ export default function ChatWidget() {
 
   // Load conversation ID and calculate initial unread count on mount
   useEffect(() => {
-    if (!chatUserId || isRouteAdmin || isAdminUser) return;
+    if (!chatUserId) return;
+    if (!forceShow && (isRouteAdmin || isAdminUser)) return;
 
     let isCancelled = false;
 
@@ -208,7 +215,10 @@ export default function ChatWidget() {
       try {
         signalStore.setUserId(chatUserId);
 
-        const res = await getOrCreateMyConversation();
+        const res = (isAdminUser && targetUserId)
+          ? await getOrCreateConversationForAdmin(targetUserId)
+          : await getOrCreateMyConversation();
+          
         if (isCancelled) return;
         if (res && !("error" in res)) {
           setConversation(res);
@@ -224,7 +234,7 @@ export default function ChatWidget() {
 
               if (m.isEncrypted) {
                 try {
-                  const targetId = m.senderId === chatUserId ? "admin" : m.senderId;
+                  const targetId = (isAdminUser && targetUserId) ? targetUserId : (m.senderId === chatUserId ? "admin" : m.senderId);
                   decryptedContent = await SignalService.decryptMessage(targetId, m.content, m.encryptionType || 1);
                 } catch (e) {
                   decryptedContent = "🔒 Mensaje de otra sesión";
@@ -233,7 +243,7 @@ export default function ChatWidget() {
 
               if (m.replyTo && m.replyTo.isEncrypted && m.replyTo.content) {
                 try {
-                  const replyTargetId = m.replyTo.senderId === chatUserId ? "admin" : m.replyTo.senderId;
+                  const replyTargetId = (isAdminUser && targetUserId) ? targetUserId : (m.replyTo.senderId === chatUserId ? "admin" : m.replyTo.senderId);
                   decryptedReplyContent = await SignalService.decryptMessage(replyTargetId, m.replyTo.content, m.replyTo.encryptionType || 1);
                 } catch (e) {
                   decryptedReplyContent = "🔒 Mensaje de otra sesión";
@@ -278,7 +288,8 @@ export default function ChatWidget() {
 
   // Handle WebSockets connection and event subscriptions
   useEffect(() => {
-    if (!socket || !conversation?.id || isRouteAdmin || isAdminUser) return;
+    if (!socket || !conversation?.id) return;
+    if (!forceShow && (isRouteAdmin || isAdminUser)) return;
 
     // Join room
     socket.emit("join_room", { conversationId: conversation.id });
@@ -314,7 +325,7 @@ export default function ChatWidget() {
         // Descifrar mensaje entrante si está encriptado
         if (message.isEncrypted) {
           try {
-            const targetId = message.senderId === chatUserId ? "admin" : message.senderId;
+            const targetId = (isAdminUser && targetUserId) ? targetUserId : (message.senderId === chatUserId ? "admin" : message.senderId);
             const decryptedContent = await SignalService.decryptMessage(targetId, message.content, message.encryptionType || 1);
             finalMessage.content = decryptedContent;
           } catch (e) {
@@ -325,7 +336,7 @@ export default function ChatWidget() {
         // Descifrar mensaje citado si existe y está cifrado
         if (message.replyTo && message.replyTo.isEncrypted && message.replyTo.content) {
           try {
-            const replyTargetId = message.replyTo.senderId === chatUserId ? "admin" : message.replyTo.senderId;
+            const replyTargetId = (isAdminUser && targetUserId) ? targetUserId : (message.replyTo.senderId === chatUserId ? "admin" : message.replyTo.senderId);
             const decryptedReplyContent = await SignalService.decryptMessage(replyTargetId, message.replyTo.content, message.replyTo.encryptionType || 1);
             finalMessage.replyTo = {
               ...message.replyTo,
@@ -477,7 +488,8 @@ export default function ChatWidget() {
         return;
       }
       try {
-        const encrypted = await SignalService.encryptMessage("admin", finalContent);
+        const encryptionTarget = (isAdminUser && targetUserId) ? targetUserId : "admin";
+        const encrypted = await SignalService.encryptMessage(encryptionTarget, finalContent);
         finalContent = encrypted.ciphertext;
         isEncrypted = encrypted.type !== 0;
         encryptionType = encrypted.type;
@@ -534,7 +546,8 @@ export default function ChatWidget() {
     }
   };
 
-  if (!isClient || isRouteAdmin || isAdminUser || status !== "authenticated") return null;
+  if (!isClient || status !== "authenticated") return null;
+  if (!forceShow && (isRouteAdmin || isAdminUser)) return null;
 
   const t = {
     es: {

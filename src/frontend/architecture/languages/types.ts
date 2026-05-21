@@ -11,6 +11,7 @@ export interface Translations {
     idioma: string;
     tema: string;
     pedidos: string;
+    dashboard: string;
     miCuenta: string;
     soporteChat: string;
     miPerfil: string;
