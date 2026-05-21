@@ -59,6 +59,13 @@ export default function AdminChatPage() {
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const messagesScrollRef = useRef<HTMLDivElement>(null);
   const sidebarScrollRef = useRef<HTMLDivElement>(null);
+  const hasInitialScrolledRef = useRef(false);
+
+  // Reset initial scroll state when changing active conversation
+  useEffect(() => {
+    hasInitialScrolledRef.current = false;
+  }, [activeConv?.id]);
+
 
   const conversationsRef = useRef(conversations);
   useEffect(() => {
@@ -502,17 +509,26 @@ export default function AdminChatPage() {
       const container = messagesScrollRef.current;
       if (!container) return;
 
-      if (firstUnreadRef.current) {
-        const element = firstUnreadRef.current;
-        const containerRect = container.getBoundingClientRect();
-        const elementRect = element.getBoundingClientRect();
-        const relativeTop = elementRect.top - containerRect.top + container.scrollTop;
-        const targetScrollTop = relativeTop - (containerRect.height / 2) + (elementRect.height / 2);
-        container.scrollTo({
-          top: Math.max(0, targetScrollTop),
-          behavior: "smooth"
-        });
+      if (!hasInitialScrolledRef.current) {
+        if (firstUnreadRef.current) {
+          const element = firstUnreadRef.current;
+          const containerRect = container.getBoundingClientRect();
+          const elementRect = element.getBoundingClientRect();
+          const relativeTop = elementRect.top - containerRect.top + container.scrollTop;
+          const targetScrollTop = relativeTop - (containerRect.height / 2) + (elementRect.height / 2);
+          container.scrollTo({
+            top: Math.max(0, targetScrollTop),
+            behavior: "smooth"
+          });
+        } else {
+          container.scrollTo({
+            top: container.scrollHeight,
+            behavior: "auto" // Scroll instantly on initial load for optimal UX
+          });
+        }
+        hasInitialScrolledRef.current = true;
       } else {
+        // Always scroll to the bottom smoothly for incoming/outgoing messages as the chat progresses
         container.scrollTo({
           top: container.scrollHeight,
           behavior: "smooth"
