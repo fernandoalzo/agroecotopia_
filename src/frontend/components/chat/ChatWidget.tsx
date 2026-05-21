@@ -461,6 +461,80 @@ export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidg
     return () => clearTimeout(timer);
   }, [messages, isAdminTyping, isLoading, isOpen]);
 
+  // Escuchar eventos externos para enviar un mensaje de notificación de asesor
+  useEffect(() => {
+    const handleAdvisorMessageEvent = async (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { pedidoId, cart, totalPrice, values } = customEvent.detail;
+
+      if (!socket || !conversation?.id || !session?.user?.id) {
+        log.warn("No se puede enviar el mensaje de asesor: chat no inicializado");
+        return;
+      }
+
+      let content = `¡Hola! Estoy a la espera de un asesor para tomar mi pedido.\n\nDetalles del pedido:\n`;
+      if (cart && Array.isArray(cart)) {
+         cart.forEach((item: any) => {
+           const itemName = item.product?.name || item.name;
+           content += `- ${item.quantity}x ${itemName}\n`;
+         });
+      }
+      content += `\nTotal: $${totalPrice.toLocaleString()}\n`;
+      if (values) {
+         const name = values.fullName || values.nombres || "";
+         const phone = values.phone || values.telefono || "";
+         content += `Nombre: ${name}\n`;
+         content += `Teléfono: ${phone}\n`;
+      }
+
+      const sendSocketMessage = async (textToEncrypt: string) => {
+        let finalContent = textToEncrypt;
+        let isEncrypted = false;
+        let encryptionType = 0;
+
+        if (config.chat.enableE2EE) {
+          if (!isE2EEReady) {
+            log.warn("E2EE no está listo para enviar el mensaje del asesor");
+          }
+          try {
+            const encryptionTarget = (isAdminUser && targetUserId) ? targetUserId : "admin";
+            const encrypted = await SignalService.encryptMessage(encryptionTarget, finalContent);
+            finalContent = encrypted.ciphertext;
+            isEncrypted = encrypted.type !== 0;
+            encryptionType = encrypted.type;
+          } catch (err) {
+            log.error("Error cifrando el mensaje", err);
+            return;
+          }
+        }
+
+        socket.emit("send_message", {
+          conversationId: conversation.id,
+          content: finalContent,
+          isEncrypted,
+          encryptionType,
+          senderId: session.user.id,
+          senderRole: session.user.role || "user",
+        });
+      };
+
+      // 1. Send the details message
+      await sendSocketMessage(content);
+      
+      // 2. Wait a little bit to ensure message order
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // 3. Send the order ID as a separate message for easy copying
+      await sendSocketMessage(pedidoId);
+      
+    };
+
+    window.addEventListener("send_advisor_chat_message", handleAdvisorMessageEvent);
+    return () => {
+      window.removeEventListener("send_advisor_chat_message", handleAdvisorMessageEvent);
+    };
+  }, [socket, conversation?.id, session?.user, isE2EEReady, isAdminUser, targetUserId]);
+
   // Handle typing input status
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputMessage(e.target.value);

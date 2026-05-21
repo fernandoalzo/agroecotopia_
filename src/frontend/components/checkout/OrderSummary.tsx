@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { formatPrice } from "@/lib/utils";
@@ -18,6 +18,7 @@ interface OrderSummaryProps {
 export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
   const { cart, totalPrice } = useCart();
   const { t, language } = useLanguage();
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const formattedTotal = new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
     style: "currency",
@@ -136,25 +137,49 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
           </div>
         </div>
 
-        <Button 
-          type="submit"
-          form="checkout-form"
-          disabled={isSubmitting}
-          className="w-full h-14 rounded-2xl font-display font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all group relative overflow-hidden bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:animate-shimmer" />
-          {isSubmitting ? (
-            <div className="flex items-center gap-3">
-              <Clock className="w-5 h-5 animate-spin" />
-              <span>{t.checkout.processing}</span>
+        {showConfirm ? (
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <p className="text-sm font-bold text-center text-foreground px-4">
+              {t.checkout.confirmQuestion}
+            </p>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowConfirm(false)}
+                disabled={isSubmitting}
+                className="flex-1 h-12 rounded-xl font-bold border-primary/20 hover:bg-primary/5"
+              >
+                {t.checkout.confirmNo}
+              </Button>
+              <Button
+                type="submit"
+                form="checkout-form"
+                disabled={isSubmitting}
+                className="flex-1 h-12 rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
+              >
+                {isSubmitting ? (
+                  <Clock className="w-5 h-5 animate-spin mx-auto" />
+                ) : (
+                  t.checkout.confirmYes
+                )}
+              </Button>
             </div>
-          ) : (
+          </div>
+        ) : (
+          <Button 
+            type="button"
+            onClick={() => setShowConfirm(true)}
+            disabled={isSubmitting}
+            className="w-full h-14 rounded-2xl font-display font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all group relative overflow-hidden bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:animate-shimmer" />
             <div className="flex items-center gap-3">
               <CheckCircle2 className="w-6 h-6" />
               <span>{t.checkout.confirmOrder}</span>
             </div>
-          )}
-        </Button>
+          </Button>
+        )}
         
         <p className="mt-4 text-center text-[10px] text-muted-foreground font-medium flex items-center justify-center gap-2">
           <CreditCard className="w-3 h-3 text-primary opacity-60" />

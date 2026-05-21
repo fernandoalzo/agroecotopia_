@@ -159,6 +159,9 @@ export interface Translations {
     invoiceNumber: string;
     billTo: string;
     confirmOrder: string;
+    confirmQuestion: string;
+    confirmYes: string;
+    confirmNo: string;
     backToCart: string;
     processing: string;
     paymentMethod: string;
