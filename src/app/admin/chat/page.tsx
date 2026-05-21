@@ -12,6 +12,7 @@ import { config } from "@/config/config";
 import { Send, MessageSquare, ShieldAlert, ArrowLeft, User, Sparkles, Trash2, Search, ChevronLeft, ChevronRight, UserPlus, X, Copy, Check, Lock } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/app/admin/chat/page.tsx");
@@ -36,7 +37,7 @@ function AdminChatPageContent() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [isE2EEReady, setIsE2EEReady] = useState(false);
-  const [viewportHeight, setViewportHeight] = useState("100vh");
+  const [viewportHeight, setViewportHeight] = useState(isEmbedded ? "100%" : "100vh");
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -102,24 +103,28 @@ function AdminChatPageContent() {
 
     const vv = window.visualViewport;
     const updateViewportHeight = () => {
-      if (vv) {
-        // vv.height = visual area excluding the on-screen keyboard;
-        // set container to this height so the input box stays visible.
-        setViewportHeight(`${vv.height}px`);
+      if (!vv) {
+        if (isEmbedded) setViewportHeight("100%");
+        return;
       }
+      // Embedded in dashboard iframe: fill parent unless keyboard shrinks visual viewport
+      if (isEmbedded) {
+        const keyboardLikelyOpen = vv.height < window.innerHeight * 0.75;
+        setViewportHeight(keyboardLikelyOpen ? `${Math.round(vv.height)}px` : "100%");
+        return;
+      }
+      setViewportHeight(`${Math.round(vv.height)}px`);
     };
 
     if (vv) {
       vv.addEventListener("resize", updateViewportHeight);
       vv.addEventListener("scroll", updateViewportHeight);
       updateViewportHeight();
+    } else if (isEmbedded) {
+      setViewportHeight("100%");
     }
 
-    // window.resize also fires on some mobile browsers when the keyboard changes
-    // the visual viewport; update height from visualViewport in that case as well.
-    window.addEventListener("resize", () => {
-      if (vv) setViewportHeight(`${vv.height}px`);
-    });
+    window.addEventListener("resize", updateViewportHeight);
 
     return () => {
       html.style.height = originalHtmlHeight;
@@ -136,7 +141,7 @@ function AdminChatPageContent() {
       }
       window.removeEventListener("resize", updateViewportHeight);
     };
-  }, []);
+  }, [isEmbedded]);
 
   // Prevent touchmove on non-scrollable areas to stop page panning on mobile
   useEffect(() => {
@@ -710,11 +715,19 @@ function AdminChatPageContent() {
    return (
       <div
         ref={pageContainerRef}
-        className={`flex flex-col md:flex-row bg-background text-foreground overflow-y-auto font-sans h-full ${isEmbedded ? "" : "pt-14 md:pt-20"}`}
+        className={cn(
+          "flex flex-col md:flex-row bg-background text-foreground font-sans",
+          isEmbedded ? "h-full min-h-0 overflow-hidden" : "overflow-y-auto pt-14 md:pt-20",
+        )}
         style={{ height: viewportHeight }}
       >
       {/* Sidebar - list of conversations */}
-      <div className={`w-full md:w-[380px] border-r border-border/40 flex flex-col bg-card/40 h-full ${activeConv ? "hidden md:flex" : "flex"}`}>
+      <div
+        className={cn(
+          "w-full md:w-[380px] border-r border-border/40 flex flex-col bg-card/40 min-h-0 shrink-0 md:shrink",
+          activeConv ? "hidden md:flex" : "flex flex-1 md:flex-none md:h-full",
+        )}
+      >
         {!isEmbedded && (
           <div className="p-5 border-b border-border/40 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
@@ -723,7 +736,7 @@ function AdminChatPageContent() {
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h1 className="font-semibold text-base leading-none font-display">Soporte Chat</h1>
+                  <h1 className="font-semibold text-base leading-snug font-display">Soporte Chat</h1>
                   {isE2EEReady && <span title="Cifrado de Extremo a Extremo Activado"><Lock className="w-3.5 h-3.5 text-primary opacity-80" /></span>}
                 </div>
                 <span className="text-xs text-muted-foreground/70 mt-1 block">Panel de Administración</span>
@@ -795,7 +808,7 @@ function AdminChatPageContent() {
                   <button
                     key={conv.id}
                     onClick={() => setActiveConv(conv)}
-                    className={`w-full text-left p-4 rounded-xl transition-all flex items-start gap-3.5 border ${isActive
+                    className={`w-full text-left p-3.5 sm:p-4 rounded-xl transition-all flex items-center gap-3 border ${isActive
                       ? "bg-primary border-primary/20 text-primary-foreground shadow-md"
                       : "bg-transparent border-transparent hover:bg-secondary/40 hover:border-border/40"
                       }`}
@@ -911,35 +924,38 @@ function AdminChatPageContent() {
       </div>
 
        {/* Main Area - active conversation detail */}
-       <div className={`flex-1 flex flex-col bg-background relative min-h-0 ${activeConv ? "flex" : "hidden md:flex"}`}>
+       <div
+         className={cn(
+           "flex-1 flex flex-col bg-background relative min-h-0 min-w-0",
+           activeConv ? "flex" : "hidden md:flex",
+         )}
+       >
         {activeConv ? (
           <>
             {/* Header */}
-            <div className="p-5 border-b border-border/40 flex items-center justify-between bg-card/20 backdrop-blur-sm z-10">
-              <div className="flex items-center gap-3.5">
-                <button
-                  onClick={() => setActiveConv(null)}
-                  className="md:hidden p-2 hover:bg-secondary rounded-xl transition-all text-muted-foreground hover:text-foreground flex items-center justify-center cursor-pointer -ml-2"
-                  title="Volver a la lista"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-secondary-foreground text-sm">
-                  {activeConv.user?.name?.[0]?.toUpperCase() || <User className="w-5 h-5" />}
-                </div>
-                <div>
-                  <h2 className="text-sm font-semibold text-foreground leading-none">
-                    {activeConv.user?.name || "Usuario"}
-                  </h2>
-                  <span className="text-xs text-muted-foreground mt-1 block">
-                    {activeConv.user?.email || ""}
-                  </span>
-                </div>
+            <div className="px-3 py-3 sm:px-4 md:px-5 md:py-4 border-b border-border/40 flex items-center gap-2 bg-card/20 backdrop-blur-sm z-10 shrink-0">
+              <button
+                onClick={() => setActiveConv(null)}
+                className="md:hidden p-2 hover:bg-secondary rounded-xl transition-all text-muted-foreground hover:text-foreground flex items-center justify-center cursor-pointer shrink-0"
+                title="Volver a la lista"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="w-10 h-10 shrink-0 rounded-full bg-secondary flex items-center justify-center font-bold text-secondary-foreground text-sm">
+                {activeConv.user?.name?.[0]?.toUpperCase() || <User className="w-5 h-5" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm font-semibold text-foreground leading-snug truncate">
+                  {activeConv.user?.name || "Usuario"}
+                </h2>
+                <p className="text-xs text-muted-foreground leading-normal truncate mt-0.5">
+                  {activeConv.user?.email || ""}
+                </p>
               </div>
 
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-all flex items-center justify-center cursor-pointer border border-red-500/20 hover:border-red-500/30 shadow-sm"
+                className="p-2.5 shrink-0 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-all flex items-center justify-center cursor-pointer border border-red-500/20 hover:border-red-500/30 shadow-sm"
                 title="Eliminar Conversación"
               >
                 <Trash2 className="w-4 h-4" />
@@ -947,7 +963,7 @@ function AdminChatPageContent() {
             </div>
 
             {/* Chat Messages */}
-            <div ref={messagesScrollRef} className="flex-1 p-6 overflow-y-auto space-y-4 bg-secondary/5 min-h-0 overscroll-y-contain">
+            <div ref={messagesScrollRef} className="flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto space-y-4 bg-secondary/5 min-h-0 overscroll-y-contain">
               {isLoadingMsgs ? (
                 <div className="h-full flex items-center justify-center">
                   <Loading text="" subtext="" className="py-0" />
@@ -965,7 +981,7 @@ function AdminChatPageContent() {
                         <div
                           key={msg.id}
                           ref={isFirstUnread ? firstUnreadRef : null}
-                          className={`flex flex-col max-w-[70%] ${isMe ? "ml-auto items-end" : "mr-auto items-start"
+                          className={`flex flex-col max-w-[85%] sm:max-w-[75%] md:max-w-[70%] ${isMe ? "ml-auto items-end" : "mr-auto items-start"
                             }`}
                         >
                           <div
@@ -1072,7 +1088,7 @@ function AdminChatPageContent() {
             </div>
 
             {/* Input Box */}
-            <div className="border-t border-border/40 bg-card/20">
+            <div className="border-t border-border/40 bg-card/20 shrink-0 pb-[env(safe-area-inset-bottom,0px)]">
               {!isConnected && (
                 <div className="px-4 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-amber-500 text-[11px] font-medium flex items-center gap-1.5 animate-pulse">
                   <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
@@ -1095,7 +1111,7 @@ function AdminChatPageContent() {
                   </button>
                 </div>
               )}
-              <form onSubmit={handleSendMessage} className="p-4 flex items-center gap-3">
+              <form onSubmit={handleSendMessage} className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
                 <input
                   ref={inputRef}
                   type="text"
