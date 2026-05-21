@@ -655,7 +655,7 @@ export default function ChatWidget() {
                   <div className="h-full flex items-center justify-center">
                     <Loading text="" subtext="" className="py-0 scale-75" />
                   </div>
-                ) : messages.length === 0 ? (
+                ) : messages.length === 0 && !isAdminTyping ? (
                   <div className="h-full flex flex-col items-center justify-center text-center p-8 select-none bg-gradient-to-b from-transparent to-primary/[0.02]">
                     {(() => {
                       const { title, subtitle } = (() => {
@@ -826,13 +826,15 @@ export default function ChatWidget() {
                       });
                     })()}
                     {isAdminTyping && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground italic px-1">
-                        <span className="flex space-x-1">
-                          <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                          <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                          <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
-                        </span>
-                        <span>{t.typing}</span>
+                      <div className="flex flex-col max-w-[80%] mr-auto items-start animate-pulse">
+                        <div className="p-3 rounded-2xl text-xs shadow-sm bg-card text-card-foreground border border-border/60 rounded-tl-none flex items-center gap-2.5">
+                          <span className="flex space-x-1 items-center">
+                            <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
+                            <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
+                            <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+                          </span>
+                          <span className="text-muted-foreground/90 font-medium">{t.typing}</span>
+                        </div>
                       </div>
                     )}
                     <div ref={messagesEndRef} />

@@ -1058,13 +1058,15 @@ export default function AdminChatPage() {
                   })()}
 
                   {isUserTyping && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground italic px-1">
-                      <span className="flex space-x-1">
-                        <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                        <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                        <span className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
-                      </span>
-                      <span>El cliente está escribiendo...</span>
+                    <div className="flex flex-col max-w-[70%] mr-auto items-start animate-pulse">
+                      <div className="p-3.5 rounded-2xl text-xs shadow-sm bg-secondary text-secondary-foreground border border-border/40 rounded-tl-none flex items-center gap-2.5">
+                        <span className="flex space-x-1 items-center">
+                          <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
+                          <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
+                          <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+                        </span>
+                        <span className="text-muted-foreground/90 font-medium">El cliente está escribiendo...</span>
+                      </div>
                     </div>
                   )}
 
