@@ -155,6 +155,7 @@ export const es: Translations = {
     welcome: "Bienvenido",
     email: "Correo electrónico",
     password: "Contraseña",
+    confirmPassword: "Confirmar contraseña",
     name: "Nombre completo",
     loginPrompt: "Ingresa tus datos para continuar",
     loginButton: "Iniciar sesión",

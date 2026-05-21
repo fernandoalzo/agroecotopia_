@@ -129,6 +129,7 @@ export interface Translations {
     welcome: string;
     email: string;
     password: string;
+    confirmPassword: string;
     name: string;
     loginPrompt: string;
     loginButton: string;
