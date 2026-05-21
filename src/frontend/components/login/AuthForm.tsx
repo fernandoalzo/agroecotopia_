@@ -1,10 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertCircle, Loader2, ArrowRight } from "lucide-react";
+import { AlertCircle, Loader2, ArrowRight, Eye, EyeClosed, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AuthMode, FormField } from "@/types/auth.types";
-import { FieldErrors, UseFormRegister } from "react-hook-form";
+import { FieldErrors, UseFormRegister, UseFormSetValue, UseFormWatch } from "react-hook-form";
 
 interface AuthFormProps {
   mode: AuthMode;
@@ -17,6 +18,8 @@ interface AuthFormProps {
   errorMsg: string;
   handleProviderSubmit: () => void;
   t: any;
+  setValue: UseFormSetValue<any>;
+  watch: UseFormWatch<any>;
 }
 
 export function AuthForm({
@@ -30,7 +33,11 @@ export function AuthForm({
   errorMsg,
   handleProviderSubmit,
   t,
+  setValue,
+  watch,
 }: AuthFormProps) {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   return (
     <div className="relative min-h-[350px]">
       <AnimatePresence mode="wait">
@@ -57,6 +64,7 @@ export function AuthForm({
                   const Icon = field.icon;
                   const fieldName = field.name as any;
                   const error = errors[fieldName];
+                  const emailValue = fieldName === "email" ? watch("email") : undefined;
 
                   return (
                     <div key={field.name} className="space-y-1.5">
@@ -72,13 +80,45 @@ export function AuthForm({
                         <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <input
                           {...register(fieldName)}
-                          type={field.type}
+                          type={
+                            fieldName === "password" ? (showPassword ? "text" : "password") :
+                            fieldName === "confirmPassword" ? (showConfirmPassword ? "text" : "password") :
+                            field.type
+                          }
                           placeholder={field.placeholder}
                           className={cn(
                             "w-full pl-11 pr-4 py-3 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all font-medium text-sm text-foreground placeholder:text-muted-foreground",
+                            (fieldName === "password" || fieldName === "confirmPassword" || fieldName === "email") && "pr-12",
                             error && "border-destructive focus:ring-destructive/20 focus:border-destructive"
                           )}
                         />
+                        {fieldName === "password" && (
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {showPassword ? <Eye className="h-5 w-5" /> : <EyeClosed className="h-5 w-5" />}
+                          </button>
+                        )}
+                        {fieldName === "confirmPassword" && (
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {showConfirmPassword ? <Eye className="h-5 w-5" /> : <EyeClosed className="h-5 w-5" />}
+                          </button>
+                        )}
+                        {fieldName === "email" && emailValue && emailValue.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setValue("email", "", { shouldValidate: true })}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <X className="h-5 w-5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   );

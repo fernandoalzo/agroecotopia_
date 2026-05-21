@@ -65,12 +65,22 @@ function LoginPageContent() {
       icon: Lock,
       showIn: ["login", "register"],
     },
+    {
+      name: "confirmPassword",
+      type: "password",
+      label: t.auth?.confirmPassword ?? "Confirmar contraseña",
+      placeholder: "••••••••",
+      icon: Lock,
+      showIn: ["register"],
+    },
   ], [t]);
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(mode === "login" ? LoginSchema : RegisterSchema),
@@ -152,6 +162,8 @@ function LoginPageContent() {
             errorMsg={errorMsg}
             handleProviderSubmit={handleProviderSubmit}
             t={t}
+            setValue={setValue}
+            watch={watch}
           />
         </div>
       </div>

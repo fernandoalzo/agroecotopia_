@@ -425,7 +425,7 @@ export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidg
 
   // Scroll to first unread message or bottom whenever messages or typing state changes
   useEffect(() => {
-    if (isLoading || messages.length === 0) return;
+    if (isLoading || messages.length === 0 || !isOpen) return;
 
     const timer = setTimeout(() => {
       const container = messagesScrollRef.current;
@@ -459,7 +459,7 @@ export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidg
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [messages, isAdminTyping, isLoading]);
+  }, [messages, isAdminTyping, isLoading, isOpen]);
 
   // Handle typing input status
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

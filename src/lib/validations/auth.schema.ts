@@ -16,6 +16,11 @@ export const RegisterSchema = z.object({
   password: z.string()
     .min(6, { message: "La contraseña debe tener al menos 6 caracteres" })
     .max(100, { message: "La contraseña es demasiado larga" }),
+  confirmPassword: z.string()
+    .min(1, { message: "Debes confirmar tu contraseña" }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Las contraseñas no coinciden",
+  path: ["confirmPassword"],
 });
 
 export type LoginInput = z.infer<typeof LoginSchema>;
