@@ -62,6 +62,7 @@ export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidg
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [isE2EEReady, setIsE2EEReady] = useState(false);
   const [viewportHeight, setViewportHeight] = useState("100vh");
+  const [targetUserName, setTargetUserName] = useState<string | null>(null);
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -200,6 +201,27 @@ export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidg
     initE2EE();
   }, [chatUserId, status, isRouteAdmin, isAdminUser]);
 
+  // Fetch target user name when admin is chatting with a specific user
+  useEffect(() => {
+    if (!isAdminUser || !targetUserId) {
+      setTargetUserName(null);
+      return;
+    }
+
+    const fetchTargetUserName = async () => {
+      try {
+        // We'll get the user name from the conversation object once it's loaded
+        // For now, we'll set a placeholder and update it when conversation loads
+        setTargetUserName("Cargando...");
+      } catch (err) {
+        log.error("Error fetching target user name:", err);
+        setTargetUserName(targetUserId); // Fallback to ID
+      }
+    };
+
+    fetchTargetUserName();
+  }, [isAdminUser, targetUserId]);
+
   // Load conversation ID and calculate initial unread count on mount
   useEffect(() => {
     if (!chatUserId) return;
@@ -218,10 +240,15 @@ export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidg
         const res = (isAdminUser && targetUserId)
           ? await getOrCreateConversationForAdmin(targetUserId)
           : await getOrCreateMyConversation();
-          
+
         if (isCancelled) return;
         if (res && !("error" in res)) {
           setConversation(res);
+
+          // Update target user name if we have the user data
+          if (isAdminUser && targetUserId && res.user) {
+            setTargetUserName(res.user.name || targetUserId);
+          }
 
           // Fetch existing messages to count unread ones
           const msgsRes = await getConversationMessages(res.id);
@@ -621,46 +648,55 @@ export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidg
               ref={chatContainerRef}
               className="relative w-full h-full md:absolute md:inset-auto md:bottom-20 md:right-0 md:w-[380px] md:h-[580px] md:rounded-2xl md:border md:border-border/80 md:shadow-2xl flex flex-col overflow-hidden bg-background z-50"
             >
-              {/* Header */}
-              <div className="p-4 bg-gradient-to-r from-primary/90 to-primary text-primary-foreground flex items-center justify-between border-b border-primary/20">
-                <div className="flex items-center gap-2.5">
-                  <div className="relative">
-                    <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-                      <Leaf className="w-5 h-5 text-primary-foreground filter drop-shadow-sm" />
-                    </div>
-                    <span
-                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-primary ${isConnected ? "bg-green-500" : "bg-zinc-400"
-                        }`}
-                    />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm leading-none flex items-center gap-1.5">
-                      {t.title}
-                      {isE2EEReady && <span title="Cifrado de extremo a extremo"><Lock className="w-3.5 h-3.5 text-primary-foreground/80" /></span>}
-                    </h3>
-                    <span className="text-[11px] opacity-80">
-                      {isConnected ? t.online : t.offline}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  {conversation?.id && (
-                    <button
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="p-1.5 hover:bg-primary-foreground/15 rounded-full transition-colors cursor-pointer"
-                      title={t.tooltipClear}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setIsOpen(false)}
-                    className="p-1.5 hover:bg-primary-foreground/15 rounded-full transition-colors cursor-pointer"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
+               {/* Header */}
+               <div className="p-4 bg-gradient-to-r from-primary/90 to-primary text-primary-foreground flex items-center justify-between border-b border-primary/20">
+                 <div className="flex items-center gap-2.5">
+                   <div className="relative">
+                     <div className="w-10 h-10 rounded-full bg-primary-foreground/20 flex items-center justify-center">
+                       <Leaf className="w-5 h-5 text-primary-foreground filter drop-shadow-sm" />
+                     </div>
+                     <span
+                       className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-primary ${isConnected ? "bg-green-500" : "bg-zinc-400"
+                       }`}
+                     />
+                   </div>
+                   <div>
+                     <h3 className="font-semibold text-sm leading-none flex items-center gap-1.5">
+                       {isAdminUser && targetUserId ? (
+                         <>
+                           {targetUserName || "Cargando..."}
+                           {isE2EEReady && <span title="Cifrado de extremo a extremo"><Lock className="w-3.5 h-3.5 text-primary-foreground/80" /></span>}
+                         </>
+                       ) : (
+                         <>
+                           {t.title}
+                           {isE2EEReady && <span title="Cifrado de extremo a extremo"><Lock className="w-3.5 h-3.5 text-primary-foreground/80" /></span>}
+                         </>
+                       )}
+                     </h3>
+                     <span className="text-[11px] opacity-80">
+                       {isConnected ? t.online : t.offline}
+                     </span>
+                   </div>
+                 </div>
+                 <div className="flex items-center gap-1">
+                   {conversation?.id && (
+                     <button
+                       onClick={() => setShowDeleteConfirm(true)}
+                       className="p-1.5 hover:bg-primary-foreground/15 rounded-full transition-colors cursor-pointer"
+                       title={t.tooltipClear}
+                     >
+                       <Trash2 className="w-4 h-4" />
+                     </button>
+                   )}
+                   <button
+                     onClick={() => setIsOpen(false)}
+                     className="p-1.5 hover:bg-primary-foreground/15 rounded-full transition-colors cursor-pointer"
+                   >
+                     <X className="w-5 h-5" />
+                   </button>
+                 </div>
+               </div>
 
               {/* Chat Body */}
               <div ref={messagesScrollRef} className="flex-1 p-4 overflow-y-auto space-y-3 bg-secondary/5 min-h-0 overscroll-y-contain">
