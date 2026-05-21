@@ -541,7 +541,7 @@ function AdminChatPageContent() {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [messages, isUserTyping, isLoadingMsgs]);
+  }, [messages, isUserTyping, isLoadingMsgs, viewportHeight]);
 
   // Handle input change & typing status
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -709,12 +709,12 @@ function AdminChatPageContent() {
     );
   }
 
-  return (
-    <div
-      ref={pageContainerRef}
-      className={`fixed inset-x-0 top-0 flex bg-background text-foreground overflow-hidden font-sans ${isEmbedded ? "" : "pt-14 md:pt-20"}`}
-      style={{ height: viewportHeight }}
-    >
+   return (
+     <div
+       ref={pageContainerRef}
+       className={`fixed inset-x-0 top-0 flex bg-background text-foreground overflow-y-auto font-sans ${isEmbedded ? "" : "pt-14 md:pt-20"}`}
+       style={{ height: viewportHeight }}
+     >
       {/* Sidebar - list of conversations */}
       <div className={`w-full md:w-[380px] border-r border-border/40 flex flex-col bg-card/40 h-full ${activeConv ? "hidden md:flex" : "flex"}`}>
         {!isEmbedded && (
