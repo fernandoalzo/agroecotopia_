@@ -38,8 +38,8 @@ function AdminChatPageContent() {
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [isE2EEReady, setIsE2EEReady] = useState(false);
   const [viewportHeight, setViewportHeight] = useState("100vh");
-  /** When keyboard is open on mobile embedded: fit chat panel to visible viewport */
-  const [mobileVv, setMobileVv] = useState<{ top: number; height: number } | null>(null);
+  /** Space to lift input above on-screen keyboard (embedded mobile only) */
+  const [keyboardPadding, setKeyboardPadding] = useState(0);
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -83,7 +83,7 @@ function AdminChatPageContent() {
     activeConvRef.current = activeConv;
   }, [activeConv]);
 
-   // Lock body scroll; shrink chat panel to visual viewport when keyboard is open (embedded mobile)
+   // Lock iframe document scroll; lift input via padding when keyboard is open (no page shift)
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -93,6 +93,10 @@ function AdminChatPageContent() {
     const originalHtmlOverscroll = html.style.overscrollBehavior;
     const originalBodyHeight = body.style.height;
     const originalBodyOverflow = body.style.overflow;
+    const originalBodyPosition = body.style.position;
+    const originalBodyTop = body.style.top;
+    const originalBodyLeft = body.style.left;
+    const originalBodyRight = body.style.right;
     const originalBodyWidth = body.style.width;
     const originalBodyOverscroll = body.style.overscrollBehavior;
 
@@ -105,37 +109,44 @@ function AdminChatPageContent() {
     body.style.overscrollBehavior = "none";
 
     const isMobile = () => typeof window !== "undefined" && window.innerWidth < 768;
+    const useFixedBody = isEmbedded && isMobile();
+
+    if (useFixedBody) {
+      body.style.position = "fixed";
+      body.style.top = "0";
+      body.style.left = "0";
+      body.style.right = "0";
+    }
+
     const vv = window.visualViewport;
 
-    /** Only true when the on-screen keyboard is actually visible */
     const isKeyboardOpen = () => {
       if (!vv) return false;
       return vv.height < window.innerHeight * 0.85;
     };
 
     const updateViewport = () => {
-      if (window.scrollY !== 0) {
-        window.scrollTo(0, 0);
-      }
+      window.scrollTo(0, 0);
 
       if (!vv) {
-        setMobileVv(null);
+        setKeyboardPadding(0);
         return;
       }
 
       if (isEmbedded && isMobile()) {
         if (isKeyboardOpen()) {
-          setMobileVv({
-            top: Math.round(vv.offsetTop || 0),
-            height: Math.round(vv.height),
-          });
+          const pad = Math.max(
+            0,
+            Math.round(window.innerHeight - vv.height - (vv.offsetTop || 0)),
+          );
+          setKeyboardPadding(pad);
         } else {
-          setMobileVv(null);
+          setKeyboardPadding(0);
         }
         return;
       }
 
-      setMobileVv(null);
+      setKeyboardPadding(0);
       if (!isEmbedded && isMobile()) {
         setViewportHeight(`${Math.round(vv.height)}px`);
       }
@@ -155,9 +166,13 @@ function AdminChatPageContent() {
       html.style.overscrollBehavior = originalHtmlOverscroll;
       body.style.height = originalBodyHeight;
       body.style.overflow = originalBodyOverflow;
+      body.style.position = originalBodyPosition;
+      body.style.top = originalBodyTop;
+      body.style.left = originalBodyLeft;
+      body.style.right = originalBodyRight;
       body.style.width = originalBodyWidth;
       body.style.overscrollBehavior = originalBodyOverscroll;
-      setMobileVv(null);
+      setKeyboardPadding(0);
 
       if (vv) {
         vv.removeEventListener("resize", updateViewport);
@@ -178,36 +193,12 @@ function AdminChatPageContent() {
       const vv = window.visualViewport;
       const keyboardClosed = !vv || vv.height >= window.innerHeight * 0.85;
       if (keyboardClosed) {
-        setMobileVv(null);
+        setKeyboardPadding(0);
         window.scrollTo(0, 0);
       }
       keyboardClearTimerRef.current = null;
-    }, 120);
+    }, 150);
   }, []);
-
-  // When keyboard is dismissed without blur (Android back), reset layout on viewport restore
-  useEffect(() => {
-    if (!isEmbedded || typeof window === "undefined" || window.innerWidth >= 768) return;
-
-    const vv = window.visualViewport;
-    const onViewportChange = () => {
-      if (!vv || vv.height >= window.innerHeight * 0.85) {
-        setMobileVv(null);
-        window.scrollTo(0, 0);
-      }
-    };
-
-    vv?.addEventListener("resize", onViewportChange);
-    document.addEventListener("focusout", resetMobileKeyboardLayout);
-
-    return () => {
-      vv?.removeEventListener("resize", onViewportChange);
-      document.removeEventListener("focusout", resetMobileKeyboardLayout);
-      if (keyboardClearTimerRef.current) {
-        clearTimeout(keyboardClearTimerRef.current);
-      }
-    };
-  }, [isEmbedded, resetMobileKeyboardLayout]);
 
   // Prevent touchmove on non-scrollable areas to stop page panning on mobile
   useEffect(() => {
@@ -610,7 +601,7 @@ function AdminChatPageContent() {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [messages, isUserTyping, isLoadingMsgs, viewportHeight, mobileVv]);
+  }, [messages, isUserTyping, isLoadingMsgs, viewportHeight, keyboardPadding]);
 
   // Handle input change & typing status
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -998,15 +989,8 @@ function AdminChatPageContent() {
        >
         {activeConv ? (
           <div
-            className={cn(
-              "flex flex-1 flex-col min-h-0 h-full w-full overflow-hidden bg-background",
-              mobileVv && "max-md:absolute max-md:left-0 max-md:right-0 max-md:z-10",
-            )}
-            style={
-              mobileVv
-                ? { top: mobileVv.top, height: mobileVv.height }
-                : undefined
-            }
+            className="flex flex-1 flex-col min-h-0 h-full w-full overflow-hidden bg-background"
+            style={isEmbedded && keyboardPadding > 0 ? { paddingBottom: keyboardPadding } : undefined}
           >
             {/* Header */}
             <div className="px-3 py-3 sm:px-4 md:px-5 md:py-4 border-b border-border/40 flex items-center gap-2 bg-card/20 backdrop-blur-sm z-10 shrink-0">

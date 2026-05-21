@@ -93,15 +93,28 @@ function AdminDashboardPageContent() {
 
   // Prevent parent page jump when mobile keyboard opens on chat tab (iframe inside)
   useEffect(() => {
-    if (activeTab !== "chat") return;
+    if (activeTab !== "chat" || typeof window === "undefined" || window.innerWidth >= 768) return;
+
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+
     const vv = window.visualViewport;
     const lockScroll = () => {
-      if (window.scrollY !== 0) window.scrollTo(0, 0);
+      window.scrollTo(0, 0);
     };
+
     vv?.addEventListener("resize", lockScroll);
     vv?.addEventListener("scroll", lockScroll);
     window.addEventListener("scroll", lockScroll, { passive: true });
+
     return () => {
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
       vv?.removeEventListener("resize", lockScroll);
       vv?.removeEventListener("scroll", lockScroll);
       window.removeEventListener("scroll", lockScroll);
