@@ -91,35 +91,21 @@ function AdminDashboardPageContent() {
     };
   }, [isAdmin, userId, socket]);
 
-  // Prevent parent page jump when mobile keyboard opens on chat tab (iframe inside)
+  const [isMobile, setIsMobile] = useState(false);
+
   useEffect(() => {
-    if (activeTab !== "chat" || typeof window === "undefined" || window.innerWidth >= 768) return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => setIsMobile(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
 
-    const html = document.documentElement;
-    const body = document.body;
-    const prevHtmlOverflow = html.style.overflow;
-    const prevBodyOverflow = body.style.overflow;
-
-    html.style.overflow = "hidden";
-    body.style.overflow = "hidden";
-
-    const vv = window.visualViewport;
-    const lockScroll = () => {
-      window.scrollTo(0, 0);
-    };
-
-    vv?.addEventListener("resize", lockScroll);
-    vv?.addEventListener("scroll", lockScroll);
-    window.addEventListener("scroll", lockScroll, { passive: true });
-
-    return () => {
-      html.style.overflow = prevHtmlOverflow;
-      body.style.overflow = prevBodyOverflow;
-      vv?.removeEventListener("resize", lockScroll);
-      vv?.removeEventListener("scroll", lockScroll);
-      window.removeEventListener("scroll", lockScroll);
-    };
-  }, [activeTab]);
+  // Mobile: full-page chat (iframe breaks keyboard/viewport on iOS & Android)
+  useEffect(() => {
+    if (!isMobile || activeTab !== "chat" || status !== "authenticated" || !isAdmin) return;
+    router.replace("/admin/chat?from=dashboard");
+  }, [isMobile, activeTab, status, isAdmin, router]);
 
   // Sync tab with URL
   const handleTabChange = (tab: DashboardTab) => {
@@ -304,7 +290,7 @@ function AdminDashboardPageContent() {
               </motion.div>
             )}
 
-            {activeTab === "chat" && (
+            {activeTab === "chat" && !isMobile && (
               <motion.div
                 key="chat"
                 initial={{ opacity: 0, x: 10 }}
@@ -316,6 +302,12 @@ function AdminDashboardPageContent() {
                 <AdminChatEmbed />
               </motion.div>
             )}
+
+            {activeTab === "chat" && isMobile && (
+              <div className="flex-1 flex items-center justify-center p-8">
+                <Loading text="Abriendo chat..." subtext="" />
+              </div>
+            )}
           </AnimatePresence>
         </div>
       </main>
@@ -323,12 +315,7 @@ function AdminDashboardPageContent() {
   );
 }
 
-/* ─── Embedded Admin Chat ────────────────────────────────────────────────
-   Renders the admin chat page inside an iframe pointing to /admin/chat.
-   This avoids duplicating 1200+ lines of complex chat logic and viewport
-   management. The iframe approach ensures the chat's body-locking and
-   mobile keyboard handling work independently from the dashboard layout.
-   ──────────────────────────────────────────────────────────────────────── */
+/** Desktop only — mobile uses /admin/chat full page (keyboard + viewport work there) */
 function AdminChatEmbed() {
   return (
     <iframe
