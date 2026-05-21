@@ -154,6 +154,35 @@ export class OrdersService {
     return pedidos.map(p => this.serializePedido(p));
   }
 
+  async getAllPedidos() {
+    log.debug("Obteniendo todos los pedidos para el admin.");
+    const pedidos = await this.ordersRepository.findAll();
+    log.debug("Todos los pedidos encontrados:", { count: pedidos.length });
+    return pedidos.map(p => this.serializePedido(p));
+  }
+
+  async getPaginatedPedidos(params: {
+    page: number;
+    limit: number;
+    estado?: PedidoEstado;
+    search?: string;
+  }) {
+    log.debug("Obteniendo pedidos paginados y filtrados para el admin.");
+    const result = await this.ordersRepository.findPaginated(params);
+    return {
+      orders: result.orders.map(p => this.serializePedido(p)),
+      totalCount: result.totalCount,
+      totalPages: result.totalPages,
+      page: result.page,
+      limit: result.limit,
+    };
+  }
+
+  async getOrderStatusCounts() {
+    log.debug("Obteniendo conteo de estados de pedidos para el admin.");
+    return await this.ordersRepository.getStatusCounts();
+  }
+
   async getPedidoDetallado(pedidoId: string) {
     log.debug("Obteniendo pedido detallado:", { pedidoId });
     const pedido = await this.ordersRepository.findById(pedidoId);

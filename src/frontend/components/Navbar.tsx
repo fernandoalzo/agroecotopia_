@@ -244,7 +244,7 @@ const Navbar = () => {
                     "text-[10px] font-black uppercase tracking-widest transition-colors",
                     isActive("/pedidos") ? "text-primary" : "text-primary/60 group-hover/orders:text-primary"
                   )}>
-                    {t.navbar.pedidos}
+                    {isAdmin ? "Pedidos" : t.navbar.pedidos}
                   </span>
                 </div>
               </Link>
@@ -541,7 +541,7 @@ const Navbar = () => {
                           <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
                             <Package className="h-6 w-6 text-white" />
                           </div>
-                          <span className="font-display text-2xl font-black tracking-tight uppercase">{t.navbar.pedidos}</span>
+                          <span className="font-display text-2xl font-black tracking-tight uppercase">{isAdmin ? "Pedidos" : t.navbar.pedidos}</span>
                         </div>
                         <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center relative z-10">
                           <ChevronRight className="h-4 w-4 text-white/40" />

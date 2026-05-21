@@ -78,6 +78,31 @@ export async function getUserOrdersAction() {
 }
 
 /**
+ * Obtiene todos los pedidos de todos los usuarios de forma paginada y filtrada (Solo Administradores).
+ */
+export async function getPaginatedOrdersAction(params: {
+  page: number;
+  limit: number;
+  estado?: PedidoEstado;
+  search?: string;
+}) {
+  return await withAdmin(async () => {
+    log.info("Admin obteniendo pedidos paginados y filtrados:", params);
+    return await ordersService.getPaginatedPedidos(params);
+  });
+}
+
+/**
+ * Obtiene el conteo de pedidos por estado desde la base de datos (Solo Administradores).
+ */
+export async function getOrderStatusCountsAction() {
+  return await withAdmin(async () => {
+    log.info("Admin obteniendo conteo de estados de pedidos.");
+    return await ordersService.getOrderStatusCounts();
+  });
+}
+
+/**
  * Obtiene el detalle de un pedido específico.
  */
 export async function getOrderDetailAction(pedidoId: string) {

@@ -21,13 +21,14 @@ const log = logger.child("src/utils/auth.ts");
  * and add to the `providers` array below.
  */
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   basePath: "/api/v1/auth",
   adapter: PrismaAdapter(prisma),
   providers: [
     Google({
       clientId: getRequiredConfig(config.auth.google.clientId, "GOOGLE_CLIENT_ID"),
       clientSecret: getRequiredConfig(config.auth.google.clientSecret, "GOOGLE_CLIENT_SECRET"),
-      checks: ["state"],
+      checks: ["pkce"],
     }),
     Credentials({
       name: "credentials",
@@ -65,13 +66,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * Attach the DB user ID to the JWT so it's available everywhere.
      */
     async jwt({ token, user }) {
+      // First sign-in: populate token basics from the user object
       if (user) {
         log.debug("Auth callback jwt: poblando token con información del usuario:", { userId: user.id, email: user.email });
         token.id = user.id as string;
-        token.role = (user as any).role;
         token.email = user.email;
         token.name = user.name;
       }
+
+      // Always sync role from DB on every token refresh.
+      // This ensures the role is never stale — even if the JWT cookie
+      // was minted before the role-fix, or if the admin promotes/demotes
+      // a user while they're logged in.
+      if (token.id) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true },
+          });
+          token.role = dbUser?.role || "user";
+        } catch (error) {
+          // On transient DB errors, preserve existing role to avoid
+          // downgrading an admin mid-session due to a blip
+          if (!token.role) {
+            token.role = "user";
+          }
+        }
+      }
+
       return token;
     },
     /**

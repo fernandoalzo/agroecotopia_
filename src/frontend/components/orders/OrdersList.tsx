@@ -107,7 +107,7 @@ export const OrdersList = () => {
         toast.error("Error", { description: result.error });
       } else {
         toast.success("Pedido cancelado", { description: "Tu pedido ha sido cancelado exitosamente." });
-        setOrders((prev) => 
+        setOrders((prev) =>
           prev.map((o) => (o.id === orderId ? { ...o, estado: PedidoEstado.CANCELADO } : o))
         );
       }
@@ -140,9 +140,9 @@ export const OrdersList = () => {
   const handleRepeatOrder = (e: React.MouseEvent, order: any) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!order.detalles || repeatingId === order.id) return;
-    
+
     setRepeatingId(order.id);
     let addedCount = 0;
     order.detalles.forEach((detalle: any) => {
@@ -244,7 +244,7 @@ export const OrdersList = () => {
                           </Button>
                         </div>
                       </div>
-                      
+
                       <Badge className={cn("rounded-full border px-4 py-1.5 font-bold transition-all group-hover:scale-105", statusConfig[order.estado].color)}>
                         <span className="mr-2 h-2 w-2 rounded-full bg-current animate-pulse" />
                         {statusConfig[order.estado].label}
@@ -292,17 +292,17 @@ export const OrdersList = () => {
                             )}
                           </div>
                         ))}
-                          {order.detalles?.length > 4 && (
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-background bg-primary text-xs font-bold text-primary-foreground shadow-sm">
-                              +{order.detalles.length - 4}
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-sm font-medium">
-                          {order.detalles?.length || 0} {order.detalles?.length === 1 ? "producto" : "productos"}
-                        </p>
+                        {order.detalles?.length > 4 && (
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-background bg-primary text-xs font-bold text-primary-foreground shadow-sm">
+                            +{order.detalles.length - 4}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium">
+                        {order.detalles?.length || 0} {order.detalles?.length === 1 ? "producto" : "productos"}
+                      </p>
                     </div>
-                    
+
                     <div className="flex flex-col sm:flex-row gap-2 mt-6">
                       <Button variant="ghost" className="w-full sm:flex-1 rounded-2xl group/btn border border-primary/10 hover:bg-primary/5 hover:text-primary transition-all font-bold" asChild>
                         <Link href={`/pedidos/${order.id}`}>
@@ -310,10 +310,10 @@ export const OrdersList = () => {
                           <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
                         </Link>
                       </Button>
-                      
+
                       {(order.estado === PedidoEstado.CONFIRMADO || order.estado === PedidoEstado.ENTREGADO || order.estado === PedidoEstado.CANCELADO) && (
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="w-full sm:flex-1 rounded-2xl border-primary/20 text-primary hover:bg-primary/5 shadow-sm font-bold disabled:opacity-70 disabled:cursor-not-allowed"
                           onClick={(e) => handleRepeatOrder(e, order)}
                           disabled={repeatingId === order.id}
@@ -331,16 +331,16 @@ export const OrdersList = () => {
                     {order.estado === PedidoEstado.PENDIENTE && (
                       confirmingCancelId === order.id ? (
                         <div className="mt-2 flex gap-2 w-full">
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             className="flex-1 rounded-2xl"
                             onClick={() => setConfirmingCancelId(null)}
                             disabled={cancelingId === order.id}
                           >
                             No
                           </Button>
-                          <Button 
-                            variant="destructive" 
+                          <Button
+                            variant="destructive"
                             className="flex-1 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-md shadow-red-500/20"
                             onClick={() => handleCancelOrder(order.id)}
                             disabled={cancelingId === order.id}
@@ -353,8 +353,8 @@ export const OrdersList = () => {
                           </Button>
                         </div>
                       ) : (
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="mt-2 w-full rounded-2xl text-rose-500 border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-600"
                           onClick={() => setConfirmingCancelId(order.id)}
                         >
@@ -366,16 +366,16 @@ export const OrdersList = () => {
                     {order.estado === PedidoEstado.CANCELADO && (
                       confirmingDeleteId === order.id ? (
                         <div className="mt-2 flex gap-2 w-full">
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             className="flex-1 rounded-2xl"
                             onClick={() => setConfirmingDeleteId(null)}
                             disabled={deletingId === order.id}
                           >
                             No
                           </Button>
-                          <Button 
-                            variant="destructive" 
+                          <Button
+                            variant="destructive"
                             className="flex-1 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold"
                             onClick={() => handleDeleteOrder(order.id)}
                             disabled={deletingId === order.id}
@@ -388,8 +388,8 @@ export const OrdersList = () => {
                           </Button>
                         </div>
                       ) : (
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="mt-2 w-full rounded-2xl text-red-600 border-red-500/20 hover:bg-red-500/10 hover:text-red-700"
                           onClick={() => setConfirmingDeleteId(order.id)}
                         >
