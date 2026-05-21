@@ -422,7 +422,10 @@ export default function ChatWidget() {
   // Send message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim() || !socket || !conversation?.id || !session?.user?.id) return;
+    if (!inputMessage.trim() || !socket || !conversation?.id || !session?.user?.id) {
+      inputRef.current?.focus();
+      return;
+    }
 
     // Stop typing immediately
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -440,6 +443,7 @@ export default function ChatWidget() {
     if (config.chat.enableE2EE) {
       if (!isE2EEReady) {
         log.warn("E2EE está activado pero no está listo aún. Esperando...");
+        inputRef.current?.focus();
         return;
       }
       try {
@@ -449,6 +453,7 @@ export default function ChatWidget() {
         encryptionType = encrypted.type;
       } catch (err) {
         log.error("Error cifrando el mensaje, no se enviará en texto plano por seguridad:", err);
+        inputRef.current?.focus();
         return; // Previene el envío en texto plano si falla
       }
     }
@@ -466,6 +471,11 @@ export default function ChatWidget() {
 
     setInputMessage("");
     setReplyingTo(null);
+
+    // Mantiene el foco en el input para evitar que se cierre el teclado en móviles
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 50);
   };
 
   // Delete/Clear my own conversation as a user
@@ -851,7 +861,8 @@ export default function ChatWidget() {
                 />
                 <button
                   type="submit"
-                  disabled={!inputMessage.trim() || !isConnected}
+                  onMouseDown={(e) => e.preventDefault()}
+                  disabled={!inputMessage.trim() || !isConnected || (config.chat.enableE2EE && !isE2EEReady)}
                   className="h-10 w-10 flex items-center justify-center rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground disabled:opacity-40 disabled:hover:bg-primary shadow-sm transition-all cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
