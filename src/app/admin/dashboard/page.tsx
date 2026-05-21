@@ -124,7 +124,7 @@ function AdminDashboardPageContent() {
   }
 
   return (
-    <div className="min-h-screen flex bg-background pt-14 md:pt-20">
+    <div className="flex h-[100dvh] max-h-[100dvh] overflow-hidden bg-background pt-14 md:pt-20">
       {/* ═══ SIDEBAR — Desktop: fixed left, Mobile: overlay ═══ */}
 
       {/* Mobile overlay backdrop */}
@@ -227,13 +227,8 @@ function AdminDashboardPageContent() {
 
       {/* ═══ MAIN CONTENT ═══ */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top bar with mobile sidebar toggle — hidden on mobile chat tab to maximize iframe space */}
-        <div
-          className={cn(
-            "flex items-center gap-3 px-4 md:px-8 py-4 border-b border-border/30 bg-background/50 backdrop-blur-sm shrink-0",
-            activeTab === "chat" && "hidden md:flex",
-          )}
-        >
+        {/* Top bar with mobile sidebar toggle */}
+        <div className="flex items-center gap-3 px-4 md:px-8 py-4 border-b border-border/30 bg-background/50 backdrop-blur-sm shrink-0">
           <button
             onClick={() => setSidebarOpen(true)}
             className="md:hidden p-2.5 hover:bg-secondary rounded-xl transition-all text-muted-foreground hover:text-foreground border border-border/40"
