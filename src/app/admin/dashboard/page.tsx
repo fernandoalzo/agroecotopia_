@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,7 +31,7 @@ const SIDEBAR_ITEMS: { id: DashboardTab; labelEs: string; labelEn: string; icon:
   { id: "chat", labelEs: "Soporte Chat", labelEn: "Chat Support", icon: MessageSquare },
 ];
 
-export default function AdminDashboardPage() {
+function AdminDashboardPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -302,5 +302,13 @@ function AdminChatEmbed() {
       title="Soporte Chat"
       allow="clipboard-write"
     />
+  );
+}
+
+export default function AdminDashboardPage() {
+  return (
+    <Suspense fallback={<Loading fullScreen />}>
+      <AdminDashboardPageContent />
+    </Suspense>
   );
 }

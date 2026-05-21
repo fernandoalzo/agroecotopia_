@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSocket } from "@/frontend/context/SocketContext";
@@ -16,7 +16,7 @@ import logger from "@/utils/logger";
 
 const log = logger.child("src/app/admin/chat/page.tsx");
 
-export default function AdminChatPage() {
+function AdminChatPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1201,5 +1201,13 @@ export default function AdminChatPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function AdminChatPage() {
+  return (
+    <Suspense fallback={<Loading fullScreen={true} />}>
+      <AdminChatPageContent />
+    </Suspense>
   );
 }
