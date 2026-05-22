@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   log.info("Renderizando página de inicio (Home Page).");
-  
+
   let products: any[] = [];
   try {
     log.debug("Página de inicio: consultando catálogo de productos.");
@@ -25,10 +25,8 @@ export default async function Home() {
   return (
     <div className="min-h-screen bg-background">
       <HeroSection />
-      
       <main>
         <ProductsSection initialProducts={products} />
-        
         {/* Story Teaser (Optional: simplified preview) */}
         <div className="py-24 bg-secondary/10 border-y border-border/50">
           <div className="container mx-auto px-4 md:px-6 text-center">
@@ -44,7 +42,7 @@ export default async function Home() {
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </div>
   );

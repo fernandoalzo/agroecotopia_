@@ -9,7 +9,7 @@ import { Message } from "@/frontend/components/chat/ChatWidget";
 import { SignalService } from "@/frontend/lib/signalService";
 import { signalStore } from "@/frontend/lib/signalStore";
 import { config } from "@/config/config";
-import { Send, MessageSquare, ShieldAlert, ArrowLeft, User, Sparkles, Trash2, Search, ChevronLeft, ChevronRight, UserPlus, X, Copy, Check, Lock } from "lucide-react";
+// import { Send, MessageSquare, ShieldAlert, ArrowLeft, User, Sparkles, Trash2, Search, ChevronLeft, ChevronRight, UserPlus, X, Copy, Check, Lock } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -58,7 +58,7 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
   const { socket, isConnected } = useSocket();
   const isEmbedded = embedded || searchParams.get("embedded") === "true";
   const isDashboardMobileEntry = searchParams.get("from") === "dashboard";
-
+  // Main chat state
   const [conversations, setConversations] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [activeConv, setActiveConv] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -74,13 +74,6 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
   const [isE2EEReady, setIsE2EEReady] = useState(false);
   const [viewportHeight, setViewportHeight] = useState("100vh");
   const [keyboardInset, setKeyboardInset] = useState(0);
-
-  const handleCopy = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
   // User search and navigation states
   const [sidebarTab, setSidebarTab] = useState<"chats" | "users">("chats");
   const [usersList, setUsersList] = useState<any[]>([]);
@@ -89,7 +82,7 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
-
+  // Refs for scrolling behavior
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const firstUnreadRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -99,6 +92,12 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
   const messagesScrollRef = useRef<HTMLDivElement>(null);
   const sidebarScrollRef = useRef<HTMLDivElement>(null);
   const hasInitialScrolledRef = useRef(false);
+
+  const handleCopy = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   // Reset initial scroll state when changing active conversation
   useEffect(() => {

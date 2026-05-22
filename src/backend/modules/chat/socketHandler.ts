@@ -48,7 +48,23 @@ export function initSocketServer(httpServer: HTTPServer, prisma: PrismaClient): 
     });
 
     // Handle sending messages
-    socket.on("send_message", async ({ conversationId, content, isEncrypted, encryptionType, senderId, senderRole, replyToId }: { conversationId: string; content: string; isEncrypted?: boolean; encryptionType?: number; senderId: string; senderRole: string; replyToId?: string }) => {
+    socket.on("send_message", async ({
+      conversationId,
+      content,
+      isEncrypted,
+      encryptionType,
+      senderId,
+      senderRole,
+      replyToId
+    }: {
+      conversationId: string;
+      content: string;
+      isEncrypted?: boolean;
+      encryptionType?: number;
+      senderId: string;
+      senderRole: string;
+      replyToId?: string
+    }) => {
       try {
         if (!conversationId || !content || !senderId) return;
 

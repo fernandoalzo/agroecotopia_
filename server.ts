@@ -22,7 +22,7 @@ app.prepare()
 
     const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
       const parsedUrl = parse(req.url!, true);
-      
+
       // Skip logging for static assets and Next.js internals (noisy, no observability value)
       const url = req.url || "";
       const isStaticAsset =
@@ -35,7 +35,7 @@ app.prepare()
       if (!isStaticAsset) {
         log.debug(`${req.method} ${url}`);
       }
-      
+
       handle(req, res, parsedUrl);
     });
 
