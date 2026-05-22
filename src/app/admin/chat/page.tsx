@@ -14,6 +14,8 @@ import { Loading } from "@/components/ui/Loading";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import logger from "@/utils/logger";
+import { AdminChatView } from "@/frontend/components/admin/chat/AdminChatView";
+import { AccessDeniedView } from "@/frontend/components/admin/chat/AccessDeniedView";
 
 const log = logger.child("src/app/admin/chat/page.tsx");
 
@@ -21,10 +23,10 @@ type AdminConversationsResult = Awaited<ReturnType<typeof getAdminConversations>
 
 let adminConversationsBootstrap:
   | {
-      userId: string;
-      expiresAt: number;
-      promise: Promise<AdminConversationsResult>;
-    }
+    userId: string;
+    expiresAt: number;
+    promise: Promise<AdminConversationsResult>;
+  }
   | null = null;
 
 function getBootstrappedAdminConversations(userId: string) {
@@ -114,7 +116,7 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
     activeConvRef.current = activeConv;
   }, [activeConv]);
 
-   // Lock body/html scroll; track viewport for standalone mobile; keyboard inset for embedded iframe
+  // Lock body/html scroll; track viewport for standalone mobile; keyboard inset for embedded iframe
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -732,539 +734,55 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
 
   // Guard access denied
   if (status === "unauthenticated" || session?.user?.role !== "admin") {
-    return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center bg-background p-6 text-center text-foreground pt-14 md:pt-20">
-        <div className="p-4 bg-destructive/15 rounded-full text-destructive mb-6">
-          <ShieldAlert className="w-12 h-12" />
-        </div>
-        <h1 className="text-2xl font-bold font-display tracking-tight mb-2">Acceso Denegado</h1>
-        <p className="text-muted-foreground max-w-sm mb-8 text-sm">
-          No tienes permisos de administrador para acceder a este panel de chat.
-        </p>
-        <button
-          onClick={() => router.push("/")}
-          className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-secondary hover:bg-secondary/80 text-secondary-foreground font-semibold text-sm transition-all"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Volver a Inicio
-        </button>
-      </div>
-    );
+    return <AccessDeniedView onGoHome={() => router.push("/")} />;
   }
 
-   return (
-      <div
-        ref={pageContainerRef}
-        className={cn(
-          "flex flex-col md:flex-row bg-background text-foreground font-sans",
-          isEmbedded ? "h-full min-h-0 overflow-hidden" : "overflow-y-auto pt-14 md:pt-20",
-        )}
-        style={isEmbedded ? undefined : { height: viewportHeight }}
-      >
-      {/* Sidebar - list of conversations */}
-      <div
-        className={cn(
-          "w-full md:w-[380px] border-r border-border/40 flex flex-col bg-card/40 min-h-0 shrink-0 md:shrink",
-          activeConv ? "hidden md:flex" : "flex flex-1 md:flex-none md:h-full",
-        )}
-      >
-        {!isEmbedded && (
-          <div className="p-5 border-b border-border/40 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
-                <MessageSquare className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h1 className="font-semibold text-base leading-snug font-display">Soporte Chat</h1>
-                  {isE2EEReady && <span title="Cifrado de Extremo a Extremo Activado"><Lock className="w-3.5 h-3.5 text-primary opacity-80" /></span>}
-                </div>
-                <span className="text-xs text-muted-foreground/70 mt-1 block">Panel de Administración</span>
-              </div>
-            </div>
-            <span
-              className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-green-500" : "bg-muted animate-pulse"}`}
-              title={isConnected ? "WebSocket Conectado" : "Buscando conexión..."}
-            />
-          </div>
-        )}
-
-        {/* Tabs Bar */}
-        <div className="px-4 py-2.5 border-b border-border/40 flex gap-2 bg-card/20">
-          <button
-            onClick={() => setSidebarTab("chats")}
-            className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${sidebarTab === "chats"
-              ? "bg-primary text-primary-foreground shadow-sm shadow-primary/10"
-              : "bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80"
-              }`}
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            Chats Activos
-          </button>
-          <button
-            onClick={() => setSidebarTab("users")}
-            className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5 ${sidebarTab === "users"
-              ? "bg-primary text-primary-foreground shadow-sm shadow-primary/10"
-              : "bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/80"
-              }`}
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            Buscar Usuarios
-          </button>
-        </div>
-
-        {sidebarTab === "users" && (
-          <div className="p-3 border-b border-border/40 bg-card/10">
-            <div className="relative">
-              <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar por nombre o correo..."
-                className="w-full h-10 pl-9 pr-4 border border-border/60 hover:border-border/80 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm outline-none bg-secondary/15 transition-all text-foreground placeholder:text-muted-foreground/60"
-              />
-            </div>
-          </div>
-        )}
-
-        <div ref={sidebarScrollRef} className="flex-1 overflow-y-auto p-3 space-y-1 overscroll-y-contain">
-          {sidebarTab === "chats" ? (
-            isLoadingConvs ? (
-              <div className="h-40 flex items-center justify-center">
-                <Loading text="" subtext="" className="py-0 scale-75" />
-              </div>
-            ) : conversations.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground text-sm">
-                No hay conversaciones activas.
-              </div>
-            ) : (
-              conversations.map((conv) => {
-                const isActive = activeConv?.id === conv.id;
-                const lastMsg = conv.messages?.[0];
-                const hasUnread = conv.unreadCount > 0 && !isActive;
-
-                return (
-                  <button
-                    key={conv.id}
-                    onClick={() => setActiveConv(conv)}
-                    className={`w-full text-left p-3.5 sm:p-4 rounded-xl transition-all flex items-center gap-3 border ${isActive
-                      ? "bg-primary border-primary/20 text-primary-foreground shadow-md"
-                      : "bg-transparent border-transparent hover:bg-secondary/40 hover:border-border/40"
-                      }`}
-                  >
-                    <div className="relative flex-shrink-0">
-                      <div
-                        className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm shadow-inner ${isActive ? "bg-primary-foreground/15 text-primary-foreground" : "bg-secondary text-secondary-foreground"
-                          }`}
-                      >
-                        {conv.user?.name?.[0]?.toUpperCase() || <User className="w-5 h-5" />}
-                      </div>
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <h3
-                          className={`text-sm font-semibold truncate ${isActive ? "text-primary-foreground" : "text-foreground"
-                            }`}
-                        >
-                          {conv.user?.name || "Usuario"}
-                        </h3>
-                        {conv.updatedAt && (
-                          <span
-                            className={`text-[10px] flex-shrink-0 ${isActive ? "text-primary-foreground/75" : "text-muted-foreground/60"
-                              }`}
-                          >
-                            {new Date(conv.updatedAt).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between gap-2 mt-1">
-                        <p
-                          className={`text-xs truncate ${isActive ? "text-primary-foreground/90 font-medium" : "text-muted-foreground"
-                            } ${hasUnread && !isActive ? "text-foreground font-bold" : ""}`}
-                        >
-                          {lastMsg?.content || "Inicia una conversación..."}
-                        </p>
-                        {hasUnread && (
-                          <span className="flex-shrink-0 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold px-1.5 animate-pulse shadow-sm shadow-red-500/20 bg-red-500 text-white">
-                            {conv.unreadCount}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })
-            )
-          ) : (
-            // Users list
-            isLoadingUsers ? (
-              <div className="h-40 flex items-center justify-center">
-                <Loading text="" subtext="" className="py-0 scale-75" />
-              </div>
-            ) : usersList.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground text-sm">
-                No se encontraron usuarios.
-              </div>
-            ) : (
-              usersList.map((user) => (
-                <button
-                  key={user.id}
-                  onClick={() => handleSelectUserChat(user.id)}
-                  className="w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 bg-transparent border border-transparent hover:bg-secondary/40 hover:border-border/40 cursor-pointer group"
-                >
-                  <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold text-secondary-foreground text-sm group-hover:bg-primary/10 group-hover:text-primary transition-all">
-                      {user.name?.[0]?.toUpperCase() || <User className="w-4 h-4" />}
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-semibold text-foreground truncate">
-                      {user.name || "Usuario sin nombre"}
-                    </h4>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {user.email}
-                    </p>
-                  </div>
-                  <div className="text-muted-foreground group-hover:text-primary p-1.5 transition-all">
-                    <UserPlus className="w-4 h-4" />
-                  </div>
-                </button>
-              ))
-            )
-          )}
-        </div>
-
-        {/* Users Pagination controls at the bottom of the sidebar if in 'users' tab */}
-        {sidebarTab === "users" && totalPages > 1 && (
-          <div className="p-3 border-t border-border/40 flex items-center justify-between bg-card/60">
-            <button
-              onClick={() => setUsersPage((p) => Math.max(1, p - 1))}
-              disabled={usersPage === 1 || isLoadingUsers}
-              className="p-2 border border-border/60 rounded-xl hover:bg-secondary/60 disabled:opacity-40 disabled:hover:bg-transparent transition-all flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-xs text-muted-foreground font-medium">
-              Página {usersPage} de {totalPages}
-            </span>
-            <button
-              onClick={() => setUsersPage((p) => Math.min(totalPages, p + 1))}
-              disabled={usersPage === totalPages || isLoadingUsers}
-              className="p-2 border border-border/60 rounded-xl hover:bg-secondary/60 disabled:opacity-40 disabled:hover:bg-transparent transition-all flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-      </div>
-
-       {/* Main Area - active conversation detail */}
-       <div
-         className={cn(
-           "flex-1 flex flex-col bg-background relative min-h-0 min-w-0 h-full overflow-hidden",
-           activeConv ? "flex" : "hidden md:flex",
-         )}
-       >
-        {activeConv ? (
-          <>
-            {/* Header */}
-            <div className="px-3 py-3 sm:px-4 md:px-5 md:py-4 border-b border-border/40 flex items-center gap-2 bg-card/20 backdrop-blur-sm z-10 shrink-0">
-              <button
-                onClick={() => setActiveConv(null)}
-                className="md:hidden p-2 hover:bg-secondary rounded-xl transition-all text-muted-foreground hover:text-foreground flex items-center justify-center cursor-pointer shrink-0"
-                title="Volver a la lista"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div className="w-10 h-10 shrink-0 rounded-full bg-secondary flex items-center justify-center font-bold text-secondary-foreground text-sm">
-                {activeConv.user?.name?.[0]?.toUpperCase() || <User className="w-5 h-5" />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <h2 className="text-sm font-semibold text-foreground leading-snug truncate">
-                  {activeConv.user?.name || "Usuario"}
-                </h2>
-                <p className="text-xs text-muted-foreground leading-normal truncate mt-0.5">
-                  {activeConv.user?.email || ""}
-                </p>
-              </div>
-
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="p-2.5 shrink-0 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-all flex items-center justify-center cursor-pointer border border-red-500/20 hover:border-red-500/30 shadow-sm"
-                title="Eliminar Conversación"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Chat Messages */}
-            <div
-              ref={messagesScrollRef}
-              className="flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto space-y-4 bg-secondary/5 min-h-0 overscroll-y-contain"
-              style={keyboardInset > 0 ? { paddingBottom: keyboardInset + 16 } : undefined}
-            >
-              {isLoadingMsgs ? (
-                <div className="h-full flex items-center justify-center">
-                  <Loading text="" subtext="" className="py-0" />
-                </div>
-              ) : (
-                <>
-                  {(() => {
-                    const firstUnreadIndex = messages.findIndex(
-                      (m) => !m.isRead && m.senderRole !== "admin"
-                    );
-                    return messages.map((msg, idx) => {
-                      const isMe = msg.senderRole === "admin";
-                      const isFirstUnread = idx === firstUnreadIndex;
-                      return (
-                        <div
-                          key={msg.id}
-                          ref={isFirstUnread ? firstUnreadRef : null}
-                          className={`flex flex-col max-w-[85%] sm:max-w-[75%] md:max-w-[70%] ${isMe ? "ml-auto items-end" : "mr-auto items-start"
-                            }`}
-                        >
-                          <div
-                            onClick={() => setActiveMessageId(activeMessageId === msg.id ? null : msg.id)}
-                            className={`p-3.5 rounded-2xl text-sm shadow-sm relative group/msg ${isMe
-                              ? "bg-primary text-primary-foreground rounded-tr-none"
-                              : "bg-secondary text-secondary-foreground border border-border/40 rounded-tl-none"
-                              } md:cursor-default cursor-pointer`}
-                          >
-                            {msg.replyTo && (
-                              <div className={`mb-1.5 p-2 rounded-lg text-xs border-l-2 ${isMe
-                                ? "bg-primary-foreground/10 border-primary-foreground/40 text-primary-foreground/80"
-                                : "bg-background/50 border-primary/40 text-muted-foreground"
-                                }`}>
-                                <div className={`font-semibold mb-0.5 ${isMe ? "text-primary-foreground" : "text-primary/80"}`}>
-                                  {msg.replyTo.senderRole === "admin" ? "Tú" : (activeConv?.user?.name || "Cliente")}
-                                </div>
-                                <div className="truncate opacity-90">{msg.replyTo.content}</div>
-                              </div>
-                            )}
-                            {msg.content}
-                            {/* Desktop: hover-based side buttons */}
-                            <div className={`hidden md:flex absolute top-1/2 -translate-y-1/2 opacity-0 group-hover/msg:opacity-100 transition-opacity items-center gap-0.5 ${isMe ? "-left-[60px]" : "-right-[60px]"
-                              }`}>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleCopy(msg.id, msg.content); }}
-                                className="p-1.5 rounded-full hover:bg-secondary/80 text-muted-foreground transition-colors cursor-pointer"
-                                title="Copiar"
-                              >
-                                {copiedId === msg.id ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setReplyingTo(msg);
-                                  setTimeout(() => inputRef.current?.focus(), 50);
-                                }}
-                                className="p-1.5 rounded-full hover:bg-secondary/80 text-muted-foreground transition-colors cursor-pointer"
-                                title="Responder"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>
-                              </button>
-                            </div>
-                          </div>
-                          {/* Mobile: tap-toggled inline buttons below the bubble */}
-                          <AnimatePresence>
-                            {activeMessageId === msg.id && (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0, y: -4 }}
-                                animate={{ opacity: 1, height: "auto", y: 0 }}
-                                exit={{ opacity: 0, height: 0, y: -4 }}
-                                transition={{ duration: 0.15 }}
-                                className={`flex md:hidden items-center gap-1 mt-1 overflow-hidden ${isMe ? "justify-end" : "justify-start"
-                                  }`}
-                              >
-                                <button
-                                  onClick={() => handleCopy(msg.id, msg.content)}
-                                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/60 hover:bg-secondary text-muted-foreground text-[11px] font-medium transition-colors"
-                                >
-                                  {copiedId === msg.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                                  {copiedId === msg.id ? "✓" : "Copiar"}
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setReplyingTo(msg);
-                                    setActiveMessageId(null);
-                                    setTimeout(() => inputRef.current?.focus(), 50);
-                                  }}
-                                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary/60 hover:bg-secondary text-muted-foreground text-[11px] font-medium transition-colors"
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>
-                                  Responder
-                                </button>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                          <span className="text-[10px] text-muted-foreground/70 mt-1 px-1">
-                            {new Date(msg.createdAt).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                        </div>
-                      );
-                    });
-                  })()}
-
-                  {isUserTyping && (
-                    <div className="flex flex-col max-w-[70%] mr-auto items-start animate-pulse">
-                      <div className="p-3.5 rounded-2xl text-xs shadow-sm bg-secondary text-secondary-foreground border border-border/40 rounded-tl-none flex items-center gap-2.5">
-                        <span className="flex space-x-1 items-center">
-                          <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                          <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                          <span className="w-1.5 h-1.5 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
-                        </span>
-                        <span className="text-muted-foreground/90 font-medium">El cliente está escribiendo...</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div ref={messagesEndRef} />
-                </>
-              )}
-            </div>
-
-            {/* Input Box */}
-            <div
-              className="border-t border-border/40 bg-card/20 shrink-0 z-20"
-              style={
-                keyboardInset > 0
-                  ? {
-                      transform: `translateY(-${keyboardInset}px)`,
-                      paddingBottom: "env(safe-area-inset-bottom, 0px)",
-                    }
-                  : { paddingBottom: "env(safe-area-inset-bottom, 0px)" }
-              }
-            >
-              {!isConnected && (
-                <div className="px-4 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-amber-500 text-[11px] font-medium flex items-center gap-1.5 animate-pulse">
-                  <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
-                  Servidor de chat desconectado. Los mensajes no se enviarán hasta restablecer la conexión.
-                </div>
-              )}
-              {replyingTo && (
-                <div className="px-4 py-2.5 bg-secondary/20 border-b border-border/40 flex items-center justify-between">
-                  <div className="flex-1 min-w-0 pr-3 border-l-2 border-primary pl-3">
-                    <div className="text-xs font-semibold text-primary">
-                      Respondiendo a {replyingTo.senderRole === "admin" ? "ti" : (activeConv?.user?.name || "Cliente")}
-                    </div>
-                    <div className="text-sm text-muted-foreground truncate">{replyingTo.content}</div>
-                  </div>
-                  <button
-                    onClick={() => setReplyingTo(null)}
-                    className="p-1.5 hover:bg-secondary rounded-full transition-colors"
-                  >
-                    <X className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                </div>
-              )}
-              <form onSubmit={handleSendMessage} className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={inputMessage}
-                  onChange={handleInputChange}
-                  onFocus={() => {
-                    requestAnimationFrame(() => {
-                      inputRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
-                    });
-                  }}
-                  disabled={!isConnected}
-                  placeholder={isConnected ? "Escribe tu respuesta..." : "Chat desconectado..."}
-                  className="flex-1 h-12 px-4 border border-border/60 hover:border-border/80 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm outline-none bg-secondary/20 transition-all text-foreground disabled:opacity-50"
-                />
-                <button
-                  type="submit"
-                  onMouseDown={(e) => e.preventDefault()}
-                  disabled={!inputMessage.trim() || !isConnected || (config.chat.enableE2EE && !isE2EEReady)}
-                  className="h-12 w-12 flex items-center justify-center rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground disabled:opacity-40 disabled:hover:bg-primary shadow-md transition-all flex-shrink-0 cursor-pointer"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </form>
-            </div>
-          </>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-muted-foreground">
-            <div className="p-5 bg-secondary/50 rounded-full text-muted-foreground/80 mb-5 relative">
-              <MessageSquare className="w-10 h-10" />
-              <Sparkles className="w-4 h-4 text-primary absolute -top-1 -right-1 animate-pulse" />
-            </div>
-            <h2 className="text-foreground/90 font-semibold font-display mb-1 text-base">Comienza a Chatear</h2>
-            <p className="text-muted-foreground max-w-sm text-xs leading-relaxed">
-              Selecciona una conversación de la barra lateral para ver los mensajes y responder en tiempo real.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Premium Confirmation Modal */}
-      <AnimatePresence>
-        {showDeleteConfirm && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowDeleteConfirm(false)}
-              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-            />
-
-            {/* Modal Container */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ type: "spring", duration: 0.4 }}
-              className="relative w-full max-w-md overflow-hidden rounded-2xl border border-border/80 bg-card p-6 shadow-2xl z-10"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="p-3 bg-red-500/10 rounded-full text-red-500 mb-4 shadow-inner">
-                  <Trash2 className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold font-display text-foreground mb-2">
-                  ¿Eliminar conversación?
-                </h3>
-                <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-                  Esta acción es permanente. Se eliminarán en cascada todos los mensajes y el historial del chat para siempre.
-                </p>
-
-                <div className="flex w-full gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteConfirm(false)}
-                    disabled={isDeleting}
-                    className="flex-1 h-11 rounded-xl border border-border bg-secondary hover:bg-secondary/80 text-secondary-foreground font-semibold text-sm transition-all cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDeleteConversation}
-                    disabled={isDeleting}
-                    className="flex-1 h-11 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-500/10 cursor-pointer"
-                  >
-                    {isDeleting ? (
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      "Eliminar"
-                    )}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
+  return (
+    <AdminChatView
+      status={status}
+      session={session}
+      isConnected={isConnected}
+      isEmbedded={isEmbedded}
+      viewportHeight={viewportHeight}
+      keyboardInset={keyboardInset}
+      conversations={conversations}
+      activeConv={activeConv}
+      messages={messages}
+      inputMessage={inputMessage}
+      isLoadingConvs={isLoadingConvs}
+      isLoadingMsgs={isLoadingMsgs}
+      isUserTyping={isUserTyping}
+      showDeleteConfirm={showDeleteConfirm}
+      isDeleting={isDeleting}
+      replyingTo={replyingTo}
+      copiedId={copiedId}
+      activeMessageId={activeMessageId}
+      isE2EEReady={isE2EEReady}
+      sidebarTab={sidebarTab}
+      usersList={usersList}
+      searchQuery={searchQuery}
+      usersPage={usersPage}
+      totalPages={totalPages}
+      isLoadingUsers={isLoadingUsers}
+      setSidebarTab={setSidebarTab}
+      setSearchQuery={setSearchQuery}
+      setUsersPage={setUsersPage}
+      setActiveConv={setActiveConv}
+      handleSelectUserChat={handleSelectUserChat}
+      setShowDeleteConfirm={setShowDeleteConfirm}
+      handleDeleteConversation={handleDeleteConversation}
+      setActiveMessageId={setActiveMessageId}
+      handleCopy={handleCopy}
+      setReplyingTo={setReplyingTo}
+      handleInputChange={handleInputChange}
+      handleSendMessage={handleSendMessage}
+      pageContainerRef={pageContainerRef}
+      sidebarScrollRef={sidebarScrollRef}
+      messagesScrollRef={messagesScrollRef}
+      firstUnreadRef={firstUnreadRef}
+      messagesEndRef={messagesEndRef}
+      inputRef={inputRef}
+    />
   );
 }
 

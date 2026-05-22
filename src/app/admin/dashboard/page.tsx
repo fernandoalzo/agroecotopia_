@@ -105,11 +105,7 @@ function AdminDashboardPageContent() {
     return () => mq.removeEventListener("change", sync);
   }, []);
 
-  // Mobile: full-page chat (iframe breaks keyboard/viewport on iOS & Android)
-  useEffect(() => {
-    if (!isMobile || activeTab !== "chat" || status !== "authenticated" || !isAdmin) return;
-    router.replace("/admin/chat?from=dashboard");
-  }, [isMobile, activeTab, status, isAdmin, router]);
+  // Removed mobile redirect to standalone chat so the dashboard header and hamburger menu stay visible.
 
   // Sync tab with URL
   const handleTabChange = (tab: DashboardTab) => {
@@ -294,7 +290,7 @@ function AdminDashboardPageContent() {
               </motion.div>
             )}
 
-            {activeTab === "chat" && !isMobile && (
+            {activeTab === "chat" && (
               <motion.div
                 key="chat"
                 initial={{ opacity: 0, x: 10 }}
@@ -307,11 +303,7 @@ function AdminDashboardPageContent() {
               </motion.div>
             )}
 
-            {activeTab === "chat" && isMobile && (
-              <div className="flex-1 flex items-center justify-center p-8">
-                <Loading text="Abriendo chat..." subtext="" />
-              </div>
-            )}
+
           </AnimatePresence>
         </div>
       </main>
