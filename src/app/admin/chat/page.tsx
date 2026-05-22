@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSocket } from "@/frontend/context/SocketContext";
@@ -23,7 +23,6 @@ function AdminChatPageContent() {
   const searchParams = useSearchParams();
   const { socket, isConnected } = useSocket();
   const isEmbedded = searchParams.get("embedded") === "true";
-  const fromDashboard = searchParams.get("from") === "dashboard";
 
   const [conversations, setConversations] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [activeConv, setActiveConv] = useState<any>(null);
@@ -38,7 +37,8 @@ function AdminChatPageContent() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [isE2EEReady, setIsE2EEReady] = useState(false);
-  const [isMobileLayout, setIsMobileLayout] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState("100vh");
+  const [keyboardInset, setKeyboardInset] = useState(0);
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -81,35 +81,72 @@ function AdminChatPageContent() {
     activeConvRef.current = activeConv;
   }, [activeConv]);
 
+   // Lock body/html scroll; track viewport for standalone mobile; keyboard inset for embedded iframe
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const syncMobile = () => setIsMobileLayout(mq.matches);
-    syncMobile();
-    mq.addEventListener("change", syncMobile);
-    return () => mq.removeEventListener("change", syncMobile);
-  }, []);
-
-  // Desktop iframe: fill parent without document scroll
-  useEffect(() => {
-    if (!isEmbedded) return;
-
     const html = document.documentElement;
     const body = document.body;
-    const prevHtmlOverflow = html.style.overflow;
-    const prevBodyOverflow = body.style.overflow;
-    const prevHtmlHeight = html.style.height;
-    const prevBodyHeight = body.style.height;
+
+    const originalHtmlHeight = html.style.height;
+    const originalHtmlOverflow = html.style.overflow;
+    const originalHtmlOverscroll = html.style.overscrollBehavior;
+    const originalBodyHeight = body.style.height;
+    const originalBodyOverflow = body.style.overflow;
+    const originalBodyWidth = body.style.width;
+    const originalBodyOverscroll = body.style.overscrollBehavior;
 
     html.style.height = "100%";
     html.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
     body.style.height = "100%";
     body.style.overflow = "hidden";
+    body.style.width = "100%";
+    body.style.overscrollBehavior = "none";
+
+    const vv = window.visualViewport;
+    const isMobile = () => typeof window !== "undefined" && window.innerWidth < 768;
+
+    const updateViewport = () => {
+      if (!vv) {
+        setKeyboardInset(0);
+        return;
+      }
+
+      if (isEmbedded && isMobile()) {
+        // Keep container at iframe height; lift input above on-screen keyboard
+        const inset = Math.max(0, Math.round(window.innerHeight - vv.height - (vv.offsetTop || 0)));
+        setKeyboardInset(inset);
+        return;
+      }
+
+      setKeyboardInset(0);
+      if (!isEmbedded && isMobile()) {
+        setViewportHeight(`${Math.round(vv.height)}px`);
+      }
+    };
+
+    if (vv) {
+      vv.addEventListener("resize", updateViewport);
+      vv.addEventListener("scroll", updateViewport);
+      updateViewport();
+    }
+
+    window.addEventListener("resize", updateViewport);
 
     return () => {
-      html.style.overflow = prevHtmlOverflow;
-      body.style.overflow = prevBodyOverflow;
-      html.style.height = prevHtmlHeight;
-      body.style.height = prevBodyHeight;
+      html.style.height = originalHtmlHeight;
+      html.style.overflow = originalHtmlOverflow;
+      html.style.overscrollBehavior = originalHtmlOverscroll;
+      body.style.height = originalBodyHeight;
+      body.style.overflow = originalBodyOverflow;
+      body.style.width = originalBodyWidth;
+      body.style.overscrollBehavior = originalBodyOverscroll;
+      setKeyboardInset(0);
+
+      if (vv) {
+        vv.removeEventListener("resize", updateViewport);
+        vv.removeEventListener("scroll", updateViewport);
+      }
+      window.removeEventListener("resize", updateViewport);
     };
   }, [isEmbedded]);
 
@@ -514,7 +551,7 @@ function AdminChatPageContent() {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [messages, isUserTyping, isLoadingMsgs]);
+  }, [messages, isUserTyping, isLoadingMsgs, viewportHeight]);
 
   // Handle input change & typing status
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -682,34 +719,15 @@ function AdminChatPageContent() {
     );
   }
 
-  const isMobileFullscreen = !isEmbedded && fromDashboard && isMobileLayout;
-
    return (
       <div
         ref={pageContainerRef}
         className={cn(
-          "flex flex-col md:flex-row bg-background text-foreground font-sans overflow-hidden",
-          isEmbedded && "h-full min-h-0",
-          isMobileFullscreen && "fixed inset-0 top-14 z-30",
-          !isEmbedded && !isMobileFullscreen && "h-[100dvh] pt-14 md:pt-20 md:h-[calc(100vh-5rem)]",
+          "flex flex-col md:flex-row bg-background text-foreground font-sans",
+          isEmbedded ? "h-full min-h-0 overflow-hidden" : "overflow-y-auto pt-14 md:pt-20",
         )}
+        style={isEmbedded ? undefined : { height: viewportHeight }}
       >
-      {fromDashboard && isMobileLayout && (
-        <div className="md:hidden shrink-0 flex items-center gap-2 px-3 py-2.5 border-b border-border/40 bg-card/30">
-          <button
-            type="button"
-            onClick={() => router.push("/admin/dashboard")}
-            className="p-2 hover:bg-secondary rounded-xl transition-all text-muted-foreground hover:text-foreground"
-            aria-label="Volver al panel"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-sm font-semibold font-display truncate">Soporte Chat</h1>
-            <p className="text-[11px] text-muted-foreground truncate">Panel de administración</p>
-          </div>
-        </div>
-      )}
       {/* Sidebar - list of conversations */}
       <div
         className={cn(
@@ -717,7 +735,7 @@ function AdminChatPageContent() {
           activeConv ? "hidden md:flex" : "flex flex-1 md:flex-none md:h-full",
         )}
       >
-        {!isEmbedded && !isMobileFullscreen && (
+        {!isEmbedded && (
           <div className="p-5 border-b border-border/40 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
@@ -920,7 +938,7 @@ function AdminChatPageContent() {
          )}
        >
         {activeConv ? (
-          <div className="flex flex-1 flex-col min-h-0 h-full w-full overflow-hidden bg-background">
+          <>
             {/* Header */}
             <div className="px-3 py-3 sm:px-4 md:px-5 md:py-4 border-b border-border/40 flex items-center gap-2 bg-card/20 backdrop-blur-sm z-10 shrink-0">
               <button
@@ -955,6 +973,7 @@ function AdminChatPageContent() {
             <div
               ref={messagesScrollRef}
               className="flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto space-y-4 bg-secondary/5 min-h-0 overscroll-y-contain"
+              style={keyboardInset > 0 ? { paddingBottom: keyboardInset + 16 } : undefined}
             >
               {isLoadingMsgs ? (
                 <div className="h-full flex items-center justify-center">
@@ -1079,9 +1098,17 @@ function AdminChatPageContent() {
               )}
             </div>
 
+            {/* Input Box */}
             <div
-              className="border-t border-border/40 bg-card/20 shrink-0"
-              style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+              className="border-t border-border/40 bg-card/20 shrink-0 z-20"
+              style={
+                keyboardInset > 0
+                  ? {
+                      transform: `translateY(-${keyboardInset}px)`,
+                      paddingBottom: "env(safe-area-inset-bottom, 0px)",
+                    }
+                  : { paddingBottom: "env(safe-area-inset-bottom, 0px)" }
+              }
             >
               {!isConnected && (
                 <div className="px-4 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-amber-500 text-[11px] font-medium flex items-center gap-1.5 animate-pulse">
@@ -1111,13 +1138,11 @@ function AdminChatPageContent() {
                   type="text"
                   value={inputMessage}
                   onChange={handleInputChange}
-                   onFocus={(e) => {
-                     window.setTimeout(() => {
-                       if (e.currentTarget) {
-                         e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" });
-                       }
-                     }, 400);
-                   }}
+                  onFocus={() => {
+                    requestAnimationFrame(() => {
+                      inputRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+                    });
+                  }}
                   disabled={!isConnected}
                   placeholder={isConnected ? "Escribe tu respuesta..." : "Chat desconectado..."}
                   className="flex-1 h-12 px-4 border border-border/60 hover:border-border/80 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm outline-none bg-secondary/20 transition-all text-foreground disabled:opacity-50"
@@ -1132,7 +1157,7 @@ function AdminChatPageContent() {
                 </button>
               </form>
             </div>
-          </div>
+          </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-muted-foreground">
             <div className="p-5 bg-secondary/50 rounded-full text-muted-foreground/80 mb-5 relative">
