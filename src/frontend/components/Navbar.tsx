@@ -42,9 +42,10 @@ const Navbar = () => {
   // on every render (session is a new object reference each time from NextAuth).
   const isAdmin = session?.user?.role === "admin";
   const userId = session?.user?.id;
+  const shouldLoadAdminUnread = isAdmin && !pathname?.startsWith("/admin/dashboard");
 
   useEffect(() => {
-    if (!isAdmin) {
+    if (!shouldLoadAdminUnread) {
       setUnreadCount(0);
       return;
     }
@@ -84,7 +85,7 @@ const Navbar = () => {
         socket.off("conversation_deleted", loadUnreadCount);
       }
     };
-  }, [isAdmin, userId, socket]);
+  }, [shouldLoadAdminUnread, userId, socket]);
 
   const isAuthenticated = !!session?.user;
   const userName = session?.user?.name ?? (t.navbar?.usuario ?? "Usuario");

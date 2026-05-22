@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { getAdminConversations } from "@/backend/modules/chat/chat.actions";
+import { AdminChatPageContent } from "@/app/admin/chat/page";
 import logger from "@/utils/logger";
 
 const log = logger.child();
@@ -299,7 +300,7 @@ function AdminDashboardPageContent() {
                 transition={{ duration: 0.2 }}
                 className="flex-1 min-h-0 h-full w-full"
               >
-                <AdminChatEmbed />
+                <AdminChatPageContent embedded />
               </motion.div>
             )}
 
@@ -312,18 +313,6 @@ function AdminDashboardPageContent() {
         </div>
       </main>
     </div>
-  );
-}
-
-/** Desktop only — mobile uses /admin/chat full page (keyboard + viewport work there) */
-function AdminChatEmbed() {
-  return (
-    <iframe
-      src="/admin/chat?embedded=true"
-      className="w-full h-full border-0 rounded-none"
-      title="Soporte Chat"
-      allow="clipboard-write"
-    />
   );
 }
 

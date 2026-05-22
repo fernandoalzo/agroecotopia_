@@ -17,12 +17,12 @@ import logger from "@/utils/logger";
 
 const log = logger.child("src/app/admin/chat/page.tsx");
 
-function AdminChatPageContent() {
+export function AdminChatPageContent({ embedded = false }: { embedded?: boolean } = {}) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { socket, isConnected } = useSocket();
-  const isEmbedded = searchParams.get("embedded") === "true";
+  const isEmbedded = embedded || searchParams.get("embedded") === "true";
 
   const [conversations, setConversations] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [activeConv, setActiveConv] = useState<any>(null);
