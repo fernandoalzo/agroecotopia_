@@ -17,12 +17,45 @@ import logger from "@/utils/logger";
 
 const log = logger.child("src/app/admin/chat/page.tsx");
 
+type AdminConversationsResult = Awaited<ReturnType<typeof getAdminConversations>>;
+
+let adminConversationsBootstrap:
+  | {
+      userId: string;
+      expiresAt: number;
+      promise: Promise<AdminConversationsResult>;
+    }
+  | null = null;
+
+function getBootstrappedAdminConversations(userId: string) {
+  const now = Date.now();
+  if (adminConversationsBootstrap && adminConversationsBootstrap.userId === userId && adminConversationsBootstrap.expiresAt > now) {
+    return adminConversationsBootstrap.promise;
+  }
+
+  const promise = getAdminConversations();
+  adminConversationsBootstrap = {
+    userId,
+    expiresAt: now + 5000,
+    promise,
+  };
+
+  promise.catch(() => {
+    if (adminConversationsBootstrap?.promise === promise) {
+      adminConversationsBootstrap = null;
+    }
+  });
+
+  return promise;
+}
+
 export function AdminChatPageContent({ embedded = false }: { embedded?: boolean } = {}) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { socket, isConnected } = useSocket();
   const isEmbedded = embedded || searchParams.get("embedded") === "true";
+  const isDashboardMobileEntry = searchParams.get("from") === "dashboard";
 
   const [conversations, setConversations] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [activeConv, setActiveConv] = useState<any>(null);
@@ -176,10 +209,10 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
-    } else if (status === "authenticated" && session?.user?.role === "admin" && !isEmbedded) {
+    } else if (status === "authenticated" && session?.user?.role === "admin" && !isEmbedded && !isDashboardMobileEntry) {
       router.replace("/admin/dashboard?tab=chat");
     }
-  }, [status, router, isEmbedded, session?.user?.role]);
+  }, [status, router, isEmbedded, isDashboardMobileEntry, session?.user?.role]);
 
   // Load conversations list and init E2EE
   // IMPORTANT: Use stable primitive deps to prevent re-running on every render
@@ -207,7 +240,7 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
 
     const loadConversations = async () => {
       try {
-        const res = await getAdminConversations();
+        const res = await getBootstrappedAdminConversations(sessionUserId);
         if (isCancelled) return;
         log.debug("DEBUG: Admin conversations loaded:", JSON.stringify(res, null, 2));
         if (res && !("error" in res)) {

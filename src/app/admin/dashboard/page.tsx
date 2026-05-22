@@ -59,7 +59,10 @@ function AdminDashboardPageContent() {
 
   // Track unread chat count
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAdmin || activeTab === "chat") {
+      setUnreadCount(0);
+      return;
+    }
     let isCancelled = false;
 
     const loadUnread = async () => {
@@ -90,7 +93,7 @@ function AdminDashboardPageContent() {
         socket.off("conversation_deleted", loadUnread);
       }
     };
-  }, [isAdmin, userId, socket]);
+  }, [isAdmin, userId, socket, activeTab]);
 
   const [isMobile, setIsMobile] = useState(false);
 
