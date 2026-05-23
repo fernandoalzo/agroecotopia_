@@ -1,178 +1,3 @@
-// "use client";
-
-// import { AnimatePresence, motion } from "framer-motion";
-// import { MessageSquare, X } from "lucide-react";
-// import { useChatWidget } from "./useChatWidget";
-// import { ChatHeader } from "./ChatHeader";
-// import { ChatMessageList } from "./ChatMessageList";
-// import { ChatInput } from "./ChatInput";
-// import { ChatDeleteConfirm } from "./ChatDeleteConfirm";
-
-// export interface Message {
-//   id: string;
-//   content: string;
-//   senderId: string;
-//   senderRole: string;
-//   conversationId: string;
-//   isRead: boolean;
-//   isEncrypted?: boolean;
-//   encryptionType?: number;
-//   createdAt: Date | string;
-//   updatedAt: Date | string;
-//   replyToId?: string | null;
-//   replyTo?: {
-//     id: string;
-//     content: string;
-//     senderId: string;
-//     senderRole: string;
-//     isEncrypted?: boolean;
-//     encryptionType?: number;
-//   } | null;
-// }
-
-// export interface ChatWidgetProps {
-//   forceShow?: boolean;
-//   targetUserId?: string;
-// }
-
-// export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidgetProps = {}) {
-//   const chat = useChatWidget(forceShow, targetUserId);
-
-//   if (!chat.isClient || chat.status !== "authenticated") return null;
-//   if (!forceShow && (chat.isRouteAdmin || chat.isAdminUser)) return null;
-
-//   const isMobileOpen = chat.isClient && chat.isOpen && window.innerWidth < 768;
-
-//   return (
-//     <>
-//       {/* Backdrop */}
-//       <AnimatePresence>
-//         {chat.isOpen && (
-//           <motion.div
-//             initial={{ opacity: 0 }}
-//             animate={{ opacity: 1 }}
-//             exit={{ opacity: 0 }}
-//             transition={{ duration: 0.3 }}
-//             onClick={() => chat.setIsOpen(false)}
-//             className="fixed inset-0 bg-black/35 backdrop-blur-[3px] z-[998] cursor-pointer"
-//           />
-//         )}
-//       </AnimatePresence>
-
-//       <div
-//         className={isMobileOpen
-//           ? "fixed inset-x-0 top-0 bottom-auto z-[999] font-sans"
-//           : "fixed bottom-5 right-5 z-[999] md:bottom-8 md:right-8 font-sans"
-//         }
-//         style={isMobileOpen ? { height: chat.viewportHeight } : undefined}
-//       >
-//         <AnimatePresence>
-//           {chat.isOpen && (
-//             <motion.div
-//               initial={{ opacity: 0, y: 50, scale: 0.95 }}
-//               animate={{ opacity: 1, y: 0, scale: 1 }}
-//               exit={{ opacity: 0, y: 50, scale: 0.95 }}
-//               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-//               ref={chat.chatContainerRef}
-//               className="relative w-full h-full md:absolute md:inset-auto md:bottom-20 md:right-0 md:w-[380px] md:h-[580px] md:rounded-2xl md:border md:border-border/80 md:shadow-2xl flex flex-col overflow-hidden bg-background z-50"
-//             >
-//               <ChatHeader
-//                 title={chat.t.title}
-//                 isConnected={chat.isConnected}
-//                 isE2EEReady={chat.isE2EEReady}
-//                 isAdminUser={chat.isAdminUser}
-//                 targetUserId={targetUserId}
-//                 targetUserName={chat.targetUserName}
-//                 conversationId={chat.conversation?.id}
-//                 onlineLabel={chat.t.online}
-//                 offlineLabel={chat.t.offline}
-//                 tooltipClear={chat.t.tooltipClear}
-//                 onClose={() => chat.setIsOpen(false)}
-//                 onDeleteClick={() => chat.setShowDeleteConfirm(true)}
-//               />
-
-//               <ChatMessageList
-//                 messages={chat.messages}
-//                 isLoading={chat.isLoading}
-//                 isAdminTyping={chat.isAdminTyping}
-//                 isOpen={chat.isOpen}
-//                 copiedId={chat.copiedId}
-//                 activeMessageId={chat.activeMessageId}
-//                 sessionUserId={chat.session?.user?.id ?? ""}
-//                 chatTitle={chat.t.title}
-//                 noMessagesText={chat.t.noMessages}
-//                 typingText={chat.t.typing}
-//                 messagesScrollRef={chat.messagesScrollRef}
-//                 messagesEndRef={chat.messagesEndRef}
-//                 firstUnreadRef={chat.firstUnreadRef}
-//                 onCopy={chat.handleCopy}
-//                 onReply={(msg) => {
-//                   chat.setReplyingTo(msg);
-//                   chat.setActiveMessageId(null);
-//                   setTimeout(() => chat.inputRef.current?.focus(), 50);
-//                 }}
-//                 onToggleActive={(id) =>
-//                   chat.setActiveMessageId(chat.activeMessageId === id ? null : id)
-//                 }
-//               />
-
-//               <ChatInput
-//                 inputMessage={chat.inputMessage}
-//                 isConnected={chat.isConnected}
-//                 isE2EEReady={chat.isE2EEReady}
-//                 replyingTo={chat.replyingTo}
-//                 sessionUserId={chat.session?.user?.id ?? ""}
-//                 chatTitle={chat.t.title}
-//                 placeholder={chat.t.placeholder}
-//                 disconnectedPlaceholder={chat.t.disconnectedPlaceholder}
-//                 disconnectedWarning={chat.t.disconnectedWarning}
-//                 replyingToLabel={chat.t.replyingTo}
-//                 inputRef={chat.inputRef}
-//                 onInputChange={chat.handleInputChange}
-//                 onSubmit={chat.handleSendMessage}
-//                 onCancelReply={() => chat.setReplyingTo(null)}
-//               />
-
-//               <AnimatePresence>
-//                 {chat.showDeleteConfirm && (
-//                   <ChatDeleteConfirm
-//                     isDeleting={chat.isDeleting}
-//                     title={chat.t.clearConfirmTitle}
-//                     description={chat.t.clearConfirmDesc}
-//                     confirmLabel={chat.t.clearConfirmBtn}
-//                     cancelLabel={chat.t.cancelBtn}
-//                     onConfirm={chat.handleDeleteConversation}
-//                     onCancel={() => chat.setShowDeleteConfirm(false)}
-//                   />
-//                 )}
-//               </AnimatePresence>
-//             </motion.div>
-//           )}
-//         </AnimatePresence>
-
-//         {/* Floating button */}
-//         <button
-//           onClick={() => chat.setIsOpen(!chat.isOpen)}
-//           aria-label="Abrir chat de soporte"
-//           className={`relative h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-110 md:h-16 md:w-16 ${chat.isOpen ? "hidden md:flex" : "flex"
-//             }`}
-//         >
-//           {chat.isOpen ? <X className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
-//           {chat.unreadCount > 0 && (
-//             <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white animate-pulse shadow-md shadow-red-500/30 border-2 border-background">
-//               {chat.unreadCount}
-//             </span>
-//           )}
-//         </button>
-//       </div>
-//     </>
-//   );
-// }
-
-
-
-// ChatWidget.tsx
-
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
@@ -210,21 +35,13 @@ export interface ChatWidgetProps {
   targetUserId?: string;
 }
 
-export default function ChatWidget({
-  forceShow = false,
-  targetUserId,
-}: ChatWidgetProps = {}) {
+export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidgetProps = {}) {
   const chat = useChatWidget(forceShow, targetUserId);
 
   if (!chat.isClient || chat.status !== "authenticated") return null;
   if (!forceShow && (chat.isRouteAdmin || chat.isAdminUser)) return null;
 
-  const isMobile =
-    chat.isClient &&
-    typeof window !== "undefined" &&
-    window.innerWidth < 768;
-
-  const isMobileOpen = isMobile && chat.isOpen;
+  const isMobileOpen = chat.isClient && chat.isOpen && window.innerWidth < 768;
 
   return (
     <>
@@ -235,57 +52,29 @@ export default function ChatWidget({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.3 }}
             onClick={() => chat.setIsOpen(false)}
-            className="fixed inset-0 bg-black/35 backdrop-blur-[3px] z-[998]"
+            className="fixed inset-0 bg-black/35 backdrop-blur-[3px] z-[998] cursor-pointer"
           />
         )}
       </AnimatePresence>
 
       <div
-        className={
-          isMobileOpen
-            ? "fixed inset-0 z-[999] font-sans"
-            : "fixed bottom-5 right-5 z-[999] md:bottom-8 md:right-8 font-sans"
+        className={isMobileOpen
+          ? "fixed inset-x-0 top-0 bottom-auto z-[999] font-sans"
+          : "fixed bottom-5 right-5 z-[999] md:bottom-8 md:right-8 font-sans"
         }
-        style={
-          isMobileOpen
-            ? {
-              height: "100dvh",
-            }
-            : undefined
-        }
+        style={isMobileOpen ? { height: chat.viewportHeight } : undefined}
       >
         <AnimatePresence>
           {chat.isOpen && (
             <motion.div
-              initial={{
-                opacity: 0,
-                y: 20,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              exit={{
-                opacity: 0,
-                y: 20,
-              }}
-              transition={{
-                type: "spring",
-                damping: 24,
-                stiffness: 260,
-              }}
+              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.95 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
               ref={chat.chatContainerRef}
-              className={`
-                bg-background z-50 flex flex-col overflow-hidden
-                w-full h-full
-                md:absolute md:bottom-20 md:right-0
-                md:w-[380px] md:h-[580px]
-                md:rounded-2xl
-                md:border md:border-border/80
-                md:shadow-2xl
-              `}
+              className="relative w-full h-full md:absolute md:inset-auto md:bottom-20 md:right-0 md:w-[380px] md:h-[580px] md:rounded-2xl md:border md:border-border/80 md:shadow-2xl flex flex-col overflow-hidden bg-background z-50"
             >
               <ChatHeader
                 title={chat.t.title}
@@ -302,66 +91,47 @@ export default function ChatWidget({
                 onDeleteClick={() => chat.setShowDeleteConfirm(true)}
               />
 
-              {/* IMPORTANT:
-                  SOLO ESTA ZONA HACE SCROLL */}
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <ChatMessageList
-                  messages={chat.messages}
-                  isLoading={chat.isLoading}
-                  isAdminTyping={chat.isAdminTyping}
-                  isOpen={chat.isOpen}
-                  copiedId={chat.copiedId}
-                  activeMessageId={chat.activeMessageId}
-                  sessionUserId={chat.session?.user?.id ?? ""}
-                  chatTitle={chat.t.title}
-                  noMessagesText={chat.t.noMessages}
-                  typingText={chat.t.typing}
-                  messagesScrollRef={chat.messagesScrollRef}
-                  messagesEndRef={chat.messagesEndRef}
-                  firstUnreadRef={chat.firstUnreadRef}
-                  onCopy={chat.handleCopy}
-                  onReply={(msg) => {
-                    chat.setReplyingTo(msg);
-                    chat.setActiveMessageId(null);
+              <ChatMessageList
+                messages={chat.messages}
+                isLoading={chat.isLoading}
+                isAdminTyping={chat.isAdminTyping}
+                isOpen={chat.isOpen}
+                copiedId={chat.copiedId}
+                activeMessageId={chat.activeMessageId}
+                sessionUserId={chat.session?.user?.id ?? ""}
+                chatTitle={chat.t.title}
+                noMessagesText={chat.t.noMessages}
+                typingText={chat.t.typing}
+                messagesScrollRef={chat.messagesScrollRef}
+                messagesEndRef={chat.messagesEndRef}
+                firstUnreadRef={chat.firstUnreadRef}
+                onCopy={chat.handleCopy}
+                onReply={(msg) => {
+                  chat.setReplyingTo(msg);
+                  chat.setActiveMessageId(null);
+                  setTimeout(() => chat.inputRef.current?.focus(), 50);
+                }}
+                onToggleActive={(id) =>
+                  chat.setActiveMessageId(chat.activeMessageId === id ? null : id)
+                }
+              />
 
-                    setTimeout(() => {
-                      chat.inputRef.current?.focus();
-                    }, 50);
-                  }}
-                  onToggleActive={(id) =>
-                    chat.setActiveMessageId(
-                      chat.activeMessageId === id
-                        ? null
-                        : id
-                    )
-                  }
-                />
-              </div>
-
-              <div className="shrink-0">
-                <ChatInput
-                  inputMessage={chat.inputMessage}
-                  isConnected={chat.isConnected}
-                  isE2EEReady={chat.isE2EEReady}
-                  replyingTo={chat.replyingTo}
-                  sessionUserId={chat.session?.user?.id ?? ""}
-                  chatTitle={chat.t.title}
-                  placeholder={chat.t.placeholder}
-                  disconnectedPlaceholder={
-                    chat.t.disconnectedPlaceholder
-                  }
-                  disconnectedWarning={
-                    chat.t.disconnectedWarning
-                  }
-                  replyingToLabel={chat.t.replyingTo}
-                  inputRef={chat.inputRef}
-                  onInputChange={chat.handleInputChange}
-                  onSubmit={chat.handleSendMessage}
-                  onCancelReply={() =>
-                    chat.setReplyingTo(null)
-                  }
-                />
-              </div>
+              <ChatInput
+                inputMessage={chat.inputMessage}
+                isConnected={chat.isConnected}
+                isE2EEReady={chat.isE2EEReady}
+                replyingTo={chat.replyingTo}
+                sessionUserId={chat.session?.user?.id ?? ""}
+                chatTitle={chat.t.title}
+                placeholder={chat.t.placeholder}
+                disconnectedPlaceholder={chat.t.disconnectedPlaceholder}
+                disconnectedWarning={chat.t.disconnectedWarning}
+                replyingToLabel={chat.t.replyingTo}
+                inputRef={chat.inputRef}
+                onInputChange={chat.handleInputChange}
+                onSubmit={chat.handleSendMessage}
+                onCancelReply={() => chat.setReplyingTo(null)}
+              />
 
               <AnimatePresence>
                 {chat.showDeleteConfirm && (
@@ -372,9 +142,7 @@ export default function ChatWidget({
                     confirmLabel={chat.t.clearConfirmBtn}
                     cancelLabel={chat.t.cancelBtn}
                     onConfirm={chat.handleDeleteConversation}
-                    onCancel={() =>
-                      chat.setShowDeleteConfirm(false)
-                    }
+                    onCancel={() => chat.setShowDeleteConfirm(false)}
                   />
                 )}
               </AnimatePresence>
@@ -386,32 +154,12 @@ export default function ChatWidget({
         <button
           onClick={() => chat.setIsOpen(!chat.isOpen)}
           aria-label="Abrir chat de soporte"
-          className={`
-            relative h-14 w-14 items-center justify-center
-            rounded-full bg-primary text-primary-foreground
-            shadow-lg transition-transform hover:scale-110
-            md:h-16 md:w-16
-            ${chat.isOpen ? "hidden md:flex" : "flex"}
-          `}
+          className={`relative h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-110 md:h-16 md:w-16 ${chat.isOpen ? "hidden md:flex" : "flex"
+            }`}
         >
-          {chat.isOpen ? (
-            <X className="h-6 w-6" />
-          ) : (
-            <MessageSquare className="h-6 w-6" />
-          )}
-
+          {chat.isOpen ? <X className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
           {chat.unreadCount > 0 && (
-            <span
-              className="
-                absolute -top-1 -right-1
-                flex h-6 w-6 items-center justify-center
-                rounded-full bg-red-500
-                text-[11px] font-bold text-white
-                animate-pulse shadow-md
-                shadow-red-500/30
-                border-2 border-background
-              "
-            >
+            <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white animate-pulse shadow-md shadow-red-500/30 border-2 border-background">
               {chat.unreadCount}
             </span>
           )}
