@@ -249,8 +249,8 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
                                       <motion.svg
                                         initial={{ scale: 0 }}
                                         animate={{ scale: 1 }}
-                                        className="w-3.5 h-3.5 stroke-current stroke-[3.5] text-primary-foreground" 
-                                        viewBox="0 0 24 24" 
+                                        className="w-3.5 h-3.5 stroke-current stroke-[3.5] text-primary-foreground"
+                                        viewBox="0 0 24 24"
                                         fill="none"
                                       >
                                         <polyline points="20 6 9 17 4 12" />
@@ -266,8 +266,8 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
                               <div className="flex items-center gap-2">
                                 <span className={cn(
                                   "text-xs px-2 py-0.5 rounded-full font-semibold transition-colors duration-350",
-                                  isChecked 
-                                    ? "bg-primary/20 text-primary" 
+                                  isChecked
+                                    ? "bg-primary/20 text-primary"
                                     : "bg-muted text-muted-foreground/70 group-hover:bg-primary/10 group-hover:text-primary"
                                 )}>
                                   {count}
