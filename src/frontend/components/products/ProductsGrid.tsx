@@ -42,7 +42,7 @@ export function ProductsGrid({
                 {row.map((p, index) => (
                   <motion.div
                     layout
-                    key={p.slug}
+                    key={p.id}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
@@ -65,7 +65,7 @@ export function ProductsGrid({
             {products.map((p, index) => (
               <motion.div
                 layout
-                key={p.slug}
+                key={p.id}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}

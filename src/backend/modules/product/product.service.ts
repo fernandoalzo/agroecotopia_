@@ -53,6 +53,19 @@ export class ProductService {
   }
 
   /**
+   * Crea un nuevo producto en la base de datos.
+   */
+  async createProduct(data: Omit<Product, "id" | "createdAt" | "updatedAt">): Promise<any> {
+    try {
+      const created = await this.productRepository.createProduct(data);
+      return this.serializeProduct(created);
+    } catch (error: any) {
+      log.error(`Error creating product:`, error);
+      throw new Error("No se pudo crear el producto. Verifique los datos ingresados.");
+    }
+  }
+
+  /**
    * Obtiene todas las categorías únicas de la base de datos.
    */
   async getCategories(): Promise<string[]> {
@@ -61,6 +74,34 @@ export class ProductService {
     } catch (error) {
       log.error("Error in getCategories:", error);
       return [];
+    }
+  }
+
+  /**
+   * Actualiza un producto existente en la base de datos.
+   */
+  async updateProduct(id: string, data: Partial<Product>): Promise<any> {
+    try {
+      // Data pre-processing if necessary (e.g. converting stock to Decimal if passed as number)
+      const updateData = { ...data };
+      
+      const updated = await this.productRepository.updateProduct(id, updateData);
+      return this.serializeProduct(updated);
+    } catch (error) {
+      log.error(`Error updating product ${id}:`, error);
+      throw new Error("No se pudo actualizar el producto. Verifique los datos ingresados.");
+    }
+  }
+
+  /**
+   * Elimina un producto de la base de datos.
+   */
+  async deleteProduct(id: string): Promise<boolean> {
+    try {
+      await this.productRepository.deleteProduct(id);
+      return true;
+    } catch (error) {
+      throw new Error("No se pudo eliminar el producto. Puede que esté asociado a pedidos existentes.");
     }
   }
 

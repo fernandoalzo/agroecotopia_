@@ -4,7 +4,7 @@ export interface Product {
   name: string;
   description: string;
   price: number;
-  categoria: string;
+  categories: { id: string; name: string }[];
   unidad: string;
   tag: string;
   emoji: string;

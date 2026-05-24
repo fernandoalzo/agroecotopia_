@@ -246,27 +246,49 @@ export const AdminOrdersList = () => {
             </Button>
 
             <div className="flex items-center gap-1 px-1">
-              {[...Array(totalPages)].map((_, i) => {
-                const pageNum = i + 1;
-                // Render a smart window of page numbers if there are too many (simple slice here since totalPages is usually small)
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={currentPage === pageNum ? "default" : "outline"}
-                    size="sm"
-                    className={cn(
-                      "h-9 w-9 rounded-xl font-bold transition-all",
-                      currentPage === pageNum
-                        ? "shadow-md shadow-primary/20"
-                        : "border-border/50 hover:bg-primary/5 hover:text-primary"
-                    )}
-                    disabled={loading}
-                    onClick={() => setCurrentPage(pageNum)}
-                  >
-                    {pageNum}
-                  </Button>
-                );
-              })}
+              {(() => {
+                const getVisiblePages = () => {
+                  if (totalPages <= 7) {
+                    return Array.from({ length: totalPages }, (_, i) => i + 1);
+                  }
+                  if (currentPage <= 4) {
+                    return [1, 2, 3, 4, 5, "...", totalPages];
+                  }
+                  if (currentPage >= totalPages - 3) {
+                    return [1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+                  }
+                  return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
+                };
+
+                return getVisiblePages().map((page, index) => {
+                  if (page === "...") {
+                    return (
+                      <span key={`ellipsis-${index}`} className="px-2 text-muted-foreground font-bold">
+                        ...
+                      </span>
+                    );
+                  }
+                  
+                  const pageNum = page as number;
+                  return (
+                    <Button
+                      key={`page-${pageNum}`}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      className={cn(
+                        "h-9 w-9 rounded-xl font-bold transition-all",
+                        currentPage === pageNum
+                          ? "shadow-md shadow-primary/20"
+                          : "border-border/50 hover:bg-primary/5 hover:text-primary"
+                      )}
+                      disabled={loading}
+                      onClick={() => setCurrentPage(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                });
+              })()}
             </div>
 
             <Button

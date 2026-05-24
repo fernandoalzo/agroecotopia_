@@ -30,7 +30,7 @@ const ProductModal = ({ product, isOpen, onClose, viewOnly = false }: ProductMod
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
 
-  const productTranslation = t.products.items[product.slug] || {
+  const productTranslation = t.products.items[product.id!] || {
     name: product.name,
     description: product.description,
     unit: product.unidad
@@ -85,7 +85,7 @@ const ProductModal = ({ product, isOpen, onClose, viewOnly = false }: ProductMod
                 )}
                 {/* Tag moved to details for a cleaner aesthetic */}
 
-                {product.images && product.images.length > 0 ? (
+                {product.images && product.images.length > 0 && product.images[0]?.trim() !== "" ? (
                   <Carousel className="w-full max-w-[240px] md:max-w-[300px]" opts={{ align: "center", loop: true }}>
                     <CarouselContent>
                       {product.images.map((photo, index) => (
@@ -97,12 +97,12 @@ const ProductModal = ({ product, isOpen, onClose, viewOnly = false }: ProductMod
                             className="flex aspect-square items-center justify-center p-2 relative w-full h-full"
                           >
                             <Image
-                              src={getDeterministicImage(photo, `${product.slug}-${index}`)}
+                              src={getDeterministicImage(photo, `${product.id!}-${index}`)}
                               alt={`${productTranslation.name} - Vista ${index + 1}`}
                               fill
                               sizes="(max-width: 768px) 100vw, 320px"
                               className="object-cover rounded-2xl shadow-2xl ring-1 ring-white/10 dark:ring-white/5 transform transition-transform group-hover/modal:scale-105 duration-700 ease-out cursor-zoom-in"
-                              onClick={() => setExpandedImage(getDeterministicImage(photo, `${product.slug}-${index}`))}
+                              onClick={() => setExpandedImage(getDeterministicImage(photo, `${product.id!}-${index}`))}
                             />
                           </motion.div>
                         </CarouselItem>
@@ -122,7 +122,7 @@ const ProductModal = ({ product, isOpen, onClose, viewOnly = false }: ProductMod
                     animate={{ scale: 1, opacity: 1 }}
                     className="text-8xl md:text-9xl drop-shadow-[0_0_50px_rgba(var(--primary),0.3)] select-none"
                   >
-                    {product.emoji}
+                    {product.emoji || "📦"}
                   </motion.div>
                 )}
               </div>
@@ -133,7 +133,7 @@ const ProductModal = ({ product, isOpen, onClose, viewOnly = false }: ProductMod
                   <div className="flex flex-wrap items-center gap-4 mb-2">
                     <div className="flex items-center gap-1.5 text-primary dark:text-[#10b981] uppercase font-black text-[10px] tracking-[0.2em] drop-shadow-sm">
                       <Tag className="w-3.5 h-3.5" />
-                      {product.categoria}
+                      {product.categories.map((c: any) => c.name).join(", ")}
                     </div>
                     {product.tag && (
                       <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-600 text-white dark:text-black uppercase font-black text-[10px] tracking-[0.2em] px-2.5 py-1 rounded-md shadow-lg border border-white/20">

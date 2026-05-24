@@ -58,19 +58,80 @@ export async function getCategoriesAction(): Promise<string[]> {
 }
 
 /**
+ * Server Action para obtener el conteo de productos por categoría
+ */
+export async function getCategoryCountsAction(): Promise<Record<string, number>> {
+  try {
+    return await productService.getCategoryCounts();
+  } catch (error) {
+    log.error("Error getting category counts:", error);
+    return {};
+  }
+}
+
+/**
+ * Server Action: Create a product (ADMIN ONLY)
+ */
+export async function createProductAction(data: any) {
+  return withAdmin(async () => {
+    log.info(`Admin creating product: ${data.name}`);
+    
+    try {
+      const newProduct = await productService.createProduct(data);
+      
+      // Revalidate UI
+      revalidatePath("/admin/dashboard");
+      revalidatePath("/productos");
+      
+      return { success: true, message: "Producto creado correctamente.", product: newProduct };
+    } catch (error: any) {
+      log.error(`Error in createProductAction for ${data.name}:`, error);
+      return { success: false, message: error.message || "Error al crear el producto." };
+    }
+  });
+}
+
+/**
+ * Server Action: Update a product (ADMIN ONLY)
+ */
+export async function updateProductAction(id: string, data: Partial<Product>) {
+  return withAdmin(async () => {
+    log.info(`Admin updating product: ${id}`);
+    
+    try {
+      const updatedProduct = await productService.updateProduct(id, data);
+      
+      // Revalidate UI
+      revalidatePath("/admin/dashboard");
+      revalidatePath("/productos");
+      
+      return { success: true, message: "Producto actualizado correctamente.", product: updatedProduct };
+    } catch (error: any) {
+      log.error(`Error in updateProductAction for ${id}:`, error);
+      return { success: false, message: error.message || "Error al actualizar el producto." };
+    }
+  });
+}
+
+/**
  * Server Action: Delete a product (ADMIN ONLY)
  * Demonstrates the use of the new RBAC guards as an alternative to middleware.
  */
 export async function deleteProductAction(productId: string) {
   return withAdmin(async () => {
-    // 1. Perform admin logic safely
     log.info(`Admin deleting product: ${productId}`);
     
-    // Example: await productService.delete(productId);
-    
-    // 2. Revalidate UI
-    revalidatePath("/products");
-    
-    return { success: true, message: "Producto eliminado correctamente." };
+    try {
+      await productService.deleteProduct(productId);
+      
+      // Revalidate UI
+      revalidatePath("/admin/dashboard");
+      revalidatePath("/productos");
+      
+      return { success: true, message: "Producto eliminado correctamente." };
+    } catch (error: any) {
+      log.error(`Error in deleteProductAction for ${productId}:`, error);
+      return { success: false, message: error.message || "Error al eliminar el producto." };
+    }
   });
 }

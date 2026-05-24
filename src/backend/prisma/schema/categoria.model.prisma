@@ -1,0 +1,5 @@
+model Categoria {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  products Product[]
+}

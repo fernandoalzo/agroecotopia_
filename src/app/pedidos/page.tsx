@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 import { Package, ArrowLeft, LayoutDashboard, History } from "lucide-react";
 import Link from "next/link";
 import { OrdersList } from "@/components/orders/OrdersList";
-import { AdminOrdersList } from "@/components/admin/AdminOrdersList";
+import { AdminOrdersList } from "@/components/admin/pedidos/AdminOrdersList";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/Loading";
 import { cn } from "@/lib/utils";

@@ -20,7 +20,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { t, language } = useLanguage();
 
-  const productTranslation = t.products.items[p.slug] || {
+  const productTranslation = t.products.items[p.id!] || {
     name: p.name,
     description: p.description,
     unit: p.unidad
@@ -46,9 +46,9 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
         >
           {/* List Image */}
           <div className="relative w-full md:w-[240px] aspect-square bg-secondary/40 dark:bg-[#121212] flex items-center justify-center rounded-md overflow-hidden flex-shrink-0 transition-all duration-500">
-            {p.images && p.images.length > 0 ? (
+            {p.images && p.images.length > 0 && p.images[0]?.trim() !== "" ? (
               <Image
-                src={getDeterministicImage(p.images[0], p.slug)}
+                src={getDeterministicImage(p.images[0], p.id!)}
                 alt={productTranslation.name}
                 fill
                 sizes="240px"
@@ -57,7 +57,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
                 className="object-contain p-4 group-hover:scale-115 transition-transform duration-700 ease-out"
               />
             ) : (
-              <span className="text-7xl drop-shadow-[0_0_30px_rgba(var(--primary),0.2)]">{p.emoji}</span>
+              <span className="text-7xl drop-shadow-[0_0_30px_rgba(var(--primary),0.2)]">{p.emoji || "📦"}</span>
             )}
 
             {p.stock === 0 && (
@@ -151,9 +151,9 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
           className="group relative flex flex-col w-full bg-card border border-border shadow-card hover:shadow-card-hover hover:scale-[1.03] hover:-translate-y-2 hover:border-primary transition-all duration-500 rounded-xl overflow-hidden cursor-pointer"
         >
           <div className="relative aspect-square w-full bg-secondary/40 dark:bg-[#121212] flex items-center justify-center overflow-hidden transition-all duration-500">
-            {p.images && p.images.length > 0 ? (
+            {p.images && p.images.length > 0 && p.images[0]?.trim() !== "" ? (
               <Image
-                src={getDeterministicImage(p.images[0], p.slug)}
+                src={getDeterministicImage(p.images[0], p.id!)}
                 alt={productTranslation.name}
                 fill
                 sizes="200px"
@@ -162,7 +162,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
                 className="object-contain p-2 group-hover:scale-115 transition-transform duration-700 ease-out"
               />
             ) : (
-              <span className="text-5xl drop-shadow-[0_0_20px_rgba(var(--primary),0.2)]">{p.emoji}</span>
+              <span className="text-5xl drop-shadow-[0_0_20px_rgba(var(--primary),0.2)]">{p.emoji || "📦"}</span>
             )}
 
             {p.stock === 0 && (
@@ -235,9 +235,9 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
 
         {/* Product Image Container */}
         <div className="relative aspect-square w-full bg-secondary/40 dark:bg-[#121212] flex items-center justify-center overflow-hidden transition-all duration-500">
-          {p.images && p.images.length > 0 ? (
+          {p.images && p.images.length > 0 && p.images[0]?.trim() !== "" ? (
             <Image
-              src={getDeterministicImage(p.images[0], p.slug)}
+              src={getDeterministicImage(p.images[0], p.id!)}
               alt={productTranslation.name}
               fill
               sizes="300px"
@@ -246,7 +246,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
               className="object-contain p-4 group-hover:scale-115 transition-transform duration-700 ease-out"
             />
           ) : (
-            <span className="text-7xl group-hover:scale-115 transition-transform duration-700 ease-out drop-shadow-[0_0_40px_rgba(var(--primary),0.3)]">{p.emoji}</span>
+            <span className="text-7xl group-hover:scale-115 transition-transform duration-700 ease-out drop-shadow-[0_0_40px_rgba(var(--primary),0.3)]">{p.emoji || "📦"}</span>
           )}
 
           {/* Quick View Overlay (Only visible on hover) */}
@@ -271,7 +271,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
           {/* Category & Icons */}
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold text-primary/70 uppercase tracking-wider bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10">
-              {p.categoria}
+              {p.categories.map((c: any) => c.name).join(", ")}
             </span>
             <div className="flex gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-green-600" />

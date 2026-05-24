@@ -10,7 +10,7 @@ async function main() {
   const brokenImageUrl = "https://images.unsplash.com/photo-1416870230247-d0a29a6c2005?auto=format&fit=crop&q=80&w=800";
   const replacementImageUrl = "https://images.unsplash.com/photo-1615811361523-6bd03d7748e7?auto=format&fit=crop&q=80&w=800";
 
-  // Use raw finding on name/slug first just in case 'has' is tricky with long URLs
+  // Use raw finding on name first just in case 'has' is tricky with long URLs
   // but Prisma 'has' should work if it's an exact match in the array.
   const productsToUpdate = await prisma.product.findMany({
     where: {
@@ -56,7 +56,7 @@ async function main() {
       where: { id: product.id },
       data: { images: updatedImages },
     });
-    log.info(`Updated product: ${product.name} (${product.slug})`);
+    log.info(`Updated product: ${product.name} (${product.id})`);
   }
 
   log.info("Database repair complete.");

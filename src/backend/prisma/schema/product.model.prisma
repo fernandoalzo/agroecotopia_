@@ -1,14 +1,13 @@
 model Product {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  name        String
-  description String
-  price       Int
-  categoria   String
-  unidad      String
-  tag         String
-  emoji       String
-  images      String[]
+  id             String          @id @default(cuid())
+  name           String
+  description    String
+  price          Int
+  categories     Categoria[]
+  unidad         String
+  tag            String
+  emoji          String
+  images         String[]
   stock          Decimal         @default(0) @db.Decimal(12, 2)
   detallesPedido DetallePedido[]
   createdAt      DateTime        @default(now())

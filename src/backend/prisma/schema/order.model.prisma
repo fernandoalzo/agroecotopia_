@@ -8,29 +8,29 @@ enum PedidoEstado {
 }
 
 model Pedido {
-  id                    String         @id @default(cuid())
-  usuarioId             String
-  accountId             String?        // Se deja como string opcional por ahora siguiendo la estructura de la base
-  estado                PedidoEstado   @default(PENDIENTE)
-  motivoCancelacion     String?        @db.Text
-  direccionEntrega      String         @db.Text
-  metodoPago            String?        // Tipo de pago / método (e.g. "advisor", "mercadopago", "nequi", etc.)
-  pagoId                String?        // ID del pago/transacción de la pasarela
-  pagoReferencia        String?        // Referencia o ID de preferencia provisto por la pasarela
-  fechaPedido           DateTime       @default(now())
-  fechaEntregaEstimada  DateTime?
-  fechaEntregaReal      DateTime?
-  subtotal              Decimal        @db.Decimal(12, 2)
-  impuestos             Decimal        @db.Decimal(12, 2)
-  costoEnvio            Decimal        @db.Decimal(12, 2)
-  total                 Decimal        @db.Decimal(12, 2)
-  notasCliente          String?        @db.Text
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
+  id                   String       @id @default(cuid())
+  usuarioId            String
+  accountId            String? // Se deja como string opcional por ahora siguiendo la estructura de la base
+  estado               PedidoEstado @default(PENDIENTE)
+  motivoCancelacion    String?      @db.Text
+  direccionEntrega     String       @db.Text
+  metodoPago           String? // Tipo de pago / método (e.g. "advisor", "mercadopago", "nequi", etc.)
+  pagoId               String? // ID del pago/transacción de la pasarela
+  pagoReferencia       String? // Referencia o ID de preferencia provisto por la pasarela
+  fechaPedido          DateTime     @default(now())
+  fechaEntregaEstimada DateTime?
+  fechaEntregaReal     DateTime?
+  subtotal             Decimal      @db.Decimal(12, 2)
+  impuestos            Decimal      @db.Decimal(12, 2)
+  costoEnvio           Decimal      @db.Decimal(12, 2)
+  total                Decimal      @db.Decimal(12, 2)
+  notasCliente         String?      @db.Text
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
 
   // Relaciones
-  usuario               User           @relation(fields: [usuarioId], references: [id])
-  detalles              DetallePedido[]
+  usuario  User            @relation(fields: [usuarioId], references: [id])
+  detalles DetallePedido[]
 
   @@index([usuarioId])
   @@index([estado])
@@ -49,8 +49,8 @@ model DetallePedido {
   updatedAt      DateTime @updatedAt
 
   // Relaciones
-  pedido         Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-  producto       Product  @relation(fields: [productoId], references: [id])
+  pedido   Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  producto Product @relation(fields: [productoId], references: [id])
 
   @@index([pedidoId])
   @@index([productoId])

@@ -1,5 +1,5 @@
 import prisma from "@/backend/db/prisma";
-import type { Product } from "@prisma/client";
+import { Prisma, type Product } from "@prisma/client";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/product/product.repository.ts");
@@ -9,12 +9,13 @@ export class ProductRepository {
    * Obtiene productos paginados de la base de datos, opcionalmente filtrados por una o más categorías.
    */
   async getAllProducts(skip: number = 0, take: number = 20, categories?: string[]): Promise<Product[]> {
-    const where = categories && categories.length > 0 ? { categoria: { in: categories } } : {};
+    const where: Prisma.ProductWhereInput = categories && categories.length > 0 ? { categories: { some: { name: { in: categories } } } } : {};
     log.debug("Obteniendo productos paginados:", { skip, take, categories });
     return prisma.product.findMany({
       where,
       skip,
       take,
+      include: { categories: true },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -23,18 +24,19 @@ export class ProductRepository {
    * Obtiene el total de productos en la base de datos, opcionalmente filtrados por una o más categorías.
    */
   async getTotalCount(categories?: string[]): Promise<number> {
-    const where = categories && categories.length > 0 ? { categoria: { in: categories } } : {};
+    const where: Prisma.ProductWhereInput = categories && categories.length > 0 ? { categories: { some: { name: { in: categories } } } } : {};
     log.debug("Obteniendo total de productos con filtros:", { categories });
     return prisma.product.count({ where });
   }
 
   /**
-   * Obtiene un producto por su slug
+   * Obtiene un producto por su id
    */
-  async getProductBySlug(slug: string): Promise<Product | null> {
-    log.debug("Buscando producto por slug:", { slug });
+  async getProductById(id: string): Promise<Product | null> {
+    log.debug("Buscando producto por id:", { id });
     return prisma.product.findUnique({
-      where: { slug },
+      where: { id },
+      include: { categories: true },
     });
   }
 
@@ -43,15 +45,15 @@ export class ProductRepository {
    */
   async searchProducts(query: string, skip: number = 0, take: number = 20, categories?: string[]): Promise<Product[]> {
     const searchConditions = [
+      { id: { contains: query, mode: "insensitive" } },
       { name: { contains: query, mode: "insensitive" } },
-      { slug: { contains: query, mode: "insensitive" } },
       { description: { contains: query, mode: "insensitive" } },
-      { categoria: { contains: query, mode: "insensitive" } },
+      { categories: { some: { name: { contains: query, mode: "insensitive" } } } },
       { tag: { contains: query, mode: "insensitive" } },
     ];
 
     const where = categories && categories.length > 0
-      ? { AND: [{ OR: searchConditions }, { categoria: { in: categories } }] }
+      ? { AND: [{ OR: searchConditions }, { categories: { some: { name: { in: categories } } } }] }
       : { OR: searchConditions };
 
     log.debug("Buscando productos:", { query, skip, take, categories });
@@ -59,6 +61,7 @@ export class ProductRepository {
       where: where as any,
       skip,
       take,
+      include: { categories: true },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -68,15 +71,15 @@ export class ProductRepository {
    */
   async getSearchCount(query: string, categories?: string[]): Promise<number> {
     const searchConditions = [
+      { id: { contains: query, mode: "insensitive" } },
       { name: { contains: query, mode: "insensitive" } },
-      { slug: { contains: query, mode: "insensitive" } },
       { description: { contains: query, mode: "insensitive" } },
-      { categoria: { contains: query, mode: "insensitive" } },
+      { categories: { some: { name: { contains: query, mode: "insensitive" } } } },
       { tag: { contains: query, mode: "insensitive" } },
     ];
 
     const where = categories && categories.length > 0
-      ? { AND: [{ OR: searchConditions }, { categoria: { in: categories } }] }
+      ? { AND: [{ OR: searchConditions }, { categories: { some: { name: { in: categories } } } }] }
       : { OR: searchConditions };
 
     log.debug("Obteniendo conteo de búsqueda de productos:", { query, categories });
@@ -88,24 +91,71 @@ export class ProductRepository {
   /**
    * Crea un nuevo producto (solo para seeding o uso interno)
    */
-  async createProduct(data: Omit<Product, "id" | "createdAt" | "updatedAt">): Promise<Product> {
-    log.info("Creando nuevo producto:", { name: data.name, slug: data.slug });
+  async createProduct(data: any): Promise<Product> {
+    log.info("Creando nuevo producto:", { name: data.name });
+
+    const { categories, ...restData } = data;
+
     return prisma.product.create({
-      data,
-    });
+      data: {
+        ...restData,
+        categories: categories && categories.length > 0 ? {
+          connectOrCreate: categories.map((c: string) => ({
+            where: { name: c },
+            create: { name: c }
+          }))
+        } : undefined,
+      },
+      include: { categories: true },
+    }) as unknown as Promise<Product>;
+  }
+
+  /**
+   * Actualiza un producto existente
+   */
+  async updateProduct(id: string, data: any): Promise<Product> {
+    log.info(`Actualizando producto: ${id}`);
+
+    const { categories, ...restData } = data;
+
+    const updateData: any = { ...restData };
+    if (categories !== undefined) {
+      updateData.categories = {
+        set: [], // Clear existing
+        connectOrCreate: categories.map((c: string) => ({
+          where: { name: c },
+          create: { name: c }
+        }))
+      };
+    }
+
+    return prisma.product.update({
+      where: { id },
+      data: updateData,
+      include: { categories: true },
+    }) as unknown as Promise<Product>;
+  }
+
+  /**
+   * Elimina un producto por su ID
+   */
+  async deleteProduct(id: string): Promise<Product> {
+    log.info(`Eliminando producto: ${id}`);
+    return prisma.product.delete({
+      where: { id },
+      include: { categories: true },
+    }) as unknown as Promise<Product>;
   }
 
   /**
    * Obtiene todas las categorías únicas de la tabla de productos.
    */
   async getCategories(): Promise<string[]> {
-    log.debug("Obteniendo categorías únicas de productos");
-    const result = await prisma.product.findMany({
-      select: { categoria: true },
-      distinct: ["categoria"],
-      orderBy: { categoria: "asc" },
+    log.debug("Obteniendo categorías únicas");
+    const result = await prisma.categoria.findMany({
+      orderBy: { name: "asc" },
     });
-    return result.map(p => p.categoria).filter(Boolean);
+    return result.map(c => c.name);
   }
 
   /**
@@ -113,16 +163,12 @@ export class ProductRepository {
    */
   async getCategoryCounts(): Promise<Record<string, number>> {
     log.debug("Obteniendo conteo de productos por categoría");
-    const result = await prisma.product.groupBy({
-      by: ["categoria"],
-      _count: { _all: true },
-      orderBy: { categoria: "asc" },
+    const categories = await prisma.categoria.findMany({
+      include: { _count: { select: { products: true } } }
     });
     const counts: Record<string, number> = {};
-    for (const row of result) {
-      if (row.categoria) {
-        counts[row.categoria] = row._count._all;
-      }
+    for (const c of categories) {
+      counts[c.name] = c._count.products;
     }
     return counts;
   }

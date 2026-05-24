@@ -84,13 +84,13 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
       <div className="p-8 flex-1 space-y-6 overflow-y-auto max-h-[400px] scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent">
         <div className="space-y-4">
           {cart.map((item) => {
-            const productTranslation = t.products.items[item.product.slug] || {
+            const productTranslation = t.products.items[item.product.id!] || {
               name: item.product.name,
               unit: item.product.unidad
             };
 
             return (
-              <div key={item.product.slug} className="group flex justify-between items-center py-2 transition-all hover:translate-x-1">
+              <div key={item.product.id} className="group flex justify-between items-center py-2 transition-all hover:translate-x-1">
                 <div className="flex-1">
                   <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
                     {productTranslation.name}

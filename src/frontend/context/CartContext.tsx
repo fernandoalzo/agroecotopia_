@@ -37,7 +37,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let alreadyExists = false;
     
     setCart((prev) => {
-      const existingProductIndex = prev.findIndex((item) => item.product.slug === product.slug);
+      const existingProductIndex = prev.findIndex((item) => item.product.id === product.id);
       
       if (existingProductIndex >= 0) {
         alreadyExists = true;
@@ -59,22 +59,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const removeFromCart = (productSlug: string) => {
+  const removeFromCart = (productId: string) => {
     setCart((prev) => {
-      return prev.filter((item) => item.product.slug !== productSlug);
+      return prev.filter((item) => item.product.id !== productId);
     });
     // Disparar toast fuera del actualizador de estado de React
     toast.info("Producto eliminado del carrito");
   };
 
-  const updateQuantity = (productSlug: string, quantity: number) => {
+  const updateQuantity = (productId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(productSlug);
+      removeFromCart(productId);
       return;
     }
     setCart((prev) => 
       prev.map((item) => 
-        item.product.slug === productSlug ? { ...item, quantity } : item
+        item.product.id === productId ? { ...item, quantity } : item
       )
     );
   };

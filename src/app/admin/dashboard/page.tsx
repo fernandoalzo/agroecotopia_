@@ -14,7 +14,8 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { AdminOrdersList } from "@/components/admin/AdminOrdersList";
+import { AdminOrdersList } from "@/components/admin/pedidos/AdminOrdersList";
+import { AdminProductsList } from "@/components/admin/productos/AdminProductsList";
 import { Loading } from "@/components/ui/Loading";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
@@ -25,10 +26,11 @@ import logger from "@/utils/logger";
 
 const log = logger.child();
 
-type DashboardTab = "orders" | "chat";
+type DashboardTab = "orders" | "products" | "chat";
 
 const SIDEBAR_ITEMS: { id: DashboardTab; labelEs: string; labelEn: string; icon: typeof Package }[] = [
   { id: "orders", labelEs: "Gestión de Pedidos", labelEn: "Order Management", icon: Package },
+  { id: "products", labelEs: "Gestión de Productos", labelEn: "Product Management", icon: Package },
   { id: "chat", labelEs: "Soporte Chat", labelEn: "Chat Support", icon: MessageSquare },
 ];
 
@@ -259,11 +261,13 @@ function AdminDashboardPageContent() {
               animate={{ opacity: 1, y: 0 }}
               className="text-xl md:text-2xl font-black tracking-tight"
             >
-              {activeTab === "orders" ? "Gestión de Pedidos" : "Soporte Chat"}
+              {activeTab === "orders" ? "Gestión de Pedidos" : activeTab === "products" ? "Gestión de Productos" : "Soporte Chat"}
             </motion.h1>
             <p className="text-xs text-muted-foreground mt-0.5">
               {activeTab === "orders"
                 ? "Monitorea, gestiona y atiende todos los pedidos."
+                : activeTab === "products"
+                ? "Monitorea y gestiona el inventario de productos."
                 : "Atiende las conversaciones de soporte en tiempo real."}
             </p>
           </div>
@@ -287,6 +291,19 @@ function AdminDashboardPageContent() {
                 className="p-4 md:p-8"
               >
                 <AdminOrdersList />
+              </motion.div>
+            )}
+
+            {activeTab === "products" && (
+              <motion.div
+                key="products"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2 }}
+                className="p-4 md:p-8"
+              >
+                <AdminProductsList />
               </motion.div>
             )}
 

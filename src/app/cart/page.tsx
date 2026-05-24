@@ -78,7 +78,7 @@ const CartContent = () => {
       <div className="lg:col-span-2 flex flex-col gap-6">
         <AnimatePresence mode="popLayout">
           {cart.map((item) => {
-            const productTranslation = t.products.items[item.product.slug] || {
+            const productTranslation = t.products.items[item.product.id!] || {
               name: item.product.name,
               description: item.product.description,
               unit: item.product.unidad
@@ -86,7 +86,7 @@ const CartContent = () => {
 
             return (
               <motion.div 
-                key={item.product.slug} 
+                key={item.product.id} 
                 layout
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -95,7 +95,7 @@ const CartContent = () => {
               >
                 {/* Item Image */}
                 <div className="h-20 w-20 shrink-0 md:h-24 md:w-24 bg-primary/5 rounded-xl flex items-center justify-center text-4xl shadow-inner relative overflow-hidden">
-                  {item.product.images && item.product.images.length > 0 ? (
+                  {item.product.images && item.product.images.length > 0 && item.product.images[0]?.trim() !== "" ? (
                     <Image 
                       src={item.product.images[0]} 
                       alt={productTranslation.name} 
@@ -104,7 +104,7 @@ const CartContent = () => {
                       className="object-cover"
                     />
                   ) : (
-                    <span>{item.product.emoji}</span>
+                    <span>{item.product.emoji || "📦"}</span>
                   )}
                 </div>
 
@@ -114,7 +114,7 @@ const CartContent = () => {
                   <div className="flex items-center gap-2 mb-2">
                     <div className="flex items-center gap-1 text-primary/70 uppercase font-black text-[8px] tracking-widest shrink-0 bg-primary/5 px-1.5 py-0.5 rounded-sm border border-primary/10">
                       <Tag className="w-2.5 h-2.5" />
-                      {item.product.categoria}
+                      {item.product.categories.map((c: any) => c.name).join(", ")}
                     </div>
                     <span className="text-[10px] text-muted-foreground font-medium">
                       {formatPrice(item.product.price)} / ud
@@ -125,14 +125,14 @@ const CartContent = () => {
                   <div className="flex items-center gap-3">
                     <div className="flex items-center bg-secondary rounded-full overflow-hidden border border-border/50">
                       <button 
-                        onClick={() => updateQuantity(item.product.slug, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.product.id!, item.quantity - 1)}
                         className="p-1 px-3 hover:bg-black/5 active:bg-black/10 transition-colors rounded-l-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-inset"
                       >
                         <Minus className="w-3 h-3" />
                       </button>
                       <span className="w-6 text-center font-bold text-xs">{item.quantity}</span>
                       <button 
-                        onClick={() => updateQuantity(item.product.slug, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.product.id!, item.quantity + 1)}
                         className="p-1 px-3 hover:bg-black/5 active:bg-black/10 transition-colors rounded-r-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-inset"
                       >
                         <Plus className="w-3 h-3" />
@@ -144,7 +144,7 @@ const CartContent = () => {
                 {/* Remove Button & Total Price */}
                 <div className="flex flex-col items-end gap-2 shrink-0 pr-2">
                   <button 
-                    onClick={() => removeFromCart(item.product.slug)}
+                    onClick={() => removeFromCart(item.product.id!)}
                     className="text-muted-foreground/60 hover:text-destructive transition-colors p-2 rounded-full hover:bg-destructive/10"
                     aria-label={t.cart.remove}
                   >
