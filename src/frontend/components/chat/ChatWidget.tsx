@@ -61,10 +61,9 @@ export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidg
 
       <div
         className={isMobileOpen
-          ? "fixed inset-x-0 top-0 bottom-auto z-[999] font-sans"
+          ? "fixed inset-0 z-[999] font-sans"
           : "fixed bottom-5 right-5 z-[999] md:bottom-8 md:right-8 font-sans"
         }
-        style={isMobileOpen ? { height: chat.viewportHeight } : undefined}
       >
         <AnimatePresence>
           {chat.isOpen && (

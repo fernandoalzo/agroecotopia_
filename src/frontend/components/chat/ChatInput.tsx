@@ -99,19 +99,6 @@ export const ChatInput = ({
                     type="text"
                     value={inputMessage}
                     onChange={onInputChange}
-                    onFocus={() => {
-                        let count = 0;
-
-                        const interval = setInterval(() => {
-                            window.scrollTo(0, 0);
-
-                            count++;
-
-                            if (count > 10) {
-                                clearInterval(interval);
-                            }
-                        }, 50);
-                    }}
                     disabled={!isConnected}
                     placeholder={
                         isConnected

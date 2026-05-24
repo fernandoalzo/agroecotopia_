@@ -36,6 +36,7 @@ export const AdminProductsList = () => {
 
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   const [categoryFilter, setCategoryFilter] = useState<string | "ALL">("ALL");
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Search state and debounce
   const [searchQuery, setSearchQuery] = useState("");
@@ -65,7 +66,7 @@ export const AdminProductsList = () => {
     getCategoryCountsAction().then((counts) => {
       setCategoryCounts(counts);
     });
-  }, []);
+  }, [refreshTrigger]);
 
   // Fetch paginated & filtered products from database
   useEffect(() => {
@@ -94,7 +95,7 @@ export const AdminProductsList = () => {
     };
 
     fetchProducts();
-  }, [currentPage, categoryFilter, debouncedSearch, limit]);
+  }, [currentPage, categoryFilter, debouncedSearch, limit, refreshTrigger]);
 
   const renderPagination = () => (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl bg-secondary/20 border border-border/30 px-6 py-4">
@@ -213,15 +214,18 @@ export const AdminProductsList = () => {
     </div>
   );
 
+  const totalProductsInDb = Object.values(categoryCounts).reduce((a, b) => a + b, 0);
+
   // ── Admin view ────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       {/* ── Status filter pills + search ── */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col gap-4"
-      >
+      {totalProductsInDb > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col gap-4"
+        >
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setCategoryFilter("ALL")}
@@ -283,6 +287,7 @@ export const AdminProductsList = () => {
           )}
         </div>
       </motion.div>
+      )}
 
       {/* ── Top Pagination ── */}
       {products.length > 0 && renderPagination()}
@@ -315,7 +320,9 @@ export const AdminProductsList = () => {
             >
               <Package className="h-10 w-10 text-muted-foreground/30 mb-3" />
               <p className="text-muted-foreground font-medium">
-                No se encontraron productos con los filtros aplicados.
+                {totalProductsInDb === 0 
+                  ? "Aún no tienes productos registrados."
+                  : "No se encontraron productos con los filtros aplicados."}
               </p>
             </motion.div>
           ) : (
@@ -354,61 +361,13 @@ export const AdminProductsList = () => {
       <AdminProductEditModal
         product={editingProduct}
         onClose={() => setEditingProduct(null)}
-        onSuccess={() => {
-          // Re-fetch products to reflect changes immediately
-          const fetchProducts = async () => {
-            setLoading(true);
-            try {
-              let result;
-              const catFilter = categoryFilter === "ALL" ? undefined : categoryFilter;
-              if (debouncedSearch.trim() !== "") {
-                result = await searchProductsAction(debouncedSearch, currentPage, limit, catFilter);
-              } else {
-                result = await getPaginatedProductsAction(currentPage, limit, catFilter);
-              }
-              if (result && "products" in result) {
-                setProducts(result.products);
-                setTotalCount(result.total);
-                setTotalPages(result.totalPages || 1);
-              }
-            } catch (error) {
-              console.error("Error refreshing products:", error);
-            } finally {
-              setLoading(false);
-            }
-          };
-          fetchProducts();
-        }}
+        onSuccess={() => setRefreshTrigger((prev) => prev + 1)}
       />
 
       {isCreateModalOpen && (
         <AdminProductCreateModal
           onClose={() => setIsCreateModalOpen(false)}
-          onSuccess={() => {
-            // Re-fetch products to reflect changes immediately
-            const fetchProducts = async () => {
-              setLoading(true);
-              try {
-                let result;
-                const catFilter = categoryFilter === "ALL" ? undefined : categoryFilter;
-                if (debouncedSearch.trim() !== "") {
-                  result = await searchProductsAction(debouncedSearch, currentPage, limit, catFilter);
-                } else {
-                  result = await getPaginatedProductsAction(currentPage, limit, catFilter);
-                }
-                if (result && "products" in result) {
-                  setProducts(result.products);
-                  setTotalCount(result.total);
-                  setTotalPages(result.totalPages || 1);
-                }
-              } catch (error) {
-                console.error("Error refreshing products:", error);
-              } finally {
-                setLoading(false);
-              }
-            };
-            fetchProducts();
-          }}
+          onSuccess={() => setRefreshTrigger((prev) => prev + 1)}
         />
       )}
     </div>

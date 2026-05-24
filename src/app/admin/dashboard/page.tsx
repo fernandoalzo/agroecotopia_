@@ -193,38 +193,44 @@ function AdminDashboardPageContent() {
           {SIDEBAR_ITEMS.map((item) => {
             const isActive = activeTab === item.id;
             const Icon = item.icon;
+            const isChat = item.id === "chat";
+
             return (
-              <button
-                key={item.id}
-                onClick={() => handleTabChange(item.id)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/15"
-                    : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+              <React.Fragment key={item.id}>
+                {isChat && (
+                  <div className="my-3 border-t border-border/40 mx-2" />
                 )}
-              >
-                <Icon className={cn("w-5 h-5 shrink-0 transition-transform duration-200", isActive && "scale-110")} />
-                <span className="flex-1 text-left">{item.labelEs}</span>
-                {item.id === "chat" && unreadCount > 0 && (
-                  <span
-                    className={cn(
-                      "min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold px-1.5 shadow-sm",
-                      isActive
-                        ? "bg-primary-foreground/20 text-primary-foreground"
-                        : "bg-red-500 text-white animate-pulse shadow-red-500/20"
-                    )}
-                  >
-                    {unreadCount}
-                  </span>
-                )}
-                <ChevronRight
+                <button
+                  onClick={() => handleTabChange(item.id)}
                   className={cn(
-                    "w-4 h-4 shrink-0 transition-all duration-200",
-                    isActive ? "opacity-80" : "opacity-0 group-hover:opacity-50"
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/15"
+                      : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                   )}
-                />
-              </button>
+                >
+                  <Icon className={cn("w-5 h-5 shrink-0 transition-transform duration-200", isActive && "scale-110")} />
+                  <span className="flex-1 text-left">{item.labelEs}</span>
+                  {item.id === "chat" && unreadCount > 0 && (
+                    <span
+                      className={cn(
+                        "min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold px-1.5 shadow-sm",
+                        isActive
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-red-500 text-white animate-pulse shadow-red-500/20"
+                      )}
+                    >
+                      {unreadCount}
+                    </span>
+                  )}
+                  <ChevronRight
+                    className={cn(
+                      "w-4 h-4 shrink-0 transition-all duration-200",
+                      isActive ? "opacity-80" : "opacity-0 group-hover:opacity-50"
+                    )}
+                  />
+                </button>
+              </React.Fragment>
             );
           })}
         </nav>
