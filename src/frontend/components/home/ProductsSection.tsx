@@ -134,14 +134,22 @@ const ProductsSection = ({ initialProducts }: ProductsSectionProps) => {
         </motion.div>
       </div>
 
-      <div className="flex flex-col gap-8 md:gap-12 mb-16">
-        <div className="relative">
-          <MarqueeRow items={row1} direction="left" speed={45} />
+      {initialProducts.length <= 6 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-4 md:px-6 mb-16 max-w-7xl mx-auto">
+          {initialProducts.map((p, i) => (
+            <ProductCard key={`${p.id || p.name}-${i}`} p={p} />
+          ))}
         </div>
-        <div className="relative">
-          <MarqueeRow items={row2} direction="right" speed={50} />
+      ) : (
+        <div className="flex flex-col gap-8 md:gap-12 mb-16">
+          <div className="relative">
+            <MarqueeRow items={row1} direction="left" speed={45} />
+          </div>
+          <div className="relative">
+            <MarqueeRow items={row2} direction="right" speed={50} />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="container mx-auto px-4 md:px-6 flex justify-center">
         <Link
