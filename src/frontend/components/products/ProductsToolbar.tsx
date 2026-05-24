@@ -26,8 +26,8 @@ interface ProductsToolbarProps {
   setSearchTerm: (val: string) => void;
   isLoading: boolean;
   totalCount: number;
-  viewMode: 'grid' | 'compact' | 'list';
-  setViewMode: (val: 'grid' | 'compact' | 'list') => void;
+  viewMode: 'grid' | 'compact';
+  setViewMode: (val: 'grid' | 'compact') => void;
   limitParam: number;
   updateUrl: (query: string, page: number, limit: number, category?: string) => void;
   queryParam: string;
@@ -240,8 +240,7 @@ export function ProductsToolbar({
           >
             {[
               { val: 'grid', icon: LayoutGrid },
-              { val: 'compact', icon: Grid2X2 },
-              { val: 'list', icon: List }
+              { val: 'compact', icon: Grid2X2 }
             ].map(({ val, icon: Icon }) => (
               <ToggleGroupItem
                 key={val}
@@ -358,8 +357,7 @@ export function ProductsToolbar({
             >
               {[
                 { val: 'grid', icon: LayoutGrid },
-                { val: 'compact', icon: Grid2X2 },
-                { val: 'list', icon: List }
+                { val: 'compact', icon: Grid2X2 }
               ].map(({ val, icon: Icon }) => (
                 <ToggleGroupItem
                   key={val}

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 interface ProductsGridProps {
   products: Product[];
-  viewMode: 'grid' | 'compact' | 'list';
+  viewMode: 'grid' | 'compact';
   t: any;
 }
 
@@ -57,11 +57,8 @@ export function ProductsGrid({
             </motion.div>
           ))
         ) : (
-          // Other Modes (Compact, List)
-          <div className={cn(
-            viewMode === 'compact' && "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3",
-            viewMode === 'list' && "flex flex-col gap-6"
-          )}>
+          // Compact Mode
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {products.map((p, index) => (
               <motion.div
                 layout
@@ -70,7 +67,6 @@ export function ProductsGrid({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
-                className={cn(viewMode === 'list' && "w-full")}
               >
                 <ProductCard p={p as any} priority={index < 10} variant={viewMode} />
               </motion.div>

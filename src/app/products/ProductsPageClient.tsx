@@ -60,7 +60,7 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
   const categoryParam = searchParams.get("category") || "";
 
   // View & UI state
-  const [viewMode, setViewMode] = useState<'grid' | 'compact' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
   const [searchTerm, setSearchTerm] = useState(queryParam);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
