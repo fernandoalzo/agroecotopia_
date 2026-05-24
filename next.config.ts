@@ -6,29 +6,39 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'images.unsplash.com',
+        hostname: '**', // permite cualquier hostname
       },
       {
-        protocol: 'https',
-        hostname: 'loremflickr.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'lh3.googleusercontent.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'avatars.githubusercontent.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'platform-lookaside.fbsbx.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'upload.wikimedia.org',
+        protocol: 'http',
+        hostname: '**',
       },
     ],
+    // remotePatterns: [
+    //   {
+    //     protocol: 'https',
+    //     hostname: 'images.unsplash.com',
+    //   },
+    //   {
+    //     protocol: 'https',
+    //     hostname: 'loremflickr.com',
+    //   },
+    //   {
+    //     protocol: 'https',
+    //     hostname: 'lh3.googleusercontent.com',
+    //   },
+    //   {
+    //     protocol: 'https',
+    //     hostname: 'avatars.githubusercontent.com',
+    //   },
+    //   {
+    //     protocol: 'https',
+    //     hostname: 'platform-lookaside.fbsbx.com',
+    //   },
+    //   {
+    //     protocol: 'https',
+    //     hostname: 'upload.wikimedia.org',
+    //   },
+    // ],
   },
   turbopack: {},
   webpack: (config) => {
