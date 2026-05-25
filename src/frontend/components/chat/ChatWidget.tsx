@@ -35,11 +35,15 @@ export interface ChatWidgetProps {
   targetUserId?: string;
 }
 
+import { usePathname } from "next/navigation";
+
 export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidgetProps = {}) {
+  const pathname = usePathname();
   const chat = useChatWidget(forceShow, targetUserId);
 
   if (!chat.isClient || chat.status !== "authenticated") return null;
   if (!forceShow && (chat.isRouteAdmin || chat.isAdminUser)) return null;
+  if (pathname?.startsWith("/comunidad")) return null;
 
   const isMobileOpen = chat.isClient && chat.isOpen && window.innerWidth < 768;
 

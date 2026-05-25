@@ -97,6 +97,7 @@ const Navbar = () => {
     { label: t.navbar.productos, href: "/products" },
     { label: t.navbar.nosotros, href: "/nosotros" },
     { label: t.navbar.contacto, href: "/contacto" },
+    { label: t.navbar.comunidad, href: "/comunidad" },
   ];
 
   useEffect(() => {

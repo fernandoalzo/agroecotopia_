@@ -41,6 +41,15 @@ export const config = {
   chat: {
     enableE2EE: true,
   },
+
+  forum: {
+    labels: {
+      cultivos: ["Hortalizas", "Frutales", "Cereales", "Leguminosas", "Ornamentales"],
+      suelos: ["Arcilloso", "Arenoso", "Franco", "Limoso", "Sustrato"],
+      clima: ["Tropical", "Seco", "Templado", "Húmedo", "Frío"],
+      temas: ["Plagas", "Riego", "Nutrición", "Poda", "Cosecha"]
+    }
+  }
 } as const;
 
 // Helper to assert that a configuration value is defined

@@ -91,6 +91,9 @@ export async function registerCredentialsAction(formData: FormData) {
       redirectTo: "/",
     });
   } catch (error: any) {
+    if (error.message === "NEXT_REDIRECT" || (error.digest && error.digest.startsWith("NEXT_REDIRECT"))) {
+      throw error;
+    }
     if (error.message === "User already exists") {
       log.warn("Intento de registro con correo ya existente:", { email });
       return { error: "El correo ya está registrado." };

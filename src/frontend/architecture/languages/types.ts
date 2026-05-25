@@ -6,6 +6,7 @@ export interface Translations {
     productos: string;
     nosotros: string;
     contacto: string;
+    comunidad: string;
     carrito: string;
     miCarrito: string;
     idioma: string;
@@ -173,6 +174,30 @@ export interface Translations {
     paymentMuteNote: string;
     advisorSuccessTitle: string;
     advisorSuccessMessage: string;
+  };
+  comunidadPage: {
+    hero: {
+      badge: string;
+      title: string;
+      titleAccent: string;
+      description: string;
+      ctaPrimary: string;
+      ctaSecondary: string;
+    };
+    events: {
+      title: string;
+      description: string;
+      viewAll: string;
+    };
+    forum: {
+      title: string;
+      description: string;
+      joinDiscussion: string;
+    };
+    stories: {
+      title: string;
+      description: string;
+    };
   };
 }
 

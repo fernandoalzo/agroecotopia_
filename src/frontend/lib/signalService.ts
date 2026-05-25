@@ -165,7 +165,11 @@ export class SignalService {
       }
     });
     if (!res.ok) {
-      log.error(`[E2EE:Bundle] Failed to retrieve cryptographic bundle for user ID: ${userId}`);
+      if (res.status === 404) {
+        log.debug(`[E2EE:Bundle] Cryptographic bundle not found for user ID: ${userId} (this is normal for new users)`);
+      } else {
+        log.warn(`[E2EE:Bundle] Failed to retrieve cryptographic bundle for user ID: ${userId} (Status: ${res.status})`);
+      }
       throw new Error('Failed to fetch bundle');
     }
     return await res.json();

@@ -7,6 +7,7 @@ export const en: Translations = {
     productos: "Products",
     nosotros: "About Us",
     contacto: "Contact",
+    comunidad: "Community",
     carrito: "Cart",
     miCarrito: "My Cart",
     idioma: "Language",
@@ -199,5 +200,29 @@ export const en: Translations = {
     paymentMuteNote: "This payment method will be available soon.",
     advisorSuccessTitle: "Order Received!",
     advisorSuccessMessage: "A collaborator will review your order and get in touch with you as soon as possible to confirm the order.",
+  },
+  comunidadPage: {
+    hero: {
+      badge: "Agroecological Network",
+      title: "Cultivating our future",
+      titleAccent: "together",
+      description: "Join a vibrant community of farmers, buyers, and agricultural enthusiasts. Share knowledge, attend events, and be part of the change towards regenerative agriculture.",
+      ctaPrimary: "Join the conversation",
+      ctaSecondary: "View events",
+    },
+    events: {
+      title: "Upcoming Events",
+      description: "Workshops, farmers markets, and gatherings to strengthen our roots.",
+      viewAll: "View all events",
+    },
+    forum: {
+      title: "Community Forum",
+      description: "Solve doubts, share your experiences, and learn from other farmers in the network.",
+      joinDiscussion: "Join the forum",
+    },
+    stories: {
+      title: "Voices from the Field",
+      description: "Real stories of people transforming agriculture.",
+    },
   },
 };

@@ -7,6 +7,7 @@ export const es: Translations = {
     productos: "Productos",
     nosotros: "Nosotros",
     contacto: "Contacto",
+    comunidad: "Comunidad",
     carrito: "Carrito",
     miCarrito: "Mi Carrito",
     idioma: "Idioma",
@@ -199,5 +200,29 @@ export const es: Translations = {
     paymentMuteNote: "Este método de pago estará disponible pronto.",
     advisorSuccessTitle: "¡Pedido Recibido!",
     advisorSuccessMessage: "Un colaborador estará revisando tu pedido y se pondrá en contacto contigo lo antes posible para confirmar el pedido.",
+  },
+  comunidadPage: {
+    hero: {
+      badge: "Red Agroecológica",
+      title: "Cultivando juntos",
+      titleAccent: "nuestro futuro",
+      description: "Únete a una comunidad vibrante de agricultores, compradores y entusiastas del agro. Comparte conocimientos, asiste a eventos y forma parte del cambio hacia una agricultura regenerativa.",
+      ctaPrimary: "Únete a la conversación",
+      ctaSecondary: "Ver eventos",
+    },
+    events: {
+      title: "Próximos Eventos",
+      description: "Talleres, mercados campesinos y encuentros para fortalecer nuestras raíces.",
+      viewAll: "Ver todos los eventos",
+    },
+    forum: {
+      title: "Foro de la Comunidad",
+      description: "Resuelve dudas, comparte tus experiencias y aprende de otros agricultores de la red.",
+      joinDiscussion: "Participar en el foro",
+    },
+    stories: {
+      title: "Voces del Campo",
+      description: "Historias reales de personas que están transformando la agricultura.",
+    },
   },
 };
