@@ -20,10 +20,8 @@ type CommunityQAForumProps = {
   handleRate: (itemId: string, rating: number) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-  filterCrop: string;
-  setFilterCrop: (f: string) => void;
-  filterSoil: string;
-  setFilterSoil: (f: string) => void;
+  activeFilters: Record<string, string>;
+  setActiveFilter: (category: string, value: string) => void;
 };
 
 export default function CommunityQAForum({
@@ -34,10 +32,8 @@ export default function CommunityQAForum({
   handleRate,
   searchQuery,
   setSearchQuery,
-  filterCrop,
-  setFilterCrop,
-  filterSoil,
-  setFilterSoil
+  activeFilters,
+  setActiveFilter
 }: CommunityQAForumProps) {
   const { status } = useSession();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -58,10 +54,8 @@ export default function CommunityQAForum({
           <ForumSidebar 
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
-            filterCrop={filterCrop}
-            setFilterCrop={setFilterCrop}
-            filterSoil={filterSoil}
-            setFilterSoil={setFilterSoil}
+            activeFilters={activeFilters}
+            setActiveFilter={setActiveFilter}
           />
 
           {/* MIDDLE COLUMN: Feed */}

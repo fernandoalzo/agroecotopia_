@@ -1,25 +1,85 @@
 "use client";
 
-import { Search, Leaf, Filter, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, ChevronRight, ChevronDown, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { cropTypes, soilTypes } from "./forum.types";
+import { config } from "@/config/config";
 
 interface ForumSidebarProps {
   searchQuery: string;
   setSearchQuery: (val: string) => void;
-  filterCrop: string;
-  setFilterCrop: (val: string) => void;
-  filterSoil: string;
-  setFilterSoil: (val: string) => void;
+  activeFilters: Record<string, string>;
+  setActiveFilter: (category: string, value: string) => void;
+}
+
+function FilterCategory({
+  category,
+  labels,
+  activeFilters,
+  setActiveFilter
+}: {
+  category: string;
+  labels: readonly string[];
+  activeFilters: Record<string, string>;
+  setActiveFilter: (category: string, value: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const activeLabel = activeFilters[category];
+  const hasActiveFilter = activeLabel && activeLabel !== "Todos";
+
+  return (
+    <div className="border-b border-border/50 pb-4 last:border-0 last:pb-0">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between group outline-none"
+      >
+        <h4 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2 group-hover:text-primary transition-colors">
+          <Hash className="w-3 h-3" /> {category}
+          {hasActiveFilter && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+        </h4>
+        <ChevronDown className={cn("w-4 h-4 text-muted-foreground/50 transition-transform duration-300", isOpen && "rotate-180", "group-hover:text-primary")} />
+      </button>
+
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="flex flex-col gap-0.5 pt-4">
+              {["Todos", ...labels].map(label => {
+                const isActive = (activeFilters[category] || "Todos") === label;
+                return (
+                  <button 
+                    key={label}
+                    onClick={() => setActiveFilter(category, label)}
+                    className={cn(
+                      "text-left px-3 py-2 -mx-3 rounded-md text-sm font-medium transition-all flex items-center justify-between group outline-none",
+                      isActive ? "text-primary bg-primary/5" : "text-foreground/70 hover:text-foreground hover:bg-secondary/50"
+                    )}
+                  >
+                    {label}
+                    {isActive && <ChevronRight className="w-4 h-4" />}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 export default function ForumSidebar({
   searchQuery,
   setSearchQuery,
-  filterCrop,
-  setFilterCrop,
-  filterSoil,
-  setFilterSoil
+  activeFilters,
+  setActiveFilter
 }: ForumSidebarProps) {
   return (
     <div className="hidden lg:block lg:col-span-3 sticky top-28 space-y-8">
@@ -35,48 +95,16 @@ export default function ForumSidebar({
           />
         </div>
 
-        <div className="space-y-8">
-          <div>
-            <h4 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/70 mb-4 flex items-center gap-2">
-              <Leaf className="w-3 h-3" /> Cultivo
-            </h4>
-            <div className="flex flex-col gap-0.5">
-              {cropTypes.map(crop => (
-                <button 
-                  key={crop}
-                  onClick={() => setFilterCrop(crop)}
-                  className={cn(
-                    "text-left px-3 py-2 -mx-3 rounded-md text-sm font-medium transition-all flex items-center justify-between group",
-                    filterCrop === crop ? "text-primary bg-primary/5" : "text-foreground/70 hover:text-foreground hover:bg-secondary/50"
-                  )}
-                >
-                  {crop}
-                  {filterCrop === crop && <ChevronRight className="w-4 h-4" />}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/70 mb-4 flex items-center gap-2">
-              <Filter className="w-3 h-3" /> Suelo
-            </h4>
-            <div className="flex flex-col gap-0.5">
-              {soilTypes.map(soil => (
-                <button 
-                  key={soil}
-                  onClick={() => setFilterSoil(soil)}
-                  className={cn(
-                    "text-left px-3 py-2 -mx-3 rounded-md text-sm font-medium transition-all flex items-center justify-between group",
-                    filterSoil === soil ? "text-accent bg-accent/5" : "text-foreground/70 hover:text-foreground hover:bg-secondary/50"
-                  )}
-                >
-                  {soil}
-                  {filterSoil === soil && <ChevronRight className="w-4 h-4" />}
-                </button>
-              ))}
-            </div>
-          </div>
+        <div className="space-y-6">
+          {Object.entries(config.forum.labels).map(([category, labels]) => (
+            <FilterCategory 
+              key={category}
+              category={category}
+              labels={labels}
+              activeFilters={activeFilters}
+              setActiveFilter={setActiveFilter}
+            />
+          ))}
         </div>
       </div>
     </div>

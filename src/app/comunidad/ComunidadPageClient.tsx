@@ -10,9 +10,12 @@ export default function ComunidadPageClient() {
   const [activeCommunityStats, setActiveCommunityStats] = useState({ totalMembers: "0", onlineNow: "0" });
   const [topContributors, setTopContributors] = useState<any[]>([]);
 
-  const [filterCrop, setFilterCrop] = useState("Todos");
-  const [filterSoil, setFilterSoil] = useState("Todos");
+  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSetFilter = (category: string, value: string) => {
+    setActiveFilters(prev => ({ ...prev, [category]: value }));
+  };
 
   const obtenerPublicaciones = () => {
     console.log("obtenerPublicaciones(): Obteniendo publicaciones mockeadas de la DB...");
@@ -43,20 +46,24 @@ export default function ComunidadPageClient() {
   }, []);
 
   const filtrarPosts = () => {
-    console.log("filtrarPosts(): Filtrando publicaciones en base a:", { filterCrop, filterSoil, searchQuery });
+    console.log("filtrarPosts(): Filtrando publicaciones en base a:", { activeFilters, searchQuery });
     // Aquí iría la llamada real para filtrar desde el servidor o DB
   };
 
   useEffect(() => {
     filtrarPosts();
-  }, [filterCrop, filterSoil, searchQuery]);
+  }, [activeFilters, searchQuery]);
 
   const filteredQuestions = questions.filter((q) => {
-    const matchCrop = filterCrop === "Todos" || q.cropType === filterCrop;
-    const matchSoil = filterSoil === "Todos" || q.soilType === filterSoil;
+    const matchesFilters = Object.entries(activeFilters).every(([cat, val]) => {
+      if (val === "Todos" || !val) return true;
+      // Compatibilidad con los mock questions legacy
+      return [q.cropType, q.soilType, q.plantType].includes(val);
+    });
+
     const matchSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                         q.plantType.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchCrop && matchSoil && matchSearch;
+    return matchesFilters && matchSearch;
   });
 
   const crearNuevaPublicacion = (postData: { title: string; body: string; labels: string[] }) => {
@@ -105,10 +112,8 @@ export default function ComunidadPageClient() {
         handleRate={handleRate}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        filterCrop={filterCrop}
-        setFilterCrop={setFilterCrop}
-        filterSoil={filterSoil}
-        setFilterSoil={setFilterSoil}
+        activeFilters={activeFilters}
+        setActiveFilter={handleSetFilter}
       />
     </main>
   );
