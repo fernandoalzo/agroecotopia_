@@ -1,6 +1,7 @@
 export type Answer = {
   id: string;
   author: string;
+  authorId: string;
   authorImage?: string | null;
   authorRole: string;
   content: string;

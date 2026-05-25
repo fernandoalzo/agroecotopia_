@@ -14,11 +14,15 @@ interface ForumQuestionDetailProps {
   onBack: () => void;
   onRate: (id: string, rating: number, isQuestion: boolean) => void;
   onAddAnswer: (content: string) => void;
+  onEditAnswer?: (answerId: string, content: string) => void;
+  onDeleteAnswer?: (answerId: string) => void;
+  currentUserId?: string;
+  currentUserRole?: string;
 }
 
 import { answerSchema } from "../schemas/answer.schema";
 
-export default function ForumQuestionDetail({ question, onBack, onRate, onAddAnswer }: ForumQuestionDetailProps) {
+export default function ForumQuestionDetail({ question, onBack, onRate, onAddAnswer, onEditAnswer, onDeleteAnswer, currentUserId, currentUserRole }: ForumQuestionDetailProps) {
   const { status } = useSession();
   const [replyContent, setReplyContent] = useState("");
   const [error, setError] = useState("");
@@ -117,7 +121,15 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
 
       <div className="space-y-4">
         {question.answers.map(ans => (
-          <ForumAnswerCard key={ans.id} answer={ans} onRate={(id, r) => onRate(id, r, false)} />
+          <ForumAnswerCard
+            key={ans.id}
+            answer={ans}
+            onRate={(id, r) => onRate(id, r, false)}
+            onEdit={onEditAnswer}
+            onDelete={onDeleteAnswer}
+            currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
+          />
         ))}
       </div>
 

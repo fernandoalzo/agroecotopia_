@@ -6,7 +6,7 @@ import { MessageSquare } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 import { Question } from "@/frontend/components/comunidad/forum/forum.types";
-import { getPostByIdAction, createAnswerAction, rateItemAction } from "@/backend/modules/forum/forum.actions";
+import { getPostByIdAction, createAnswerAction, rateItemAction, editAnswerAction, deleteAnswerAction } from "@/backend/modules/forum/forum.actions";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -15,7 +15,7 @@ import ForumStatsPanel from "@/frontend/components/comunidad/forum/ForumStatsPan
 
 export default function PostPageClient({ id }: { id: string }) {
   const router = useRouter();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   
   const [question, setQuestion] = useState<Question | null>(null);
 
@@ -47,6 +47,7 @@ export default function PostPageClient({ id }: { id: string }) {
           id: ans.id,
           content: ans.content,
           author: ans.author.name || "Usuario",
+          authorId: ans.authorId,
           authorImage: ans.author.image,
           authorRole: ans.author.role,
           ratingTotal: ans.ratingTotal,
@@ -111,6 +112,45 @@ export default function PostPageClient({ id }: { id: string }) {
     rateItemMutation.mutate({ itemId, rating, isQuestion });
   };
 
+  const editAnswerMutation = useMutation({
+    mutationFn: async (data: { answerId: string; content: string }) => {
+      const res = await editAnswerAction(data);
+      if ("error" in res) throw new Error(res.error);
+      if (!res.success) throw new Error("Unknown error");
+      return res.answer;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
+      toast.success("Respuesta actualizada");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Error al editar la respuesta");
+    },
+  });
+
+  const deleteAnswerMutation = useMutation({
+    mutationFn: async (answerId: string) => {
+      const res = await deleteAnswerAction(answerId);
+      if ("error" in res) throw new Error(res.error);
+      if (!res.success) throw new Error("Unknown error");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
+      toast.success("Respuesta eliminada");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Error al eliminar la respuesta");
+    },
+  });
+
+  const handleEditAnswer = (answerId: string, content: string) => {
+    editAnswerMutation.mutate({ answerId, content });
+  };
+
+  const handleDeleteAnswer = (answerId: string) => {
+    deleteAnswerMutation.mutate(answerId);
+  };
+
   if (!question || isLoading) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
@@ -137,6 +177,10 @@ export default function PostPageClient({ id }: { id: string }) {
               onBack={() => router.push("/comunidad")} 
               onRate={handleRate} 
               onAddAnswer={añadirNuevaRespuesta}
+              onEditAnswer={handleEditAnswer}
+              onDeleteAnswer={handleDeleteAnswer}
+              currentUserId={session?.user?.id}
+              currentUserRole={session?.user?.role}
             />
           </div>
 

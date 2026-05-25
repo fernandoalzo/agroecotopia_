@@ -125,6 +125,45 @@ export class ForumRepository {
     }
   }
 
+  async getAnswerById(id: string) {
+    try {
+      return await prisma.forumAnswer.findUnique({
+        where: { id },
+      });
+    } catch (error) {
+      log.error(`Error fetching answer by ID (${id}) from repository:`, error);
+      throw new Error("Failed to fetch answer.");
+    }
+  }
+
+  async updateAnswer(id: string, content: string) {
+    try {
+      return await prisma.forumAnswer.update({
+        where: { id },
+        data: { content },
+        include: {
+          author: {
+            select: { id: true, name: true, image: true, role: true },
+          },
+        },
+      });
+    } catch (error) {
+      log.error(`Error updating answer in repository:`, error);
+      throw new Error("Failed to update answer.");
+    }
+  }
+
+  async deleteAnswer(id: string) {
+    try {
+      return await prisma.forumAnswer.delete({
+        where: { id },
+      });
+    } catch (error) {
+      log.error(`Error deleting answer in repository:`, error);
+      throw new Error("Failed to delete answer.");
+    }
+  }
+
   async rateItem(
     userId: string,
     itemId: string,

@@ -61,6 +61,40 @@ export async function createAnswerAction(formData: { content: string; postId: st
   });
 }
 
+export async function editAnswerAction(formData: { answerId: string; content: string }) {
+  return withAuth(async () => {
+    try {
+      const session = await authService.ensureAuthenticated();
+      const userId = session.user?.id;
+      if (!userId) throw new Error("User ID not found");
+
+      log.info(`User ${userId} editing answer ${formData.answerId}`);
+      const answer = await forumService.editAnswer(formData.answerId, formData.content, userId, session.user.role ?? "user");
+      return { success: true, answer };
+    } catch (error: any) {
+      log.error("Failed to edit answer:", error);
+      return { success: false, error: error.message };
+    }
+  });
+}
+
+export async function deleteAnswerAction(answerId: string) {
+  return withAuth(async () => {
+    try {
+      const session = await authService.ensureAuthenticated();
+      const userId = session.user?.id;
+      if (!userId) throw new Error("User ID not found");
+
+      log.info(`User ${userId} deleting answer ${answerId}`);
+      await forumService.deleteAnswer(answerId, userId, session.user.role ?? "user");
+      return { success: true };
+    } catch (error: any) {
+      log.error("Failed to delete answer:", error);
+      return { success: false, error: error.message };
+    }
+  });
+}
+
 export async function rateItemAction(data: { itemId: string; itemType: "post" | "answer"; value: number }) {
   return withAuth(async () => {
     try {

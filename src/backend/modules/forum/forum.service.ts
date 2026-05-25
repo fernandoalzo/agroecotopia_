@@ -46,6 +46,36 @@ export class ForumService {
     return await this.forumRepository.createAnswer(data, authorId);
   }
 
+  async editAnswer(answerId: string, content: string, userId: string, role: string) {
+    if (!content || content.length < 10) {
+      throw new Error("Answer must be at least 10 characters long.");
+    }
+
+    const answer = await this.forumRepository.getAnswerById(answerId);
+    if (!answer) {
+      throw new Error("Answer not found.");
+    }
+
+    if (answer.authorId !== userId && role !== "admin") {
+      throw new Error("UNAUTHORIZED");
+    }
+
+    return await this.forumRepository.updateAnswer(answerId, content);
+  }
+
+  async deleteAnswer(answerId: string, userId: string, role: string) {
+    const answer = await this.forumRepository.getAnswerById(answerId);
+    if (!answer) {
+      throw new Error("Answer not found.");
+    }
+
+    if (answer.authorId !== userId && role !== "admin") {
+      throw new Error("UNAUTHORIZED");
+    }
+
+    return await this.forumRepository.deleteAnswer(answerId);
+  }
+
   async rateItem(
     userId: string,
     itemId: string,
