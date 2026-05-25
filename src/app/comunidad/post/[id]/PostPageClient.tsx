@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { MessageSquare } from "lucide-react";
 import { useSession } from "next-auth/react";
 
-import { mockQuestions, Question } from "@/frontend/components/comunidad/forum/forum.types";
+import { Question } from "@/frontend/components/comunidad/forum/forum.types";
+import { getPostByIdAction, createAnswerAction, rateItemAction } from "@/backend/modules/forum/forum.actions";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
 import ForumQuestionDetail from "@/frontend/components/comunidad/forum/ForumQuestionDetail";
 import ForumStatsPanel from "@/frontend/components/comunidad/forum/ForumStatsPanel";
 
@@ -15,78 +19,105 @@ export default function PostPageClient({ id }: { id: string }) {
   
   const [question, setQuestion] = useState<Question | null>(null);
 
-  const obtenerDetallesDelPost = () => {
-    console.log(`obtenerDetallesDelPost(): Obteniendo detalles para el post con ID: ${id}`);
-    const foundQuestion = mockQuestions.find(q => q.id === id);
-    setQuestion(foundQuestion || null);
-  };
+  const queryClient = useQueryClient();
+
+  const { data: postData, isLoading } = useQuery({
+    queryKey: ["forumPost", id],
+    queryFn: async () => {
+      const res = await getPostByIdAction(id);
+      if (!res.success) throw new Error(res.error);
+      return res.post;
+    },
+  });
 
   useEffect(() => {
-    obtenerDetallesDelPost();
-  }, [id]);
+    if (postData) {
+      const mapped: Question = {
+        id: postData.id,
+        title: postData.title,
+        body: postData.body,
+        author: postData.author.name || "Usuario",
+        authorImage: postData.author.image,
+        labels: postData.labels,
+        ratingTotal: postData.ratingTotal,
+        ratingCount: postData.ratingCount,
+        createdAt: postData.createdAt,
+        isTrending: postData.isTrending,
+        answers: postData.answers.map((ans: any) => ({
+          id: ans.id,
+          content: ans.content,
+          author: ans.author.name || "Usuario",
+          authorImage: ans.author.image,
+          authorRole: ans.author.role,
+          ratingTotal: ans.ratingTotal,
+          ratingCount: ans.ratingCount,
+          isAccepted: ans.isAccepted,
+          createdAt: ans.createdAt,
+        })),
+      };
+      setQuestion(mapped);
+    }
+  }, [postData]);
+
+  const createAnswerMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await createAnswerAction({ content, postId: id });
+      if ("error" in res) throw new Error(res.error);
+      if (!res.success) throw new Error("Unknown error");
+      return res.answer;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
+      toast.success("Respuesta enviada");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Error al enviar la respuesta");
+    },
+  });
+
+  const rateItemMutation = useMutation({
+    mutationFn: async (data: { itemId: string; rating: number; isQuestion: boolean }) => {
+      const res = await rateItemAction({ 
+        itemId: data.itemId, 
+        itemType: data.isQuestion ? "post" : "answer", 
+        value: data.rating 
+      });
+      if ("error" in res) throw new Error(res.error);
+      if (!res.success) throw new Error("Unknown error");
+      return res.rating;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
+      toast.success("Calificación guardada");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Error al calificar");
+    },
+  });
 
   const añadirNuevaRespuesta = (content: string) => {
-    console.log("añadirNuevaRespuesta(): Guardando nueva respuesta...", content);
-    if (!question) return;
-
-    const newAnswer = {
-      id: `a${Date.now()}`,
-      author: "Tú",
-      authorRole: "Miembro",
-      content,
-      rating: 0,
-      ratingCount: 0,
-      isAccepted: false,
-      timestamp: "Justo ahora"
-    };
-
-    setQuestion({
-      ...question,
-      answers: [...question.answers, newAnswer]
-    });
+    if (status !== "authenticated") {
+      toast.error("Debes iniciar sesión para responder");
+      return;
+    }
+    createAnswerMutation.mutate(content);
   };
 
-  if (!question) {
+  const handleRate = (itemId: string, rating: number, isQuestion: boolean = false) => {
+    if (status !== "authenticated") {
+      toast.error("Debes iniciar sesión para calificar");
+      return;
+    }
+    rateItemMutation.mutate({ itemId, rating, isQuestion });
+  };
+
+  if (!question || isLoading) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center pt-20">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Publicación no encontrada</h1>
-          <button 
-            onClick={() => router.push("/comunidad")}
-            className="px-6 py-2 bg-primary text-primary-foreground rounded-full font-bold hover:bg-primary/90 transition-all"
-          >
-            Volver a la Comunidad
-          </button>
-        </div>
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <p className="text-muted-foreground animate-pulse">Cargando publicación...</p>
       </div>
     );
   }
-
-  // Handle star rating for the details page
-  const handleRate = (itemId: string, rating: number, isQuestion: boolean = false) => {
-    console.log(`handleRate(): Calificando item ${itemId} con ${rating} estrellas`);
-    if (!question) return;
-
-    if (isQuestion) {
-      if (question.id === itemId) {
-        const newCount = question.ratingCount + 1;
-        const newRating = ((question.rating * question.ratingCount) + rating) / newCount;
-        setQuestion({ ...question, rating: Math.round(newRating * 10) / 10, ratingCount: newCount });
-      }
-    } else {
-      setQuestion({
-        ...question,
-        answers: question.answers.map(ans => {
-          if (ans.id === itemId) {
-            const newCount = ans.ratingCount + 1;
-            const newRating = ((ans.rating * ans.ratingCount) + rating) / newCount;
-            return { ...ans, rating: Math.round(newRating * 10) / 10, ratingCount: newCount };
-          }
-          return ans;
-        })
-      });
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden pt-16 md:pt-20">

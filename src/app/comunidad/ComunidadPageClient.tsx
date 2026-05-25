@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import CommunityQAForum from "@/frontend/components/comunidad/CommunityQAForum";
-import { Question, mockQuestions } from "@/frontend/components/comunidad/forum/forum.types";
-import { config } from "@/config/config";
+import { Question } from "@/frontend/components/comunidad/forum/forum.types";
+import { getPostsAction, createPostAction, rateItemAction, getCommunityStatsAction, getTopContributorsAction } from "@/backend/modules/forum/forum.actions";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export default function ComunidadPageClient() {
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -17,89 +19,121 @@ export default function ComunidadPageClient() {
     setActiveFilters(prev => ({ ...prev, [category]: value }));
   };
 
-  const obtenerPublicaciones = () => {
-    console.log("obtenerPublicaciones(): Obteniendo publicaciones mockeadas de la DB...");
-    setQuestions(mockQuestions);
-  };
+  const queryClient = useQueryClient();
 
-  const obtenerComunidadActiva = () => {
-    console.log("obtenerComunidadActiva(): Obteniendo estadísticas de la comunidad...");
-    setActiveCommunityStats({
-      totalMembers: "12.4k",
-      onlineNow: "342"
-    });
-  };
+  const { data: postsData, isLoading } = useQuery({
+    queryKey: ["forumPosts", activeFilters, searchQuery],
+    queryFn: async () => {
+      const res = await getPostsAction(activeFilters, searchQuery);
+      if (!res.success) throw new Error(res.error);
+      return res.posts;
+    },
+  });
 
-  const obtenerTopContributors = () => {
-    console.log("obtenerTopContributors(): Obteniendo top contributors...");
-    setTopContributors([
-      { name: "Ing. Roberto M.", role: "Experto en Suelos", points: "4.2k", rank: 1 },
-      { name: "Finca El Paraíso", role: "Agricultura Regenerativa", points: "3.8k", rank: 2 },
-      { name: "Dra. Sofía L.", role: "Fitopatóloga", points: "3.1k", rank: 3 }
-    ]);
-  };
+  // Transform backend posts to UI Question format
+  useEffect(() => {
+    if (postsData) {
+      const mapped: Question[] = postsData.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        body: p.body,
+        author: p.author.name || "Usuario",
+        authorImage: p.author.image,
+        labels: p.labels,
+        ratingTotal: p.ratingTotal,
+        ratingCount: p.ratingCount,
+        createdAt: p.createdAt,
+        answers: [], // We don't fetch all answers for the feed
+        _count: p._count,
+        isTrending: p.isTrending,
+      }));
+      setQuestions(mapped);
+    }
+  }, [postsData]);
+
+  const { data: communityStats } = useQuery({
+    queryKey: ["communityStats"],
+    queryFn: async () => {
+      const res = await getCommunityStatsAction();
+      if ("error" in res) throw new Error(res.error);
+      if (!res.success) throw new Error("Unknown error");
+      return res.stats;
+    },
+    refetchInterval: 60000, // Refresh every minute
+  });
+
+  const { data: topContributorsData } = useQuery({
+    queryKey: ["topContributors"],
+    queryFn: async () => {
+      const res = await getTopContributorsAction();
+      if ("error" in res) throw new Error(res.error);
+      if (!res.success) throw new Error("Unknown error");
+      return res.contributors;
+    },
+  });
 
   useEffect(() => {
-    obtenerPublicaciones();
-    obtenerComunidadActiva();
-    obtenerTopContributors();
-  }, []);
-
-  const filtrarPosts = () => {
-    console.log("filtrarPosts(): Filtrando publicaciones en base a:", { activeFilters, searchQuery });
-    // Aquí iría la llamada real para filtrar desde el servidor o DB
-  };
+    if (communityStats) {
+      setActiveCommunityStats({
+        totalMembers: communityStats.totalMembers > 1000 ? (communityStats.totalMembers / 1000).toFixed(1) + "k" : communityStats.totalMembers.toString(),
+        onlineNow: communityStats.onlineNow.toString()
+      });
+    }
+  }, [communityStats]);
 
   useEffect(() => {
-    filtrarPosts();
-  }, [activeFilters, searchQuery]);
+    if (topContributorsData) {
+      const mapped = topContributorsData.map((c, index) => ({
+        name: c.name,
+        role: c.role,
+        points: c.points > 1000 ? (c.points / 1000).toFixed(1) + "k" : c.points.toString(),
+        rank: index + 1
+      }));
+      setTopContributors(mapped);
+    }
+  }, [topContributorsData]);
 
-  const filteredQuestions = questions.filter((q) => {
-    const matchesFilters = Object.entries(activeFilters).every(([cat, val]) => {
-      if (val === "Todos" || !val) return true;
-      // Compatibilidad con los mock questions legacy
-      return [q.cropType, q.soilType, q.plantType].includes(val);
-    });
+  // Filtering is now handled by the backend via the query
+  const filteredQuestions = questions;
 
-    const matchSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                        q.plantType.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilters && matchSearch;
+  const createPostMutation = useMutation({
+    mutationFn: async (postData: { title: string; body: string; labels: string[] }) => {
+      const res = await createPostAction(postData);
+      if ("error" in res) throw new Error(res.error);
+      if (!res.success) throw new Error("Unknown error");
+      return res.post;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
+      toast.success("Publicación creada con éxito");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Error al crear la publicación");
+    },
+  });
+
+  const rateItemMutation = useMutation({
+    mutationFn: async (data: { itemId: string; rating: number }) => {
+      const res = await rateItemAction({ itemId: data.itemId, itemType: "post", value: data.rating });
+      if ("error" in res) throw new Error(res.error);
+      if (!res.success) throw new Error("Unknown error");
+      return res.rating;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
+      toast.success("Calificación guardada");
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Error al calificar");
+    },
   });
 
   const crearNuevaPublicacion = (postData: { title: string; body: string; labels: string[] }) => {
-    console.log("crearNuevaPublicacion(): Guardando nueva publicación...", postData);
-    // Derive mock values from labels for backward compatibility with current UI
-    const allCategories = config.forum.labels as Record<string, readonly string[]>;
-    const cropType = postData.labels.find(l => allCategories.cultivos?.includes(l)) || "Todos";
-    const soilType = postData.labels.find(l => allCategories.suelos?.includes(l)) || "Todos";
-    const plantType = postData.labels[0] || "General";
-
-    const newQuestion: Question = {
-      id: `q${Date.now()}`,
-      title: postData.title,
-      body: postData.body,
-      author: "Tú",
-      cropType,
-      plantType,
-      soilType,
-      rating: 0,
-      ratingCount: 0,
-      timestamp: "Justo ahora",
-      answers: [],
-    };
-    setQuestions([newQuestion, ...questions]);
+    createPostMutation.mutate(postData);
   };
 
   const handleRate = (itemId: string, rating: number) => {
-    console.log(`Calificando post ${itemId} con ${rating} estrellas`);
-    setQuestions(questions.map(q => {
-      if (q.id === itemId) {
-        const newCount = q.ratingCount + 1;
-        const newRating = ((q.rating * q.ratingCount) + rating) / newCount;
-        return { ...q, rating: Math.round(newRating * 10) / 10, ratingCount: newCount };
-      }
-      return q;
-    }));
+    rateItemMutation.mutate({ itemId, rating });
   };
 
   return (

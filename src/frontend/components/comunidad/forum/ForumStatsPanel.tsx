@@ -19,17 +19,10 @@ export default function ForumStatsPanel({
           Comunidad Activa
         </h3>
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="flex">
           <div>
             <span className="block font-black text-3xl text-foreground tracking-tight">{activeCommunityStats.totalMembers}</span>
             <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mt-1 block">Miembros</span>
-          </div>
-          <div>
-            <span className="block font-black text-3xl text-accent flex items-center gap-2 tracking-tight">
-              {activeCommunityStats.onlineNow}
-              <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-            </span>
-            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mt-1 block">En línea</span>
           </div>
         </div>
       </div>

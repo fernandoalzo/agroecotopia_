@@ -25,7 +25,7 @@ export default function ForumQuestionCard({ question, onRate }: ForumQuestionCar
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
           <span className="font-bold text-foreground/80">{question.author}</span>
           <span>•</span>
-          <span>{question.timestamp}</span>
+          <span>{new Date(question.createdAt).toLocaleDateString()}</span>
           {question.isTrending && (
             <>
               <span>•</span>
@@ -45,13 +45,17 @@ export default function ForumQuestionCard({ question, onRate }: ForumQuestionCar
         </p>
 
         <div className="flex items-center justify-between">
-          <div className="flex gap-2">
-            <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 rounded-full border border-primary/20">
-              {question.plantType}
-            </span>
-            <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-accent bg-accent/10 rounded-full border border-accent/20">
-              {question.soilType}
-            </span>
+          <div className="flex gap-2 flex-wrap max-w-[60%]">
+            {question.labels.slice(0, 3).map((label) => (
+              <span key={label} className="px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 rounded-full border border-primary/20">
+                {label}
+              </span>
+            ))}
+            {question.labels.length > 3 && (
+              <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground bg-secondary/50 rounded-full border border-border/50">
+                +{question.labels.length - 3}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
@@ -65,7 +69,7 @@ export default function ForumQuestionCard({ question, onRate }: ForumQuestionCar
                     className="transition-all hover:scale-125"
                   >
                     <Star
-                      className={`w-4 h-4 transition-colors ${star <= Math.round(question.rating)
+                      className={`w-4 h-4 transition-colors ${star <= Math.round(question.ratingTotal)
                           ? "fill-amber-400 text-amber-400"
                           : "fill-none text-muted-foreground/40 hover:text-amber-300"
                         }`}
@@ -74,14 +78,14 @@ export default function ForumQuestionCard({ question, onRate }: ForumQuestionCar
                 ))}
               </div>
               <span className="text-xs font-bold text-muted-foreground ml-1">
-                {question.rating.toFixed(1)}
+                {question.ratingTotal.toFixed(1)}
               </span>
             </div>
 
             {/* Answers Count */}
             <div className="flex items-center gap-1.5 text-muted-foreground group-hover:text-foreground/70 transition-colors">
               <MessageCircle className="w-4 h-4" />
-              <span className="text-xs font-bold">{question.answers.length}</span>
+              <span className="text-xs font-bold">{question._count?.answers || question.answers?.length || 0}</span>
             </div>
           </div>
         </div>

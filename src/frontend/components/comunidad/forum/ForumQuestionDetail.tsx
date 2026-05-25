@@ -54,12 +54,16 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
       <div className="mb-12 relative">
         <div className="flex-1">
           <div className="flex items-center gap-3 text-sm text-muted-foreground mb-6">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary text-lg shadow-inner">
-              {question.author.charAt(0)}
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary text-lg shadow-inner overflow-hidden">
+              {question.authorImage ? (
+                <img src={question.authorImage} alt={question.author} className="w-full h-full object-cover" />
+              ) : (
+                question.author.charAt(0)
+              )}
             </div>
             <div>
               <span className="font-bold text-foreground block">{question.author}</span>
-              <span>{question.timestamp}</span>
+              <span>{new Date(question.createdAt).toLocaleDateString()}</span>
             </div>
           </div>
 
@@ -68,12 +72,11 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
           </h1>
 
           <div className="flex flex-wrap items-center gap-3 mb-8">
-            <span className="px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-primary bg-primary/10 rounded-full border border-primary/20">
-              {question.plantType}
-            </span>
-            <span className="px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-accent bg-accent/10 rounded-full border border-accent/20">
-              {question.soilType}
-            </span>
+            {question.labels.map(label => (
+              <span key={label} className="px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-primary bg-primary/10 rounded-full border border-primary/20">
+                {label}
+              </span>
+            ))}
 
             {/* Inline Star Rating */}
             <div className="flex items-center gap-1 ml-2">
@@ -85,7 +88,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
                 >
                   <Star
                     className={`w-5 h-5 transition-colors ${
-                      star <= Math.round(question.rating)
+                      star <= Math.round(question.ratingTotal)
                         ? "fill-amber-400 text-amber-400"
                         : "fill-none text-muted-foreground/30 hover:text-amber-300"
                     }`}
@@ -93,7 +96,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
                 </button>
               ))}
               <span className="text-sm font-bold text-foreground ml-2">
-                {question.rating.toFixed(1)}
+                {question.ratingTotal.toFixed(1)}
               </span>
               <span className="text-xs text-muted-foreground ml-1">
                 ({question.ratingCount} valoraciones)

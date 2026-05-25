@@ -39,7 +39,7 @@ export default function ForumAnswerCard({ answer, onRate }: ForumAnswerCardProps
                 >
                   <Star
                     className={`w-4 h-4 transition-colors ${
-                      star <= Math.round(answer.rating)
+                      star <= Math.round(answer.ratingTotal)
                         ? "fill-amber-400 text-amber-400"
                         : "fill-none text-muted-foreground/40 hover:text-amber-300"
                     }`}
@@ -47,7 +47,7 @@ export default function ForumAnswerCard({ answer, onRate }: ForumAnswerCardProps
                 </button>
               ))}
               <span className="text-xs font-bold text-muted-foreground ml-1.5">
-                {answer.rating.toFixed(1)}
+                {answer.ratingTotal.toFixed(1)}
               </span>
               <span className="text-[10px] text-muted-foreground/60 ml-0.5">
                 ({answer.ratingCount})
@@ -65,8 +65,12 @@ export default function ForumAnswerCard({ answer, onRate }: ForumAnswerCardProps
               <span className="font-bold text-foreground text-sm block">{answer.author}</span>
               <span className="text-[10px] uppercase font-black tracking-wider text-primary">{answer.authorRole}</span>
             </div>
-            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-muted-foreground border border-border">
-              <User className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-muted-foreground border border-border overflow-hidden">
+              {answer.authorImage ? (
+                <img src={answer.authorImage} alt={answer.author} className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-4 h-4" />
+              )}
             </div>
           </div>
         </div>

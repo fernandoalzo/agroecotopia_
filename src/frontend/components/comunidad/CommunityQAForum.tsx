@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Sparkles, Flame, MessageSquare, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
 
-import { Question, mockQuestions } from "./forum/forum.types";
+import { Question } from "./forum/forum.types";
 import ForumSidebar from "./forum/ForumSidebar";
 import ForumTrendingBanner from "./forum/ForumTrendingBanner";
 import ForumQuestionCard from "./forum/ForumQuestionCard";
