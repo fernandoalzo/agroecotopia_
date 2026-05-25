@@ -82,7 +82,7 @@ export default function ForumSidebar({
   setActiveFilter
 }: ForumSidebarProps) {
   return (
-    <div className="hidden lg:block lg:col-span-3 sticky top-28 space-y-8">
+    <div className="w-full lg:col-span-3 lg:sticky lg:top-28 space-y-8">
       <div className="space-y-10 px-2">
         <div className="relative">
           <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
