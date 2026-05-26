@@ -119,9 +119,9 @@ const Navbar = () => {
 
   return (
     <nav className="fixed top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
-      <div className="container mx-auto flex h-14 items-center justify-between px-4 md:h-20 md:px-6">
+      <div className="mx-auto flex h-14 items-center justify-between px-4 lg:h-20 lg:px-6 max-w-[1440px]">
         <div className="flex items-center justify-start">
-          <Link href="/" className="group relative flex items-center gap-1.5 font-display text-lg font-bold md:gap-3 md:text-2xl transition-all duration-300">
+          <Link href="/" className="group relative flex shrink-0 items-center gap-1.5 font-display text-lg font-bold lg:gap-3 lg:text-2xl transition-all duration-300">
             {/* Animated Logo Container */}
             <div className="relative flex items-center justify-center">
               <motion.div
@@ -136,7 +136,7 @@ const Navbar = () => {
                 }}
                 className="relative z-10"
               >
-                <Leaf className="h-6 w-6 text-primary md:h-8 md:w-8 transition-transform duration-500 group-hover:rotate-[25deg] group-hover:scale-125" />
+                <Leaf className="h-6 w-6 text-primary lg:h-8 lg:w-8 transition-transform duration-500 group-hover:rotate-[25deg] group-hover:scale-125" />
               </motion.div>
 
               {/* Subtle aura behind the leaf */}
@@ -145,7 +145,7 @@ const Navbar = () => {
 
             {/* Premium Typography Container */}
             <div className="relative overflow-hidden">
-              <div className="flex items-center tracking-tight md:tracking-tighter">
+              <div className="flex items-center tracking-tight lg:tracking-tighter">
                 {config.app.name.split("").map((letter, i) => (
                   <motion.span
                     key={i}
@@ -161,7 +161,7 @@ const Navbar = () => {
                       // Unified primary green for the entire brand title for consistency and maximum legibility
                       "text-primary font-bold md:font-black",
                       // Slightly smaller on mobile to prevent overflow
-                      "text-[15px] md:text-2xl"
+                      "text-[15px] lg:text-2xl"
                     )}
                   >
                     {letter}
@@ -199,18 +199,18 @@ const Navbar = () => {
         </div>
 
         {/* Right Side Action Group: Contains Nav Pill, Auth, and Settings with homogeneous spacing */}
-        <div className="flex shrink-0 items-center gap-2 md:gap-3 justify-end">
+        <div className="flex shrink-0 items-center gap-2 lg:gap-3 justify-end min-w-0">
           {/* Desktop Navigation (Center Pill) */}
-          <div className="hidden items-center gap-6 md:flex lg:gap-8 bg-secondary/30 backdrop-blur-sm pl-6 pr-4 py-2 rounded-full border border-border/40 shadow-inner group/nav overflow-hidden relative">
+          <div className="hidden items-center lg:flex gap-1 xl:gap-2 bg-secondary/30 backdrop-blur-sm pl-4 xl:pl-6 pr-3 xl:pr-4 py-2 rounded-full border border-border/40 shadow-inner group/nav overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full group-hover/nav:translate-x-full transition-transform duration-1000 pointer-events-none" />
 
-            <div className="flex items-center gap-6 lg:gap-8">
+            <div className="flex items-center gap-3 xl:gap-6">
               {links.map((l) => (
                 <Link
                   key={l.href}
                   href={l.href}
                   className={cn(
-                    "relative py-1 font-body text-sm font-bold tracking-tight transition-all hover:text-primary z-20",
+                    "relative py-1 font-body text-[13px] xl:text-sm font-bold tracking-tight transition-all hover:text-primary z-20 whitespace-nowrap",
                     isActive(l.href) ? "text-primary" : "text-muted-foreground/80"
                   )}
                 >
@@ -322,7 +322,7 @@ const Navbar = () => {
 
 
           {/* Auth Button — standalone, outside settings dropdown */}
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -400,11 +400,11 @@ const Navbar = () => {
           </div>
 
           {/* Settings + Mobile Toggle pill */}
-          <div className="flex shrink-0 items-center gap-1 bg-background/50 backdrop-blur-xl p-1 md:p-1.5 rounded-full border-2 border-primary/10 dark:border-primary/30 shadow-lg md:gap-2 group/pill hover:border-primary/30 dark:hover:border-primary/50 transition-all duration-300">
+          <div className="flex shrink-0 items-center gap-1 bg-background/50 backdrop-blur-xl p-1 lg:p-1.5 rounded-full border-2 border-primary/10 dark:border-primary/30 shadow-lg lg:gap-2 group/pill hover:border-primary/30 dark:hover:border-primary/50 transition-all duration-300">
             <div className="flex items-center">
               <UserMenu />
             </div>
-            <div className="md:hidden px-1">
+            <div className="lg:hidden px-1">
               <button
                 onClick={() => setOpen(!open)}
                 className={cn(
@@ -422,7 +422,7 @@ const Navbar = () => {
           </div>
 
           {/* Mobile Cart Button */}
-          <div className="relative shrink-0 md:hidden">
+          <div className="relative shrink-0 lg:hidden">
             <Link href="/cart" className="group relative flex items-center">
               <motion.div
                 whileTap={{ scale: 0.9 }}
@@ -458,7 +458,7 @@ const Navbar = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-0 top-0 z-[60] flex h-screen w-full flex-col bg-primary dark:bg-[#0a1f14] md:hidden overflow-y-auto"
+            className="fixed inset-0 top-0 z-[60] flex h-screen w-full flex-col bg-primary dark:bg-[#0a1f14] lg:hidden overflow-y-auto"
           >
             {/* Background pattern layer - Organic Leaf SVGs from Visual Concept */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.07] mix-blend-overlay">
