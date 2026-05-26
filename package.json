@@ -3,13 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:web\" \"npm run dev:ws\"",
-    "dev:web": "tsx server.ts",
-    "dev:ws": "tsx socket-server.ts",
+    "dev": "tsx server.ts",
     "build": "next build",
-    "start": "concurrently \"npm run start:web\" \"npm run start:ws\"",
-    "start:web": "tsx server.ts",
-    "start:ws": "tsx socket-server.ts",
+    "start": "tsx server.ts",
     "lint": "eslint",
     "postinstall": "prisma generate"
   },
@@ -83,7 +79,6 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "prisma": "^6.19.2",
