@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, Flame, MessageSquare, Plus } from "lucide-react";
+import { Sparkles, Flame, MessageSquare, Plus, SearchX } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 import { Question } from "./forum/forum.types";
@@ -20,8 +20,12 @@ type CommunityQAForumProps = {
   handleRate: (itemId: string, rating: number) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-  activeFilters: Record<string, string>;
+  activeFilters: Record<string, string[]>;
   setActiveFilter: (category: string, value: string) => void;
+  fetchNextPage?: () => void;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
+  trendingTags: string[];
 };
 
 export default function CommunityQAForum({
@@ -33,7 +37,11 @@ export default function CommunityQAForum({
   searchQuery,
   setSearchQuery,
   activeFilters,
-  setActiveFilter
+  setActiveFilter,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
+  trendingTags
 }: CommunityQAForumProps) {
   const { status } = useSession();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -67,7 +75,7 @@ export default function CommunityQAForum({
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              <ForumTrendingBanner />
+              <ForumTrendingBanner tags={trendingTags} />
 
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-4">
@@ -84,13 +92,54 @@ export default function CommunityQAForum({
               </div>
 
               <div className="space-y-4">
-                {questions.map((q) => (
-                  <ForumQuestionCard 
-                    key={q.id} 
-                    question={q} 
-                    onRate={handleRate} 
-                  />
-                ))}
+                {questions.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    className="flex flex-col items-center justify-center py-24 px-6 text-center"
+                  >
+                    <motion.div 
+                      initial={{ scale: 0, rotate: -15 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ delay: 0.15, type: "spring", stiffness: 200, damping: 15 }}
+                      className="w-20 h-20 mb-6 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10 backdrop-blur-sm border border-border/20 flex items-center justify-center"
+                    >
+                      <SearchX className="w-9 h-9 text-muted-foreground/50" />
+                    </motion.div>
+                    <h3 className="text-lg font-semibold text-foreground/70 mb-1.5">No se encontraron resultados</h3>
+                    <p className="text-sm text-muted-foreground/60 max-w-xs leading-relaxed">
+                      Intenta probar con otros términos o ajustar los filtros.
+                    </p>
+                  </motion.div>
+                ) : (
+                  questions.map((q) => (
+                    <ForumQuestionCard 
+                      key={q.id} 
+                      question={q} 
+                      onRate={handleRate} 
+                    />
+                  ))
+                )}
+                
+                {hasNextPage && (
+                  <div className="flex justify-center mt-6">
+                    <button
+                      onClick={() => fetchNextPage?.()}
+                      disabled={isFetchingNextPage}
+                      className="px-6 py-2.5 rounded-full bg-primary/10 text-primary font-bold hover:bg-primary/20 transition-all disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {isFetchingNextPage ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                          Cargando...
+                        </>
+                      ) : (
+                        "Cargar más publicaciones"
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>

@@ -24,10 +24,10 @@ export async function createPostAction(formData: { title: string; body: string; 
   });
 }
 
-export async function getPostsAction(activeFilters?: Record<string, string>, searchQuery?: string) {
+export async function getPostsAction(activeFilters?: Record<string, string[]>, searchQuery?: string, limit?: number, cursor?: string) {
   try {
-    const posts = await forumService.getPosts(activeFilters, searchQuery);
-    return { success: true, posts };
+    const { posts, nextCursor } = await forumService.getPosts(activeFilters, searchQuery, limit, cursor);
+    return { success: true, posts, nextCursor };
   } catch (error: any) {
     log.error("Failed to get posts:", error);
     return { success: false, error: error.message };
@@ -42,6 +42,24 @@ export async function getPostByIdAction(id: string) {
     log.error(`Failed to get post by id ${id}:`, error);
     return { success: false, error: error.message };
   }
+}
+
+export async function deletePostAction(postId: string) {
+  return withAuth(async () => {
+    try {
+      const session = await authService.ensureAuthenticated();
+      const userId = session.user?.id;
+      if (!userId) throw new Error("User ID not found");
+
+      log.info(`User ${userId} deleting post ${postId}`);
+      // Asumiendo que forumService tiene deletePost implementado
+      await forumService.deletePost(postId, userId, session.user.role ?? "user");
+      return { success: true };
+    } catch (error: any) {
+      log.error("Failed to delete post:", error);
+      return { success: false, error: error.message };
+    }
+  });
 }
 
 export async function createAnswerAction(formData: { content: string; postId: string }) {
@@ -128,6 +146,16 @@ export async function getTopContributorsAction() {
     return { success: true, contributors };
   } catch (error: any) {
     log.error("Failed to get top contributors:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getTrendingLabelsAction() {
+  try {
+    const labels = await forumService.getTrendingLabels();
+    return { success: true, labels };
+  } catch (error: any) {
+    log.error("Failed to get trending labels:", error);
     return { success: false, error: error.message };
   }
 }

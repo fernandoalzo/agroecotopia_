@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import CommunityQAForum from "@/frontend/components/comunidad/CommunityQAForum";
 import { Question } from "@/frontend/components/comunidad/forum/forum.types";
-import { getPostsAction, createPostAction, rateItemAction, getCommunityStatsAction, getTopContributorsAction } from "@/backend/modules/forum/forum.actions";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getPostsAction, createPostAction, rateItemAction, getCommunityStatsAction, getTopContributorsAction, getTrendingLabelsAction } from "@/backend/modules/forum/forum.actions";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export default function ComunidadPageClient() {
@@ -12,28 +12,61 @@ export default function ComunidadPageClient() {
   const [activeCommunityStats, setActiveCommunityStats] = useState({ totalMembers: "0", onlineNow: "0" });
   const [topContributors, setTopContributors] = useState<any[]>([]);
 
-  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
+  const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSetFilter = (category: string, value: string) => {
-    setActiveFilters(prev => ({ ...prev, [category]: value }));
+    setActiveFilters(prev => {
+      // "Todos" clears the category
+      if (value === "Todos") {
+        const next = { ...prev };
+        delete next[category];
+        return next;
+      }
+
+      const current = prev[category] || [];
+      const isAlreadySelected = current.includes(value);
+
+      // Toggle: remove if already selected, add if not
+      const updated = isAlreadySelected
+        ? current.filter(v => v !== value)
+        : [...current, value];
+
+      // If empty after removal, delete the category key
+      if (updated.length === 0) {
+        const next = { ...prev };
+        delete next[category];
+        return next;
+      }
+
+      return { ...prev, [category]: updated };
+    });
   };
 
   const queryClient = useQueryClient();
 
-  const { data: postsData, isLoading } = useQuery({
+  const { 
+    data: postsData, 
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteQuery({
     queryKey: ["forumPosts", activeFilters, searchQuery],
-    queryFn: async () => {
-      const res = await getPostsAction(activeFilters, searchQuery);
+    queryFn: async ({ pageParam = undefined }: { pageParam: string | undefined }) => {
+      const res = await getPostsAction(activeFilters, searchQuery, 10, pageParam);
       if (!res.success) throw new Error(res.error);
-      return res.posts;
+      return { posts: res.posts, nextCursor: res.nextCursor };
     },
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    initialPageParam: undefined as string | undefined,
   });
 
   // Transform backend posts to UI Question format
   useEffect(() => {
     if (postsData) {
-      const mapped: Question[] = postsData.map((p: any) => ({
+      const allPosts = postsData.pages.flatMap((page) => page.posts);
+      const mapped: Question[] = allPosts.map((p: any) => ({
         id: p.id,
         title: p.title,
         body: p.body,
@@ -69,6 +102,15 @@ export default function ComunidadPageClient() {
       if ("error" in res) throw new Error(res.error);
       if (!res.success) throw new Error("Unknown error");
       return res.contributors;
+    },
+  });
+
+  const { data: trendingLabels } = useQuery({
+    queryKey: ["trendingLabels"],
+    queryFn: async () => {
+      const res = await getTrendingLabelsAction();
+      if (!res.success) throw new Error(res.error);
+      return res.labels;
     },
   });
 
@@ -148,6 +190,10 @@ export default function ComunidadPageClient() {
         setSearchQuery={setSearchQuery}
         activeFilters={activeFilters}
         setActiveFilter={handleSetFilter}
+        fetchNextPage={fetchNextPage}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        trendingTags={trendingLabels ?? []}
       />
     </main>
   );

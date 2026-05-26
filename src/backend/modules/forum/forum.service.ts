@@ -20,8 +20,8 @@ export class ForumService {
     return await this.forumRepository.createPost(data, authorId);
   }
 
-  async getPosts(activeFilters?: Record<string, string>, searchQuery?: string) {
-    return await this.forumRepository.getPosts(activeFilters, searchQuery);
+  async getPosts(activeFilters?: Record<string, string[]>, searchQuery?: string, limit?: number, cursor?: string) {
+    return await this.forumRepository.getPosts(activeFilters, searchQuery, limit, cursor);
   }
 
   async getPostById(id: string) {
@@ -30,6 +30,19 @@ export class ForumService {
       throw new Error("Post not found.");
     }
     return post;
+  }
+
+  async deletePost(postId: string, userId: string, role: string) {
+    const post = await this.forumRepository.getPostById(postId);
+    if (!post) {
+      throw new Error("Post not found.");
+    }
+
+    if (post.authorId !== userId && role !== "admin") {
+      throw new Error("UNAUTHORIZED");
+    }
+
+    return await this.forumRepository.deletePost(postId);
   }
 
   async createAnswer(
@@ -95,5 +108,9 @@ export class ForumService {
 
   async getTopContributors() {
     return await this.forumRepository.getTopContributors();
+  }
+
+  async getTrendingLabels() {
+    return await this.forumRepository.getTrendingLabels();
   }
 }

@@ -6,7 +6,7 @@ import { MessageSquare } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 import { Question } from "@/frontend/components/comunidad/forum/forum.types";
-import { getPostByIdAction, createAnswerAction, rateItemAction, editAnswerAction, deleteAnswerAction } from "@/backend/modules/forum/forum.actions";
+import { getPostByIdAction, createAnswerAction, rateItemAction, editAnswerAction, deleteAnswerAction, deletePostAction } from "@/backend/modules/forum/forum.actions";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -37,6 +37,7 @@ export default function PostPageClient({ id }: { id: string }) {
         title: postData.title,
         body: postData.body,
         author: postData.author.name || "Usuario",
+        authorId: postData.authorId || postData.author.id, // Añadido authorId
         authorImage: postData.author.image,
         labels: postData.labels,
         ratingTotal: postData.ratingTotal,
@@ -151,6 +152,25 @@ export default function PostPageClient({ id }: { id: string }) {
     deleteAnswerMutation.mutate(answerId);
   };
 
+  const deletePostMutation = useMutation({
+    mutationFn: async (postId: string) => {
+      const res = await deletePostAction(postId);
+      if ("error" in res) throw new Error(res.error);
+      if (!res.success) throw new Error("Unknown error");
+    },
+    onSuccess: () => {
+      toast.success("Publicación eliminada correctamente");
+      router.push("/comunidad"); // Redirect to forum feed after deleting
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Error al eliminar la publicación");
+    },
+  });
+
+  const handleDeleteQuestion = (questionId: string) => {
+    deletePostMutation.mutate(questionId);
+  };
+
   if (!question || isLoading) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
@@ -179,6 +199,7 @@ export default function PostPageClient({ id }: { id: string }) {
               onAddAnswer={añadirNuevaRespuesta}
               onEditAnswer={handleEditAnswer}
               onDeleteAnswer={handleDeleteAnswer}
+              onDeleteQuestion={handleDeleteQuestion}
               currentUserId={session?.user?.id}
               currentUserRole={session?.user?.role}
             />

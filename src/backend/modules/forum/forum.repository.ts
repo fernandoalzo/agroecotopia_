@@ -4,6 +4,14 @@ import logger from "@/utils/logger";
 
 const log = logger.child();
 
+let cachedCommunityStats: { totalMembers: number; onlineNow: number } | null = null;
+let statsLastFetched: number = 0;
+const STATS_TTL = 1000 * 60 * 5; // 5 minutes
+
+let cachedTrendingLabels: string[] | null = null;
+let trendingLabelsLastFetched: number = 0;
+const TRENDING_TTL = 1000 * 60 * 5; // 5 minutes
+
 export class ForumRepository {
   async createPost(
     data: { title: string; body: string; labels: string[] },
@@ -29,33 +37,41 @@ export class ForumRepository {
     }
   }
 
-  async getPosts(activeFilters?: Record<string, string>, searchQuery?: string) {
+  async getPosts(activeFilters?: Record<string, string[]>, searchQuery?: string, limit: number = 10, cursor?: string) {
     try {
       // Build the where clause
       let where: Prisma.ForumPostWhereInput = {};
 
       if (searchQuery && searchQuery.trim() !== "") {
+        const formattedQuery = searchQuery.trim().split(/\s+/).join(" | ");
         where.OR = [
-          { title: { contains: searchQuery, mode: "insensitive" } },
-          { body: { contains: searchQuery, mode: "insensitive" } },
+          { title: { search: formattedQuery } },
+          { body: { search: formattedQuery } },
         ];
       }
 
       if (activeFilters && Object.keys(activeFilters).length > 0) {
-        // Collect all non-'Todos' filter values
-        const activeLabels = Object.values(activeFilters).filter((v) => v !== "Todos");
-        
-        if (activeLabels.length > 0) {
-          // If we have filters, we require the post to have ALL of these labels.
-          // Since Prisma's hasEvery expects an array, we can use it on the labels field.
-          where.labels = {
-            hasEvery: activeLabels,
-          };
+        // For each category, require the post to have at least one of the selected labels (hasSome).
+        // Across categories, we use AND: the post must match every active category.
+        const labelConditions: Prisma.ForumPostWhereInput[] = [];
+
+        for (const [, selectedLabels] of Object.entries(activeFilters)) {
+          if (selectedLabels.length > 0) {
+            labelConditions.push({
+              labels: { hasSome: selectedLabels },
+            });
+          }
+        }
+
+        if (labelConditions.length > 0) {
+          where.AND = labelConditions;
         }
       }
 
       const posts = await prisma.forumPost.findMany({
         where,
+        take: limit + 1,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
         orderBy: { createdAt: "desc" },
         include: {
           author: {
@@ -67,7 +83,13 @@ export class ForumRepository {
         },
       });
 
-      return posts;
+      let nextCursor: string | undefined = undefined;
+      if (posts.length > limit) {
+        const nextItem = posts.pop(); // Remove the extra item
+        nextCursor = nextItem?.id;
+      }
+
+      return { posts, nextCursor };
     } catch (error) {
       log.error("Error fetching posts from repository:", error);
       throw new Error("Failed to fetch posts.");
@@ -99,6 +121,17 @@ export class ForumRepository {
     } catch (error) {
       log.error(`Error fetching post by ID (${id}) from repository:`, error);
       throw new Error("Failed to fetch post.");
+    }
+  }
+
+  async deletePost(id: string) {
+    try {
+      return await prisma.forumPost.delete({
+        where: { id },
+      });
+    } catch (error) {
+      log.error(`Error deleting post in repository:`, error);
+      throw new Error("Failed to delete post.");
     }
   }
 
@@ -173,7 +206,7 @@ export class ForumRepository {
     try {
       // Upsert the rating
       const rating = await prisma.forumRating.upsert({
-        where: itemType === "post" 
+        where: itemType === "post"
           ? { userId_postId: { userId, postId: itemId } }
           : { userId_answerId: { userId, answerId: itemId } },
         create: {
@@ -227,14 +260,21 @@ export class ForumRepository {
 
   async getCommunityStats() {
     try {
+      if (cachedCommunityStats && Date.now() - statsLastFetched < STATS_TTL) {
+        return cachedCommunityStats;
+      }
+
       const totalMembers = await prisma.user.count();
       // For online members, we can generate a realistic dynamic number, e.g. 10% of total members + 15
       const onlineNow = Math.floor(totalMembers * 0.1) + 15;
-      
-      return {
+
+      cachedCommunityStats = {
         totalMembers,
         onlineNow,
       };
+      statsLastFetched = Date.now();
+
+      return cachedCommunityStats;
     } catch (error) {
       log.error("Error getting community stats in repository:", error);
       throw new Error("Failed to get community stats.");
@@ -243,37 +283,74 @@ export class ForumRepository {
 
   async getTopContributors() {
     try {
-      // Find top users by total posts + total answers
-      const users = await prisma.user.findMany({
-        where: {
-          OR: [
-            { forumPosts: { some: {} } },
-            { forumAnswers: { some: {} } }
-          ]
-        },
-        include: {
-          _count: {
-            select: {
-              forumPosts: true,
-              forumAnswers: true
-            }
-          }
-        }
-      });
+      // Professional approach: Execute aggregation and sorting directly in PostgreSQL
+      // This avoids fetching potentially thousands of records into Node.js memory.
+      const rankedUsers = await prisma.$queryRaw<
+        Array<{
+          id: string;
+          name: string | null;
+          image: string | null;
+          role: string;
+          points: number;
+        }>
+      >`
+        SELECT 
+          u.id, 
+          u.name, 
+          u.image, 
+          CAST(u.role AS TEXT) as role,
+          (COALESCE(p.post_count, 0) * 10 + COALESCE(a.answer_count, 0) * 5) as points
+        FROM "User" u
+        LEFT JOIN (
+          SELECT "authorId", COUNT(id) as post_count
+          FROM "ForumPost"
+          GROUP BY "authorId"
+        ) p ON u.id = p."authorId"
+        LEFT JOIN (
+          SELECT "authorId", COUNT(id) as answer_count
+          FROM "ForumAnswer"
+          GROUP BY "authorId"
+        ) a ON u.id = a."authorId"
+        WHERE (COALESCE(p.post_count, 0) > 0 OR COALESCE(a.answer_count, 0) > 0)
+        ORDER BY points DESC
+        LIMIT 3;
+      `;
 
-      // Sort in memory (since we can't easily order by sum of relation counts in Prisma)
-      const rankedUsers = users.map(u => ({
+      return rankedUsers.map(u => ({
         id: u.id,
         name: u.name || "Usuario",
         image: u.image,
         role: u.role,
-        points: u._count.forumPosts * 10 + u._count.forumAnswers * 5, // Custom point logic
-      })).sort((a, b) => b.points - a.points).slice(0, 3);
-
-      return rankedUsers;
+        points: Number(u.points),
+      }));
     } catch (error) {
       log.error("Error getting top contributors in repository:", error);
       throw new Error("Failed to get top contributors.");
+    }
+  }
+
+  async getTrendingLabels(limit: number = 5): Promise<string[]> {
+    try {
+      if (cachedTrendingLabels && Date.now() - trendingLabelsLastFetched < TRENDING_TTL) {
+        return cachedTrendingLabels;
+      }
+
+      // Unnest the labels array column and count frequency across all posts
+      const result = await prisma.$queryRaw<Array<{ label: string; count: bigint }>>`
+        SELECT label, COUNT(*) as count
+        FROM "ForumPost", unnest(labels) AS label
+        GROUP BY label
+        ORDER BY count DESC
+        LIMIT ${limit};
+      `;
+
+      cachedTrendingLabels = result.map(r => r.label);
+      trendingLabelsLastFetched = Date.now();
+
+      return cachedTrendingLabels;
+    } catch (error) {
+      log.error("Error getting trending labels in repository:", error);
+      throw new Error("Failed to get trending labels.");
     }
   }
 }

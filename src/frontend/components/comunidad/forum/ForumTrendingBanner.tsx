@@ -1,9 +1,14 @@
 "use client";
 
 import { Flame } from "lucide-react";
-import { trendingTags } from "./forum.types";
 
-export default function ForumTrendingBanner() {
+interface ForumTrendingBannerProps {
+  tags: string[];
+}
+
+export default function ForumTrendingBanner({ tags }: ForumTrendingBannerProps) {
+  if (tags.length === 0) return null;
+
   return (
     <div className="mb-8">
       <div className="flex items-center gap-2 text-primary font-bold mb-4">
@@ -11,7 +16,7 @@ export default function ForumTrendingBanner() {
         <h2 className="text-lg">Tendencias esta semana</h2>
       </div>
       <div className="flex flex-wrap gap-4">
-        {trendingTags.map(tag => (
+        {tags.map(tag => (
           <span key={tag} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1">
             <span className="text-primary/50">#</span>{tag.replace('#', '')}
           </span>

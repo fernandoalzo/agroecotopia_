@@ -16,6 +16,7 @@ export type Question = {
   title: string;
   body: string;
   author: string;
+  authorId?: string;
   authorImage?: string | null;
   labels: string[];
   ratingTotal: number;
@@ -25,7 +26,3 @@ export type Question = {
   _count?: { answers: number };
   isTrending?: boolean;
 };
-
-export const cropTypes = ["Todos", "Hortalizas", "Frutales", "Cereales", "Cultivos Perennes"];
-export const soilTypes = ["Todos", "Arcilloso", "Arenoso", "Franco", "Limoso"];
-export const trendingTags = ["#RoyaCafé", "#Sintropía", "#Compostaje", "#MercadosLocales", "#AbonoVerde"];

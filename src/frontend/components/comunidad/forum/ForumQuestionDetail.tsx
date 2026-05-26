@@ -4,8 +4,9 @@ import { useState } from "react";
 import { z } from "zod";
 
 import { motion } from "framer-motion";
-import { ArrowLeft, Star, MessageCircle } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { ArrowLeft, Star, MessageCircle, Share2, Check, Trash2 } from "lucide-react";
+import { useSession, signIn } from "next-auth/react";
+import { usePathname } from "next/navigation";
 import { Question } from "./forum.types";
 import ForumAnswerCard from "./ForumAnswerCard";
 
@@ -16,16 +17,33 @@ interface ForumQuestionDetailProps {
   onAddAnswer: (content: string) => void;
   onEditAnswer?: (answerId: string, content: string) => void;
   onDeleteAnswer?: (answerId: string) => void;
+  onDeleteQuestion?: (questionId: string) => void;
   currentUserId?: string;
   currentUserRole?: string;
 }
 
 import { answerSchema } from "../schemas/answer.schema";
 
-export default function ForumQuestionDetail({ question, onBack, onRate, onAddAnswer, onEditAnswer, onDeleteAnswer, currentUserId, currentUserRole }: ForumQuestionDetailProps) {
+export default function ForumQuestionDetail({ question, onBack, onRate, onAddAnswer, onEditAnswer, onDeleteAnswer, onDeleteQuestion, currentUserId, currentUserRole }: ForumQuestionDetailProps) {
   const { status } = useSession();
+  const pathname = usePathname();
   const [replyContent, setReplyContent] = useState("");
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const canDeleteQuestion = currentUserId && (currentUserId === question.authorId || currentUserRole === "admin");
+
+  const handleShare = async () => {
+    try {
+      const url = typeof window !== "undefined" ? window.location.href : "";
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Error al copiar", err);
+    }
+  };
 
   const handleAddAnswer = () => {
     try {
@@ -47,7 +65,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
     >
-      <button 
+      <button
         onClick={onBack}
         className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6 font-bold text-sm bg-secondary px-4 py-2 rounded-full w-fit"
       >
@@ -82,6 +100,40 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
               </span>
             ))}
 
+            {/* Share Button */}
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1.5 ml-auto md:ml-4 px-3 py-1.5 rounded-full text-xs font-bold transition-all border bg-secondary/50 hover:bg-secondary text-foreground"
+            >
+              {copied ? (
+                <><Check className="w-3.5 h-3.5 text-green-500" /> ¡Copiado!</>
+              ) : (
+                <><Share2 className="w-3.5 h-3.5" /> Compartir</>
+              )}
+            </button>
+
+            {/* Delete Button */}
+            {canDeleteQuestion && (
+              <div className="relative">
+                {!showDeleteConfirm ? (
+                  <button 
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="flex items-center justify-center w-8 h-8 rounded-full transition-all hover:bg-red-500/10 hover:text-red-500 text-muted-foreground"
+                    title="Eliminar post"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 rounded-full border border-red-500/20 text-xs">
+                    <span className="text-red-500 font-bold">¿Seguro?</span>
+                    <button onClick={() => { if(onDeleteQuestion) onDeleteQuestion(question.id); }} className="text-red-500 hover:text-red-600 font-black">Sí</button>
+                    <span className="text-red-500/30">|</span>
+                    <button onClick={() => setShowDeleteConfirm(false)} className="hover:text-foreground">No</button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Inline Star Rating */}
             <div className="flex items-center gap-1 ml-2">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -91,11 +143,10 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
                   className="transition-all hover:scale-125"
                 >
                   <Star
-                    className={`w-5 h-5 transition-colors ${
-                      star <= Math.round(question.ratingTotal)
-                        ? "fill-amber-400 text-amber-400"
-                        : "fill-none text-muted-foreground/30 hover:text-amber-300"
-                    }`}
+                    className={`w-5 h-5 transition-colors ${star <= Math.round(question.ratingTotal)
+                      ? "fill-amber-400 text-amber-400"
+                      : "fill-none text-muted-foreground/30 hover:text-amber-300"
+                      }`}
                   />
                 </button>
               ))}
@@ -108,9 +159,9 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
             </div>
           </div>
 
-          <p className="text-foreground/80 text-lg leading-relaxed whitespace-pre-wrap font-medium">
+          <div className="text-foreground/80 text-base leading-relaxed whitespace-pre-wrap break-words overflow-hidden">
             {question.body}
-          </p>
+          </div>
         </div>
       </div>
 
@@ -137,7 +188,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
         <div className="mt-8 bg-secondary/30 border border-border/50 rounded-3xl p-6 backdrop-blur-md">
           <h3 className="font-bold text-foreground mb-4">Añadir una respuesta</h3>
           <div className={`bg-background/50 border rounded-xl p-4 focus-within:border-primary/50 transition-all mb-2 ${error ? 'border-red-500' : 'border-border/50'}`}>
-            <textarea 
+            <textarea
               rows={4}
               value={replyContent}
               onChange={(e) => { setReplyContent(e.target.value); setError(""); }}
@@ -147,7 +198,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
           </div>
           {error && <p className="text-red-500 text-xs font-bold mb-4">{error}</p>}
           <div className="flex justify-end">
-            <button 
+            <button
               onClick={handleAddAnswer}
               className="px-6 py-2.5 bg-primary text-primary-foreground rounded-full font-bold hover:bg-primary/90 transition-all text-sm"
             >
@@ -158,9 +209,17 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
       ) : (
         <div className="mt-8 bg-secondary/30 border border-border/50 rounded-3xl p-6 backdrop-blur-md text-center">
           <p className="text-muted-foreground font-medium mb-4">Inicia sesión para participar en la conversación.</p>
-          <a href="/login" className="inline-block px-6 py-2.5 border border-primary text-primary rounded-full font-bold hover:bg-primary/10 transition-all text-sm">
+          <button
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                const url = encodeURIComponent(window.location.pathname);
+                window.location.href = `/login?callbackUrl=${url}`;
+              }
+            }}
+            className="inline-block px-6 py-2.5 border border-primary text-primary rounded-full font-bold hover:bg-primary/10 transition-all text-sm"
+          >
             Iniciar Sesión
-          </a>
+          </button>
         </div>
       )}
     </motion.div>
