@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles, Flame, MessageSquare, Plus, SearchX } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { cn } from "@/lib/utils";
 
 import { Question } from "./forum/forum.types";
 import ForumSidebar from "./forum/ForumSidebar";
@@ -26,6 +27,8 @@ type CommunityQAForumProps = {
   hasNextPage?: boolean;
   isFetchingNextPage?: boolean;
   trendingTags: string[];
+  sortBy: "newest" | "popular";
+  setSortBy: (val: "newest" | "popular") => void;
 };
 
 export default function CommunityQAForum({
@@ -41,7 +44,9 @@ export default function CommunityQAForum({
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
-  trendingTags
+  trendingTags,
+  sortBy,
+  setSortBy
 }: CommunityQAForumProps) {
   const { status } = useSession();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -79,11 +84,27 @@ export default function CommunityQAForum({
 
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-4">
-                  <button className="text-primary font-bold flex items-center gap-2 text-sm">
-                    <Sparkles className="w-4 h-4" /> Nuevos
+                  <button 
+                    onClick={() => setSortBy("newest")}
+                    className={cn(
+                      "flex items-center gap-2 text-sm transition-all duration-300",
+                      sortBy === "newest" 
+                        ? "text-primary font-bold scale-105" 
+                        : "text-muted-foreground hover:text-foreground font-medium"
+                    )}
+                  >
+                    <Sparkles className={cn("w-4 h-4", sortBy === "newest" ? "text-primary animate-pulse" : "text-muted-foreground")} /> Nuevos
                   </button>
-                  <button className="text-muted-foreground hover:text-foreground font-medium flex items-center gap-2 text-sm transition-colors">
-                    <Flame className="w-4 h-4" /> Populares
+                  <button 
+                    onClick={() => setSortBy("popular")}
+                    className={cn(
+                      "flex items-center gap-2 text-sm transition-all duration-300",
+                      sortBy === "popular" 
+                        ? "text-primary font-bold scale-105" 
+                        : "text-muted-foreground hover:text-foreground font-medium"
+                    )}
+                  >
+                    <Flame className={cn("w-4 h-4", sortBy === "popular" ? "text-primary animate-pulse" : "text-muted-foreground")} /> Populares
                   </button>
                 </div>
                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">

@@ -30,7 +30,7 @@ function FilterCategory({
 
   return (
     <div className="border-b border-border/50 pb-4 last:border-0 last:pb-0">
-      <button 
+      <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between group outline-none"
       >
@@ -56,7 +56,7 @@ function FilterCategory({
           >
             <div className="flex flex-col gap-0.5 pt-4">
               {/* "Todos" acts as a reset — active when no labels are selected */}
-              <button 
+              <button
                 onClick={() => setActiveFilter(category, "Todos")}
                 className={cn(
                   "text-left px-3 py-2 -mx-3 rounded-md text-sm font-medium transition-all flex items-center justify-between group outline-none",
@@ -70,7 +70,7 @@ function FilterCategory({
               {labels.map(label => {
                 const isSelected = selectedLabels.includes(label);
                 return (
-                  <button 
+                  <button
                     key={label}
                     onClick={() => setActiveFilter(category, label)}
                     className={cn(
@@ -126,47 +126,70 @@ export default function ForumSidebar({
   activeFilters,
   setActiveFilter
 }: ForumSidebarProps) {
-  return (
-    <div className="w-full lg:col-span-3 lg:sticky lg:top-28 space-y-8">
-      <div className="space-y-10 px-2">
-        <div className="relative">
-          <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <input 
-            type="text" 
-            placeholder="Buscar discusiones..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-8 py-2 bg-transparent border-b border-border/50 focus:border-primary focus:outline-none text-sm text-foreground placeholder:text-muted-foreground transition-all rounded-none"
-          />
-          <AnimatePresence>
-            {searchQuery.length > 0 && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.5 }}
-                transition={{ duration: 0.15 }}
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-                aria-label="Limpiar búsqueda"
-              >
-                <X className="w-4 h-4" />
-              </motion.button>
-            )}
-          </AnimatePresence>
-        </div>
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const totalActiveFilters = Object.values(activeFilters).reduce((acc, curr) => acc + curr.length, 0);
 
-        <div className="space-y-6">
-          {Object.entries(config.forum.labels).map(([category, labels]) => (
-            <FilterCategory 
-              key={category}
-              category={category}
-              labels={labels}
-              activeFilters={activeFilters}
-              setActiveFilter={setActiveFilter}
-            />
-          ))}
-        </div>
+  return (
+    <div className="w-full lg:col-span-3 lg:sticky lg:top-28 space-y-6 lg:space-y-8">
+      <div className="relative">
+        <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Buscar discusiones..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-8 pr-8 py-2 bg-transparent border-b border-border/50 focus:border-primary focus:outline-none text-sm text-foreground placeholder:text-muted-foreground transition-all rounded-none"
+        />
+        <AnimatePresence>
+          {searchQuery.length > 0 && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.5 }}
+              transition={{ duration: 0.15 }}
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+              aria-label="Limpiar búsqueda"
+            >
+              <X className="w-4 h-4" />
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Mobile Filter Toggle */}
+      <div className="border-b border-border/50 pb-4 lg:hidden">
+        <button
+          onClick={() => setIsMobileFiltersOpen(!isMobileFiltersOpen)}
+          className="w-full flex items-center justify-between group outline-none"
+        >
+          <h4 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2 group-hover:text-primary transition-colors">
+            <Hash className="w-3 h-3" /> Filtrar por etiquetas
+            {totalActiveFilters > 0 && (
+              <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1">
+                {totalActiveFilters}
+              </span>
+            )}
+          </h4>
+          <ChevronDown className={cn("w-4 h-4 text-muted-foreground/50 transition-transform duration-300", isMobileFiltersOpen && "rotate-180", "group-hover:text-primary")} />
+        </button>
+      </div>
+
+      {/* Filters List */}
+      <div className={cn(
+        "space-y-6 lg:block",
+        isMobileFiltersOpen ? "block" : "hidden"
+      )}>
+        {Object.entries(config.forum.labels).map(([category, labels]) => (
+          <FilterCategory
+            key={category}
+            category={category}
+            labels={labels}
+            activeFilters={activeFilters}
+            setActiveFilter={setActiveFilter}
+          />
+        ))}
       </div>
     </div>
   );

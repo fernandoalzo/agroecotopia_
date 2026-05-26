@@ -14,6 +14,7 @@ export default function ComunidadPageClient() {
 
   const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"newest" | "popular">("newest");
 
   const handleSetFilter = (category: string, value: string) => {
     setActiveFilters(prev => {
@@ -52,9 +53,9 @@ export default function ComunidadPageClient() {
     hasNextPage,
     isFetchingNextPage
   } = useInfiniteQuery({
-    queryKey: ["forumPosts", activeFilters, searchQuery],
+    queryKey: ["forumPosts", activeFilters, searchQuery, sortBy],
     queryFn: async ({ pageParam = undefined }: { pageParam: string | undefined }) => {
-      const res = await getPostsAction(activeFilters, searchQuery, 10, pageParam);
+      const res = await getPostsAction(activeFilters, searchQuery, 10, pageParam, sortBy);
       if (!res.success) throw new Error(res.error);
       return { posts: res.posts, nextCursor: res.nextCursor };
     },
@@ -194,6 +195,8 @@ export default function ComunidadPageClient() {
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
         trendingTags={trendingLabels ?? []}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
       />
     </main>
   );

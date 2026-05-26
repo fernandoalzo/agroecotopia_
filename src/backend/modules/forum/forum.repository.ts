@@ -37,7 +37,7 @@ export class ForumRepository {
     }
   }
 
-  async getPosts(activeFilters?: Record<string, string[]>, searchQuery?: string, limit: number = 10, cursor?: string) {
+  async getPosts(activeFilters?: Record<string, string[]>, searchQuery?: string, limit: number = 10, cursor?: string, sortBy?: "newest" | "popular") {
     try {
       // Build the where clause
       let where: Prisma.ForumPostWhereInput = {};
@@ -68,11 +68,16 @@ export class ForumRepository {
         }
       }
 
+      const orderBy: Prisma.ForumPostOrderByWithRelationInput | Prisma.ForumPostOrderByWithRelationInput[] = 
+        sortBy === "popular" 
+          ? [{ ratingTotal: "desc" }, { createdAt: "desc" }] 
+          : { createdAt: "desc" };
+
       const posts = await prisma.forumPost.findMany({
         where,
         take: limit + 1,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-        orderBy: { createdAt: "desc" },
+        orderBy,
         include: {
           author: {
             select: { id: true, name: true, image: true, role: true },
@@ -264,9 +269,25 @@ export class ForumRepository {
         return cachedCommunityStats;
       }
 
-      const totalMembers = await prisma.user.count();
-      // For online members, we can generate a realistic dynamic number, e.g. 10% of total members + 15
-      const onlineNow = Math.floor(totalMembers * 0.1) + 15;
+      // Get distinct authors from posts
+      const activePosters = await prisma.forumPost.findMany({
+        select: { authorId: true },
+        distinct: ['authorId'],
+      });
+      
+      // Get distinct authors from answers
+      const activeAnswerers = await prisma.forumAnswer.findMany({
+        select: { authorId: true },
+        distinct: ['authorId'],
+      });
+
+      const uniqueActiveMembers = new Set([
+        ...activePosters.map(p => p.authorId),
+        ...activeAnswerers.map(a => a.authorId)
+      ]);
+
+      const totalMembers = uniqueActiveMembers.size;
+      const onlineNow = Math.min(Math.floor(totalMembers * 0.1) + 15, totalMembers);
 
       cachedCommunityStats = {
         totalMembers,

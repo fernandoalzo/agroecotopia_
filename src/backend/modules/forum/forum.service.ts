@@ -20,8 +20,8 @@ export class ForumService {
     return await this.forumRepository.createPost(data, authorId);
   }
 
-  async getPosts(activeFilters?: Record<string, string[]>, searchQuery?: string, limit?: number, cursor?: string) {
-    return await this.forumRepository.getPosts(activeFilters, searchQuery, limit, cursor);
+  async getPosts(activeFilters?: Record<string, string[]>, searchQuery?: string, limit?: number, cursor?: string, sortBy?: "newest" | "popular") {
+    return await this.forumRepository.getPosts(activeFilters, searchQuery, limit, cursor, sortBy);
   }
 
   async getPostById(id: string) {

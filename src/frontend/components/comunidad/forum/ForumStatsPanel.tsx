@@ -11,18 +11,18 @@ export default function ForumStatsPanel({
 }) {
   return (
     <div className="hidden xl:block xl:col-span-3 sticky top-28 space-y-10 px-2">
-      
+
       {/* Community Stats */}
       <div>
         <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/70 mb-4 flex items-center gap-2">
           <Users className="w-3 h-3 text-primary" />
           Comunidad Activa
         </h3>
-        
+
         <div className="flex">
           <div>
             <span className="block font-black text-3xl text-foreground tracking-tight">{activeCommunityStats.totalMembers}</span>
-            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mt-1 block">Miembros</span>
+            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mt-1 block">Participantes</span>
           </div>
         </div>
       </div>
