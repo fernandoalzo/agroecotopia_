@@ -88,7 +88,7 @@ export default function ForumQuestionCard({ question, onRate }: ForumQuestionCar
         </h3>
 
         {/* Body Preview */}
-        <div className="mb-2 text-[13px] text-muted-foreground line-clamp-2 leading-relaxed">
+        <div className="mb-2 text-[13px] text-muted-foreground line-clamp-2 leading-relaxed break-words break-all">
           {question.body}
         </div>
 
