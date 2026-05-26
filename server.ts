@@ -2,7 +2,6 @@ import { createServer, type IncomingMessage, type ServerResponse } from "http";
 import { parse } from "url";
 import next from "next";
 import { PrismaClient } from "@prisma/client";
-import { initSocketServer } from "./src/backend/modules/chat/socketHandler";
 import { ensureAdminExists } from "./src/lib/admin-init";
 import logger from "./src/utils/logger";
 import { applyRateLimitMiddleware } from "./src/backend/middlewares/rateLimiter";
@@ -44,10 +43,6 @@ app.prepare()
 
       handle(req, res, parsedUrl);
     });
-
-    // Initialize the Socket.IO server via the dedicated handler module
-    log.info("Initializing Socket.IO server...");
-    initSocketServer(httpServer, prisma);
 
     // Verify default admin user exists on boot
     ensureAdminExists(prisma).catch((err) => {
