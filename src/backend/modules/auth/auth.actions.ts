@@ -5,6 +5,8 @@ import { AuthError } from "next-auth";
 import { authService } from "@/backend/modules/auth";
 import { LoginSchema, RegisterSchema } from "@/lib/validations/auth.schema";
 import logger from "@/utils/logger";
+import { headers } from "next/headers";
+import { authRateLimiter } from "@/lib/rate-limit";
 
 const log = logger.child("src/backend/modules/auth/auth.actions.ts");
 
@@ -31,6 +33,15 @@ export async function signOutAction() {
  */
 export async function credentialsSignInAction(formData: FormData) {
   const data = Object.fromEntries(formData.entries());
+
+  try {
+    const headersList = await headers();
+    const ip = headersList.get("x-forwarded-for") || "unknown_ip";
+    await authRateLimiter.consume(ip);
+  } catch (rejRes) {
+    log.warn("Rate limit excedido para inicio de sesión:", { ip: data.email });
+    return { error: "Demasiados intentos. Por favor, inténtalo de nuevo en 1 minuto." };
+  }
 
   // 1. Validate with Zod
   const validatedFields = LoginSchema.safeParse(data);
@@ -68,6 +79,15 @@ export async function credentialsSignInAction(formData: FormData) {
  */
 export async function registerCredentialsAction(formData: FormData) {
   const data = Object.fromEntries(formData.entries());
+
+  try {
+    const headersList = await headers();
+    const ip = headersList.get("x-forwarded-for") || "unknown_ip";
+    await authRateLimiter.consume(ip);
+  } catch (rejRes) {
+    log.warn("Rate limit excedido para registro:", { ip: data.email });
+    return { error: "Demasiados intentos. Por favor, inténtalo de nuevo en 1 minuto." };
+  }
 
   // 1. Validate with Zod
   const validatedFields = RegisterSchema.safeParse(data);

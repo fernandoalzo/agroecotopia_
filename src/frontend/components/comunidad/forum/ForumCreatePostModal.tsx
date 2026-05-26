@@ -7,19 +7,17 @@ import { z } from "zod";
 import { postSchema } from "../schemas/post.schema";
 import { config } from "@/config/config";
 import { cn } from "@/lib/utils";
-function MultiLabelSelect({ 
-  value, 
-  onChange, 
-  groupedOptions, 
-  label 
-}: { 
-  value: string[], 
-  onChange: (v: string[]) => void, 
-  groupedOptions: Record<string, readonly string[]>, 
-  label: string 
+function MultiLabelSelect({
+  value,
+  onChange,
+  groupedOptions,
+  label
+}: {
+  value: string[],
+  onChange: (v: string[]) => void,
+  groupedOptions: Record<string, readonly string[]>,
+  label: string
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-
   const toggleOption = (opt: string) => {
     if (value.includes(opt)) {
       onChange(value.filter(v => v !== opt));
@@ -29,91 +27,50 @@ function MultiLabelSelect({
     }
   };
 
-  const removeOption = (e: React.MouseEvent, opt: string) => {
-    e.stopPropagation();
-    onChange(value.filter(v => v !== opt));
-  };
-
   return (
-    <div className="space-y-2 relative md:col-span-3">
-      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</label>
-      <div className={cn(
-        "w-full border rounded-xl transition-all duration-300 overflow-hidden",
-        isOpen 
-          ? "bg-background border-primary/50 ring-4 ring-primary/10 shadow-lg shadow-primary/5" 
-          : "bg-secondary/50 border-border/50 hover:border-primary/30"
-      )}>
-        <div 
-          className="px-4 py-3 min-h-[52px] flex items-center justify-between cursor-pointer group"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          <div className="flex flex-wrap gap-2 flex-1 mr-4">
-            {value.length === 0 && <span className="text-muted-foreground font-medium">Seleccionar etiquetas (máx 5)...</span>}
-            {value.map(val => (
-              <span key={val} className="flex items-center gap-1 bg-primary text-primary-foreground px-2.5 py-1 rounded-full text-xs font-bold shadow-sm shadow-primary/20">
-                {val}
-                <button type="button" onClick={(e) => removeOption(e, val)} className="hover:bg-primary-foreground/20 rounded-full p-0.5 transition-colors ml-0.5">
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
+    <div className="space-y-4 md:col-span-3">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</label>
+        <span className={cn(
+          "text-xs font-bold",
+          value.length === 5 ? "text-amber-500" : "text-muted-foreground"
+        )}>
+          {value.length} / 5 seleccionadas
+        </span>
+      </div>
+
+      <div className="bg-secondary/30 border border-border/50 rounded-2xl p-5 space-y-6">
+        {Object.entries(groupedOptions).map(([category, options]) => (
+          <div key={category} className="space-y-3">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70 flex items-center gap-2">
+              {category}
+              <div className="h-px bg-border flex-1"></div>
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {options.map(opt => {
+                const isSelected = value.includes(opt);
+                const isDisabled = !isSelected && value.length >= 5;
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => !isDisabled && toggleOption(opt)}
+                    disabled={isDisabled}
+                    className={cn(
+                      "px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all duration-300",
+                      isSelected
+                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/90 scale-105"
+                        : "bg-background border border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                      isDisabled && "opacity-40 cursor-not-allowed hover:border-border/60 hover:text-muted-foreground"
+                    )}
+                  >
+                    {opt}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className={cn(
-            "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-            isOpen ? "bg-primary/10" : "group-hover:bg-primary/5"
-          )}>
-            <ChevronDown className={cn(
-              "w-4 h-4 transition-transform duration-300", 
-              isOpen ? "text-primary rotate-180" : "text-muted-foreground group-hover:text-primary"
-            )} />
-          </div>
-        </div>
-        
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="bg-secondary/20 border-t border-border/50"
-            >
-              <div className="max-h-64 overflow-y-auto p-3 space-y-4">
-                {Object.entries(groupedOptions).map(([category, options]) => (
-                  <div key={category}>
-                    <div className="flex items-center gap-3 mb-2 px-1 mt-4 first:mt-0">
-                      <div className="h-px bg-border/80 flex-1"></div>
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary bg-primary/10 px-3 py-1 rounded-md">
-                        {category}
-                      </span>
-                      <div className="h-px bg-border/80 flex-1"></div>
-                    </div>
-                    <div className="space-y-0.5">
-                      {options.map(opt => {
-                        const isSelected = value.includes(opt);
-                        const isDisabled = !isSelected && value.length >= 5;
-                        return (
-                          <div
-                            key={opt}
-                            onClick={() => !isDisabled && toggleOption(opt)}
-                            className={cn(
-                              "px-3 py-2 rounded-lg cursor-pointer text-sm font-medium transition-all flex items-center justify-between",
-                              isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-secondary/50",
-                              isDisabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
-                            )}
-                          >
-                            {opt}
-                            {isSelected && <Check className="w-4 h-4" />}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        ))}
       </div>
     </div>
   );
@@ -151,7 +108,7 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
       const validatedData = postSchema.parse(formData);
       setErrors({});
       onSubmit(validatedData);
-      
+
       // Reset
       setFormData({
         title: "",
@@ -205,7 +162,7 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
                   {formFieldsConfig.map((field) => (
                     <div key={field.id} className={cn("space-y-2", field.colSpan)}>
                       <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{field.label}</label>
-                      
+
                       {field.type === "text" && (
                         <input
                           value={formData[field.id as keyof typeof formData] as string}
@@ -236,14 +193,14 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
                           )}
                         />
                       )}
-                      
+
                       {errors[field.id] && <span className="text-red-500 text-xs font-bold block">{errors[field.id]}</span>}
                     </div>
                   ))}
 
                   {/* Labels Section */}
                   <div className="md:col-span-3">
-                    <MultiLabelSelect 
+                    <MultiLabelSelect
                       label="Etiquetas (Clasificadas)"
                       value={formData.labels}
                       onChange={(labels) => {

@@ -115,7 +115,12 @@ function LoginPageContent() {
         });
 
         if (result?.error) {
-          setErrorMsg("Credenciales inválidas");
+          if (result.error === "CredentialsSignin") {
+            setErrorMsg("Credenciales inválidas");
+          } else {
+            // Show custom errors (e.g. Rate Limit) returned from server
+            setErrorMsg(result.error);
+          }
         } else if (result?.ok) {
           router.push(callbackUrl);
           router.refresh();

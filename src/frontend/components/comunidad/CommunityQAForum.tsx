@@ -138,7 +138,6 @@ export default function CommunityQAForum({
                     <ForumQuestionCard 
                       key={q.id} 
                       question={q} 
-                      onRate={handleRate} 
                     />
                   ))
                 )}

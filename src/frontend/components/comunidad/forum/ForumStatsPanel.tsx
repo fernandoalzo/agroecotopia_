@@ -1,6 +1,7 @@
 "use client";
 
 import { Users, TrendingUp } from "lucide-react";
+import { config } from "@/config/config";
 
 export default function ForumStatsPanel({
   activeCommunityStats,
@@ -57,9 +58,9 @@ export default function ForumStatsPanel({
       <div>
         <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/70 mb-4">Normas del Foro</h3>
         <ul className="space-y-3 text-xs text-muted-foreground leading-relaxed">
-          <li className="flex gap-2 items-start"><span className="text-primary mt-0.5">•</span> Sé respetuoso con todos los miembros y fomenta el diálogo.</li>
-          <li className="flex gap-2 items-start"><span className="text-primary mt-0.5">•</span> Verifica si tu pregunta ya fue respondida en discusiones previas.</li>
-          <li className="flex gap-2 items-start"><span className="text-primary mt-0.5">•</span> Prioriza prácticas agroecológicas y soluciones orgánicas.</li>
+          {config.forum.rules.map((rule, idx) => (
+            <li key={idx} className="flex gap-2 items-start"><span className="text-primary mt-0.5">•</span> {rule}</li>
+          ))}
         </ul>
       </div>
 

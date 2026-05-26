@@ -11,10 +11,9 @@ interface ForumQuestionCardProps {
   question: Question & { 
     ratingDistribution?: { 1: number, 2: number, 3: number, 4: number, 5: number } 
   };
-  onRate: (id: string, rating: number) => void;
 }
 
-export default function ForumQuestionCard({ question, onRate }: ForumQuestionCardProps) {
+export default function ForumQuestionCard({ question }: ForumQuestionCardProps) {
   const router = useRouter();
 
   // Extract initials for avatar fallback
@@ -49,20 +48,16 @@ export default function ForumQuestionCard({ question, onRate }: ForumQuestionCar
         >
           <div className="flex items-center gap-0.5">
             {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                onClick={(e) => { e.stopPropagation(); onRate(question.id, star); }}
-                className="transition-all hover:scale-125 focus:outline-none"
-              >
+              <div key={star} className="focus:outline-none">
                 <Star
                   className={cn(
-                    "w-3.5 h-3.5 transition-all duration-300",
+                    "w-3.5 h-3.5",
                     star <= Math.round(displayRating)
                       ? "fill-amber-400 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.5)]"
-                      : "fill-none text-muted-foreground/30 hover:text-amber-300"
+                      : "fill-none text-muted-foreground/30"
                   )}
                 />
-              </button>
+              </div>
             ))}
           </div>
           <span className="text-xs font-bold text-foreground/80 w-5 text-right">

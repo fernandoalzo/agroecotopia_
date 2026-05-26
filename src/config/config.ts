@@ -43,11 +43,16 @@ export const config = {
   },
 
   forum: {
+    rules: [
+      "Sé respetuoso con todos los miembros y fomenta el diálogo.",
+      "Verifica si tu pregunta ya fue respondida en discusiones previas.",
+      "Las preguntas debe ser relaconadas con el tema del foro, es decir, la agricultura."
+    ],
     labels: {
-      cultivos: ["Hortalizas", "Frutales", "Cereales", "Leguminosas", "Ornamentales"],
-      suelos: ["Arcilloso", "Arenoso", "Franco", "Limoso", "Sustrato"],
-      clima: ["Tropical", "Seco", "Templado", "Húmedo", "Frío"],
-      temas: ["Plagas", "Riego", "Nutrición", "Poda", "Cosecha"]
+      cultivos: ["café", "plátano", "cacao", "cítricos", "frutales", "hortalizas", "cereales", "leguminosas", "ornamentales", "cannabis"],
+      suelos: ["arcilloso", "arenoso", "franco", "limoso", "sustrato"],
+      clima: ["tropical", "seco", "templado", "húmedo", "frío"],
+      temas: ["plagas", "riego", "nutrición", "poda", "cosecha"]
     }
   }
 } as const;

@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import type { Server as HTTPServer } from "http";
 import type { PrismaClient } from "@prisma/client";
 import logger from "@/utils/logger";
+import { socketRateLimiter } from "@/lib/rate-limit";
 const log = logger.child("src/backend/modules/chat/socketHandler.ts");
 
 /**
@@ -67,6 +68,15 @@ export function initSocketServer(httpServer: HTTPServer, prisma: PrismaClient): 
     }) => {
       try {
         if (!conversationId || !content || !senderId) return;
+
+        // Rate Limit check
+        try {
+          await socketRateLimiter.consume(socket.id);
+        } catch (rejRes) {
+          log.warn(`[Socket Rate Limit Exceeded] Socket ID: ${socket.id}, User: ${senderId}`);
+          socket.emit("error", { message: "Estás enviando mensajes demasiado rápido. Espera un momento." });
+          return;
+        }
 
         // Save message to database (with optional reply reference)
         const message = await prisma.message.create({
