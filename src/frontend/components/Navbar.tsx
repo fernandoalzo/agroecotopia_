@@ -118,7 +118,10 @@ const Navbar = () => {
   }, [open]);
 
   return (
-    <nav className="fixed top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
+    <nav className="fixed top-0 z-50 w-full bg-gradient-to-b from-background/95 via-background/85 to-background/60 backdrop-blur-md">
+      {/* Soft gradient fade into page content */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 -bottom-6 h-6 bg-gradient-to-b from-background/30 to-transparent" />
       <div className="mx-auto flex h-14 items-center justify-between px-4 lg:h-20 lg:px-6 max-w-[1440px]">
         <div className="flex items-center justify-start">
           <Link href="/" className="group relative flex shrink-0 items-center gap-1.5 font-display text-lg font-bold lg:gap-3 lg:text-2xl transition-all duration-300">

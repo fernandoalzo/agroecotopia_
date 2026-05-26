@@ -57,12 +57,7 @@ const HeroSection = () => {
               →
             </motion.div>
           </Link>
-          <a
-            href="#nosotros"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border-2 border-primary/20 bg-background/40 px-8 py-4 font-body text-sm font-bold text-foreground backdrop-blur-xl transition-all hover:bg-background/80 md:text-base active:scale-95"
-          >
-            {t.hero.ctaSecondary}
-          </a>
+
         </div>
       </motion.div>
     </div>

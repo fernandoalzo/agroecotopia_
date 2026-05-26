@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 import ForumQuestionDetail from "@/frontend/components/comunidad/forum/ForumQuestionDetail";
 import ForumStatsPanel from "@/frontend/components/comunidad/forum/ForumStatsPanel";
+import { Loading } from "@/frontend/components/ui/Loading";
 
 export default function PostPageClient({ id }: { id: string }) {
   const router = useRouter();
@@ -173,9 +174,7 @@ export default function PostPageClient({ id }: { id: string }) {
 
   if (!question || isLoading) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-        <p className="text-muted-foreground animate-pulse">Cargando publicación...</p>
-      </div>
+      <Loading fullScreen text="Cargando publicación..." subtext="Obteniendo los detalles del post" />
     );
   }
 
