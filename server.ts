@@ -5,7 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import { initSocketServer } from "./src/backend/modules/chat/socketHandler";
 import { ensureAdminExists } from "./src/lib/admin-init";
 import logger from "./src/utils/logger";
-import { globalRateLimiter, authRateLimiter } from "./src/lib/rate-limit";
+import { applyRateLimitMiddleware } from "./src/backend/middlewares/rateLimiter";
 
 const log = logger.child();
 
@@ -37,46 +37,10 @@ app.prepare()
         log.debug(`${req.method} ${url}`);
       }
 
-      // --- Global & Auth Rate Limit ---
-      if (!isStaticAsset) {
-        try {
-          const clientIp = req.socket.remoteAddress || "unknown_ip";
-          
-          // 1. Global limit
-          await globalRateLimiter.consume(clientIp);
-
-          // 2. Auth limit for specific endpoint
-          if (url.includes("/api/v1/auth/callback/credentials") && req.method === "POST") {
-            await authRateLimiter.consume(clientIp);
-          }
-
-        } catch (rejRes) {
-          const isAuth = url.includes("/api/v1/auth/callback/credentials") && req.method === "POST";
-          log.warn(`[Rate Limit Exceeded] IP: ${req.socket.remoteAddress || "unknown"} (Auth: ${isAuth})`);
-          
-          res.setHeader("Content-Type", "application/json");
-
-          if (isAuth) {
-            // Intercepted NextAuth credentials login
-            const protocol = req.headers["x-forwarded-proto"] || "http";
-            const host = req.headers["host"] || "localhost:3000";
-            const encodedError = encodeURIComponent("Demasiados intentos. Por favor, inténtalo de nuevo en 1 minuto.");
-            const fullUrl = `${protocol}://${host}/api/v1/auth/signin?error=${encodedError}`;
-            
-            res.statusCode = 401; // NextAuth expects 401 for failed auth
-            res.end(JSON.stringify({ 
-              url: fullUrl
-            }));
-            return;
-          }
-
-          res.statusCode = 429;
-          res.setHeader("Retry-After", "60");
-          res.end(JSON.stringify({ error: "Too Many Requests", message: "Excediste el límite de peticiones globales." }));
-          return;
-        }
+      const isRateLimited = await applyRateLimitMiddleware(req, res, url, isStaticAsset);
+      if (isRateLimited) {
+        return;
       }
-      // -------------------------
 
       handle(req, res, parsedUrl);
     });
