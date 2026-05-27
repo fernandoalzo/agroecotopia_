@@ -240,3 +240,26 @@ export async function getStoreOrderStatusCountsAction(storeId: string) {
     }
   });
 }
+
+export async function updateStoreOrderStatusAction(
+  storeId: string,
+  pedidoId: string,
+  nuevoEstado: PedidoEstado,
+  motivoCancelacion?: string
+) {
+  return await withStoreOwner(storeId, async () => {
+    try {
+      log.info("Seller actualizando estado de pedido de tienda:", { storeId, pedidoId, nuevoEstado });
+      const pedido = await ordersService.updateEstadoForStore(storeId, pedidoId, nuevoEstado, motivoCancelacion);
+      log.info("Estado del pedido de tienda actualizado exitosamente:", { storeId, pedidoId, nuevoEstado });
+      revalidatePath("/mi-tienda");
+      revalidatePath("/admin/pedidos");
+      revalidatePath(`/pedidos/${pedidoId}`);
+      return { success: true, pedido };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Error al actualizar el estado del pedido";
+      log.error("Error al actualizar estado del pedido de tienda:", { storeId, pedidoId, nuevoEstado, error: message });
+      return { error: message };
+    }
+  });
+}

@@ -7,10 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Store,
   Package,
-  BarChart3,
-  Settings,
-  ArrowLeft,
-  ChevronRight,
+  ClipboardList,
   Menu,
   X,
   ShoppingBag,
@@ -19,20 +16,21 @@ import {
 } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { cn } from "@/lib/utils";
-import { useLanguage } from "@/context/LanguageContext";
 import { getMyStoresAction, updateMyStoreAction } from "@/backend/modules/store/store.actions";
 import { Store as StoreType, StoreCreateInput } from "@/types/store";
 import { ProductsList } from "@/components/shared/productos/ProductsList";
 import { SellerStoreInfo } from "@/components/seller/SellerStoreInfo";
+import { AdminOrdersList } from "@/components/admin/pedidos/AdminOrdersList";
 import { useProductsLogic } from "@/frontend/hooks/useProductsLogic";
 import { toast } from "sonner";
 import logger from "@/utils/logger";
 
 const log = logger.child();
 
-type SellerTab = "products" | "store_info";
+type SellerTab = "orders" | "products" | "store_info";
 
-const SIDEBAR_ITEMS: { id: SellerTab; labelEs: string; labelEn: string; icon: any }[] = [
+const SIDEBAR_ITEMS: { id: SellerTab; labelEs: string; labelEn: string; icon: React.ElementType }[] = [
+  { id: "orders", labelEs: "Pedidos", labelEn: "Orders", icon: ClipboardList },
   { id: "products", labelEs: "Mis Productos", labelEn: "My Products", icon: Package },
   { id: "store_info", labelEs: "Mi Tienda", labelEn: "My Store", icon: Store },
 ];
@@ -41,7 +39,6 @@ function SellerDashboardContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t } = useLanguage();
 
   const initialTab = (searchParams.get("tab") as SellerTab) || "products";
   const [activeTab, setActiveTab] = useState<SellerTab>(initialTab);
@@ -335,9 +332,9 @@ function SellerDashboardContent() {
               {getTabTitle()}
             </motion.h1>
             <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
-              {activeTab === "products"
-                ? "Gestiona los productos de tu tienda"
-                : "Información y configuración de tu tienda"}
+              {activeTab === "orders" && "Gestiona los pedidos que contienen productos de esta tienda"}
+              {activeTab === "products" && "Gestiona los productos de tu tienda"}
+              {activeTab === "store_info" && "Información y configuración de tu tienda"}
             </p>
           </div>
         </div>
@@ -353,6 +350,12 @@ function SellerDashboardContent() {
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.2 }}
               >
+                {activeTab === "orders" && activeStore && (
+                  <AdminOrdersList
+                    storeId={activeStore.id}
+                    emptyMessage="No hay pedidos para los productos de esta tienda con los filtros aplicados."
+                  />
+                )}
                 {activeTab === "products" && activeStore && (
                   <ProductsList
                     storeId={activeStore.id}

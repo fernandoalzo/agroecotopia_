@@ -237,7 +237,6 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
         log.error("Error al registrar dispositivo E2EE Admin:", err);
       }
     };
-    initE2EE();
 
     const loadConversations = async () => {
       try {
@@ -274,7 +273,14 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
       }
     };
 
-    loadConversations();
+    const initializeAdminChat = async () => {
+      await initE2EE();
+      if (!isCancelled) {
+        await loadConversations();
+      }
+    };
+
+    initializeAdminChat();
 
     return () => {
       isCancelled = true;

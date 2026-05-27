@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Filter, ChevronLeft, ChevronRight
@@ -9,6 +9,9 @@ import {
   getPaginatedOrdersAction,
   getOrderStatusCountsAction,
   updateOrderStatusAction,
+  getStoreOrdersAction,
+  getStoreOrderStatusCountsAction,
+  updateStoreOrderStatusAction,
 } from "@/backend/modules/orders/orders.actions";
 import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
@@ -22,7 +25,12 @@ const log = logger.child("src/frontend/components/admin/AdminOrdersList.tsx");
 import { AdminOrderCard } from "./AdminOrderCard";
 import { AdminOrder, statusConfig } from "./adminOrderUtils";
 
-export const AdminOrdersList = () => {
+interface AdminOrdersListProps {
+  storeId?: string;
+  emptyMessage?: string;
+}
+
+export const AdminOrdersList = ({ storeId, emptyMessage }: AdminOrdersListProps) => {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<PedidoEstado | "ALL">("ALL");
@@ -57,13 +65,16 @@ export const AdminOrdersList = () => {
   // Fetch status counts from database
   const fetchCounts = async () => {
     try {
-      const counts = await getOrderStatusCountsAction();
+      const counts = storeId
+        ? await getStoreOrderStatusCountsAction(storeId)
+        : await getOrderStatusCountsAction();
       if (counts && typeof counts === "object") {
-        const total = Object.values(counts).reduce((acc: number, val: any) => acc + (Number(val) || 0), 0);
+        const typedCounts = counts as Record<string, number>;
+        const total = Object.values(typedCounts).reduce((acc, val) => acc + (Number(val) || 0), 0);
         setStatusCounts({
           ALL: total,
-          ...counts
-        } as any);
+          ...typedCounts
+        });
       }
     } catch (error) {
       log.error("Error fetching status counts:", error);
@@ -72,22 +83,25 @@ export const AdminOrdersList = () => {
 
   useEffect(() => {
     fetchCounts();
-  }, []);
+  }, [storeId]);
 
   // Fetch paginated & filtered orders from database
   useEffect(() => {
     const fetchOrders = async () => {
       setLoading(true);
       try {
-        const result = await getPaginatedOrdersAction({
+        const params = {
           page: currentPage,
           limit: LIMIT,
           estado: statusFilter === "ALL" ? undefined : statusFilter,
           search: debouncedSearch ? debouncedSearch : undefined,
-        });
+        };
+        const result = storeId
+          ? await getStoreOrdersAction(storeId, params)
+          : await getPaginatedOrdersAction(params);
 
         if (result && "orders" in result) {
-          setOrders(result.orders as any);
+          setOrders(result.orders as AdminOrder[]);
           setTotalPages(result.totalPages);
           setTotalCount(result.totalCount);
         }
@@ -99,12 +113,14 @@ export const AdminOrdersList = () => {
     };
 
     fetchOrders();
-  }, [currentPage, statusFilter, debouncedSearch]);
+  }, [currentPage, statusFilter, debouncedSearch, storeId]);
 
   const handleUpdateStatus = async (orderId: string, newStatus: PedidoEstado) => {
     setUpdatingStatusId(orderId);
     try {
-      const result = await updateOrderStatusAction(orderId, newStatus);
+      const result = storeId
+        ? await updateStoreOrderStatusAction(storeId, orderId, newStatus)
+        : await updateOrderStatusAction(orderId, newStatus);
       if (result && "error" in result) {
         toast.error("Error", { description: result.error });
       } else {
@@ -119,7 +135,7 @@ export const AdminOrdersList = () => {
         // Refresh counts from DB
         fetchCounts();
       }
-    } catch (error) {
+    } catch {
       toast.error("Error", { description: "Hubo un problema al actualizar el estado." });
     } finally {
       setUpdatingStatusId(null);
@@ -207,7 +223,7 @@ export const AdminOrdersList = () => {
             >
               <Filter className="h-10 w-10 text-muted-foreground/30 mb-3" />
               <p className="text-muted-foreground font-medium">
-                No se encontraron pedidos en la base de datos con los filtros aplicados.
+                {emptyMessage || "No se encontraron pedidos en la base de datos con los filtros aplicados."}
               </p>
             </motion.div>
           ) : (

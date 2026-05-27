@@ -190,6 +190,24 @@ export class OrdersService {
     };
   }
 
+  async updateEstadoForStore(storeId: string, pedidoId: string, nuevoEstado: PedidoEstado, motivoCancelacion?: string) {
+    log.info("Validando pedido de tienda antes de actualizar estado:", { storeId, pedidoId, nuevoEstado });
+    const pedido = await this.ordersRepository.findById(pedidoId);
+
+    if (!pedido) {
+      log.warn("Pedido no encontrado al validar actualización de tienda:", { storeId, pedidoId });
+      throw new Error("Pedido no encontrado");
+    }
+
+    const belongsToStore = pedido.detalles.some((detalle: { storeId?: string | null }) => detalle.storeId === storeId);
+    if (!belongsToStore) {
+      log.warn("Intento de actualizar pedido ajeno a la tienda:", { storeId, pedidoId });
+      throw new Error("No tienes permiso para gestionar este pedido");
+    }
+
+    return await this.updateEstado(pedidoId, nuevoEstado, motivoCancelacion);
+  }
+
   async getOrderStatusCounts(storeId?: string) {
     log.debug("Obteniendo conteo de estados de pedidos.");
     return await this.ordersRepository.getStatusCounts(storeId);

@@ -196,7 +196,7 @@ export class SignalService {
     const receiverPublicKey = naclUtil.decodeBase64(sessionPubKeyBase64);
     const mySignedPreKeySecret = await signalStore.loadSignedPreKey(1);
     if (!mySignedPreKeySecret) {
-      log.error('[E2EE:Encrypt] Cryptographic private key not found on this device. Aborting encryption.');
+      log.warn('[E2EE:Encrypt] Cryptographic private key not found on this device. Aborting encryption.');
       throw new Error("Clave privada no encontrada en el dispositivo");
     }
 
@@ -240,7 +240,7 @@ export class SignalService {
     const senderPublicKey = naclUtil.decodeBase64(sessionPubKeyBase64);
     const mySignedPreKeySecret = await signalStore.loadSignedPreKey(1);
     if (!mySignedPreKeySecret) {
-      log.error('[E2EE:Decrypt] Cryptographic private key not found on this device. Aborting decryption.');
+      log.warn('[E2EE:Decrypt] Cryptographic private key not found on this device. Aborting decryption.');
       throw new Error("Clave privada no encontrada en el dispositivo");
     }
 
