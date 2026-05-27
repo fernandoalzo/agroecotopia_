@@ -38,6 +38,7 @@ export function StoreRequestDetailModal({
 }: StoreRequestDetailModalProps) {
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectNote, setRejectNote] = useState("");
+  const [confirmAction, setConfirmAction] = useState<"approve" | "reject" | null>(null);
   const [localRequest, setLocalRequest] = React.useState<StoreRequest | null>(null);
 
   React.useEffect(() => {
@@ -86,6 +87,7 @@ export function StoreRequestDetailModal({
   const handleClose = () => {
     setIsRejecting(false);
     setRejectNote("");
+    setConfirmAction(null);
     onClose();
   };
 
@@ -316,29 +318,100 @@ export function StoreRequestDetailModal({
 
           {/* ═══ FOOTER (Action buttons — only for PENDING) ═══ */}
           {isPending && !isRejecting && (
-            <div className="p-4 border-t border-border/30 bg-gradient-to-r from-secondary/5 to-secondary/15 flex gap-3">
-              <button
-                onClick={() => setIsRejecting(true)}
-                className="flex-1 py-3 rounded-xl text-sm font-bold text-red-600 bg-red-500/10 hover:bg-red-500/15 border border-red-500/10 hover:border-red-500/20 transition-all flex items-center justify-center gap-2"
-                disabled={isProcessing}
-              >
-                <XCircle className="w-4 h-4" />
-                Rechazar Solicitud
-              </button>
-              <button
-                onClick={() => onApprove(activeRequest.id)}
-                className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30"
-                disabled={isProcessing}
-              >
-                {isProcessing ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            <div className="p-4 border-t border-border/30 bg-gradient-to-r from-secondary/5 to-secondary/15">
+              <AnimatePresence mode="wait">
+                {!confirmAction ? (
+                  <motion.div
+                    key="action-buttons"
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex gap-3"
+                  >
+                    <button
+                      onClick={() => setConfirmAction("reject")}
+                      className="flex-1 py-3 rounded-xl text-sm font-bold text-red-600 bg-red-500/10 hover:bg-red-500/15 border border-red-500/10 hover:border-red-500/20 transition-all flex items-center justify-center gap-2"
+                      disabled={isProcessing}
+                    >
+                      <XCircle className="w-4 h-4" />
+                      Rechazar Solicitud
+                    </button>
+                    <button
+                      onClick={() => setConfirmAction("approve")}
+                      className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30"
+                      disabled={isProcessing}
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Aprobar Tienda
+                    </button>
+                  </motion.div>
                 ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    Aprobar Tienda
-                  </>
+                  <motion.div
+                    key="confirm-block"
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.25 }}
+                    className={cn(
+                      "rounded-2xl p-5 space-y-4 text-center border",
+                      confirmAction === "approve"
+                        ? "bg-primary/5 border-primary/15"
+                        : "bg-red-500/5 border-red-500/15"
+                    )}
+                  >
+                    <p className={cn(
+                      "text-sm font-semibold",
+                      confirmAction === "approve" ? "text-primary" : "text-red-600"
+                    )}>
+                      {confirmAction === "approve"
+                        ? "¿Estás seguro de que deseas aprobar esta tienda?"
+                        : "¿Estás seguro de que deseas rechazar esta solicitud?"}
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmAction(null)}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-bold border border-border/50 bg-card text-foreground/70 hover:bg-secondary transition-all active:scale-[0.98]"
+                      >
+                        No
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirmAction === "approve") {
+                            onApprove(activeRequest.id);
+                          } else {
+                            setIsRejecting(true);
+                            setConfirmAction(null);
+                          }
+                        }}
+                        disabled={isProcessing}
+                        className={cn(
+                          "flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-70 active:scale-[0.98] flex items-center justify-center gap-2",
+                          confirmAction === "approve"
+                            ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
+                            : "bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/20"
+                        )}
+                      >
+                        {isProcessing ? (
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : confirmAction === "approve" ? (
+                          <>
+                            <CheckCircle className="w-4 h-4" />
+                            Sí, aprobar
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-4 h-4" />
+                            Sí, rechazar
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </motion.div>
                 )}
-              </button>
+              </AnimatePresence>
             </div>
           )}
         </div>

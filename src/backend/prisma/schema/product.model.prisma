@@ -9,9 +9,9 @@ model Product {
   emoji          String
   images         String[]
   stock          Decimal         @default(0) @db.Decimal(12, 2)
-  storeId        String?
+  storeId        String
   detallesPedido DetallePedido[]
-  store          Store?          @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  store          Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Eye, Edit, Image as ImageIcon } from "lucide-react";
+import { Check, Copy, Eye, Edit, Image as ImageIcon, Store } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -31,9 +31,9 @@ export const ProductCardDesktop = ({
   return (
     <div className="hidden lg:flex flex-1 items-stretch">
       <div className={cn("w-[4px] h-auto my-4 shrink-0 rounded-full ml-3 transition-all duration-300", hasStock ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]")} />
-      
+
       <div className="flex-1 p-3 xl:p-5 flex items-center gap-4 xl:gap-6 min-w-0">
-        
+
         {/* ID & Image */}
         <div className="flex items-center gap-3 w-44 xl:w-56 shrink-0">
           <div className="w-10 h-10 rounded-xl bg-secondary/50 flex items-center justify-center shrink-0 border border-border/50 overflow-hidden">
@@ -53,14 +53,21 @@ export const ProductCardDesktop = ({
             <Badge variant="outline" className={cn("rounded-md border px-1.5 py-0 text-[9px] font-black uppercase tracking-widest shadow-sm", stockClass)}>
               {stockLabel}
             </Badge>
+            {/* Store Info */}
+            {product.store?.name && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground/80 mt-1">
+                <Store className="w-3.5 h-3.5 text-primary/70" />
+                <span className="truncate">{product.store.name}</span>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Name & Category */}
         <div className="min-w-0 flex-1">
           <p className="text-xs text-muted-foreground/60 font-bold uppercase tracking-wider mb-0.5">Producto</p>
-          <div className="text-sm font-bold truncate flex items-center gap-2">
-            {product.name} 
+          <div className="text-sm font-bold truncate flex items-center gap-2 mb-1">
+            {product.name}
             <div className="flex gap-1">
               {product.categories.map((c: any) => (
                 <span key={c.id} className="text-xs font-normal text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded-md border border-border/50">{c.name}</span>

@@ -5,13 +5,13 @@ enum Role {
 }
 
 model User {
-  id            String        @id @default(cuid())
+  id            String         @id @default(cuid())
   name          String?
-  email         String        @unique
+  email         String         @unique
   emailVerified DateTime?
   image         String?
   password      String?
-  role          Role          @default(user)
+  role          Role           @default(user)
   accounts      Account[]
   pedidos       Pedido[]
   conversation  Conversation?
@@ -21,8 +21,8 @@ model User {
   forumRatings  ForumRating[]
   stores        Store[]
   storeRequests StoreRequest[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 model Account {

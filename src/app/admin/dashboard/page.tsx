@@ -21,9 +21,10 @@ import { Loading } from "@/components/ui/Loading";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSocket } from "@/frontend/context/SocketContext";
+import { getAllRequestsAction, approveRequestAction, rejectRequestAction, getPendingRequestsAction } from "@/backend/modules/store/store.actions";
 import { getAdminConversations } from "@/backend/modules/chat/chat.actions";
-import { getAllRequestsAction, approveRequestAction, rejectRequestAction } from "@/backend/modules/store/store.actions";
 import { AdminChatPageContent } from "@/app/admin/chat/page";
+import { useProductsLogic } from "@/frontend/hooks/useProductsLogic";
 import logger from "@/utils/logger";
 
 const log = logger.child();
@@ -50,6 +51,9 @@ function AdminDashboardPageContent() {
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingStoresCount, setPendingStoresCount] = useState(0);
+
+  const { state: productState, actions: productActions } = useProductsLogic();
 
   const isAdmin = session?.user?.role === "admin";
   const userId = session?.user?.id;
@@ -101,6 +105,35 @@ function AdminDashboardPageContent() {
       }
     };
   }, [isAdmin, userId, socket, activeTab]);
+
+  // Track pending store requests
+  useEffect(() => {
+    if (!isAdmin) {
+      setPendingStoresCount(0);
+      return;
+    }
+    
+    let isCancelled = false;
+    
+    const loadPendingRequests = async () => {
+      try {
+        const res = await getPendingRequestsAction();
+        if (!isCancelled && res && !("error" in res) && typeof res.total === 'number') {
+          setPendingStoresCount(res.total);
+        }
+      } catch (err) {
+        log.error("Error loading pending stores count:", err);
+      }
+    };
+
+    loadPendingRequests();
+    const interval = setInterval(loadPendingRequests, 30000);
+    
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [isAdmin, activeTab]);
 
   const [isMobile, setIsMobile] = useState(false);
 
@@ -228,6 +261,18 @@ function AdminDashboardPageContent() {
                       {unreadCount}
                     </span>
                   )}
+                  {item.id === "store_requests" && pendingStoresCount > 0 && (
+                    <span
+                      className={cn(
+                        "min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold px-1.5 shadow-sm",
+                        isActive
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-amber-500 text-white animate-pulse shadow-amber-500/20"
+                      )}
+                    >
+                      {pendingStoresCount}
+                    </span>
+                  )}
                   <ChevronRight
                     className={cn(
                       "w-4 h-4 shrink-0 transition-all duration-200",
@@ -296,7 +341,27 @@ function AdminDashboardPageContent() {
                 transition={{ duration: 0.2 }}
                 className="p-4 md:p-8"
               >
-                <ProductsList />
+                <ProductsList
+                  products={productState.products}
+                  loading={productState.loading}
+                  categoryCounts={productState.categoryCounts}
+                  categoryFilter={productState.categoryFilter}
+                  searchQuery={productState.searchQuery}
+                  debouncedSearch={productState.debouncedSearch}
+                  currentPage={productState.currentPage}
+                  totalPages={productState.totalPages}
+                  totalCount={productState.totalCount}
+                  limit={productState.limit}
+                  availableCategories={productState.availableCategories}
+                  storesList={productState.storesList}
+                  setCategoryFilter={productActions.setCategoryFilter}
+                  setSearchQuery={productActions.setSearchQuery}
+                  setCurrentPage={productActions.setCurrentPage}
+                  setLimit={productActions.setLimit}
+                  onSubmitCreate={productActions.handleCreateProduct}
+                  onSubmitUpdate={productActions.handleUpdateProduct}
+                  onDeleteProduct={productActions.handleDeleteProduct}
+                />
               </motion.div>
             )}
 

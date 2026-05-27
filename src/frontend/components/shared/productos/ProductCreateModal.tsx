@@ -6,28 +6,31 @@ import { X, Save, AlertCircle, ImageIcon, Plus, Trash2, Search, Check } from "lu
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { createProductAction, createStoreProductAction, getCategoriesAction } from "@/backend/modules/product/product.actions";
-import { toast } from "sonner";
 import { productSchema, ProductFormValues } from "./schemas/productSchema";
+import { Store } from "lucide-react";
 
 interface ProductCreateModalProps {
   onClose: () => void;
-  onSuccess?: () => void;
   storeId?: string;
+  availableCategories: string[];
+  storesList?: {id: string, name: string}[];
+  onSubmitForm: (payload: any, targetStoreId?: string) => Promise<boolean>;
 }
 
-export const ProductCreateModal = ({ onClose, onSuccess, storeId }: ProductCreateModalProps) => {
+export const ProductCreateModal = ({
+  onClose,
+  storeId,
+  availableCategories,
+  storesList = [],
+  onSubmitForm,
+}: ProductCreateModalProps) => {
   const [loading, setLoading] = useState(false);
   const [imagesList, setImagesList] = useState<string[]>([]);
   const [newImage, setNewImage] = useState("");
   const [categoriesList, setCategoriesList] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [isCategoryFocused, setIsCategoryFocused] = useState(false);
-
-  useEffect(() => {
-    getCategoriesAction().then(setAvailableCategories).catch(console.error);
-  }, []);
+  const [selectedStoreId, setSelectedStoreId] = useState<string>("");
 
   const filteredCategories = availableCategories.filter(cat =>
     cat.toLowerCase().includes(newCategory.toLowerCase()) && !categoriesList.includes(cat)
@@ -103,31 +106,20 @@ export const ProductCreateModal = ({ onClose, onSuccess, storeId }: ProductCreat
         images: imagesList,
       };
 
-      let result;
-      if (storeId) {
-        result = await createStoreProductAction(storeId, payload) as any;
-      } else {
-        result = await createProductAction(payload) as any;
+      const targetStoreId = storeId || selectedStoreId;
+
+      if (!storeId && !targetStoreId) {
+        // Simple UI validation
+        setLoading(false);
+        return;
       }
 
-      if (result.success) {
-        if (typeof toast !== "undefined") {
-          toast.success(result.message || "Producto creado con éxito");
-        } else {
-          alert("¡Producto creado con éxito!");
-        }
-        onSuccess?.();
+      const success = await onSubmitForm(payload, targetStoreId);
+      if (success) {
         onClose();
-      } else {
-        if (typeof toast !== "undefined") {
-          toast.error(result.message || "Error al crear el producto");
-        } else {
-          alert("Error: " + result.message);
-        }
       }
     } catch (error) {
       console.error(error);
-      if (typeof toast !== "undefined") toast.error("Ocurrió un error inesperado al crear el producto.");
     } finally {
       setLoading(false);
     }
@@ -182,6 +174,30 @@ export const ProductCreateModal = ({ onClose, onSuccess, storeId }: ProductCreat
                     />
                     {errors.name && <p className="text-red-500 text-xs mt-1 font-medium">{errors.name.message as string}</p>}
                   </div>
+
+                  {!storeId && (
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+                        Tienda Asignada <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50">
+                          <Store className="h-4 w-4" />
+                        </div>
+                        <select
+                          value={selectedStoreId}
+                          onChange={(e) => setSelectedStoreId(e.target.value)}
+                          className="w-full appearance-none rounded-xl border border-border/50 bg-background pl-10 pr-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          required
+                        >
+                          <option value="" disabled>Selecciona una tienda</option>
+                          {storesList.map(store => (
+                            <option key={store.id} value={store.id}>{store.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>

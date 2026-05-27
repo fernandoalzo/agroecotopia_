@@ -24,6 +24,7 @@ import { getMyStoresAction, updateMyStoreAction } from "@/backend/modules/store/
 import { Store as StoreType, StoreCreateInput } from "@/types/store";
 import { ProductsList } from "@/components/shared/productos/ProductsList";
 import { SellerStoreInfo } from "@/components/seller/SellerStoreInfo";
+import { useProductsLogic } from "@/frontend/hooks/useProductsLogic";
 import { toast } from "sonner";
 import logger from "@/utils/logger";
 
@@ -50,10 +51,11 @@ function SellerDashboardContent() {
   const [isStoreSelectorOpen, setIsStoreSelectorOpen] = useState(false);
   const [loadingStore, setLoadingStore] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const isSeller = session?.user?.role === "seller" || session?.user?.role === "admin";
   
   const activeStore = stores.find(s => s.id === activeStoreId) || null;
+
+  const { state: productState, actions: productActions } = useProductsLogic(activeStoreId || undefined);
 
   // Protect route
   useEffect(() => {
@@ -352,7 +354,28 @@ function SellerDashboardContent() {
                 transition={{ duration: 0.2 }}
               >
                 {activeTab === "products" && activeStore && (
-                  <ProductsList storeId={activeStore.id} />
+                  <ProductsList
+                    storeId={activeStore.id}
+                    products={productState.products}
+                    loading={productState.loading}
+                    categoryCounts={productState.categoryCounts}
+                    categoryFilter={productState.categoryFilter}
+                    searchQuery={productState.searchQuery}
+                    debouncedSearch={productState.debouncedSearch}
+                    currentPage={productState.currentPage}
+                    totalPages={productState.totalPages}
+                    totalCount={productState.totalCount}
+                    limit={productState.limit}
+                    availableCategories={productState.availableCategories}
+                    storesList={productState.storesList}
+                    setCategoryFilter={productActions.setCategoryFilter}
+                    setSearchQuery={productActions.setSearchQuery}
+                    setCurrentPage={productActions.setCurrentPage}
+                    setLimit={productActions.setLimit}
+                    onSubmitCreate={productActions.handleCreateProduct}
+                    onSubmitUpdate={productActions.handleUpdateProduct}
+                    onDeleteProduct={productActions.handleDeleteProduct}
+                  />
                 )}
                 {activeTab === "store_info" && activeStore && (
                   <SellerStoreInfo 

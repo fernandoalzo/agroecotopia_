@@ -19,6 +19,7 @@ function SolicitarTiendaContent() {
   const [success, setSuccess] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -29,11 +30,11 @@ function SolicitarTiendaContent() {
     city: "",
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRequestConfirm = (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
     
-    // Zod validation
+    // Zod validation before showing confirmation
     const result = storeRequestSchema.safeParse(formData);
     
     if (!result.success) {
@@ -51,7 +52,14 @@ function SolicitarTiendaContent() {
       return;
     }
 
+    setShowConfirm(true);
+  };
+
+  const handleConfirmedSubmit = async () => {
     setLoading(true);
+    const result = storeRequestSchema.safeParse(formData);
+    if (!result.success) return;
+
     try {
       const res = await submitStoreRequestAction(result.data);
       if (res && "error" in res) {
@@ -64,6 +72,7 @@ function SolicitarTiendaContent() {
       toast.error("Ocurrió un error al enviar la solicitud.");
     } finally {
       setLoading(false);
+      setShowConfirm(false);
     }
   };
 
@@ -153,7 +162,7 @@ function SolicitarTiendaContent() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.6 }}
-            className="text-4xl md:text-5xl font-black text-[#111111] font-display tracking-tight"
+            className="text-4xl md:text-5xl font-black text-primary font-display tracking-tight"
           >
             Vende en Agroecotopia
           </motion.h1>
@@ -176,7 +185,7 @@ function SolicitarTiendaContent() {
           className="bg-white border border-[#EAEAEC] shadow-[0_8px_30px_rgb(0,0,0,0.03)] rounded-[2rem] overflow-hidden"
         >
           <div className="p-8 sm:p-12">
-            <form onSubmit={handleSubmit} className="space-y-10">
+            <form onSubmit={handleRequestConfirm} className="space-y-10">
               
               {/* Section 1: Store Info */}
               <div className="space-y-7">
@@ -365,19 +374,56 @@ function SolicitarTiendaContent() {
 
               {/* Footer / Submit */}
               <div className="pt-8 mt-4">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full flex items-center justify-center gap-2 bg-[#111111] text-white py-4 rounded-xl font-bold shadow-sm hover:bg-black transition-all disabled:opacity-70 disabled:pointer-events-none active:scale-[0.98]"
-                >
-                  {loading ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
+                <AnimatePresence mode="wait">
+                  {!showConfirm ? (
+                    <motion.button
+                      key="submit-btn"
+                      type="submit"
+                      disabled={loading}
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      transition={{ duration: 0.2 }}
+                      className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-4 rounded-xl font-bold shadow-sm hover:bg-primary/90 transition-all disabled:opacity-70 disabled:pointer-events-none active:scale-[0.98]"
+                    >
                       Enviar Solicitud
-                    </>
+                    </motion.button>
+                  ) : (
+                    <motion.div
+                      key="confirm-block"
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      transition={{ duration: 0.25 }}
+                      className="bg-[#F7F7F8] border border-[#EAEAEC] rounded-2xl p-6 space-y-4 text-center"
+                    >
+                      <p className="text-base font-semibold text-[#111111]">
+                        ¿Estás seguro de que deseas enviar la solicitud?
+                      </p>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirm(false)}
+                          className="flex-1 py-3 rounded-xl font-bold border border-[#DDDDE0] bg-white text-[#444444] hover:bg-[#F2F2F4] transition-all active:scale-[0.98]"
+                        >
+                          No
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleConfirmedSubmit}
+                          disabled={loading}
+                          className="flex-1 py-3 rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-70 active:scale-[0.98] flex items-center justify-center gap-2"
+                        >
+                          {loading ? (
+                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          ) : (
+                            "Sí, enviar"
+                          )}
+                        </button>
+                      </div>
+                    </motion.div>
                   )}
-                </button>
+                </AnimatePresence>
                 <p className="text-xs text-[#888888] mt-6 text-center leading-relaxed">
                   Al enviar esta solicitud, aceptas nuestros términos y condiciones para vendedores. <br className="hidden sm:block" /> Tu solicitud pasará por un proceso de revisión manual.
                 </p>

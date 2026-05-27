@@ -12,11 +12,8 @@ export class ProductRepository {
     const where: Prisma.ProductWhereInput = {
       ...(categories && categories.length > 0 ? { categories: { some: { name: { in: categories } } } } : {}),
       ...(storeId ? { storeId } : {
-        // Only show products from active stores, or products without a store (for backward compatibility during migration)
-        OR: [
-          { storeId: null },
-          { store: { status: 'ACTIVE' } }
-        ]
+        // Only show products from active stores
+        store: { status: 'ACTIVE' }
       })
     };
     log.debug("Obteniendo productos paginados:", { skip, take, categories });
@@ -39,10 +36,7 @@ export class ProductRepository {
     const where: Prisma.ProductWhereInput = {
       ...(categories && categories.length > 0 ? { categories: { some: { name: { in: categories } } } } : {}),
       ...(storeId ? { storeId } : {
-        OR: [
-          { storeId: null },
-          { store: { status: 'ACTIVE' } }
-        ]
+        store: { status: 'ACTIVE' }
       })
     };
     log.debug("Obteniendo total de productos con filtros:", { categories });
@@ -83,10 +77,7 @@ export class ProductRepository {
     const where: Prisma.ProductWhereInput = {
       ...baseWhere,
       ...(storeId ? { storeId } : {
-        OR: [
-          { storeId: null },
-          { store: { status: 'ACTIVE' } }
-        ]
+        store: { status: 'ACTIVE' }
       })
     };
 
@@ -122,10 +113,7 @@ export class ProductRepository {
     const where: Prisma.ProductWhereInput = {
       ...baseWhere,
       ...(storeId ? { storeId } : {
-        OR: [
-          { storeId: null },
-          { store: { status: 'ACTIVE' } }
-        ]
+        store: { status: 'ACTIVE' }
       })
     };
 

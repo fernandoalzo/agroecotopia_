@@ -67,6 +67,7 @@ export const getPendingRequestsAction = async (page: number = 1) => {
     return {
       requests: result.requests,
       totalPages: Math.ceil(result.total / 10),
+      total: result.total,
       page
     };
   });
@@ -142,4 +143,13 @@ export const getStoreBySlugAction = async (slug: string) => {
 export const getActiveStoresCatalogAction = async (page: number = 1) => {
   log.info("Action: getActiveStoresCatalogAction", { page });
   return await storeService.getActiveStoresForCatalog(page);
+};
+
+export const getAllActiveStoresListAction = async () => {
+  return withAuth(async () => {
+    log.info("Action: getAllActiveStoresListAction");
+    // Get up to 1000 active stores for select dropdowns
+    const result = await storeService.getAllStores(1, 1000, 'ACTIVE');
+    return result.stores.map((s: any) => ({ id: s.id, name: s.name }));
+  });
 };

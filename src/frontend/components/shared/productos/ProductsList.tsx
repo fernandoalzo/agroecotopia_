@@ -1,22 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, ChevronLeft, ChevronRight, Package, X, Plus } from "lucide-react";
-import {
-  getPaginatedProductsAction,
-  searchProductsAction,
-  getCategoryCountsAction
-} from "@/backend/modules/product/product.actions";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Loading } from "@/components/ui/Loading";
-import logger from "@/utils/logger";
+import { Search, ChevronLeft, ChevronRight, Package, X, Plus } from "lucide-react";
 import { Product } from "@prisma/client";
 import { ProductCard } from "./ProductCard";
 import { ProductModal } from "./ProductModal";
 import { ProductEditModal } from "./ProductEditModal";
 import { ProductCreateModal } from "./ProductCreateModal";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Loading } from "@/components/ui/Loading";
 import {
   Select,
   SelectContent,
@@ -24,81 +18,59 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const log = logger.child();
 interface ProductsListProps {
   storeId?: string;
+  // State
+  products: Product[];
+  loading: boolean;
+  categoryCounts: Record<string, number>;
+  categoryFilter: string | "ALL";
+  searchQuery: string;
+  debouncedSearch: string;
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  limit: number;
+  availableCategories: string[];
+  storesList: {id: string, name: string}[];
+
+  // Actions
+  setCategoryFilter: (cat: string | "ALL") => void;
+  setSearchQuery: (query: string) => void;
+  setCurrentPage: (page: number | ((prev: number) => number)) => void;
+  setLimit: (limit: number) => void;
+
+  // Mutators
+  onSubmitCreate: (payload: any, storeId?: string) => Promise<boolean>;
+  onSubmitUpdate: (productId: string, payload: any) => Promise<boolean>;
+  onDeleteProduct: (productId: string) => Promise<boolean>;
 }
 
-export const ProductsList = ({ storeId }: ProductsListProps = {}) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+export const ProductsList = ({
+  storeId,
+  products,
+  loading,
+  categoryCounts,
+  categoryFilter,
+  searchQuery,
+  debouncedSearch,
+  currentPage,
+  totalPages,
+  totalCount,
+  limit,
+  availableCategories,
+  storesList,
+  setCategoryFilter,
+  setSearchQuery,
+  setCurrentPage,
+  setLimit,
+  onSubmitCreate,
+  onSubmitUpdate,
+  onDeleteProduct
+}: ProductsListProps) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
-  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
-  const [categoryFilter, setCategoryFilter] = useState<string | "ALL">("ALL");
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  // Search state and debounce
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const [limit, setLimit] = useState(10);
-
-  // Debounce search query
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 400);
-    return () => clearTimeout(handler);
-  }, [searchQuery]);
-
-  // Reset page to 1 when filters or limit change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [categoryFilter, debouncedSearch, limit]);
-
-  // Fetch category counts from DB
-  useEffect(() => {
-    getCategoryCountsAction(storeId).then((counts) => {
-      setCategoryCounts(counts);
-    });
-  }, [refreshTrigger, storeId]);
-
-  // Fetch paginated & filtered products from database
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      try {
-        const catFilter = categoryFilter === "ALL" ? undefined : categoryFilter;
-        let result;
-
-        if (debouncedSearch.trim() !== "") {
-          result = await searchProductsAction(debouncedSearch, currentPage, limit, catFilter, storeId);
-        } else {
-          result = await getPaginatedProductsAction(currentPage, limit, catFilter, storeId);
-        }
-
-        if (result && "products" in result) {
-          setProducts(result.products as Product[]);
-          setTotalPages(result.totalPages);
-          setTotalCount(result.total); // the action returns 'total' not 'totalCount'
-        }
-      } catch (error) {
-        log.error("Error fetching paginated products:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, [currentPage, categoryFilter, debouncedSearch, limit, refreshTrigger, storeId]);
 
   const renderPagination = () => (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl bg-secondary/20 border border-border/30 px-6 py-4">
@@ -365,14 +337,18 @@ export const ProductsList = ({ storeId }: ProductsListProps = {}) => {
         storeId={storeId}
         product={editingProduct}
         onClose={() => setEditingProduct(null)}
-        onSuccess={() => setRefreshTrigger((prev) => prev + 1)}
+        availableCategories={availableCategories}
+        onSubmitForm={onSubmitUpdate}
+        onDeleteProduct={onDeleteProduct}
       />
 
       {isCreateModalOpen && (
         <ProductCreateModal
           storeId={storeId}
           onClose={() => setIsCreateModalOpen(false)}
-          onSuccess={() => setRefreshTrigger((prev) => prev + 1)}
+          availableCategories={availableCategories}
+          storesList={storesList}
+          onSubmitForm={onSubmitCreate}
         />
       )}
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ShoppingCart, Star, StarHalf, Tag, ShieldCheck, Truck, ArrowRight } from "lucide-react";
+import { ShoppingCart, Star, StarHalf, Tag, ShieldCheck, Truck, ArrowRight, Store } from "lucide-react";
 import { Product } from "@/types";
 import ProductModal from "./ProductModal";
 import Image from "next/image";
@@ -88,6 +88,12 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
             <h3 className="font-display font-bold text-xl md:text-2xl text-foreground mb-1 group-hover:text-[#007185] transition-colors line-clamp-2">
               {productTranslation.name}
             </h3>
+            {(p as any).store?.name && (
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground/80 mb-2">
+                <Store className="w-4 h-4 text-primary/70" />
+                <span className="truncate">{(p as any).store.name}</span>
+              </div>
+            )}
 
             <div className="flex items-center gap-1 mb-3">
               <div className="flex text-[#ffa41c]">
@@ -178,6 +184,12 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
             <h3 className="font-display font-bold text-sm text-foreground mb-1 line-clamp-1 group-hover:text-primary transition-colors">
               {productTranslation.name}
             </h3>
+            {(p as any).store?.name && (
+              <div className="flex items-center gap-1 text-[11px] text-muted-foreground/80 mb-1.5">
+                <Store className="w-3 h-3 text-primary/70" />
+                <span className="truncate">{(p as any).store.name}</span>
+              </div>
+            )}
 
             <div className="flex items-center gap-1 mb-2">
               <div className="flex text-[#ffa41c]">
@@ -282,6 +294,12 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
           <h3 className="font-display font-bold text-base text-foreground mb-1 line-clamp-2 leading-snug group-hover:text-primary transition-colors">
             {productTranslation.name}
           </h3>
+          {(p as any).store?.name && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground/80 mb-2">
+              <Store className="w-3.5 h-3.5 text-primary/70" />
+              <span className="truncate">{(p as any).store.name}</span>
+            </div>
+          )}
 
           {/* Amazon Rating */}
           <div className="flex items-center gap-1 mb-2">

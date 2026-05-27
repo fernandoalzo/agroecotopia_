@@ -30,7 +30,7 @@ export function SellerStoreInfo({ store, onStoreUpdated, onUpdateStore }: Seller
         {/* Header Section */}
         <div className="relative">
           {/* Edit Button */}
-          <div className="absolute top-0 right-0 z-10 flex justify-end">
+          <div className="flex justify-end mb-4 sm:absolute sm:top-0 sm:right-0 sm:mb-0 sm:z-10">
             <button
               onClick={() => setIsEditModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 bg-secondary/50 backdrop-blur-sm rounded-full text-sm font-bold text-foreground hover:bg-secondary transition-all group"
@@ -41,11 +41,11 @@ export function SellerStoreInfo({ store, onStoreUpdated, onUpdateStore }: Seller
           </div>
 
           {/* Minimal Banner Style */}
-          <div className="flex items-end gap-6 mb-8 pt-4">
+          <div className="flex items-end gap-4 sm:gap-6 mb-8 sm:pt-4">
             <div className="h-20 w-20 rounded-3xl bg-secondary/80 flex items-center justify-center shrink-0">
               <Store className="w-10 h-10 text-primary" />
             </div>
-            <div className="pb-2">
+            <div className="pb-2 min-w-0">
               <h2 className="text-3xl font-black text-foreground font-display tracking-tight">{store.name}</h2>
               <div className="flex items-center gap-3 mt-2">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-500">

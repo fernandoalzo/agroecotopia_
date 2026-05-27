@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Eye, Edit, Image as ImageIcon } from "lucide-react";
+import { Check, Copy, Eye, Edit, Image as ImageIcon, Store } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +53,12 @@ export const ProductCardMobile = ({
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="font-bold text-base truncate">{product.name}</h3>
+          {product.store?.name && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground/80 my-0.5">
+              <Store className="w-3 h-3 text-primary/70" />
+              <span className="truncate">{product.store.name}</span>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground flex items-center gap-1">
               <span className="truncate">{product.categories.map((c: any) => c.name).join(", ")}</span> • <span className="font-semibold text-foreground/80">${product.price.toLocaleString("es-CO")}</span>
           </p>

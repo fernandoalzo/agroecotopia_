@@ -4,7 +4,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Product } from "@/types";
 import { useCart } from "@/context/CartContext";
 import { useState } from "react";
-import { Minus, Plus, ShoppingCart, Info, CheckCircle2, X, Tag } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Info, CheckCircle2, X, Tag, Store } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
@@ -145,6 +145,12 @@ const ProductModal = ({ product, isOpen, onClose, viewOnly = false }: ProductMod
                   <DialogTitle className="font-display text-2xl md:text-3xl font-black leading-tight text-foreground">
                     {productTranslation.name}
                   </DialogTitle>
+                  {(product as any).store?.name && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground/80 mt-2">
+                      <Store className="w-4 h-4 text-primary/70" />
+                      <span className="truncate">{(product as any).store.name}</span>
+                    </div>
+                  )}
                   <div className="font-display text-2xl md:text-3xl font-black text-primary mt-4">
                     {formatPrice(product.price)}
                     <span className="text-sm font-body text-muted-foreground ml-2 font-medium">

@@ -5,17 +5,24 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Save, AlertCircle, ImageIcon, Plus, Trash2, Search, Check } from "lucide-react";
 import { Product } from "@prisma/client";
 import { Button } from "@/components/ui/button";
-import { updateProductAction, deleteProductAction, getCategoriesAction, updateStoreProductAction, deleteStoreProductAction } from "@/backend/modules/product/product.actions";
-import { toast } from "sonner";
 
 interface ProductEditModalProps {
   product: (Product & { categories?: any[] }) | null;
   onClose: () => void;
-  onSuccess: () => void;
   storeId?: string;
+  availableCategories: string[];
+  onSubmitForm: (productId: string, payload: any) => Promise<boolean>;
+  onDeleteProduct: (productId: string) => Promise<boolean>;
 }
 
-export const ProductEditModal = ({ product, onClose, onSuccess, storeId }: ProductEditModalProps) => {
+export const ProductEditModal = ({ 
+  product, 
+  onClose, 
+  storeId,
+  availableCategories,
+  onSubmitForm,
+  onDeleteProduct
+}: ProductEditModalProps) => {
   const [loading, setLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -24,12 +31,7 @@ export const ProductEditModal = ({ product, onClose, onSuccess, storeId }: Produ
   const [newImage, setNewImage] = useState("");
   const [categoriesList, setCategoriesList] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState("");
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [isCategoryFocused, setIsCategoryFocused] = useState(false);
-
-  useEffect(() => {
-    getCategoriesAction().then(setAvailableCategories).catch(console.error);
-  }, []);
 
   const filteredCategories = availableCategories.filter(cat => 
     cat.toLowerCase().includes(newCategory.toLowerCase()) && !categoriesList.includes(cat)
@@ -103,63 +105,27 @@ export const ProductEditModal = ({ product, onClose, onSuccess, storeId }: Produ
         images: imagesList,
       };
 
-      let result;
-      if (storeId) {
-        result = await updateStoreProductAction(storeId, product.id, dataToSave) as any;
-      } else {
-        result = await updateProductAction(product.id, dataToSave) as any;
-      }
-      
-      if (result.success) {
-        if (typeof toast !== "undefined") {
-          toast.success(result.message || "Producto actualizado con éxito");
-        } else {
-          alert("¡Producto actualizado con éxito!");
-        }
-        onSuccess();
+      const success = await onSubmitForm(product.id, dataToSave);
+      if (success) {
         onClose();
-      } else {
-        if (typeof toast !== "undefined") {
-          toast.error(result.message || "Error al actualizar el producto");
-        } else {
-          alert("Error: " + result.message);
-        }
       }
     } catch (error) {
       console.error(error);
-      if (typeof toast !== "undefined") toast.error("Ocurrió un error inesperado.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async () => {
+    if (!product) return;
     setIsDeleting(true);
     try {
-      let result;
-      if (storeId) {
-        result = await deleteStoreProductAction(storeId, product.id) as any;
-      } else {
-        result = await deleteProductAction(product.id) as any;
-      }
-      if (result.success) {
-        if (typeof toast !== "undefined") {
-          toast.success(result.message || "Producto eliminado con éxito");
-        } else {
-          alert("¡Producto eliminado con éxito!");
-        }
-        onSuccess();
+      const success = await onDeleteProduct(product.id);
+      if (success) {
         onClose();
-      } else {
-        if (typeof toast !== "undefined") {
-          toast.error(result.message || "Error al eliminar el producto");
-        } else {
-          alert("Error: " + result.message);
-        }
       }
     } catch (error) {
       console.error(error);
-      if (typeof toast !== "undefined") toast.error("Ocurrió un error inesperado al eliminar.");
     } finally {
       setIsDeleting(false);
     }

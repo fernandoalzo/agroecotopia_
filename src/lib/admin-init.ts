@@ -30,7 +30,7 @@ export async function ensureAdminExists(prisma: PrismaClient) {
       log.info(`Admin user not found. Creating initial admin user: ${adminEmail}`);
       const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
-      // Create user and its associated "credentials" account for consistency
+      // Create user, its associated "credentials" account, and a default store for consistency
       await prisma.user.create({
         data: {
           name: "Admin Fernando",
@@ -44,11 +44,19 @@ export async function ensureAdminExists(prisma: PrismaClient) {
               providerAccountId: adminEmail, // Unique identifier for the provider
             },
           },
+          stores: {
+            create: {
+              name: "Tienda Principal",
+              slug: "tienda-principal",
+              description: "Tienda principal del administrador",
+              status: "ACTIVE",
+            },
+          },
         },
       });
-      log.info(`Initial admin user and credential account successfully created for: ${adminEmail}`);
+      log.info(`Initial admin user, credential account, and default store successfully created for: ${adminEmail}`);
     } else {
-      log.debug(`Existing user found for admin email: ${adminEmail}. Checking account linkages and roles...`);
+      log.debug(`Existing user found for admin email: ${adminEmail}. Checking account linkages, roles, and default store...`);
 
       // Ensure the admin account record exists if the user already exists
       const existingAccount = await prisma.account.findFirst({
@@ -81,8 +89,28 @@ export async function ensureAdminExists(prisma: PrismaClient) {
         elevatedRole = true;
       }
 
-      if (!linkedAccount && !elevatedRole) {
-        log.debug(`Admin user "${adminEmail}" is already fully synchronized, linked, and has correct role.`);
+      let storeCreated = false;
+      const existingStore = await prisma.store.findFirst({
+        where: { ownerId: existingUser.id },
+      });
+
+      if (!existingStore) {
+        log.info(`Default store missing for existing admin. Creating default store: ${adminEmail}`);
+        await prisma.store.create({
+          data: {
+            name: "Tienda Principal",
+            slug: "tienda-principal",
+            description: "Tienda principal del administrador",
+            ownerId: existingUser.id,
+            status: "ACTIVE",
+          },
+        });
+        log.info(`Default store successfully created for: ${adminEmail}`);
+        storeCreated = true;
+      }
+
+      if (!linkedAccount && !elevatedRole && !storeCreated) {
+        log.debug(`Admin user "${adminEmail}" is already fully synchronized, linked, has correct role and default store.`);
       }
     }
   } catch (error) {
