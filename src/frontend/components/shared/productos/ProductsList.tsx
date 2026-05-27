@@ -13,10 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/Loading";
 import logger from "@/utils/logger";
 import { Product } from "@prisma/client";
-import { AdminProductCard } from "./AdminProductCard";
-import { AdminProductModal } from "./AdminProductModal";
-import { AdminProductEditModal } from "./AdminProductEditModal";
-import { AdminProductCreateModal } from "./AdminProductCreateModal";
+import { ProductCard } from "./ProductCard";
+import { ProductModal } from "./ProductModal";
+import { ProductEditModal } from "./ProductEditModal";
+import { ProductCreateModal } from "./ProductCreateModal";
 import {
   Select,
   SelectContent,
@@ -26,8 +26,11 @@ import {
 } from "@/components/ui/select";
 
 const log = logger.child();
+interface ProductsListProps {
+  storeId?: string;
+}
 
-export const AdminProductsList = () => {
+export const ProductsList = ({ storeId }: ProductsListProps = {}) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -63,10 +66,10 @@ export const AdminProductsList = () => {
 
   // Fetch category counts from DB
   useEffect(() => {
-    getCategoryCountsAction().then((counts) => {
+    getCategoryCountsAction(storeId).then((counts) => {
       setCategoryCounts(counts);
     });
-  }, [refreshTrigger]);
+  }, [refreshTrigger, storeId]);
 
   // Fetch paginated & filtered products from database
   useEffect(() => {
@@ -77,9 +80,9 @@ export const AdminProductsList = () => {
         let result;
 
         if (debouncedSearch.trim() !== "") {
-          result = await searchProductsAction(debouncedSearch, currentPage, limit, catFilter);
+          result = await searchProductsAction(debouncedSearch, currentPage, limit, catFilter, storeId);
         } else {
-          result = await getPaginatedProductsAction(currentPage, limit, catFilter);
+          result = await getPaginatedProductsAction(currentPage, limit, catFilter, storeId);
         }
 
         if (result && "products" in result) {
@@ -95,7 +98,7 @@ export const AdminProductsList = () => {
     };
 
     fetchProducts();
-  }, [currentPage, categoryFilter, debouncedSearch, limit, refreshTrigger]);
+  }, [currentPage, categoryFilter, debouncedSearch, limit, refreshTrigger, storeId]);
 
   const renderPagination = () => (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl bg-secondary/20 border border-border/30 px-6 py-4">
@@ -327,7 +330,7 @@ export const AdminProductsList = () => {
             </motion.div>
           ) : (
             products.map((product, index) => (
-              <AdminProductCard
+              <ProductCard
                 key={product.id}
                 product={product}
                 index={index}
@@ -353,19 +356,21 @@ export const AdminProductsList = () => {
         <Plus className="h-6 w-6" />
       </motion.button>
 
-      <AdminProductModal
+      <ProductModal
         product={selectedProduct}
         onClose={() => setSelectedProduct(null)}
       />
 
-      <AdminProductEditModal
+      <ProductEditModal
+        storeId={storeId}
         product={editingProduct}
         onClose={() => setEditingProduct(null)}
         onSuccess={() => setRefreshTrigger((prev) => prev + 1)}
       />
 
       {isCreateModalOpen && (
-        <AdminProductCreateModal
+        <ProductCreateModal
+          storeId={storeId}
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={() => setRefreshTrigger((prev) => prev + 1)}
         />

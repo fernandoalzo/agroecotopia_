@@ -377,6 +377,32 @@ const Navbar = () => {
                       <DropdownMenuSeparator className="bg-border/50 my-1" />
                     </>
                   )}
+                  {session?.user?.role === "seller" && (
+                    <>
+                      <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 transition-colors focus:bg-primary/5 focus:text-primary">
+                        <Link href="/mi-tienda" className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">Mi Tienda</span>
+                          </div>
+                          <Package className="h-4 w-4 text-primary" />
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-border/50 my-1" />
+                    </>
+                  )}
+                  {session?.user?.role === "user" && (
+                    <>
+                      <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 transition-colors focus:bg-primary/5 focus:text-primary">
+                        <Link href="/solicitar-tienda" className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">Vender con Nosotros</span>
+                          </div>
+                          <Leaf className="h-4 w-4 text-primary" />
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-border/50 my-1" />
+                    </>
+                  )}
                   <DropdownMenuItem
                     onClick={() => signOut({ callbackUrl: "/" })}
                     className="text-red-500 focus:bg-red-500/10 focus:text-red-600 cursor-pointer flex items-center justify-between rounded-xl px-2 py-2 transition-colors"

@@ -5,16 +5,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Save, AlertCircle, ImageIcon, Plus, Trash2, Search, Check } from "lucide-react";
 import { Product } from "@prisma/client";
 import { Button } from "@/components/ui/button";
-import { updateProductAction, deleteProductAction, getCategoriesAction } from "@/backend/modules/product/product.actions";
+import { updateProductAction, deleteProductAction, getCategoriesAction, updateStoreProductAction, deleteStoreProductAction } from "@/backend/modules/product/product.actions";
 import { toast } from "sonner";
 
-interface AdminProductEditModalProps {
-  product: any | null;
+interface ProductEditModalProps {
+  product: (Product & { categories?: any[] }) | null;
   onClose: () => void;
   onSuccess: () => void;
+  storeId?: string;
 }
 
-export const AdminProductEditModal = ({ product, onClose, onSuccess }: AdminProductEditModalProps) => {
+export const ProductEditModal = ({ product, onClose, onSuccess, storeId }: ProductEditModalProps) => {
   const [loading, setLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -102,7 +103,12 @@ export const AdminProductEditModal = ({ product, onClose, onSuccess }: AdminProd
         images: imagesList,
       };
 
-      const result = await updateProductAction(product.id, dataToSave) as any;
+      let result;
+      if (storeId) {
+        result = await updateStoreProductAction(storeId, product.id, dataToSave) as any;
+      } else {
+        result = await updateProductAction(product.id, dataToSave) as any;
+      }
       
       if (result.success) {
         if (typeof toast !== "undefined") {
@@ -130,7 +136,12 @@ export const AdminProductEditModal = ({ product, onClose, onSuccess }: AdminProd
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const result = await deleteProductAction(product.id) as any;
+      let result;
+      if (storeId) {
+        result = await deleteStoreProductAction(storeId, product.id) as any;
+      } else {
+        result = await deleteProductAction(product.id) as any;
+      }
       if (result.success) {
         if (typeof toast !== "undefined") {
           toast.success(result.message || "Producto eliminado con éxito");

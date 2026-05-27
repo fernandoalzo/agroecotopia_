@@ -7,17 +7,17 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Product } from "@prisma/client";
 
-import { AdminProductCardMobile } from "./mobile/AdminProductCard";
-import { AdminProductCardDesktop } from "./desktop/AdminProductCard";
+import { ProductCardMobile } from "./mobile/ProductCard";
+import { ProductCardDesktop } from "./desktop/ProductCard";
 
-interface AdminProductCardProps {
+interface ProductCardProps {
   product: any;
   index: number;
   onView: () => void;
   onEdit: () => void;
 }
 
-export const AdminProductCard = ({ product, index, onView, onEdit }: AdminProductCardProps) => {
+export const ProductCard = ({ product, index, onView, onEdit }: ProductCardProps) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleCopyId = () => {
@@ -54,8 +54,8 @@ export const AdminProductCard = ({ product, index, onView, onEdit }: AdminProduc
       )}>
         <CardContent className="p-0">
           <div className="flex flex-col lg:flex-row lg:items-stretch">
-            <AdminProductCardMobile {...sharedProps} />
-            <AdminProductCardDesktop {...sharedProps} />
+            <ProductCardMobile {...sharedProps} />
+            <ProductCardDesktop {...sharedProps} />
           </div>
         </CardContent>
       </Card>

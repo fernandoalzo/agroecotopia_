@@ -1,11 +1,18 @@
 import { PrismaClient } from "@prisma/client";
 import logger from "@/utils/logger";
+import { ensureDefaultAdminStore } from "./init";
 
 const log = logger.child("src/backend/db/prisma.ts");
 
 const prismaClientSingleton = () => {
   log.info("Creando nueva instancia de PrismaClient (Singleton)...");
   const client = new PrismaClient();
+  
+  // Ejecutar inicializaciones asíncronas sin bloquear (Fire and forget)
+  client.$connect().then(() => {
+    ensureDefaultAdminStore(client).catch(err => log.error("Error en init db:", err));
+  });
+
   return client;
 };
 

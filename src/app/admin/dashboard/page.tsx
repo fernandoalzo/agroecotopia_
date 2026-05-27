@@ -15,22 +15,27 @@ import {
   X,
 } from "lucide-react";
 import { AdminOrdersList } from "@/components/admin/pedidos/AdminOrdersList";
-import { AdminProductsList } from "@/components/admin/productos/AdminProductsList";
+import { ProductsList } from "@/components/shared/productos/ProductsList";
+import { AdminStoreRequests } from "@/components/admin/store/AdminStoreRequests";
 import { Loading } from "@/components/ui/Loading";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { getAdminConversations } from "@/backend/modules/chat/chat.actions";
+import { getAllRequestsAction, approveRequestAction, rejectRequestAction } from "@/backend/modules/store/store.actions";
 import { AdminChatPageContent } from "@/app/admin/chat/page";
 import logger from "@/utils/logger";
 
 const log = logger.child();
 
-type DashboardTab = "orders" | "products" | "chat";
+type DashboardTab = "orders" | "products" | "chat" | "store_requests";
 
-const SIDEBAR_ITEMS: { id: DashboardTab; labelEs: string; labelEn: string; icon: typeof Package }[] = [
+import { Store } from "lucide-react";
+
+const SIDEBAR_ITEMS: { id: DashboardTab; labelEs: string; labelEn: string; icon: any }[] = [
   { id: "orders", labelEs: "Gestión de Pedidos", labelEn: "Order Management", icon: Package },
   { id: "products", labelEs: "Gestión de Productos", labelEn: "Product Management", icon: Package },
+  { id: "store_requests", labelEs: "Solicitudes de Tienda", labelEn: "Store Requests", icon: Store },
   { id: "chat", labelEs: "Soporte Chat", labelEn: "Chat Support", icon: MessageSquare },
 ];
 
@@ -259,24 +264,6 @@ function AdminDashboardPageContent() {
           >
             <Menu className="w-5 h-5" />
           </button>
-
-          <div className="flex-1 min-w-0">
-            <motion.h1
-              key={activeTab}
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-xl md:text-2xl font-black tracking-tight"
-            >
-              {activeTab === "orders" ? "Gestión de Pedidos" : activeTab === "products" ? "Gestión de Productos" : "Soporte Chat"}
-            </motion.h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {activeTab === "orders"
-                ? "Monitorea, gestiona y atiende todos los pedidos."
-                : activeTab === "products"
-                ? "Monitorea y gestiona el inventario de productos."
-                : "Atiende las conversaciones de soporte en tiempo real."}
-            </p>
-          </div>
         </div>
 
         {/* Content area */}
@@ -309,7 +296,24 @@ function AdminDashboardPageContent() {
                 transition={{ duration: 0.2 }}
                 className="p-4 md:p-8"
               >
-                <AdminProductsList />
+                <ProductsList />
+              </motion.div>
+            )}
+
+            {activeTab === "store_requests" && (
+              <motion.div
+                key="store_requests"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2 }}
+                className="p-4 md:p-8"
+              >
+                <AdminStoreRequests
+                  onLoadRequests={getAllRequestsAction}
+                  onApproveRequest={approveRequestAction}
+                  onRejectRequest={rejectRequestAction}
+                />
               </motion.div>
             )}
 

@@ -1,5 +1,6 @@
 import { OrdersRepository } from "./orders.repository";
 import { PedidoEstado, Prisma } from "@prisma/client";
+import prisma from "@/backend/db/prisma";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/orders/orders.service.ts");
@@ -22,6 +23,15 @@ export class OrdersService {
       unidadMedida: string;
     }[];
   }) {
+    // 1. Fetch products to get storeId for each DetallePedido
+    const productIds = data.detalles.map(d => d.productoId);
+    const dbProducts = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, storeId: true }
+    });
+    
+    const productStoreMap = new Map(dbProducts.map(p => [p.id, p.storeId]));
+
     let subtotal = 0;
     const detallesInput: Prisma.DetallePedidoCreateWithoutPedidoInput[] = data.detalles.map((d) => {
       const itemSubtotal = d.cantidad * d.precioUnitario;
@@ -32,6 +42,7 @@ export class OrdersService {
         precioUnitario: new Prisma.Decimal(d.precioUnitario),
         unidadMedida: d.unidadMedida,
         subtotal: new Prisma.Decimal(itemSubtotal),
+        storeId: productStoreMap.get(d.productoId) || null,
       };
     });
 
@@ -166,8 +177,9 @@ export class OrdersService {
     limit: number;
     estado?: PedidoEstado;
     search?: string;
+    storeId?: string;
   }) {
-    log.debug("Obteniendo pedidos paginados y filtrados para el admin.");
+    log.debug("Obteniendo pedidos paginados y filtrados.");
     const result = await this.ordersRepository.findPaginated(params);
     return {
       orders: result.orders.map(p => this.serializePedido(p)),
@@ -178,9 +190,9 @@ export class OrdersService {
     };
   }
 
-  async getOrderStatusCounts() {
-    log.debug("Obteniendo conteo de estados de pedidos para el admin.");
-    return await this.ordersRepository.getStatusCounts();
+  async getOrderStatusCounts(storeId?: string) {
+    log.debug("Obteniendo conteo de estados de pedidos.");
+    return await this.ordersRepository.getStatusCounts(storeId);
   }
 
   async getPedidoDetallado(pedidoId: string) {

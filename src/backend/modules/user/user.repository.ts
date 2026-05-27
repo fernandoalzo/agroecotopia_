@@ -26,7 +26,7 @@ export class UserRepository {
     });
   }
 
-  async updateUserRole(id: string, role: "admin" | "user") {
+  async updateUserRole(id: string, role: "admin" | "user" | "seller") {
     log.info("Actualizando rol del usuario:", { userId: id, nuevoRol: role });
     return await prisma.user.update({
       where: { id },

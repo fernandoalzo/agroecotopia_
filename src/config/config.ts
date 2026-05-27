@@ -54,6 +54,12 @@ export const config = {
       clima: ["tropical", "seco", "templado", "húmedo", "frío"],
       temas: ["plagas", "riego", "nutrición", "poda", "cosecha"]
     }
+  },
+
+  marketplace: {
+    maxProductsPerStore: 50,
+    maxStoresPerUser: 5,
+    adminDefaultStoreName: "Agroecotopia Oficial",
   }
 } as const;
 

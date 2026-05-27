@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Product } from "@prisma/client";
 
-interface AdminProductCardMobileProps {
+interface ProductCardMobileProps {
   product: any;
   copiedId: string | null;
   stockClass: string;
@@ -17,7 +17,7 @@ interface AdminProductCardMobileProps {
   onEdit: () => void;
 }
 
-export const AdminProductCardMobile = ({
+export const ProductCardMobile = ({
   product,
   copiedId,
   stockClass,
@@ -25,7 +25,7 @@ export const AdminProductCardMobile = ({
   onCopyId,
   onView,
   onEdit,
-}: AdminProductCardMobileProps) => {
+}: ProductCardMobileProps) => {
   return (
     <div className="flex-1 p-4 lg:hidden">
       <div className="flex items-start justify-between mb-3">

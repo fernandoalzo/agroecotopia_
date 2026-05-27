@@ -10,14 +10,14 @@ export class ProductService {
   /**
    * Obtiene la colección paginada de productos para el catálogo, opcionalmente filtrados por categorías (como string de comas).
    */
-  async getCatalog(page: number = 1, limit: number = 20, category?: string): Promise<{ products: any[], total: number, totalPages: number }> {
+  async getCatalog(page: number = 1, limit: number = 20, category?: string, storeId?: string): Promise<{ products: any[], total: number, totalPages: number }> {
     try {
       const skip = (page - 1) * limit;
       const categories = category ? category.split(",").filter(Boolean) : [];
       
       const [products, total] = await Promise.all([
-        this.productRepository.getAllProducts(skip, limit, categories),
-        this.productRepository.getTotalCount(categories)
+        this.productRepository.getAllProducts(skip, limit, categories, storeId),
+        this.productRepository.getTotalCount(categories, storeId)
       ]);
       
       return {
@@ -34,15 +34,15 @@ export class ProductService {
   /**
    * Realiza la búsqueda paginada de productos en la base de datos, opcionalmente filtrados por categorías (como string de comas).
    */
-  async searchProducts(query: string, page: number = 1, limit: number = 20, category?: string): Promise<{ products: any[], total: number, totalPages: number }> {
+  async searchProducts(query: string, page: number = 1, limit: number = 20, category?: string, storeId?: string): Promise<{ products: any[], total: number, totalPages: number }> {
     if (!query || query.trim().length === 0) return { products: [], total: 0, totalPages: 0 };
     
     const skip = (page - 1) * limit;
     const categories = category ? category.split(",").filter(Boolean) : [];
 
     const [products, total] = await Promise.all([
-      this.productRepository.searchProducts(query, skip, limit, categories),
-      this.productRepository.getSearchCount(query, categories)
+      this.productRepository.searchProducts(query, skip, limit, categories, storeId),
+      this.productRepository.getSearchCount(query, categories, storeId)
     ]);
 
     return {
@@ -53,7 +53,7 @@ export class ProductService {
   }
 
   /**
-   * Crea un nuevo producto en la base de datos.
+   * Crea un nuevo producto en la base de datos (Admin).
    */
   async createProduct(data: Omit<Product, "id" | "createdAt" | "updatedAt">): Promise<any> {
     try {
@@ -62,6 +62,44 @@ export class ProductService {
     } catch (error: any) {
       log.error(`Error creating product:`, error);
       throw new Error("No se pudo crear el producto. Verifique los datos ingresados.");
+    }
+  }
+
+  /**
+   * Crea un nuevo producto vinculado a una tienda.
+   */
+  async createStoreProduct(storeId: string, data: Omit<Product, "id" | "createdAt" | "updatedAt" | "storeId" | "store">): Promise<any> {
+    try {
+      log.info(`Creando producto para tienda ${storeId}`);
+      // The auth guard ensures the user owns this store or is admin
+      const created = await this.productRepository.createProduct({ ...data, storeId });
+      return this.serializeProduct(created);
+    } catch (error: any) {
+      log.error(`Error creating store product:`, error);
+      throw new Error("No se pudo crear el producto. Verifique los datos ingresados.");
+    }
+  }
+
+  /**
+   * Obtiene los productos de una tienda paginados.
+   */
+  async getStoreProducts(storeId: string, page: number = 1, limit: number = 20): Promise<{ products: any[], total: number, totalPages: number }> {
+    try {
+      const skip = (page - 1) * limit;
+      
+      const [products, total] = await Promise.all([
+        this.productRepository.getProductsByStore(storeId, skip, limit),
+        this.productRepository.getProductCountByStore(storeId)
+      ]);
+      
+      return {
+        products: products.map(p => this.serializeProduct(p)),
+        total,
+        totalPages: Math.ceil(total / limit)
+      };
+    } catch (error) {
+      log.error("Error in getStoreProducts:", error);
+      return { products: [], total: 0, totalPages: 0 };
     }
   }
 
@@ -108,9 +146,9 @@ export class ProductService {
   /**
    * Obtiene el conteo de productos por cada categoría.
    */
-  async getCategoryCounts(): Promise<Record<string, number>> {
+  async getCategoryCounts(storeId?: string): Promise<Record<string, number>> {
     try {
-      return await this.productRepository.getCategoryCounts();
+      return await this.productRepository.getCategoryCounts(storeId);
     } catch (error) {
       log.error("Error in getCategoryCounts:", error);
       return {};

@@ -212,3 +212,31 @@ export async function deleteUserOrderAction(pedidoId: string) {
     }
   });
 }
+
+// --- Seller Actions ---
+
+import { withStoreOwner } from "@/lib/auth-guards";
+
+export async function getStoreOrdersAction(storeId: string, params: { page: number; limit: number; estado?: PedidoEstado; search?: string }) {
+  return await withStoreOwner(storeId, async () => {
+    log.info(`Action: getStoreOrdersAction`, { storeId, params });
+    try {
+      return await ordersService.getPaginatedPedidos({ ...params, storeId });
+    } catch (error: any) {
+      log.error("Error getting store orders:", error);
+      return { orders: [], totalCount: 0, totalPages: 0, page: params.page, limit: params.limit };
+    }
+  });
+}
+
+export async function getStoreOrderStatusCountsAction(storeId: string) {
+  return await withStoreOwner(storeId, async () => {
+    log.info(`Action: getStoreOrderStatusCountsAction`, { storeId });
+    try {
+      return await ordersService.getOrderStatusCounts(storeId);
+    } catch (error: any) {
+      log.error("Error getting store order status counts:", error);
+      return {};
+    }
+  });
+}

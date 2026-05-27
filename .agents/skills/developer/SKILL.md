@@ -61,6 +61,8 @@ The project follows a strict **modular layered architecture**. The backend is en
 > - `REPO` → `DB` (Prisma)
 >
 > **BOUNDARY RESTRICTION RULE**: Cross-layer imports (e.g., `UI` → `REPO`, `CTRL` → `REPO`) are **strictly forbidden**. UI components MUST NOT import Prisma clients or perform DB queries directly. 
+> 
+> **PAGE PARENT DATA FETCHING RULE (DUMB COMPONENTS)**: Nunca, pero nunca, se accede a recursos del backend (Server Actions para fetching de datos o mutaciones) directamente desde componentes hijos (`src/frontend/components/`). Los componentes UI siempre deben ser **Dumb Components** (Componentes Tontos / Presentacionales). El acceso al backend y la lógica de estado DEBE realizarse siempre a través del componente Page Padre (`page.tsx`), quien se encarga de realizar las llamadas y pasar la información (data) y las acciones (callbacks) como `props` a estos componentes hijos.
 
 ---
 

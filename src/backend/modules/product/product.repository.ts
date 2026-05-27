@@ -8,14 +8,26 @@ export class ProductRepository {
   /**
    * Obtiene productos paginados de la base de datos, opcionalmente filtrados por una o más categorías.
    */
-  async getAllProducts(skip: number = 0, take: number = 20, categories?: string[]): Promise<Product[]> {
-    const where: Prisma.ProductWhereInput = categories && categories.length > 0 ? { categories: { some: { name: { in: categories } } } } : {};
+  async getAllProducts(skip: number = 0, take: number = 20, categories?: string[], storeId?: string): Promise<Product[]> {
+    const where: Prisma.ProductWhereInput = {
+      ...(categories && categories.length > 0 ? { categories: { some: { name: { in: categories } } } } : {}),
+      ...(storeId ? { storeId } : {
+        // Only show products from active stores, or products without a store (for backward compatibility during migration)
+        OR: [
+          { storeId: null },
+          { store: { status: 'ACTIVE' } }
+        ]
+      })
+    };
     log.debug("Obteniendo productos paginados:", { skip, take, categories });
     return prisma.product.findMany({
       where,
       skip,
       take,
-      include: { categories: true },
+      include: { 
+        categories: true,
+        store: { select: { id: true, name: true, slug: true, logo: true } } 
+      },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -23,8 +35,16 @@ export class ProductRepository {
   /**
    * Obtiene el total de productos en la base de datos, opcionalmente filtrados por una o más categorías.
    */
-  async getTotalCount(categories?: string[]): Promise<number> {
-    const where: Prisma.ProductWhereInput = categories && categories.length > 0 ? { categories: { some: { name: { in: categories } } } } : {};
+  async getTotalCount(categories?: string[], storeId?: string): Promise<number> {
+    const where: Prisma.ProductWhereInput = {
+      ...(categories && categories.length > 0 ? { categories: { some: { name: { in: categories } } } } : {}),
+      ...(storeId ? { storeId } : {
+        OR: [
+          { storeId: null },
+          { store: { status: 'ACTIVE' } }
+        ]
+      })
+    };
     log.debug("Obteniendo total de productos con filtros:", { categories });
     return prisma.product.count({ where });
   }
@@ -36,32 +56,49 @@ export class ProductRepository {
     log.debug("Buscando producto por id:", { id });
     return prisma.product.findUnique({
       where: { id },
-      include: { categories: true },
+      include: { 
+        categories: true,
+        store: { select: { id: true, name: true, slug: true, logo: true } }
+      },
     });
   }
 
   /**
    * Busca productos por coincidencia parcial o total en múltiples campos con paginación, opcionalmente filtrados por una o más categorías.
    */
-  async searchProducts(query: string, skip: number = 0, take: number = 20, categories?: string[]): Promise<Product[]> {
-    const searchConditions = [
+  async searchProducts(query: string, skip: number = 0, take: number = 20, categories?: string[], storeId?: string): Promise<Product[]> {
+    const searchConditions: Prisma.ProductWhereInput[] = [
       { id: { contains: query, mode: "insensitive" } },
       { name: { contains: query, mode: "insensitive" } },
       { description: { contains: query, mode: "insensitive" } },
       { categories: { some: { name: { contains: query, mode: "insensitive" } } } },
       { tag: { contains: query, mode: "insensitive" } },
+      { store: { name: { contains: query, mode: "insensitive" } } },
     ];
 
-    const where = categories && categories.length > 0
+    const baseWhere = categories && categories.length > 0
       ? { AND: [{ OR: searchConditions }, { categories: { some: { name: { in: categories } } } }] }
       : { OR: searchConditions };
+
+    const where: Prisma.ProductWhereInput = {
+      ...baseWhere,
+      ...(storeId ? { storeId } : {
+        OR: [
+          { storeId: null },
+          { store: { status: 'ACTIVE' } }
+        ]
+      })
+    };
 
     log.debug("Buscando productos:", { query, skip, take, categories });
     return prisma.product.findMany({
       where: where as any,
       skip,
       take,
-      include: { categories: true },
+      include: { 
+        categories: true,
+        store: { select: { id: true, name: true, slug: true, logo: true } }
+      },
       orderBy: { createdAt: "desc" },
     });
   }
@@ -69,8 +106,8 @@ export class ProductRepository {
   /**
    * Obtiene el conteo de resultados para una búsqueda específica, opcionalmente filtrados por una o más categorías.
    */
-  async getSearchCount(query: string, categories?: string[]): Promise<number> {
-    const searchConditions = [
+  async getSearchCount(query: string, categories?: string[], storeId?: string): Promise<number> {
+    const searchConditions: Prisma.ProductWhereInput[] = [
       { id: { contains: query, mode: "insensitive" } },
       { name: { contains: query, mode: "insensitive" } },
       { description: { contains: query, mode: "insensitive" } },
@@ -78,11 +115,21 @@ export class ProductRepository {
       { tag: { contains: query, mode: "insensitive" } },
     ];
 
-    const where = categories && categories.length > 0
+    const baseWhere = categories && categories.length > 0
       ? { AND: [{ OR: searchConditions }, { categories: { some: { name: { in: categories } } } }] }
       : { OR: searchConditions };
 
-    log.debug("Obteniendo conteo de búsqueda de productos:", { query, categories });
+    const where: Prisma.ProductWhereInput = {
+      ...baseWhere,
+      ...(storeId ? { storeId } : {
+        OR: [
+          { storeId: null },
+          { store: { status: 'ACTIVE' } }
+        ]
+      })
+    };
+
+    log.debug("Obteniendo conteo de búsqueda de productos:", { query, categories, storeId });
     return prisma.product.count({
       where: where as any,
     });
@@ -94,11 +141,12 @@ export class ProductRepository {
   async createProduct(data: any): Promise<Product> {
     log.info("Creando nuevo producto:", { name: data.name });
 
-    const { categories, ...restData } = data;
+    const { categories, storeId, ...restData } = data;
 
     return prisma.product.create({
       data: {
         ...restData,
+        storeId,
         categories: categories && categories.length > 0 ? {
           connectOrCreate: categories.map((c: string) => ({
             where: { name: c },
@@ -106,7 +154,10 @@ export class ProductRepository {
           }))
         } : undefined,
       },
-      include: { categories: true },
+      include: { 
+        categories: true,
+        store: { select: { id: true, name: true, slug: true, logo: true } }
+      },
     }) as unknown as Promise<Product>;
   }
 
@@ -116,9 +167,10 @@ export class ProductRepository {
   async updateProduct(id: string, data: any): Promise<Product> {
     log.info(`Actualizando producto: ${id}`);
 
-    const { categories, ...restData } = data;
+    const { categories, storeId, ...restData } = data;
 
     const updateData: any = { ...restData };
+    if (storeId !== undefined) updateData.storeId = storeId;
     if (categories !== undefined) {
       updateData.categories = {
         set: [], // Clear existing
@@ -132,7 +184,10 @@ export class ProductRepository {
     return prisma.product.update({
       where: { id },
       data: updateData,
-      include: { categories: true },
+      include: { 
+        categories: true,
+        store: { select: { id: true, name: true, slug: true, logo: true } }
+      },
     }) as unknown as Promise<Product>;
   }
 
@@ -143,8 +198,38 @@ export class ProductRepository {
     log.info(`Eliminando producto: ${id}`);
     return prisma.product.delete({
       where: { id },
-      include: { categories: true },
+      include: { 
+        categories: true,
+        store: { select: { id: true, name: true, slug: true, logo: true } }
+      },
     }) as unknown as Promise<Product>;
+  }
+
+  /**
+   * Obtiene productos de una tienda específica
+   */
+  async getProductsByStore(storeId: string, skip: number = 0, take: number = 20): Promise<Product[]> {
+    log.debug("Obteniendo productos de la tienda:", { storeId, skip, take });
+    return prisma.product.findMany({
+      where: { storeId },
+      skip,
+      take,
+      include: { 
+        categories: true,
+        store: { select: { id: true, name: true, slug: true, logo: true } }
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  /**
+   * Obtiene el conteo total de productos de una tienda
+   */
+  async getProductCountByStore(storeId: string): Promise<number> {
+    log.debug("Obteniendo conteo de productos de la tienda:", { storeId });
+    return prisma.product.count({
+      where: { storeId }
+    });
   }
 
   /**
@@ -161,10 +246,16 @@ export class ProductRepository {
   /**
    * Obtiene el conteo de productos por categoría usando groupBy.
    */
-  async getCategoryCounts(): Promise<Record<string, number>> {
-    log.debug("Obteniendo conteo de productos por categoría");
+  async getCategoryCounts(storeId?: string): Promise<Record<string, number>> {
+    log.debug("Obteniendo conteo de productos por categoría", { storeId });
     const categories = await prisma.categoria.findMany({
-      include: { _count: { select: { products: true } } }
+      include: { 
+        _count: { 
+          select: { 
+            products: storeId ? { where: { storeId } } : true 
+          } 
+        } 
+      }
     });
     const counts: Record<string, number> = {};
     for (const c of categories) {

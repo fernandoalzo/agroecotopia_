@@ -70,12 +70,16 @@ export class AuthService {
     return user;
   }
 
-  hasRole(session: any, role: "admin" | "user"): boolean {
+  hasRole(session: any, role: "admin" | "user" | "seller"): boolean {
     return session?.user?.role === role;
   }
 
   isAdmin(session: any): boolean {
     return this.hasRole(session, "admin");
+  }
+  
+  isSeller(session: any): boolean {
+    return this.hasRole(session, "seller");
   }
 
   async me() {
@@ -87,6 +91,7 @@ export class AuthService {
     }
 
     return {
+      id: session.user.id,
       name: session.user.name,
       email: session.user.email,
       role: session.user.role,
@@ -102,12 +107,26 @@ export class AuthService {
     return session;
   }
 
-  async ensureRole(role: "admin" | "user") {
+  async ensureRole(role: "admin" | "user" | "seller") {
     const session = await this.ensureAuthenticated();
     if (session.user.role !== role) {
       log.warn(`ensureRole: Rol insuficiente. Requerido: ${role}, actual: ${session.user.role}`);
       throw new Error("FORBIDDEN");
     }
     return session;
+  }
+
+  async ensureAnyRole(roles: ("admin" | "user" | "seller")[]) {
+    const session = await this.ensureAuthenticated();
+    if (!roles.includes(session.user.role as any)) {
+      log.warn(`ensureAnyRole: Rol insuficiente. Requerido: uno de [${roles.join(", ")}], actual: ${session.user.role}`);
+      throw new Error("FORBIDDEN");
+    }
+    return session;
+  }
+
+  async promoteToSeller(userId: string) {
+    log.info("Promoviendo usuario a seller", { userId });
+    return await this.userRepository.updateUserRole(userId, "seller");
   }
 }

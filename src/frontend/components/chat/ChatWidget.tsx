@@ -44,6 +44,7 @@ export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidg
   if (!chat.isClient || chat.status !== "authenticated") return null;
   if (!forceShow && (chat.isRouteAdmin || chat.isAdminUser)) return null;
   if (pathname?.startsWith("/comunidad")) return null;
+  if (pathname?.startsWith("/mi-tienda")) return null;
 
   const isMobileOpen = chat.isClient && chat.isOpen && window.innerWidth < 768;
 

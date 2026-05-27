@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Product } from "@prisma/client";
 
-interface AdminProductCardDesktopProps {
+interface ProductCardDesktopProps {
   product: any;
   copiedId: string | null;
   hasStock: boolean;
@@ -18,7 +18,7 @@ interface AdminProductCardDesktopProps {
   onEdit: () => void;
 }
 
-export const AdminProductCardDesktop = ({
+export const ProductCardDesktop = ({
   product,
   copiedId,
   hasStock,
@@ -27,7 +27,7 @@ export const AdminProductCardDesktop = ({
   onCopyId,
   onView,
   onEdit,
-}: AdminProductCardDesktopProps) => {
+}: ProductCardDesktopProps) => {
   return (
     <div className="hidden lg:flex flex-1 items-stretch">
       <div className={cn("w-[4px] h-auto my-4 shrink-0 rounded-full ml-3 transition-all duration-300", hasStock ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]")} />

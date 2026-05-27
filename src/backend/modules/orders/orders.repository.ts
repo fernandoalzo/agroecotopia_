@@ -91,6 +91,25 @@ export class OrdersRepository {
     });
   }
 
+  async findByStoreId(storeId: string) {
+    log.debug("Buscando pedidos por tienda:", { storeId });
+    return await prisma.pedido.findMany({
+      where: {
+        detalles: { some: { storeId } }
+      },
+      orderBy: { fechaPedido: "desc" },
+      include: {
+        usuario: { select: { id: true, name: true, email: true } },
+        detalles: {
+          where: { storeId },
+          include: {
+            producto: true,
+          },
+        },
+      },
+    });
+  }
+
   async findAll() {
     log.debug("Buscando todos los pedidos.");
     return await prisma.pedido.findMany({
@@ -117,14 +136,19 @@ export class OrdersRepository {
     limit: number;
     estado?: PedidoEstado;
     search?: string;
+    storeId?: string;
   }) {
-    const { page, limit, estado, search } = params;
+    const { page, limit, estado, search, storeId } = params;
     const skip = (page - 1) * limit;
 
     const where: Prisma.PedidoWhereInput = {};
 
     if (estado) {
       where.estado = estado;
+    }
+
+    if (storeId) {
+      where.detalles = { some: { storeId } };
     }
 
     if (search && search.trim() !== "") {
@@ -161,6 +185,7 @@ export class OrdersRepository {
             },
           },
           detalles: {
+            ...(storeId ? { where: { storeId } } : {}),
             include: {
               producto: true,
             },
@@ -178,10 +203,13 @@ export class OrdersRepository {
     };
   }
 
-  async getStatusCounts() {
+  async getStatusCounts(storeId?: string) {
     log.debug("Obteniendo conteo de pedidos por estado en la base de datos.");
+    const where = storeId ? { detalles: { some: { storeId } } } : {};
+    
     const counts = await prisma.pedido.groupBy({
       by: ['estado'],
+      where,
       _count: {
         _all: true,
       },

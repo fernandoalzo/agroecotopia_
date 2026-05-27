@@ -9,12 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-interface AdminProductModalProps {
-  product: any | null;
+interface ProductModalProps {
+  product: (Product & { categories?: any[], store?: any }) | null;
   onClose: () => void;
 }
 
-export const AdminProductModal = ({ product, onClose }: AdminProductModalProps) => {
+export const ProductModal = ({ product, onClose }: ProductModalProps) => {
   if (!product) return null;
 
   const hasStock = Number(product.stock) > 0;
@@ -88,7 +88,7 @@ export const AdminProductModal = ({ product, onClose }: AdminProductModalProps) 
                     </Badge>
                     <Badge variant="secondary" className="rounded-md px-2 py-0.5 text-[10px] font-bold shadow-sm">
                       <Tag className="h-3 w-3 mr-1 inline" />
-                      {product.categories.map((c: any) => c.name).join(", ")}
+                      {product.categories?.map((c: any) => c.name).join(", ")}
                     </Badge>
                   </div>
                   

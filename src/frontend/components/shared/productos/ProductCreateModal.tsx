@@ -6,16 +6,17 @@ import { X, Save, AlertCircle, ImageIcon, Plus, Trash2, Search, Check } from "lu
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { createProductAction, getCategoriesAction } from "@/backend/modules/product/product.actions";
+import { createProductAction, createStoreProductAction, getCategoriesAction } from "@/backend/modules/product/product.actions";
 import { toast } from "sonner";
-import { productSchema, ProductFormValues } from "./productSchema";
+import { productSchema, ProductFormValues } from "./schemas/productSchema";
 
-interface AdminProductCreateModalProps {
+interface ProductCreateModalProps {
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: () => void;
+  storeId?: string;
 }
 
-export const AdminProductCreateModal = ({ onClose, onSuccess }: AdminProductCreateModalProps) => {
+export const ProductCreateModal = ({ onClose, onSuccess, storeId }: ProductCreateModalProps) => {
   const [loading, setLoading] = useState(false);
   const [imagesList, setImagesList] = useState<string[]>([]);
   const [newImage, setNewImage] = useState("");
@@ -28,7 +29,7 @@ export const AdminProductCreateModal = ({ onClose, onSuccess }: AdminProductCrea
     getCategoriesAction().then(setAvailableCategories).catch(console.error);
   }, []);
 
-  const filteredCategories = availableCategories.filter(cat => 
+  const filteredCategories = availableCategories.filter(cat =>
     cat.toLowerCase().includes(newCategory.toLowerCase()) && !categoriesList.includes(cat)
   );
 
@@ -102,7 +103,12 @@ export const AdminProductCreateModal = ({ onClose, onSuccess }: AdminProductCrea
         images: imagesList,
       };
 
-      const result = await createProductAction(payload) as any;
+      let result;
+      if (storeId) {
+        result = await createStoreProductAction(storeId, payload) as any;
+      } else {
+        result = await createProductAction(payload) as any;
+      }
 
       if (result.success) {
         if (typeof toast !== "undefined") {
@@ -110,7 +116,7 @@ export const AdminProductCreateModal = ({ onClose, onSuccess }: AdminProductCrea
         } else {
           alert("¡Producto creado con éxito!");
         }
-        onSuccess();
+        onSuccess?.();
         onClose();
       } else {
         if (typeof toast !== "undefined") {
@@ -253,8 +259,8 @@ export const AdminProductCreateModal = ({ onClose, onSuccess }: AdminProductCrea
                             onFocus={() => setIsCategoryFocused(true)}
                             onBlur={() => setTimeout(() => setIsCategoryFocused(false), 200)}
                             className={`w-full border border-border/50 bg-background pl-10 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all placeholder:text-muted-foreground/40
-                              ${isCategoryFocused && (newCategory.trim() !== "" || filteredCategories.length > 0) 
-                                ? 'rounded-t-xl border-b-transparent focus:ring-0 shadow-[0_4px_20px_-10px_rgba(var(--primary),0.3)]' 
+                              ${isCategoryFocused && (newCategory.trim() !== "" || filteredCategories.length > 0)
+                                ? 'rounded-t-xl border-b-transparent focus:ring-0 shadow-[0_4px_20px_-10px_rgba(var(--primary),0.3)]'
                                 : 'rounded-xl focus:ring-2 focus:ring-primary/30 shadow-sm'
                               }`}
                             placeholder="Buscar o crear categoría..."
@@ -304,11 +310,11 @@ export const AdminProductCreateModal = ({ onClose, onSuccess }: AdminProductCrea
                         <div className="flex flex-wrap gap-2 mt-3">
                           <AnimatePresence>
                             {categoriesList.map((cat, index) => (
-                              <motion.div 
+                              <motion.div
                                 initial={{ scale: 0.8, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0.8, opacity: 0 }}
-                                key={index} 
+                                key={index}
                                 className="flex items-center gap-1.5 bg-background border border-border shadow-sm text-foreground text-xs font-bold px-3 py-1.5 rounded-full"
                               >
                                 <span className="w-1.5 h-1.5 rounded-full bg-primary" />

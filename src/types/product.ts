@@ -10,6 +10,8 @@ export interface Product {
   emoji: string;
   images: string[];
   stock: number;
+  storeId?: string | null;
+  store?: { id: string; name: string; slug: string; logo?: string | null } | null;
   createdAt?: Date;
   updatedAt?: Date;
 }

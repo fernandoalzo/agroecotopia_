@@ -1,0 +1,65 @@
+enum StoreStatus {
+  ACTIVE     // Tienda activa y visible
+  SUSPENDED  // Suspendida por el admin
+  CLOSED     // Cerrada por el admin o el dueño
+}
+
+enum StoreRequestStatus {
+  PENDING    // Esperando revisión del admin
+  APPROVED   // Aprobada → se crea la Store
+  REJECTED   // Rechazada por el admin
+}
+
+model Store {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  description String      @db.Text
+  logo        String?
+  banner      String?
+  ownerId     String      // NO @unique → 1:N (un user puede tener varias tiendas)
+  status      StoreStatus @default(ACTIVE)
+
+  // Metadata de contacto
+  phone       String?
+  email       String?
+  address     String?     @db.Text
+  city        String?
+
+  // Relaciones
+  owner          User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  products       Product[]
+  orderDetails   DetallePedido[]
+  requests       StoreRequest[]    @relation("StoreToRequests")
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([slug])
+}
+
+model StoreRequest {
+  id          String             @id @default(cuid())
+  userId      String
+  name        String             // Nombre propuesto
+  description String             @db.Text
+  phone       String?
+  email       String?
+  address     String?            @db.Text
+  city        String?
+  status      StoreRequestStatus @default(PENDING)
+  adminNote   String?            @db.Text  // Nota del admin al aprobar/rechazar
+  storeId     String?            // Se llena cuando se aprueba y se crea la Store
+
+  // Relaciones
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store       Store?             @relation("StoreToRequests", fields: [storeId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
