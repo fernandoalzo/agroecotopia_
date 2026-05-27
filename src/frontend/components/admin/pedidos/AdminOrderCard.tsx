@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -13,7 +13,7 @@ interface AdminOrderCardProps {
   order: AdminOrder;
   index: number;
   isUpdating: boolean;
-  onUpdateStatus: (orderId: string, newStatus: PedidoEstado) => void;
+  onUpdateStatus: (orderId: string, newStatus: PedidoEstado) => Promise<boolean>;
 }
 
 export const AdminOrderCard = ({ order, index, isUpdating, onUpdateStatus }: AdminOrderCardProps) => {
@@ -24,6 +24,12 @@ export const AdminOrderCard = ({ order, index, isUpdating, onUpdateStatus }: Adm
   const cfg = statusConfig[order.estado];
   const nextStatuses = getNextStatuses(order.estado);
 
+  useEffect(() => {
+    if (confirmingStatus && order.estado === confirmingStatus && !isUpdating) {
+      setConfirmingStatus(null);
+    }
+  }, [confirmingStatus, isUpdating, order.estado]);
+
   const handleCopyId = () => {
     navigator.clipboard.writeText(order.id);
     setCopiedId(order.id);
@@ -31,10 +37,9 @@ export const AdminOrderCard = ({ order, index, isUpdating, onUpdateStatus }: Adm
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (confirmingStatus) {
-      onUpdateStatus(order.id, confirmingStatus);
-      setTimeout(() => setConfirmingStatus(null), 1000);
+      await onUpdateStatus(order.id, confirmingStatus);
     }
   };
 

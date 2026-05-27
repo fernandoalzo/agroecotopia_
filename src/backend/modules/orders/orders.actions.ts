@@ -30,14 +30,16 @@ export async function placeOrderAction(data: {
     if (!userId) throw new Error("UNAUTHORIZED");
 
     log.info("Creando nuevo pedido para el usuario:", { userId, metodoPago: data.metodoPago, cantidadItems: data.detalles.length });
-    const pedido = await ordersService.createPedido({
+    const pedidos = await ordersService.createPedido({
       ...data,
       usuarioId: userId,
     });
+    const pedidoIds = pedidos.map((pedido) => pedido.id);
+    const primaryPedidoId = pedidoIds[0];
 
-    log.info("Pedido creado exitosamente:", { pedidoId: pedido.id, userId });
+    log.info("Pedido creado exitosamente:", { pedidoIds, userId });
     revalidatePath("/perfil/pedidos");
-    return { success: true, pedidoId: pedido.id };
+    return { success: true, pedidoId: primaryPedidoId, pedidoIds };
   });
 }
 
@@ -107,8 +109,9 @@ export async function getOrderStatusCountsAction() {
  */
 export async function getOrderDetailAction(pedidoId: string) {
   return await withAuth(async () => {
-    const userId = await authService.getCurrentUserId();
-    const isAdmin = await authService.isAdmin(await authService.getSession());
+    const session = await authService.getSession();
+    const userId = session?.user?.id ?? null;
+    const isAdmin = authService.isAdmin(session);
     
     log.debug("Obteniendo detalle del pedido:", { pedidoId, userId, isAdmin });
     const pedido = await ordersService.getPedidoDetallado(pedidoId);
@@ -118,8 +121,12 @@ export async function getOrderDetailAction(pedidoId: string) {
       return { error: "Pedido no encontrado" };
     }
     
-    // Solo el dueño del pedido o un admin pueden verlo
-    if (pedido.usuarioId !== userId && !isAdmin) {
+    const isStoreOwner = userId
+      ? await ordersService.belongsToStoreOwner(pedidoId, userId)
+      : false;
+
+    // Solo el dueño del pedido, un admin o el dueño de la tienda asociada pueden verlo
+    if (pedido.usuarioId !== userId && !isAdmin && !isStoreOwner) {
       log.warn("Acceso denegado al detalle del pedido:", { pedidoId, userId, ownerUserId: pedido.usuarioId });
       return { error: "FORBIDDEN" };
     }

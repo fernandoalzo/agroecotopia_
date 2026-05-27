@@ -123,6 +123,7 @@ export const AdminOrdersList = ({ storeId, emptyMessage }: AdminOrdersListProps)
         : await updateOrderStatusAction(orderId, newStatus);
       if (result && "error" in result) {
         toast.error("Error", { description: result.error });
+        return false;
       } else {
         toast.success("Estado actualizado", {
           description: `Pedido actualizado a ${statusConfig[newStatus].label}`,
@@ -133,10 +134,12 @@ export const AdminOrdersList = ({ storeId, emptyMessage }: AdminOrdersListProps)
           prev.map((o) => (o.id === orderId ? { ...o, estado: newStatus } : o))
         );
         // Refresh counts from DB
-        fetchCounts();
+        await fetchCounts();
+        return true;
       }
     } catch {
       toast.error("Error", { description: "Hubo un problema al actualizar el estado." });
+      return false;
     } finally {
       setUpdatingStatusId(null);
     }

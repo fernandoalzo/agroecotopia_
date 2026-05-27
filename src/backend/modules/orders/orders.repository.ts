@@ -39,9 +39,10 @@ export class OrdersRepository {
     return success;
   }
 
-  async createPedido(data: Prisma.PedidoCreateInput) {
+  async createPedido(data: Prisma.PedidoCreateInput, tx?: TxClient) {
+    const client = tx || prisma;
     log.debug("Creando pedido en la base de datos.");
-    return await prisma.pedido.create({
+    return await client.pedido.create({
       data,
       include: {
         detalles: true,
@@ -62,6 +63,20 @@ export class OrdersRepository {
         },
       },
     });
+  }
+
+  async belongsToStoreOwner(pedidoId: string, ownerId: string) {
+    log.debug("Validando si el pedido pertenece a una tienda del vendedor:", { pedidoId, ownerId });
+    const count = await prisma.detallePedido.count({
+      where: {
+        pedidoId,
+        store: {
+          ownerId,
+        },
+      },
+    });
+
+    return count > 0;
   }
 
   async updatePedido(id: string, data: Prisma.PedidoUpdateInput, tx?: TxClient) {

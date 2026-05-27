@@ -5,35 +5,82 @@ import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/orders/orders.service.ts");
 
+type CreatePedidoDetalle = {
+  productoId: string;
+  cantidad: number;
+  precioUnitario: number;
+  unidadMedida: string;
+};
+
+type CreatePedidoData = {
+  usuarioId: string;
+  accountId?: string;
+  direccionEntrega: string;
+  notasCliente?: string;
+  costoEnvio: number;
+  impuestosPorcentaje: number;
+  metodoPago?: string;
+  detalles: CreatePedidoDetalle[];
+};
+
 export class OrdersService {
   constructor(private ordersRepository: OrdersRepository) { }
 
-  async createPedido(data: {
-    usuarioId: string;
-    accountId?: string;
-    direccionEntrega: string;
-    notasCliente?: string;
-    costoEnvio: number;
-    impuestosPorcentaje: number;
-    metodoPago?: string;
-    detalles: {
-      productoId: string;
-      cantidad: number;
-      precioUnitario: number;
-      unidadMedida: string;
-    }[];
-  }) {
-    // 1. Fetch products to get storeId for each DetallePedido
+  async createPedido(data: CreatePedidoData) {
     const productIds = data.detalles.map(d => d.productoId);
     const dbProducts = await prisma.product.findMany({
       where: { id: { in: productIds } },
       select: { id: true, storeId: true }
     });
-    
-    const productStoreMap = new Map(dbProducts.map(p => [p.id, p.storeId]));
 
+    const productStoreMap = new Map(dbProducts.map(p => [p.id, p.storeId]));
+    const missingProduct = productIds.find((productId) => !productStoreMap.has(productId));
+    if (missingProduct) {
+      log.warn("Intento de crear pedido con producto inexistente:", { productoId: missingProduct });
+      throw new Error("Uno de los productos del carrito ya no está disponible");
+    }
+
+    const storeGroups = new Map<string, typeof data.detalles>();
+    for (const detalle of data.detalles) {
+      const storeId = productStoreMap.get(detalle.productoId)!;
+      const group = storeGroups.get(storeId) || [];
+      group.push(detalle);
+      storeGroups.set(storeId, group);
+    }
+
+    log.info("Creando pedidos agrupados por tienda:", {
+      usuarioId: data.usuarioId,
+      storesCount: storeGroups.size,
+      cantidadItems: data.detalles.length,
+    });
+
+    const pedidos = await this.ordersRepository.executeTransaction(async (tx) => {
+      const createdPedidos = [];
+      const allItemsSubtotal = data.detalles.reduce((total, detalle) => {
+        return total + detalle.cantidad * detalle.precioUnitario;
+      }, 0);
+
+      for (const [storeId, detalles] of storeGroups.entries()) {
+        const pedido = await this.createPedidoForStoreGroup(data, storeId, detalles, allItemsSubtotal, tx);
+        createdPedidos.push(pedido);
+      }
+
+      return createdPedidos;
+    });
+
+    log.info("Pedidos creados exitosamente por tienda:", { pedidoIds: pedidos.map((pedido) => pedido.id) });
+    return pedidos.map((pedido) => this.serializePedido(pedido));
+  }
+
+  private async createPedidoForStoreGroup(
+    data: CreatePedidoData,
+    storeId: string,
+    detalles: CreatePedidoDetalle[],
+    allItemsSubtotal: number,
+    tx: Prisma.TransactionClient
+  ) {
     let subtotal = 0;
-    const detallesInput: Prisma.DetallePedidoCreateWithoutPedidoInput[] = data.detalles.map((d) => {
+    const detallesInput: Prisma.DetallePedidoCreateWithoutPedidoInput[] = detalles.map((d) => {
       const itemSubtotal = d.cantidad * d.precioUnitario;
       subtotal += itemSubtotal;
       return {
@@ -42,16 +89,18 @@ export class OrdersService {
         precioUnitario: new Prisma.Decimal(d.precioUnitario),
         unidadMedida: d.unidadMedida,
         subtotal: new Prisma.Decimal(itemSubtotal),
-        store: productStoreMap.get(d.productoId) ? { connect: { id: productStoreMap.get(d.productoId)! } } : undefined,
+        store: { connect: { id: storeId } },
       };
     });
 
     const impuestos = subtotal * (data.impuestosPorcentaje / 100);
-    const total = subtotal + impuestos + data.costoEnvio;
+    const shippingRatio = allItemsSubtotal > 0 ? subtotal / allItemsSubtotal : 0;
+    const costoEnvio = data.costoEnvio * shippingRatio;
+    const total = subtotal + impuestos + costoEnvio;
 
-    log.info("Creando pedido en base de datos:", { usuarioId: data.usuarioId, subtotal, impuestos, total, cantidadItems: data.detalles.length });
+    log.info("Creando pedido de tienda en base de datos:", { usuarioId: data.usuarioId, storeId, subtotal, impuestos, costoEnvio, total, cantidadItems: detalles.length });
 
-    const pedido = await this.ordersRepository.createPedido({
+    return await this.ordersRepository.createPedido({
       usuario: { connect: { id: data.usuarioId } },
       accountId: data.accountId,
       direccionEntrega: data.direccionEntrega,
@@ -59,16 +108,13 @@ export class OrdersService {
       metodoPago: data.metodoPago,
       subtotal: new Prisma.Decimal(subtotal),
       impuestos: new Prisma.Decimal(impuestos),
-      costoEnvio: new Prisma.Decimal(data.costoEnvio),
+      costoEnvio: new Prisma.Decimal(costoEnvio),
       total: new Prisma.Decimal(total),
       estado: PedidoEstado.PENDIENTE,
       detalles: {
         create: detallesInput,
       },
-    } as any);
-
-    log.info("Pedido creado exitosamente:", { pedidoId: pedido.id });
-    return this.serializePedido(pedido);
+    } as Prisma.PedidoCreateInput, tx);
   }
 
   async updateEstado(pedidoId: string, nuevoEstado: PedidoEstado, motivoCancelacion?: string) {
@@ -217,6 +263,10 @@ export class OrdersService {
     log.debug("Obteniendo pedido detallado:", { pedidoId });
     const pedido = await this.ordersRepository.findById(pedidoId);
     return pedido ? this.serializePedido(pedido) : null;
+  }
+
+  async belongsToStoreOwner(pedidoId: string, ownerId: string) {
+    return await this.ordersRepository.belongsToStoreOwner(pedidoId, ownerId);
   }
 
   /**

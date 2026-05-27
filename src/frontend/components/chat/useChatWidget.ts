@@ -352,7 +352,8 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string) {
     useEffect(() => {
         const handleAdvisorMessageEvent = async (e: Event) => {
             const customEvent = e as CustomEvent;
-            const { pedidoId, cart, totalPrice, values } = customEvent.detail;
+            const { pedidoId, pedidoIds, cart, totalPrice, values } = customEvent.detail;
+            const orderIds = Array.isArray(pedidoIds) && pedidoIds.length > 0 ? pedidoIds : [pedidoId];
 
             if (!socket || !conversation?.id || !session?.user?.id) {
                 log.warn("No se puede enviar el mensaje de asesor: chat no inicializado");
@@ -386,7 +387,9 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string) {
                 if (phone) content += `Teléfono: ${phone}\n`;
                 if (address) content += `Dirección: ${address}\n`;
             }
-            content += `\nID DEL PEDIDO: ${pedidoId}\n==================\n`;
+            content += orderIds.length > 1
+                ? `\nIDS DE PEDIDOS GENERADOS (${orderIds.length} tiendas): ${orderIds.join(", ")}\n==================\n`
+                : `\nID DEL PEDIDO: ${pedidoId}\n==================\n`;
 
             const sendSocketMessage = async (textToEncrypt: string) => {
                 let finalContent = textToEncrypt;
@@ -414,7 +417,7 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string) {
 
             await sendSocketMessage(content);
             await new Promise(resolve => setTimeout(resolve, 500));
-            await sendSocketMessage(pedidoId);
+            await sendSocketMessage(orderIds.join(", "));
         };
 
         window.addEventListener("send_advisor_chat_message", handleAdvisorMessageEvent);

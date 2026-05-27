@@ -14,6 +14,7 @@ export interface PaymentMethodConfig {
 
 export interface PaymentHandlerContext {
   pedidoId: string;
+  pedidoIds?: string[];
   values: CheckoutValues;
   cart: CartItem[];
   totalPrice: number;

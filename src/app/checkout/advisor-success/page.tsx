@@ -20,6 +20,11 @@ function AdvisorSuccessContent() {
   const [copied, setCopied] = useState(false);
 
   const orderId = searchParams.get("id") || "";
+  const orderIds = (searchParams.get("ids") || orderId)
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  const displayOrderCode = orderIds.length > 1 ? orderIds.join(", ") : orderId;
 
   const isEs = language === "es";
 
@@ -34,9 +39,9 @@ function AdvisorSuccessContent() {
   }, [orderId, router]);
 
   const handleCopy = async () => {
-    if (!orderId) return;
+    if (!displayOrderCode) return;
     try {
-      await navigator.clipboard.writeText(orderId);
+      await navigator.clipboard.writeText(displayOrderCode);
       setCopied(true);
       toast.success(
         isEs ? "¡Copiado con éxito!" : "Copied successfully!",
@@ -178,7 +183,7 @@ function AdvisorSuccessContent() {
                   
                   <div className="relative flex items-center justify-between gap-4 p-4 bg-secondary/30 dark:bg-secondary/15 backdrop-blur-md rounded-2xl border border-border/80 font-mono text-sm md:text-base text-foreground break-all shadow-inner">
                     <span className="flex-1 text-center font-bold tracking-tight select-all pl-2 select-text">
-                      {orderId}
+                      {displayOrderCode}
                     </span>
                     
                     <button

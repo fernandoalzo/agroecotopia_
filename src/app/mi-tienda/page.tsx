@@ -40,7 +40,7 @@ function SellerDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const initialTab = (searchParams.get("tab") as SellerTab) || "products";
+  const initialTab = (searchParams.get("tab") as SellerTab) || "orders";
   const [activeTab, setActiveTab] = useState<SellerTab>(initialTab);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stores, setStores] = useState<StoreType[]>([]);

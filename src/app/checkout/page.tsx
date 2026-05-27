@@ -85,6 +85,7 @@ export default function CheckoutPage() {
       const paymentHandler = PaymentHandlerFactory.getHandler(values.paymentMethod);
       await paymentHandler.process({
         pedidoId: result.pedidoId,
+        pedidoIds: result.pedidoIds,
         values,
         cart,
         totalPrice,
