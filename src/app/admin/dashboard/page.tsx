@@ -21,7 +21,12 @@ import { Loading } from "@/components/ui/Loading";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSocket } from "@/frontend/context/SocketContext";
-import { getAllRequestsAction, approveRequestAction, rejectRequestAction, getPendingRequestsAction } from "@/backend/modules/store/store.actions";
+import {
+  getAllRequestsAction,
+  approveRequestAction,
+  rejectRequestAction,
+  getPendingRequestsAction
+} from "@/backend/modules/store/store.actions";
 import { getAdminConversations } from "@/backend/modules/chat/chat.actions";
 import { AdminChatPageContent } from "@/app/admin/chat/page";
 import { useProductsLogic } from "@/frontend/hooks/useProductsLogic";
@@ -112,9 +117,9 @@ function AdminDashboardPageContent() {
       setPendingStoresCount(0);
       return;
     }
-    
+
     let isCancelled = false;
-    
+
     const loadPendingRequests = async () => {
       try {
         const res = await getPendingRequestsAction();
@@ -128,7 +133,7 @@ function AdminDashboardPageContent() {
 
     loadPendingRequests();
     const interval = setInterval(loadPendingRequests, 30000);
-    
+
     return () => {
       isCancelled = true;
       clearInterval(interval);
