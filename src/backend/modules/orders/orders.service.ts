@@ -42,7 +42,7 @@ export class OrdersService {
         precioUnitario: new Prisma.Decimal(d.precioUnitario),
         unidadMedida: d.unidadMedida,
         subtotal: new Prisma.Decimal(itemSubtotal),
-        storeId: productStoreMap.get(d.productoId) || null,
+        store: productStoreMap.get(d.productoId) ? { connect: { id: productStoreMap.get(d.productoId)! } } : undefined,
       };
     });
 

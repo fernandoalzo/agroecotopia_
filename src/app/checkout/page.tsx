@@ -14,7 +14,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Truck, ShieldCheck, MapPin } from "lucide-react";
 import Link from "next/link";
 import { PAYMENT_METHODS, PaymentHandlerFactory } from "@/utils/PaymentsMethods";
-import { placeOrderAction } from "@/backend/modules/orders";
+// import { placeOrderAction } from "@/backend/modules/orders"; // moved to API route
 import { Loading } from "@/components/ui/Loading";
 import logger from "@/utils/logger";
 
@@ -66,7 +66,12 @@ export default function CheckoutPage() {
         }))
       };
 
-      const result = await placeOrderAction(orderData);
+      const response = await fetch('/api/place-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+      });
+      const result = await response.json();
 
       if ("error" in result) {
         toast.error("Error al crear el pedido", {

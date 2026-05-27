@@ -8,10 +8,13 @@ const prismaClientSingleton = () => {
   log.info("Creando nueva instancia de PrismaClient (Singleton)...");
   const client = new PrismaClient();
   
-  // Ejecutar inicializaciones asíncronas sin bloquear (Fire and forget)
-  client.$connect().then(() => {
-    ensureDefaultAdminStore(client).catch(err => log.error("Error en init db:", err));
-  });
+  // Connect PrismaClient lazily on the server side only.
+  if (typeof window === "undefined") {
+    client.$connect().then(() => {
+      ensureDefaultAdminStore(client).catch(err => log.error("Error en init db:", err));
+    });
+  }
+
 
   return client;
 };
