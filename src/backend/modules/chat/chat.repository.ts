@@ -167,6 +167,65 @@ export class ChatRepository {
     });
   }
 
+  async findUserOrderConversations(userId: string) {
+    log.debug("Buscando conversaciones de pedidos para comprador:", { userId });
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        type: ConversationType.ORDER,
+        userId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        store: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        pedido: {
+          select: {
+            id: true,
+            estado: true,
+            fechaPedido: true,
+          },
+        },
+        messages: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+    });
+
+    return Promise.all(
+      conversations.map(async (conv) => ({
+        ...conv,
+        unreadCount: await prisma.message.count({
+          where: {
+            conversationId: conv.id,
+            isRead: false,
+            senderId: { not: userId },
+          },
+        }),
+      }))
+    );
+  }
+
   async createOrderConversation(data: {
     pedidoId: string;
     storeId: string;

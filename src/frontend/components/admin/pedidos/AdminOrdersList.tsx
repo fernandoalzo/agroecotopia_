@@ -29,9 +29,10 @@ interface AdminOrdersListProps {
   storeId?: string;
   emptyMessage?: string;
   onOpenOrderChat?: (order: AdminOrder) => void;
+  unreadChatCounts?: Record<string, number>;
 }
 
-export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat }: AdminOrdersListProps) => {
+export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unreadChatCounts }: AdminOrdersListProps) => {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<PedidoEstado | "ALL">("ALL");
@@ -239,6 +240,7 @@ export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat }: Admi
                 isUpdating={updatingStatusId === order.id}
                 onUpdateStatus={handleUpdateStatus}
                 onOpenOrderChat={onOpenOrderChat}
+                unreadChatCount={unreadChatCounts?.[order.id] || 0}
               />
             ))
           )}

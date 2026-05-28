@@ -26,10 +26,13 @@ import type { Message } from "@/components/chat/ChatWidget";
 import {
   getConversationMessages,
   getOrCreateOrderConversationAction,
+  getSellerOrderConversationsAction,
+  getUserOrderConversationsAction,
   markAsRead,
 } from "@/backend/modules/chat/chat.actions";
 import { Product } from "@/types";
 import logger from "@/utils/logger";
+import { Loader2 } from "lucide-react";
 
 const log = logger.child("src/app/pedidos/[id]/page.tsx");
 
@@ -68,7 +71,7 @@ const statusConfig = {
 
 export default function OrderDetailPage() {
   const { id } = useParams();
-  const { status } = useSession();
+  const { status, data: session } = useSession();
   const router = useRouter();
   const { t } = useLanguage();
   const { addToCart } = useCart();
@@ -80,8 +83,23 @@ export default function OrderDetailPage() {
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isOpeningChat, setIsOpeningChat] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [orderChat, setOrderChat] = useState<{ conversation: OrderConversation; messages: Message[] } | null>(null);
+  const [orderChatUnreadCounts, setOrderChatUnreadCounts] = useState<Record<string, number>>({});
+  const [orderChat, setOrderChat] = useState<{
+    conversation: OrderConversation;
+    messages: Message[];
+    isLoading: boolean;
+    unreadCount: number;
+  } | null>(null);
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push("/pedidos");
+  };
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -193,6 +211,78 @@ export default function OrderDetailPage() {
     }
   }, [id, router]);
 
+  const orderStoreIds: string[] = Array.from(
+    new Set<string>(
+      (order?.detalles || [])
+        .map((detalle: any) => detalle.storeId)
+        .filter((storeId: string | null | undefined): storeId is string => Boolean(storeId))
+    )
+  );
+
+  const getUnreadChatCount = (storeId: string) => orderChatUnreadCounts[storeId] ?? orderChatUnreadCounts[order?.id || ""] ?? 0;
+
+  useEffect(() => {
+    if (!order?.id || orderStoreIds.length === 0) {
+      setOrderChatUnreadCounts({});
+      return;
+    }
+
+    let cancelled = false;
+    const userRole = session?.user?.role;
+
+    const loadUnreadCounts = async () => {
+      try {
+        if (userRole === "seller" || userRole === "admin") {
+          const results = await Promise.all(
+            orderStoreIds.map(async (storeId) => {
+              const res = await getSellerOrderConversationsAction(storeId);
+              if (!Array.isArray(res)) return { storeId, count: 0 };
+              const matched = res.find((conv: any) => conv?.pedido?.id === order.id);
+              return { storeId, count: Number(matched?.unreadCount) || 0 };
+            })
+          );
+
+          if (cancelled) return;
+
+          const counts = results.reduce((acc: Record<string, number>, item) => {
+            acc[item.storeId] = item.count;
+            acc[order.id] = (acc[order.id] || 0) + item.count;
+            return acc;
+          }, {});
+
+          setOrderChatUnreadCounts(counts);
+          return;
+        }
+
+        const res = await getUserOrderConversationsAction();
+        if (cancelled || !Array.isArray(res)) return;
+
+        const counts = res.reduce((acc: Record<string, number>, conv: any) => {
+          if (conv?.pedido?.id) {
+            const unread = Number(conv.unreadCount) || 0;
+            acc[conv.pedido.id] = unread;
+            if (conv.store?.id) {
+              acc[conv.store.id] = unread;
+            }
+          }
+          return acc;
+        }, {});
+
+        setOrderChatUnreadCounts(counts);
+      } catch (err) {
+        log.error("Error loading order unread counts:", err);
+      }
+    };
+
+    loadUnreadCounts();
+    const interval = setInterval(loadUnreadCounts, 15000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [order?.id, orderStoreIds.join("|"), session?.user?.role]);
+
   const handleRepeatOrder = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -261,6 +351,7 @@ export default function OrderDetailPage() {
   const handleOpenSellerChat = async (storeId: string) => {
     if (!order?.id) return;
 
+    setIsOpeningChat(true);
     try {
       const conversation = await getOrCreateOrderConversationAction(order.id, storeId);
       if (!conversation || "error" in conversation) {
@@ -270,25 +361,49 @@ export default function OrderDetailPage() {
         return;
       }
 
+      // Monta el panel apenas tenemos la conversación para evitar que el botón
+      // se sienta "pegado" mientras llega el historial.
+      setOrderChat({ conversation: conversation as OrderConversation, messages: [], isLoading: true, unreadCount: 0 });
+
       const messages = await getConversationMessages(conversation.id);
       if (messages && "error" in messages) {
+        setOrderChat({
+          conversation: conversation as OrderConversation,
+          messages: [],
+          isLoading: false,
+          unreadCount: 0,
+        });
         toast.error("No se pudieron cargar los mensajes", { description: String(messages.error) });
         return;
       }
 
-      await markAsRead(conversation.id);
-      setOrderChat({ conversation: conversation as OrderConversation, messages: (messages || []) as Message[] });
+      const messageList = (messages || []) as Message[];
+      const unreadCount = messageList.filter(
+        (message) => !message.isRead && message.senderId !== session?.user?.id
+      ).length;
+
+      setOrderChat({
+        conversation: conversation as OrderConversation,
+        messages: messageList,
+        isLoading: false,
+        unreadCount,
+      });
+
+      void markAsRead(conversation.id);
     } catch (err) {
       log.error("Error abriendo chat con vendedor:", err);
       const description = err instanceof Error
         ? err.message
         : "Ocurrió un error abriendo el chat con el vendedor.";
       toast.error("No se pudo abrir el chat", { description });
+    } finally {
+      setIsOpeningChat(false);
     }
   };
 
   const handleMarkOrderChatAsRead = async (conversationId: string) => {
     await markAsRead(conversationId);
+    setOrderChat((current) => (current ? { ...current, unreadCount: 0 } : current));
   };
 
   if (loading || status === "loading") {
@@ -300,19 +415,12 @@ export default function OrderDetailPage() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
         <XCircle className="h-16 w-16 text-rose-500 mb-4" />
         <h2 className="text-2xl font-bold">Pedido no encontrado</h2>
-        <Button className="mt-6" onClick={() => router.push("/pedidos")}>Volver a mis pedidos</Button>
+        <Button className="mt-6" onClick={handleBack}>Volver a mis pedidos</Button>
       </div>
     );
   }
 
   const StatusIcon = statusConfig[order.estado as PedidoEstado].icon;
-  const orderStoreIds: string[] = Array.from(
-    new Set<string>(
-      (order.detalles || [])
-        .map((detalle: any) => detalle.storeId)
-        .filter((storeId: string | null | undefined): storeId is string => Boolean(storeId))
-    )
-  );
   const closedOrderStatuses: PedidoEstado[] = [PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO];
   const isOrderChatDisabled = closedOrderStatuses.includes(order.estado as PedidoEstado);
 
@@ -327,7 +435,7 @@ export default function OrderDetailPage() {
             animate={{ opacity: 1, x: 0 }}
             className="mb-8"
           >
-            <Button variant="ghost" className="rounded-full pl-2 pr-4 hover:bg-primary/5 transition-all" onClick={() => router.push("/pedidos")}>
+            <Button variant="ghost" className="rounded-full pl-2 pr-4 hover:bg-primary/5 transition-all" onClick={handleBack}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Volver a mis pedidos
             </Button>
@@ -593,12 +701,21 @@ export default function OrderDetailPage() {
                       <Button
                         key={storeId}
                         variant="outline"
-                        className="w-full rounded-2xl justify-start"
+                        className="relative w-full rounded-2xl justify-start"
                         onClick={() => handleOpenSellerChat(storeId)}
-                        disabled={isOrderChatDisabled}
+                        disabled={isOrderChatDisabled || isOpeningChat}
                       >
-                        <MessageSquare className="mr-2 h-4 w-4" />
+                        {isOpeningChat ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <MessageSquare className="mr-2 h-4 w-4" />
+                        )}
                         {orderStoreIds.length > 1 ? `Vendedor ${index + 1}` : "Abrir chat"}
+                        {getUnreadChatCount(storeId) > 0 ? (
+                          <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white animate-pulse shadow-md shadow-red-500/30 border-2 border-background">
+                            {getUnreadChatCount(storeId)}
+                          </span>
+                        ) : null}
                       </Button>
                     ))}
                   </div>
@@ -623,6 +740,7 @@ export default function OrderDetailPage() {
         <OrderChatPanel
           conversation={orderChat.conversation}
           initialMessages={orderChat.messages}
+          isLoading={orderChat.isLoading}
           title={`Pedido #${order.id.slice(-6).toUpperCase()}`}
           disabled={isOrderChatDisabled}
           onClose={() => setOrderChat(null)}

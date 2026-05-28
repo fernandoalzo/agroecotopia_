@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/context/LanguageContext";
@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check, Copy, ShoppingBag, ArrowRight, PhoneCall, Database, Truck, FileText, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import logger from "@/utils/logger";
 
@@ -18,6 +19,12 @@ function AdvisorSuccessContent() {
   const router = useRouter();
   const { t, language } = useLanguage();
   const [copied, setCopied] = useState(false);
+  const [storeSummaries, setStoreSummaries] = useState<Array<{
+    pedidoId: string;
+    storeId: string;
+    storeName: string;
+    content: string;
+  }>>([]);
 
   const orderId = searchParams.get("id") || "";
   const orderIds = (searchParams.get("ids") || orderId)
@@ -37,6 +44,28 @@ function AdvisorSuccessContent() {
       return () => clearTimeout(timeout);
     }
   }, [orderId, router]);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("advisor-order-summary");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed?.orderId !== orderId || !Array.isArray(parsed?.summaries)) return;
+      setStoreSummaries(parsed.summaries);
+    } catch (error) {
+      log.error("No se pudo leer el resumen por tienda:", error);
+    }
+  }, [orderId]);
+
+  const groupedSummaries = useMemo(() => {
+    if (storeSummaries.length > 0) return storeSummaries;
+    return orderIds.map((pedidoId, index) => ({
+      pedidoId,
+      storeId: pedidoId,
+      storeName: isEs ? `Tienda ${index + 1}` : `Store ${index + 1}`,
+      content: "",
+    }));
+  }, [storeSummaries, orderIds, isEs]);
 
   const handleCopy = async () => {
     if (!displayOrderCode) return;
@@ -287,6 +316,43 @@ function AdvisorSuccessContent() {
                 : "We dispatch your agroecological products direct from the field to your door."}
             </p>
           </div>
+        </div>
+      </motion.div>
+
+      <motion.div variants={itemVariants} className="space-y-4 mb-10">
+        <h3 className="text-lg font-black tracking-tight flex items-center gap-2 border-b border-border/50 pb-2 text-foreground">
+          <ShoppingBag className="w-4.5 h-4.5 text-primary" />
+          {isEs ? "Resumen por Tienda" : "Store Summary"}
+        </h3>
+
+        <div className="grid gap-4">
+          {groupedSummaries.map((summary, index) => (
+            <Card key={`${summary.storeId}-${index}`} className="rounded-2xl border-border/50 bg-card/70 backdrop-blur-sm">
+              <CardContent className="p-5 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
+                      {isEs ? "Tienda" : "Store"}
+                    </p>
+                    <h4 className="text-base font-black text-foreground">{summary.storeName}</h4>
+                  </div>
+                  <Badge className="rounded-full bg-primary/10 text-primary border-primary/20">
+                    {summary.pedidoId.slice(-6).toUpperCase()}
+                  </Badge>
+                </div>
+
+                {summary.content ? (
+                  <pre className="whitespace-pre-wrap rounded-2xl border border-border/60 bg-secondary/20 p-4 text-xs leading-relaxed text-foreground/80 overflow-auto">
+                    {summary.content}
+                  </pre>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {isEs ? "No se encontró detalle para esta tienda." : "No detail found for this store."}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </motion.div>
 

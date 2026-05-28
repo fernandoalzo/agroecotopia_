@@ -127,3 +127,70 @@ export async function getSellerOrderConversationsAction(storeId: string) {
     }
   });
 }
+
+export async function getUserOrderConversationsAction() {
+  return withAuth(async () => {
+    const session = await authService.ensureAuthenticated();
+    const userId = session.user?.id;
+    const userRole = session.user?.role as Role;
+    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
+
+    try {
+      log.debug("Obteniendo conversaciones de pedidos para comprador:", { userId });
+      return await chatService.getUserOrderConversations(userId, userRole);
+    } catch (error) {
+      log.warn("No se pudieron obtener conversaciones de pedidos para comprador:", { userId, error });
+      return { error: getChatActionErrorMessage(error) };
+    }
+  });
+}
+
+export async function sendAdvisorOrderMessagesAction(params: {
+  messages: Array<{
+    pedidoId: string;
+    storeId: string;
+    content: string;
+  }>;
+}) {
+  return withAuth(async () => {
+    const session = await authService.ensureAuthenticated();
+    const userId = session.user?.id;
+    const userRole = session.user?.role as Role;
+    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
+
+    try {
+      const createdMessages = [];
+
+      for (const messageData of params.messages || []) {
+        if (!messageData?.pedidoId || !messageData?.storeId || !messageData?.content) continue;
+        const conversation = await chatService.getOrCreateOrderConversation(
+          String(messageData.pedidoId),
+          String(messageData.storeId),
+          String(userId),
+          userRole
+        );
+
+        if (!conversation?.id) continue;
+
+        const message = await chatService.sendRealtimeMessage({
+          conversationId: conversation.id,
+          content: messageData.content,
+          senderId: userId,
+          senderRole: userRole,
+        });
+        createdMessages.push(message);
+      }
+
+      log.info("Mensajes de asesor enviados a conversaciones de pedido:", {
+        userId,
+        pedidoIds: params.messages.map((m) => m.pedidoId),
+        count: createdMessages.length,
+      });
+
+      return createdMessages;
+    } catch (error) {
+      log.warn("No se pudieron enviar los mensajes de asesor a conversaciones de pedido:", { userId, error });
+      return { error: getChatActionErrorMessage(error as unknown as Error) };
+    }
+  });
+}

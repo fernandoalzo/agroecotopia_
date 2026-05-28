@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Package, ChevronRight, Calendar, MapPin, CreditCard, Clock, CheckCircle2, Truck, Timer, XCircle, RefreshCw, Copy, Check } from "lucide-react";
 import { getUserOrdersAction, cancelUserOrderAction, deleteUserOrderAction } from "@/backend/modules/orders/orders.actions";
+import { getUserOrderConversationsAction } from "@/backend/modules/chat/chat.actions";
 import { useCart } from "@/context/CartContext";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -79,6 +80,7 @@ export const OrdersList = () => {
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [repeatingId, setRepeatingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [unreadChatCounts, setUnreadChatCounts] = useState<Record<string, number>>({});
   const { addToCart } = useCart();
   const router = useRouter();
 
@@ -98,6 +100,41 @@ export const OrdersList = () => {
 
     fetchOrders();
   }, []);
+
+  useEffect(() => {
+    if (orders.length === 0) {
+      setUnreadChatCounts({});
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadUnreadCounts = async () => {
+      try {
+        const res = await getUserOrderConversationsAction();
+        if (cancelled || !Array.isArray(res)) return;
+
+        const counts = res.reduce((acc: Record<string, number>, conv: any) => {
+          if (conv?.pedido?.id) {
+            acc[conv.pedido.id] = Number(conv.unreadCount) || 0;
+          }
+          return acc;
+        }, {});
+
+        setUnreadChatCounts(counts);
+      } catch (error) {
+        log.error("Error loading order unread counts:", error);
+      }
+    };
+
+    loadUnreadCounts();
+    const interval = setInterval(loadUnreadCounts, 15000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [orders]);
 
   const handleCancelOrder = async (orderId: string) => {
     setCancelingId(orderId);
@@ -304,10 +341,15 @@ export const OrdersList = () => {
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-2 mt-6">
-                      <Button variant="ghost" className="w-full sm:flex-1 rounded-2xl group/btn border border-primary/10 hover:bg-primary/5 hover:text-primary transition-all font-bold" asChild>
+                      <Button variant="ghost" className="relative w-full sm:flex-1 rounded-2xl group/btn border border-primary/10 hover:bg-primary/5 hover:text-primary transition-all font-bold" asChild>
                         <Link href={`/pedidos/${order.id}`}>
                           Ver detalles
                           <ChevronRight className="ml-2 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
+                          {unreadChatCounts[order.id] > 0 && (
+                            <span className="absolute -top-2 -right-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold leading-none text-white shadow-md shadow-red-500/30 ring-2 ring-background">
+                              {unreadChatCounts[order.id]}
+                            </span>
+                          )}
                         </Link>
                       </Button>
 

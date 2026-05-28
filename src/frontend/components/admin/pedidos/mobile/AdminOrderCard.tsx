@@ -23,6 +23,7 @@ interface AdminOrderCardMobileProps {
     onSetConfirmingStatus: (status: PedidoEstado | null) => void;
     onSetShowAllItems: (show: boolean) => void;
     onOpenOrderChat?: () => void;
+    unreadChatCount?: number;
 }
 
 export const AdminOrderCardMobile = ({
@@ -37,6 +38,7 @@ export const AdminOrderCardMobile = ({
     onSetConfirmingStatus,
     onSetShowAllItems,
     onOpenOrderChat,
+    unreadChatCount = 0,
 }: AdminOrderCardMobileProps) => {
     const cfg = statusConfig[order.estado];
     const StatusIcon = cfg.icon;
@@ -223,14 +225,21 @@ export const AdminOrderCardMobile = ({
                                 </button>
                             ))}
                             {onOpenOrderChat && (
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-9 w-9 rounded-xl text-muted-foreground hover:text-primary transition-colors shrink-0 border border-border/30"
-                                    onClick={onOpenOrderChat}
-                                >
-                                    <MessageSquare className="h-4 w-4" />
-                                </Button>
+                                <div className="relative shrink-0">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-9 w-9 rounded-xl text-muted-foreground hover:text-primary transition-colors border border-border/30"
+                                        onClick={onOpenOrderChat}
+                                    >
+                                        <MessageSquare className="h-4 w-4" />
+                                    </Button>
+                                    {unreadChatCount > 0 && (
+                                        <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-md shadow-red-500/30 ring-2 ring-background">
+                                            {unreadChatCount}
+                                        </span>
+                                    )}
+                                </div>
                             )}
                             <Button
                                 variant="ghost"

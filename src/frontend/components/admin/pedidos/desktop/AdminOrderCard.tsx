@@ -21,6 +21,7 @@ interface AdminOrderCardDesktopProps {
     onConfirm: () => void;
     onSetConfirmingStatus: (status: PedidoEstado | null) => void;
     onOpenOrderChat?: () => void;
+    unreadChatCount?: number;
 }
 
 export const AdminOrderCardDesktop = ({
@@ -33,6 +34,7 @@ export const AdminOrderCardDesktop = ({
     onConfirm,
     onSetConfirmingStatus,
     onOpenOrderChat,
+    unreadChatCount = 0,
 }: AdminOrderCardDesktopProps) => {
     const cfg = statusConfig[order.estado];
     const StatusIcon = cfg.icon;
@@ -183,14 +185,21 @@ export const AdminOrderCardDesktop = ({
                                     </button>
                                 ))}
                                 {onOpenOrderChat && (
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary transition-colors"
-                                        onClick={onOpenOrderChat}
-                                    >
-                                        <MessageSquare className="h-4 w-4" />
-                                    </Button>
+                                    <div className="relative">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary transition-colors"
+                                            onClick={onOpenOrderChat}
+                                        >
+                                            <MessageSquare className="h-4 w-4" />
+                                        </Button>
+                                        {unreadChatCount > 0 && (
+                                            <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-md shadow-red-500/30 ring-2 ring-background">
+                                                {unreadChatCount}
+                                            </span>
+                                        )}
+                                    </div>
                                 )}
                                 <Button
                                     variant="ghost"

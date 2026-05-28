@@ -10,6 +10,7 @@ import {
     markAsRead,
     deleteConversationAction,
     getOrCreateConversationForAdmin,
+    sendAdvisorOrderMessagesAction,
 } from "@/backend/modules/chat/chat.actions";
 import { SignalService } from "@/frontend/lib/signalService";
 import { signalStore } from "@/frontend/lib/signalStore";
@@ -352,77 +353,19 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string) {
     useEffect(() => {
         const handleAdvisorMessageEvent = async (e: Event) => {
             const customEvent = e as CustomEvent;
-            const { pedidoId, pedidoIds, cart, totalPrice, values } = customEvent.detail;
-            const orderIds = Array.isArray(pedidoIds) && pedidoIds.length > 0 ? pedidoIds : [pedidoId];
+            const { messages } = customEvent.detail;
 
-            if (!socket || !conversation?.id || !session?.user?.id) {
-                log.warn("No se puede enviar el mensaje de asesor: chat no inicializado");
-                return;
-            }
-
-            let content = `¡Hola! Estoy a la espera de un asesor para tomar mi pedido.\n\n`;
-            content += `DETALLES DEL PEDIDO\n`;
-            content += `===================\n\n`;
-            if (cart && Array.isArray(cart)) {
-                content += `CANTIDAD\tPRODUCTO\t\tPRECIO UNIT.\tSUBTOTAL\n`;
-                content += `--------\t--------\t\t------------\t--------\n`;
-                let totalCalculado = 0;
-                cart.forEach((item: any) => {
-                    const itemName = item.product?.name || item.name || "Producto";
-                    const precioUnitario = item.product?.price || 0;
-                    const subtotal = item.quantity * precioUnitario;
-                    totalCalculado += subtotal;
-                    content += `${item.quantity}\t\t${itemName}\t\t$${precioUnitario.toLocaleString()}\t\t$${subtotal.toLocaleString()}\n`;
-                });
-                content += `\nTOTAL\t\t\t\t$${totalCalculado.toLocaleString()}\n`;
-            }
-            if (values) {
-                content += `\nINFORMACIÓN DE CONTACTO\n======================\n\n`;
-                const name = values.fullName || values.nombres || "";
-                const phone = values.phone || values.telefono || "";
-                const email = values.email || "";
-                const address = values.address || values.direccion || "";
-                if (name) content += `Nombre: ${name}\n`;
-                if (email) content += `Email: ${email}\n`;
-                if (phone) content += `Teléfono: ${phone}\n`;
-                if (address) content += `Dirección: ${address}\n`;
-            }
-            content += orderIds.length > 1
-                ? `\nIDS DE PEDIDOS GENERADOS (${orderIds.length} tiendas): ${orderIds.join(", ")}\n==================\n`
-                : `\nID DEL PEDIDO: ${pedidoId}\n==================\n`;
-
-            const sendSocketMessage = async (textToEncrypt: string) => {
-                let finalContent = textToEncrypt;
-                let isEncrypted = false;
-                let encryptionType = 0;
-                if (config.chat.enableE2EE) {
-                    if (!isE2EEReady) { log.warn("E2EE no está listo para enviar el mensaje del asesor"); }
-                    try {
-                        const encryptionTarget = (isAdminUser && targetUserId) ? targetUserId : "admin";
-                        const encrypted = await SignalService.encryptMessage(encryptionTarget, finalContent);
-                        finalContent = encrypted.ciphertext;
-                        isEncrypted = encrypted.type !== 0;
-                        encryptionType = encrypted.type;
-                    } catch (err) { log.error("Error cifrando el mensaje", err); return; }
-                }
-                socket.emit("send_message", {
-                    conversationId: conversation.id,
-                    content: finalContent,
-                    isEncrypted,
-                    encryptionType,
-                    senderId: session.user.id,
-                    senderRole: session.user.role || "user",
-                });
+            const sendAdvisorMessage = async () => {
+                if (!Array.isArray(messages) || messages.length === 0) return;
+                await sendAdvisorOrderMessagesAction({ messages });
             };
 
-            await sendSocketMessage(content);
-            await new Promise(resolve => setTimeout(resolve, 500));
-            await sendSocketMessage(orderIds.join(", "));
+            await sendAdvisorMessage();
         };
 
         window.addEventListener("send_advisor_chat_message", handleAdvisorMessageEvent);
         return () => window.removeEventListener("send_advisor_chat_message", handleAdvisorMessageEvent);
-    }, [socket, conversation?.id, session?.user, isE2EEReady, isAdminUser, targetUserId]);
+    }, [isAdminUser, targetUserId]);
 
     // ── Handlers ──────────────────────────────────────────────────────
 

@@ -97,6 +97,13 @@ export class ChatService {
     return await this.chatRepository.findSellerOrderConversations(storeId, sellerId);
   }
 
+  async getUserOrderConversations(userId: string, userRole: Role) {
+    if (!["user", "admin", "seller"].includes(userRole)) {
+      throw new Error("UNAUTHORIZED_ACCESS");
+    }
+    return await this.chatRepository.findUserOrderConversations(userId);
+  }
+
   async canSendMessage(conversationId: string, senderId: string, senderRole: Role) {
     const conversation = await this.getConversationById(conversationId, senderId, senderRole);
 

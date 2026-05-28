@@ -104,6 +104,19 @@ export class ProductService {
   }
 
   /**
+   * Obtiene un producto completo por ID.
+   */
+  async getProductById(id: string): Promise<any | null> {
+    try {
+      const product = await this.productRepository.getProductById(id);
+      return product ? this.serializeProduct(product) : null;
+    } catch (error) {
+      log.error(`Error in getProductById ${id}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Obtiene todas las categorías únicas de la base de datos.
    */
   async getCategories(): Promise<string[]> {

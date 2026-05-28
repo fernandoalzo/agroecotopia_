@@ -27,6 +27,7 @@ import type { Message } from "@/components/chat/ChatWidget";
 import {
   getConversationMessages,
   getOrCreateOrderConversationAction,
+  getSellerOrderConversationsAction,
   markAsRead,
 } from "@/backend/modules/chat/chat.actions";
 import { useProductsLogic } from "@/frontend/hooks/useProductsLogic";
@@ -57,6 +58,7 @@ function SellerDashboardContent() {
   const [loadingStore, setLoadingStore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [orderChat, setOrderChat] = useState<{ conversation: OrderConversation; messages: Message[] } | null>(null);
+  const [orderChatUnreadCounts, setOrderChatUnreadCounts] = useState<Record<string, number>>({});
   const isSeller = session?.user?.role === "seller" || session?.user?.role === "admin";
   
   const activeStore = stores.find(s => s.id === activeStoreId) || null;
@@ -134,6 +136,40 @@ function SellerDashboardContent() {
   useEffect(() => {
     loadStore();
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!activeStore?.id || !isSeller) {
+      setOrderChatUnreadCounts({});
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadUnreadCounts = async () => {
+      try {
+        const res = await getSellerOrderConversationsAction(activeStore.id);
+        if (!cancelled && Array.isArray(res)) {
+          const counts = res.reduce((acc: Record<string, number>, conv: any) => {
+            if (conv?.pedido?.id) {
+              acc[conv.pedido.id] = Number(conv.unreadCount) || 0;
+            }
+            return acc;
+          }, {});
+          setOrderChatUnreadCounts(counts);
+        }
+      } catch (err) {
+        log.error("Error loading seller order unread counts:", err);
+      }
+    };
+
+    loadUnreadCounts();
+    const interval = setInterval(loadUnreadCounts, 15000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [activeStore?.id, isSeller]);
 
   // Update tab in URL
   const handleTabChange = (tab: SellerTab) => {
@@ -398,6 +434,7 @@ function SellerDashboardContent() {
                     storeId={activeStore.id}
                     emptyMessage="No hay pedidos para los productos de esta tienda con los filtros aplicados."
                     onOpenOrderChat={handleOpenOrderChat}
+                    unreadChatCounts={orderChatUnreadCounts}
                   />
                 )}
                 {activeTab === "products" && activeStore && (

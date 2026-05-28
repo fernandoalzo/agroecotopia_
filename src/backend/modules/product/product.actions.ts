@@ -72,6 +72,19 @@ export async function getCategoryCountsAction(storeId?: string): Promise<Record<
 }
 
 /**
+ * Server Action para obtener un producto completo por ID.
+ */
+export async function getProductByIdAction(productId: string) {
+  try {
+    if (!productId) return null;
+    return await productService.getProductById(productId);
+  } catch (error) {
+    log.error("Error getting product by id:", error);
+    return null;
+  }
+}
+
+/**
  * Server Action: Create a product (ADMIN ONLY)
  */
 export async function createProductAction(data: any) {
