@@ -14,6 +14,7 @@ export interface AdminOrder {
   };
   detalles: {
     id: string;
+    storeId?: string | null;
     cantidad: number;
     precioUnitario: number;
     producto: {

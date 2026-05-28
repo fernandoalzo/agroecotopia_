@@ -14,7 +14,8 @@ model User {
   role          Role           @default(user)
   accounts      Account[]
   pedidos       Pedido[]
-  conversation  Conversation?
+  conversationsAsUser   Conversation[] @relation("ConversationUser")
+  conversationsAsSeller Conversation[] @relation("ConversationSeller")
   e2eeDevice    E2EEDevice?
   forumPosts    ForumPost[]
   forumAnswers  ForumAnswer[]

@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Copy, Eye, User } from "lucide-react";
+import { Check, Copy, Eye, MessageSquare, User } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
@@ -20,6 +20,7 @@ interface AdminOrderCardDesktopProps {
     onCopyId: () => void;
     onConfirm: () => void;
     onSetConfirmingStatus: (status: PedidoEstado | null) => void;
+    onOpenOrderChat?: () => void;
 }
 
 export const AdminOrderCardDesktop = ({
@@ -31,6 +32,7 @@ export const AdminOrderCardDesktop = ({
     onCopyId,
     onConfirm,
     onSetConfirmingStatus,
+    onOpenOrderChat,
 }: AdminOrderCardDesktopProps) => {
     const cfg = statusConfig[order.estado];
     const StatusIcon = cfg.icon;
@@ -180,6 +182,16 @@ export const AdminOrderCardDesktop = ({
                                         {statusConfig[ns].label}
                                     </button>
                                 ))}
+                                {onOpenOrderChat && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary transition-colors"
+                                        onClick={onOpenOrderChat}
+                                    >
+                                        <MessageSquare className="h-4 w-4" />
+                                    </Button>
+                                )}
                                 <Button
                                     variant="ghost"
                                     size="icon"

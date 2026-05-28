@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Copy, Eye, User } from "lucide-react";
+import { Check, Copy, Eye, MessageSquare, User } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
@@ -22,6 +22,7 @@ interface AdminOrderCardMobileProps {
     onConfirm: () => void;
     onSetConfirmingStatus: (status: PedidoEstado | null) => void;
     onSetShowAllItems: (show: boolean) => void;
+    onOpenOrderChat?: () => void;
 }
 
 export const AdminOrderCardMobile = ({
@@ -35,6 +36,7 @@ export const AdminOrderCardMobile = ({
     onConfirm,
     onSetConfirmingStatus,
     onSetShowAllItems,
+    onOpenOrderChat,
 }: AdminOrderCardMobileProps) => {
     const cfg = statusConfig[order.estado];
     const StatusIcon = cfg.icon;
@@ -220,6 +222,16 @@ export const AdminOrderCardMobile = ({
                                     {statusConfig[ns].label}
                                 </button>
                             ))}
+                            {onOpenOrderChat && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-xl text-muted-foreground hover:text-primary transition-colors shrink-0 border border-border/30"
+                                    onClick={onOpenOrderChat}
+                                >
+                                    <MessageSquare className="h-4 w-4" />
+                                </Button>
+                            )}
                             <Button
                                 variant="ghost"
                                 size="icon"

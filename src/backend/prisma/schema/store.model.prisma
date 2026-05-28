@@ -30,6 +30,7 @@ model Store {
   owner        User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   products     Product[]
   orderDetails DetallePedido[]
+  conversations Conversation[]
   requests     StoreRequest[]  @relation("StoreToRequests")
 
   createdAt DateTime @default(now())

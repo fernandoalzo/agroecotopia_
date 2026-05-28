@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useLanguage } from "@/context/LanguageContext";
 import { motion } from "framer-motion";
-import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw, Copy, Check, ChevronRight } from "lucide-react";
+import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw, Copy, Check, ChevronRight, MessageSquare } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { getOrderDetailAction, cancelUserOrderAction, deleteUserOrderAction } from "@/backend/modules/orders/orders.actions";
 import { processMercadoPagoPaymentAction } from "@/backend/modules/payments/payments.actions";
@@ -21,7 +21,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Loading } from "@/components/ui/Loading";
 import ProductModal from "@/components/ProductModal";
-import ChatWidget from "@/components/chat/ChatWidget";
+import { OrderChatPanel, type OrderConversation } from "@/components/chat/OrderChatPanel";
+import type { Message } from "@/components/chat/ChatWidget";
+import {
+  getConversationMessages,
+  getOrCreateOrderConversationAction,
+  markAsRead,
+} from "@/backend/modules/chat/chat.actions";
 import { Product } from "@/types";
 import logger from "@/utils/logger";
 
@@ -75,6 +81,7 @@ export default function OrderDetailPage() {
   const [isRepeating, setIsRepeating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [orderChat, setOrderChat] = useState<{ conversation: OrderConversation; messages: Message[] } | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -251,6 +258,39 @@ export default function OrderDetailPage() {
     }
   };
 
+  const handleOpenSellerChat = async (storeId: string) => {
+    if (!order?.id) return;
+
+    try {
+      const conversation = await getOrCreateOrderConversationAction(order.id, storeId);
+      if (!conversation || "error" in conversation) {
+        toast.error("No se pudo abrir el chat", {
+          description: conversation && "error" in conversation ? String(conversation.error) : undefined,
+        });
+        return;
+      }
+
+      const messages = await getConversationMessages(conversation.id);
+      if (messages && "error" in messages) {
+        toast.error("No se pudieron cargar los mensajes", { description: String(messages.error) });
+        return;
+      }
+
+      await markAsRead(conversation.id);
+      setOrderChat({ conversation: conversation as OrderConversation, messages: (messages || []) as Message[] });
+    } catch (err) {
+      log.error("Error abriendo chat con vendedor:", err);
+      const description = err instanceof Error
+        ? err.message
+        : "Ocurrió un error abriendo el chat con el vendedor.";
+      toast.error("No se pudo abrir el chat", { description });
+    }
+  };
+
+  const handleMarkOrderChatAsRead = async (conversationId: string) => {
+    await markAsRead(conversationId);
+  };
+
   if (loading || status === "loading") {
     return <Loading fullScreen />;
   }
@@ -266,6 +306,15 @@ export default function OrderDetailPage() {
   }
 
   const StatusIcon = statusConfig[order.estado as PedidoEstado].icon;
+  const orderStoreIds: string[] = Array.from(
+    new Set<string>(
+      (order.detalles || [])
+        .map((detalle: any) => detalle.storeId)
+        .filter((storeId: string | null | undefined): storeId is string => Boolean(storeId))
+    )
+  );
+  const closedOrderStatuses: PedidoEstado[] = [PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO];
+  const isOrderChatDisabled = closedOrderStatuses.includes(order.estado as PedidoEstado);
 
   return (
     <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
@@ -530,6 +579,31 @@ export default function OrderDetailPage() {
                   Tu pedido está siendo procesado bajo nuestros estándares de calidad agroecológica. Si tienes dudas, contáctanos.
                 </p>
               </div>
+              {orderStoreIds.length > 0 && (
+                <div className="rounded-3xl border border-border/60 bg-card p-6 space-y-4">
+                  <div className="flex items-center gap-3 text-primary">
+                    <MessageSquare className="h-5 w-5" />
+                    <span className="font-bold text-sm">Chat con vendedor</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Escríbele al vendedor asociado a este pedido mientras siga abierto.
+                  </p>
+                  <div className="space-y-2">
+                    {orderStoreIds.map((storeId, index) => (
+                      <Button
+                        key={storeId}
+                        variant="outline"
+                        className="w-full rounded-2xl justify-start"
+                        onClick={() => handleOpenSellerChat(storeId)}
+                        disabled={isOrderChatDisabled}
+                      >
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        {orderStoreIds.length > 1 ? `Vendedor ${index + 1}` : "Abrir chat"}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -545,7 +619,16 @@ export default function OrderDetailPage() {
           viewOnly={true}
         />
       )}
-      <ChatWidget forceShow={true} targetUserId={order?.usuarioId} />
+      {orderChat && (
+        <OrderChatPanel
+          conversation={orderChat.conversation}
+          initialMessages={orderChat.messages}
+          title={`Pedido #${order.id.slice(-6).toUpperCase()}`}
+          disabled={isOrderChatDisabled}
+          onClose={() => setOrderChat(null)}
+          onMarkAsRead={handleMarkOrderChatAsRead}
+        />
+      )}
     </div>
   );
 }

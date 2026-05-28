@@ -29,8 +29,9 @@ model Pedido {
   updatedAt            DateTime     @updatedAt
 
   // Relaciones
-  usuario  User            @relation(fields: [usuarioId], references: [id])
-  detalles DetallePedido[]
+  usuario       User            @relation(fields: [usuarioId], references: [id])
+  detalles      DetallePedido[]
+  conversations Conversation[]
 
   @@index([usuarioId])
   @@index([estado])

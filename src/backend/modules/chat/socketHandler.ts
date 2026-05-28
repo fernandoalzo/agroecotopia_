@@ -1,9 +1,23 @@
 import { Server } from "socket.io";
 import type { Server as HTTPServer } from "http";
 import type { PrismaClient } from "@prisma/client";
+import { Role } from "@prisma/client";
 import logger from "@/utils/logger";
 import { socketRateLimiter } from "@/lib/rate-limit";
+import { chatService } from "./index";
 const log = logger.child("src/backend/modules/chat/socketHandler.ts");
+
+function getSocketChatErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) return "Error enviando el mensaje";
+
+  const messages: Record<string, string> = {
+    ORDER_CLOSED: "El chat solo está disponible mientras el pedido esté abierto.",
+    UNAUTHORIZED_ACCESS: "No tienes permiso para enviar mensajes en esta conversación.",
+    CONVERSATION_NOT_FOUND: "No se encontró la conversación.",
+  };
+
+  return messages[error.message] || "Error enviando el mensaje";
+}
 
 /**
  * Initializes the Socket.IO server on top of the given HTTP server.
@@ -13,7 +27,7 @@ const log = logger.child("src/backend/modules/chat/socketHandler.ts");
  * @param prisma - The Prisma Client instance.
  * @returns The initialized Socket.IO server instance.
  */
-export function initSocketServer(httpServer: HTTPServer, prisma: PrismaClient): Server {
+export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient): Server {
   const io = new Server(httpServer, {
     cors: {
       origin: "*",
@@ -78,35 +92,15 @@ export function initSocketServer(httpServer: HTTPServer, prisma: PrismaClient): 
           return;
         }
 
-        // Save message to database (with optional reply reference)
-        const message = await prisma.message.create({
-          data: {
-            content,
-            isEncrypted: isEncrypted || false,
-            encryptionType: encryptionType || 0,
-            senderId,
-            senderRole: senderRole as any,
-            conversationId,
-            ...(replyToId ? { replyToId } : {}),
-          },
-          include: {
-            replyTo: {
-              select: {
-                id: true,
-                content: true,
-                senderId: true,
-                senderRole: true,
-                isEncrypted: true,
-                encryptionType: true,
-              },
-            },
-          },
-        });
-
-        // Update conversation updatedAt timestamp
-        await prisma.conversation.update({
-          where: { id: conversationId },
-          data: { updatedAt: new Date() },
+        const normalizedRole = senderRole as Role;
+        const message = await chatService.sendRealtimeMessage({
+          conversationId,
+          content,
+          isEncrypted,
+          encryptionType,
+          senderId,
+          senderRole: normalizedRole,
+          replyToId,
         });
 
         // Broadcast the message to the room
@@ -120,7 +114,9 @@ export function initSocketServer(httpServer: HTTPServer, prisma: PrismaClient): 
 
       } catch (error) {
         log.error("Error saving/sending message:", error);
-        socket.emit("error", { message: "Error enviando el mensaje" });
+        const message = getSocketChatErrorMessage(error);
+        socket.emit("chat_error", { conversationId, message });
+        socket.emit("error", { message });
       }
     });
 

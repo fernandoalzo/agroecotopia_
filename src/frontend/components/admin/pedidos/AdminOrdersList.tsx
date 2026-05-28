@@ -28,9 +28,10 @@ import { AdminOrder, statusConfig } from "./adminOrderUtils";
 interface AdminOrdersListProps {
   storeId?: string;
   emptyMessage?: string;
+  onOpenOrderChat?: (order: AdminOrder) => void;
 }
 
-export const AdminOrdersList = ({ storeId, emptyMessage }: AdminOrdersListProps) => {
+export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat }: AdminOrdersListProps) => {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<PedidoEstado | "ALL">("ALL");
@@ -237,6 +238,7 @@ export const AdminOrdersList = ({ storeId, emptyMessage }: AdminOrdersListProps)
                 index={index}
                 isUpdating={updatingStatusId === order.id}
                 onUpdateStatus={handleUpdateStatus}
+                onOpenOrderChat={onOpenOrderChat}
               />
             ))
           )}

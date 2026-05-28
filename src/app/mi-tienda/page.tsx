@@ -21,6 +21,14 @@ import { Store as StoreType, StoreCreateInput } from "@/types/store";
 import { ProductsList } from "@/components/shared/productos/ProductsList";
 import { SellerStoreInfo } from "@/components/seller/SellerStoreInfo";
 import { AdminOrdersList } from "@/components/admin/pedidos/AdminOrdersList";
+import { AdminOrder } from "@/components/admin/pedidos/adminOrderUtils";
+import { OrderChatPanel, type OrderConversation } from "@/components/chat/OrderChatPanel";
+import type { Message } from "@/components/chat/ChatWidget";
+import {
+  getConversationMessages,
+  getOrCreateOrderConversationAction,
+  markAsRead,
+} from "@/backend/modules/chat/chat.actions";
 import { useProductsLogic } from "@/frontend/hooks/useProductsLogic";
 import { toast } from "sonner";
 import logger from "@/utils/logger";
@@ -48,6 +56,7 @@ function SellerDashboardContent() {
   const [isStoreSelectorOpen, setIsStoreSelectorOpen] = useState(false);
   const [loadingStore, setLoadingStore] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [orderChat, setOrderChat] = useState<{ conversation: OrderConversation; messages: Message[] } | null>(null);
   const isSeller = session?.user?.role === "seller" || session?.user?.role === "admin";
   
   const activeStore = stores.find(s => s.id === activeStoreId) || null;
@@ -142,6 +151,40 @@ function SellerDashboardContent() {
     const params = new URLSearchParams(searchParams.toString());
     params.set("store", storeId);
     router.replace(`/mi-tienda?${params.toString()}`, { scroll: false });
+  };
+
+  const handleOpenOrderChat = async (order: AdminOrder) => {
+    const storeId = activeStoreId || order.detalles.find((detalle) => detalle.storeId)?.storeId;
+    if (!storeId) {
+      toast.error("No se pudo identificar la tienda del pedido.");
+      return;
+    }
+
+    try {
+      const conversation = await getOrCreateOrderConversationAction(order.id, storeId);
+      if (!conversation || "error" in conversation) {
+        toast.error("No se pudo abrir el chat", {
+          description: conversation && "error" in conversation ? String(conversation.error) : undefined,
+        });
+        return;
+      }
+
+      const messages = await getConversationMessages(conversation.id);
+      if (messages && "error" in messages) {
+        toast.error("No se pudieron cargar los mensajes", { description: String(messages.error) });
+        return;
+      }
+
+      await markAsRead(conversation.id);
+      setOrderChat({ conversation: conversation as OrderConversation, messages: (messages || []) as Message[] });
+    } catch (err) {
+      log.error("Error abriendo chat de pedido:", err);
+      toast.error("Ocurrió un error abriendo el chat del pedido.");
+    }
+  };
+
+  const handleMarkOrderChatAsRead = async (conversationId: string) => {
+    await markAsRead(conversationId);
   };
 
   if (status === "loading" || loadingStore) {
@@ -354,6 +397,7 @@ function SellerDashboardContent() {
                   <AdminOrdersList
                     storeId={activeStore.id}
                     emptyMessage="No hay pedidos para los productos de esta tienda con los filtros aplicados."
+                    onOpenOrderChat={handleOpenOrderChat}
                   />
                 )}
                 {activeTab === "products" && activeStore && (
@@ -392,6 +436,16 @@ function SellerDashboardContent() {
           </div>
         </div>
       </main>
+      {orderChat && (
+        <OrderChatPanel
+          conversation={orderChat.conversation}
+          initialMessages={orderChat.messages}
+          title={`Pedido #${orderChat.conversation.pedidoId?.slice(-6).toUpperCase() || "pedido"}`}
+          disabled={["ENTREGADO", "CANCELADO"].includes(orderChat.conversation.pedido?.estado || "")}
+          onClose={() => setOrderChat(null)}
+          onMarkAsRead={handleMarkOrderChatAsRead}
+        />
+      )}
     </div>
   );
 }

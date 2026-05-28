@@ -1,11 +1,18 @@
 import { ChatRepository } from "./chat.repository";
-import { Role } from "@prisma/client";
+import { ConversationType, PedidoEstado, Role } from "@prisma/client";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/chat/chat.service.ts");
 
 export class ChatService {
   constructor(private chatRepository: ChatRepository) {}
+
+  private readonly openOrderStatuses: PedidoEstado[] = [
+    PedidoEstado.PENDIENTE,
+    PedidoEstado.CONFIRMADO,
+    PedidoEstado.EN_PREPARACION,
+    PedidoEstado.EN_CAMINO,
+  ];
 
   async getOrCreateConversationForUser(userId: string) {
     let conversation = await this.chatRepository.findConversationByUserId(userId);
@@ -25,8 +32,12 @@ export class ChatService {
       throw new Error("CONVERSATION_NOT_FOUND");
     }
 
-    // Access control: User can only see their own conversation, admin can see any
-    if (userRole !== "admin" && conversation.userId !== currentUserId) {
+    const canAccessSupport = conversation.type === ConversationType.SUPPORT
+      && (userRole === "admin" || conversation.userId === currentUserId);
+    const canAccessOrder = conversation.type === ConversationType.ORDER
+      && (conversation.userId === currentUserId || conversation.sellerId === currentUserId || userRole === "admin");
+
+    if (!canAccessSupport && !canAccessOrder) {
       log.warn("Acceso no autorizado a conversación:", { conversationId: id, currentUserId, ownerUserId: conversation.userId });
       throw new Error("UNAUTHORIZED_ACCESS");
     }
@@ -46,6 +57,80 @@ export class ChatService {
     return this.chatRepository.findAllConversations();
   }
 
+  async getOrCreateOrderConversation(pedidoId: string, storeId: string, currentUserId: string, userRole: Role) {
+    const access = await this.chatRepository.findPedidoStoreAccess(pedidoId, storeId);
+
+    if (!access || !access.detalles[0]?.store) {
+      log.warn("Pedido no asociado a la tienda para chat:", { pedidoId, storeId, currentUserId });
+      throw new Error("ORDER_STORE_NOT_FOUND");
+    }
+
+    if (!this.openOrderStatuses.includes(access.estado)) {
+      log.warn("Intento de abrir chat para pedido cerrado:", { pedidoId, estado: access.estado });
+      throw new Error("ORDER_CLOSED");
+    }
+
+    const sellerId = access.detalles[0].store.ownerId;
+    const isBuyer = access.usuarioId === currentUserId;
+    const isSeller = sellerId === currentUserId;
+
+    if (!isBuyer && !isSeller && userRole !== "admin") {
+      log.warn("Acceso denegado para conversación de pedido:", { pedidoId, storeId, currentUserId, sellerId, buyerId: access.usuarioId });
+      throw new Error("UNAUTHORIZED_ACCESS");
+    }
+
+    const existing = await this.chatRepository.findOrderConversation(pedidoId, storeId);
+    if (existing) return existing;
+
+    return await this.chatRepository.createOrderConversation({
+      pedidoId,
+      storeId,
+      userId: access.usuarioId,
+      sellerId,
+    });
+  }
+
+  async getSellerOrderConversations(storeId: string, sellerId: string, userRole: Role) {
+    if (userRole !== "admin" && userRole !== "seller") {
+      throw new Error("UNAUTHORIZED_ACCESS");
+    }
+    return await this.chatRepository.findSellerOrderConversations(storeId, sellerId);
+  }
+
+  async canSendMessage(conversationId: string, senderId: string, senderRole: Role) {
+    const conversation = await this.getConversationById(conversationId, senderId, senderRole);
+
+    if (conversation.type === ConversationType.ORDER) {
+      if (!conversation.pedido || !this.openOrderStatuses.includes(conversation.pedido.estado)) {
+        log.warn("Intento de enviar mensaje a pedido cerrado:", { conversationId, senderId });
+        throw new Error("ORDER_CLOSED");
+      }
+    }
+
+    return conversation;
+  }
+
+  async sendRealtimeMessage(data: {
+    conversationId: string;
+    content: string;
+    senderId: string;
+    senderRole?: Role;
+    isEncrypted?: boolean;
+    encryptionType?: number;
+    replyToId?: string;
+  }) {
+    const sender = await this.chatRepository.findUserRoleById(data.senderId);
+    if (!sender) {
+      throw new Error("UNAUTHORIZED_ACCESS");
+    }
+
+    await this.canSendMessage(data.conversationId, data.senderId, sender.role);
+    return await this.chatRepository.createRealtimeMessage({
+      ...data,
+      senderRole: sender.role,
+    });
+  }
+
   async markAsRead(conversationId: string, currentUserId: string) {
     log.debug("Marcando mensajes como leídos:", { conversationId, excludeSenderId: currentUserId });
     return this.chatRepository.markMessagesAsRead(conversationId, currentUserId);
@@ -58,7 +143,11 @@ export class ChatService {
       throw new Error("CONVERSATION_NOT_FOUND");
     }
 
-    // Access control: User can only delete their own conversation, admin can delete any
+    // Solo soporte mantiene borrado por usuario/admin. Los chats de pedido se conservan como historial operativo.
+    if (conversation.type !== ConversationType.SUPPORT) {
+      throw new Error("DELETE_NOT_ALLOWED");
+    }
+
     if (userRole !== "admin" && conversation.userId !== currentUserId) {
       log.warn("Acceso no autorizado para eliminar conversación:", { conversationId, currentUserId, ownerUserId: conversation.userId });
       throw new Error("UNAUTHORIZED_ACCESS");
