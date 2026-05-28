@@ -31,12 +31,12 @@ import { getAdminConversations } from "@/backend/modules/chat/chat.actions";
 import { AdminChatPageContent } from "@/app/admin/chat/page";
 import { useProductsLogic } from "@/frontend/hooks/useProductsLogic";
 import logger from "@/utils/logger";
+import { Store } from "lucide-react";
 
 const log = logger.child();
 
 type DashboardTab = "orders" | "products" | "chat" | "store_requests";
-
-import { Store } from "lucide-react";
+type StoreRequestsResponse = Exclude<Awaited<ReturnType<typeof getAllRequestsAction>>, { error: string }>;
 
 const SIDEBAR_ITEMS: { id: DashboardTab; labelEs: string; labelEn: string; icon: any }[] = [
   { id: "orders", labelEs: "Gestión de Pedidos", labelEn: "Order Management", icon: Package },
@@ -59,6 +59,31 @@ function AdminDashboardPageContent() {
   const [pendingStoresCount, setPendingStoresCount] = useState(0);
 
   const { state: productState, actions: productActions } = useProductsLogic();
+  const loadStoreRequests = async (page: number, search?: string): Promise<StoreRequestsResponse> => {
+    const result = await getAllRequestsAction(page, search);
+
+    if (result && "error" in result) {
+      throw new Error(result.error);
+    }
+
+    return result;
+  };
+
+  const approveStoreRequest = async (requestId: string) => {
+    const result = await approveRequestAction(requestId);
+    if (result && "error" in result) {
+      return { error: result.error };
+    }
+    return { success: true as const, data: result.data };
+  };
+
+  const rejectStoreRequest = async (requestId: string, note: string) => {
+    const result = await rejectRequestAction(requestId, note);
+    if (result && "error" in result) {
+      return { error: result.error };
+    }
+    return { success: true as const, data: result.data };
+  };
 
   const isAdmin = session?.user?.role === "admin";
   const userId = session?.user?.id;
@@ -379,9 +404,9 @@ function AdminDashboardPageContent() {
                 className="p-4 md:p-8"
               >
                 <AdminStoreRequests
-                  onLoadRequests={getAllRequestsAction}
-                  onApproveRequest={approveRequestAction}
-                  onRejectRequest={rejectRequestAction}
+                  onLoadRequests={loadStoreRequests}
+                  onApproveRequest={approveStoreRequest}
+                  onRejectRequest={rejectStoreRequest}
                 />
               </motion.div>
             )}

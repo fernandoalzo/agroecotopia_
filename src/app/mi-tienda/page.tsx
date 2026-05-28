@@ -450,7 +450,6 @@ function SellerDashboardContent() {
                     categoryCounts={productState.categoryCounts}
                     categoryFilter={productState.categoryFilter}
                     searchQuery={productState.searchQuery}
-                    debouncedSearch={productState.debouncedSearch}
                     currentPage={productState.currentPage}
                     totalPages={productState.totalPages}
                     totalCount={productState.totalCount}
