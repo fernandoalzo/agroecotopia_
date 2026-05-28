@@ -4,6 +4,15 @@ import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/store/store.repository.ts");
 
+type StoreRequestForApproval = Prisma.StoreRequestGetPayload<{
+  include: {
+    user: {
+      select: { id: true; name: true; email: true; image: true; role: true };
+    };
+    store: true;
+  };
+}>;
+
 export class StoreRepository {
   // --- Store CRUD ---
 
@@ -206,6 +215,46 @@ export class StoreRepository {
         adminNote,
         store: storeId ? { connect: { id: storeId } } : undefined
       },
+    });
+  }
+
+  async approveRequestTransaction(request: StoreRequestForApproval, slug: string, adminNote?: string) {
+    log.info("Aprobando solicitud de tienda en transacción", { requestId: request.id, slug });
+
+    return await prisma.$transaction(async (tx) => {
+      const store = await tx.store.create({
+        data: {
+          name: request.name,
+          slug,
+          description: request.description,
+          phone: request.phone,
+          email: request.email,
+          address: request.address,
+          city: request.city,
+          status: 'ACTIVE',
+          owner: { connect: { id: request.userId } }
+        }
+      });
+
+      await tx.storeRequest.update({
+        where: { id: request.id },
+        data: {
+          status: 'APPROVED',
+          adminNote,
+          storeId: store.id
+        }
+      });
+
+      const userRole = request.user?.role ?? null;
+      if (userRole && userRole !== 'seller' && userRole !== 'admin') {
+        log.info("Promoviendo usuario a seller", { userId: request.userId, previousRole: userRole });
+        await tx.user.update({
+          where: { id: request.userId },
+          data: { role: 'seller' }
+        });
+      }
+
+      return store;
     });
   }
 }

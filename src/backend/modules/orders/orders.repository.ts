@@ -50,6 +50,14 @@ export class OrdersRepository {
     });
   }
 
+  async findProductsStoreIds(productIds: string[]) {
+    log.debug("Buscando tiendas asociadas a productos:", { productIdsCount: productIds.length });
+    return await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, storeId: true },
+    });
+  }
+
   async findById(id: string, tx?: TxClient) {
     const client = tx || prisma;
     log.debug("Buscando pedido por ID:", { pedidoId: id });

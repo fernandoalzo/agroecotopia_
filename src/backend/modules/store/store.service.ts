@@ -1,5 +1,4 @@
 import { StoreRepository } from "./store.repository";
-import prisma from "@/backend/db/prisma";
 import logger from "@/utils/logger";
 import { StoreCreateInput } from "@/types/store";
 
@@ -95,45 +94,7 @@ export class StoreService {
       counter++;
     }
 
-    // Execute in a transaction to ensure data consistency
-    return await prisma.$transaction(async (tx) => {
-      // 1. Create the store
-      const store = await tx.store.create({
-        data: {
-          name: request.name,
-          slug,
-          description: request.description,
-          phone: request.phone,
-          email: request.email,
-          address: request.address,
-          city: request.city,
-          status: 'ACTIVE',
-          owner: { connect: { id: request.userId } }
-        }
-      });
-
-      // 2. Update request status and link to created store
-      await tx.storeRequest.update({
-        where: { id: requestId },
-        data: {
-          status: 'APPROVED',
-          adminNote,
-          storeId: store.id
-        }
-      });
-
-      // 3. Promote user to seller if they are not already seller or admin
-      const userRole = request.user?.role ?? null;
-      if (userRole && userRole !== 'seller' && userRole !== 'admin') {
-        log.info("Promoviendo usuario a seller", { userId: request.userId, previousRole: userRole });
-        await tx.user.update({
-          where: { id: request.userId },
-          data: { role: 'seller' }
-        });
-      }
-
-      return store;
-    });
+    return await this.storeRepository.approveRequestTransaction(request, slug, adminNote);
   }
 
   async rejectRequest(requestId: string, adminNote: string) {

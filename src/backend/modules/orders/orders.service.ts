@@ -1,6 +1,5 @@
 import { OrdersRepository } from "./orders.repository";
 import { PedidoEstado, Prisma } from "@prisma/client";
-import prisma from "@/backend/db/prisma";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/orders/orders.service.ts");
@@ -28,10 +27,7 @@ export class OrdersService {
 
   async createPedido(data: CreatePedidoData) {
     const productIds = data.detalles.map(d => d.productoId);
-    const dbProducts = await prisma.product.findMany({
-      where: { id: { in: productIds } },
-      select: { id: true, storeId: true }
-    });
+    const dbProducts = await this.ordersRepository.findProductsStoreIds(productIds);
 
     const productStoreMap = new Map(dbProducts.map(p => [p.id, p.storeId]));
     const missingProduct = productIds.find((productId) => !productStoreMap.has(productId));

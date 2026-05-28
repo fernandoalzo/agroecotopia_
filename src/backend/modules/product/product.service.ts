@@ -144,6 +144,21 @@ export class ProductService {
     }
   }
 
+  async updateStoreProduct(storeId: string, id: string, data: Partial<Product>): Promise<any> {
+    try {
+      const existingProduct = await this.productRepository.getProductByIdAndStore(id, storeId);
+      if (!existingProduct) {
+        throw new Error("Producto no encontrado en esta tienda.");
+      }
+
+      const updated = await this.productRepository.updateStoreProduct(storeId, id, data);
+      return this.serializeProduct(updated);
+    } catch (error) {
+      log.error("Error updating store product:", { storeId, id, error });
+      throw new Error("No se pudo actualizar el producto de esta tienda.");
+    }
+  }
+
   /**
    * Elimina un producto de la base de datos.
    */
@@ -153,6 +168,21 @@ export class ProductService {
       return true;
     } catch (error) {
       throw new Error("No se pudo eliminar el producto. Puede que esté asociado a pedidos existentes.");
+    }
+  }
+
+  async deleteStoreProduct(storeId: string, id: string): Promise<boolean> {
+    try {
+      const existingProduct = await this.productRepository.getProductByIdAndStore(id, storeId);
+      if (!existingProduct) {
+        throw new Error("Producto no encontrado en esta tienda.");
+      }
+
+      await this.productRepository.deleteStoreProduct(storeId, id);
+      return true;
+    } catch (error) {
+      log.error("Error deleting store product:", { storeId, id, error });
+      throw new Error("No se pudo eliminar el producto de esta tienda.");
     }
   }
 

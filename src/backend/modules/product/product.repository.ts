@@ -57,6 +57,17 @@ export class ProductRepository {
     });
   }
 
+  async getProductByIdAndStore(id: string, storeId: string): Promise<Product | null> {
+    log.debug("Buscando producto por id y tienda:", { id, storeId });
+    return prisma.product.findFirst({
+      where: { id, storeId },
+      include: {
+        categories: true,
+        store: { select: { id: true, name: true, slug: true, logo: true } }
+      },
+    });
+  }
+
   /**
    * Busca productos por coincidencia parcial o total en múltiples campos con paginación, opcionalmente filtrados por una o más categorías.
    */
@@ -179,6 +190,33 @@ export class ProductRepository {
     }) as unknown as Promise<Product>;
   }
 
+  async updateStoreProduct(storeId: string, id: string, data: any): Promise<Product> {
+    log.info("Actualizando producto de tienda:", { id, storeId });
+
+    const { categories, ...restData } = data;
+    delete restData.storeId;
+
+    const updateData: any = { ...restData };
+    if (categories !== undefined) {
+      updateData.categories = {
+        set: [],
+        connectOrCreate: categories.map((c: string) => ({
+          where: { name: c },
+          create: { name: c }
+        }))
+      };
+    }
+
+    return prisma.product.update({
+      where: { id, storeId },
+      data: updateData,
+      include: {
+        categories: true,
+        store: { select: { id: true, name: true, slug: true, logo: true } }
+      },
+    }) as unknown as Promise<Product>;
+  }
+
   /**
    * Elimina un producto por su ID
    */
@@ -187,6 +225,17 @@ export class ProductRepository {
     return prisma.product.delete({
       where: { id },
       include: { 
+        categories: true,
+        store: { select: { id: true, name: true, slug: true, logo: true } }
+      },
+    }) as unknown as Promise<Product>;
+  }
+
+  async deleteStoreProduct(storeId: string, id: string): Promise<Product> {
+    log.info("Eliminando producto de tienda:", { id, storeId });
+    return prisma.product.delete({
+      where: { id, storeId },
+      include: {
         categories: true,
         store: { select: { id: true, name: true, slug: true, logo: true } }
       },

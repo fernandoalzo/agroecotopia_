@@ -174,11 +174,7 @@ export async function updateStoreProductAction(storeId: string, productId: strin
   return withStoreOwner(storeId, async () => {
     log.info(`Seller updating product ${productId} in store ${storeId}`);
     try {
-      // Basic check to ensure product belongs to store
-      const existingProduct = await productService.searchProducts(productId);
-      // Depending on implementation we might need a dedicated `getProductByIdAndStore` 
-      // For now we assume store ownership validation is sufficient and frontend passes correct ID
-      const updatedProduct = await productService.updateProduct(productId, data);
+      const updatedProduct = await productService.updateStoreProduct(storeId, productId, data);
       revalidatePath(`/mi-tienda/${storeId}/productos`);
       revalidatePath("/productos");
       return { success: true, message: "Producto actualizado correctamente.", product: updatedProduct };
@@ -193,7 +189,7 @@ export async function deleteStoreProductAction(storeId: string, productId: strin
   return withStoreOwner(storeId, async () => {
     log.info(`Seller deleting product ${productId} in store ${storeId}`);
     try {
-      await productService.deleteProduct(productId);
+      await productService.deleteStoreProduct(storeId, productId);
       revalidatePath(`/mi-tienda/${storeId}/productos`);
       revalidatePath("/productos");
       return { success: true, message: "Producto eliminado correctamente." };
