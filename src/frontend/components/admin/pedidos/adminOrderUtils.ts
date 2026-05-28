@@ -21,6 +21,10 @@ export interface AdminOrder {
       name: string;
       images: string[];
     };
+    store?: {
+      id: string;
+      name: string;
+    } | null;
   }[];
 }
 

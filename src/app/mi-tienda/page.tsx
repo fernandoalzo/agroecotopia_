@@ -59,11 +59,12 @@ function SellerDashboardContent() {
   const [error, setError] = useState<string | null>(null);
   const [orderChat, setOrderChat] = useState<{ conversation: OrderConversation; messages: Message[] } | null>(null);
   const [orderChatUnreadCounts, setOrderChatUnreadCounts] = useState<Record<string, number>>({});
+  const [openingChatOrderId, setOpeningChatOrderId] = useState<string | null>(null);
   const isSeller = session?.user?.role === "seller" || session?.user?.role === "admin";
   
   const activeStore = stores.find(s => s.id === activeStoreId) || null;
 
-  const { state: productState, actions: productActions } = useProductsLogic(activeStoreId || undefined);
+  const { state: productState, actions: productActions } = useProductsLogic(activeStoreId || undefined, !!activeStoreId);
 
   // Protect route
   useEffect(() => {
@@ -196,6 +197,7 @@ function SellerDashboardContent() {
       return;
     }
 
+    setOpeningChatOrderId(order.id);
     try {
       const conversation = await getOrCreateOrderConversationAction(order.id, storeId);
       if (!conversation || "error" in conversation) {
@@ -216,6 +218,8 @@ function SellerDashboardContent() {
     } catch (err) {
       log.error("Error abriendo chat de pedido:", err);
       toast.error("Ocurrió un error abriendo el chat del pedido.");
+    } finally {
+      setOpeningChatOrderId(null);
     }
   };
 
@@ -431,11 +435,12 @@ function SellerDashboardContent() {
               >
                 {activeTab === "orders" && activeStore && (
                   <AdminOrdersList
-                    storeId={activeStore.id}
-                    emptyMessage="No hay pedidos para los productos de esta tienda con los filtros aplicados."
-                    onOpenOrderChat={handleOpenOrderChat}
-                    unreadChatCounts={orderChatUnreadCounts}
-                  />
+                  storeId={activeStore.id}
+                  emptyMessage="No hay pedidos para los productos de esta tienda con los filtros aplicados."
+                  onOpenOrderChat={handleOpenOrderChat}
+                  unreadChatCounts={orderChatUnreadCounts}
+                  openingChatOrderId={openingChatOrderId}
+                />
                 )}
                 {activeTab === "products" && activeStore && (
                   <ProductsList

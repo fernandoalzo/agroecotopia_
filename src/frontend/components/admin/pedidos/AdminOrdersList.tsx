@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Search, Filter, ChevronLeft, ChevronRight
-} from "lucide-react";
+import { Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   getPaginatedOrdersAction,
   getOrderStatusCountsAction,
@@ -18,6 +16,7 @@ import { PedidoEstado } from "@/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/Loading";
+import { SearchInput } from "@/components/shared/SearchInput";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/frontend/components/admin/AdminOrdersList.tsx");
@@ -30,9 +29,10 @@ interface AdminOrdersListProps {
   emptyMessage?: string;
   onOpenOrderChat?: (order: AdminOrder) => void;
   unreadChatCounts?: Record<string, number>;
+  openingChatOrderId?: string | null;
 }
 
-export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unreadChatCounts }: AdminOrdersListProps) => {
+export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unreadChatCounts, openingChatOrderId }: AdminOrdersListProps) => {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<PedidoEstado | "ALL">("ALL");
@@ -65,7 +65,7 @@ export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unread
   }, [statusFilter, debouncedSearch]);
 
   // Fetch status counts from database
-  const fetchCounts = async () => {
+  const fetchCounts = useCallback(async () => {
     try {
       const counts = storeId
         ? await getStoreOrderStatusCountsAction(storeId)
@@ -81,11 +81,11 @@ export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unread
     } catch (error) {
       log.error("Error fetching status counts:", error);
     }
-  };
+  }, [storeId]);
 
   useEffect(() => {
     fetchCounts();
-  }, [storeId]);
+  }, [fetchCounts]);
 
   // Fetch paginated & filtered orders from database
   useEffect(() => {
@@ -187,17 +187,14 @@ export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unread
           })}
         </div>
 
-        {/* Search bar */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-          <input
-            type="text"
-            placeholder="Buscar por ID, nombre, email o dirección..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm pl-11 pr-4 py-3 text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
-          />
-        </div>
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Buscar por ID, nombre, email o dirección..."
+          onClear={() => setSearchQuery("")}
+          containerClassName="max-w-md"
+          inputClassName="pr-4"
+        />
       </motion.div>
 
       {/* ── Compact order rows ── */}
@@ -241,6 +238,7 @@ export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unread
                 onUpdateStatus={handleUpdateStatus}
                 onOpenOrderChat={onOpenOrderChat}
                 unreadChatCount={unreadChatCounts?.[order.id] || 0}
+                isOpeningChat={openingChatOrderId === order.id}
               />
             ))
           )}

@@ -127,27 +127,33 @@ export class StoreRepository {
     });
   }
 
-  async findPendingRequests(skip?: number, take?: number) {
-    log.debug("Buscando solicitudes pendientes");
+  async findPendingRequests(skip?: number, take?: number, search?: string) {
+    const q = search?.trim();
+    log.debug("Buscando solicitudes pendientes", { search: q || undefined });
+    const where = this.buildStoreRequestSearchWhere(q, true);
     const [requests, total] = await Promise.all([
       prisma.storeRequest.findMany({
-        where: { status: 'PENDING' },
+        where,
         skip,
         take,
         include: {
-          user: { select: { id: true, name: true, email: true, image: true } }
+          user: { select: { id: true, name: true, email: true, image: true } },
+          store: true,
         },
         orderBy: { createdAt: 'asc' }
       }),
-      prisma.storeRequest.count({ where: { status: 'PENDING' } })
+      prisma.storeRequest.count({ where })
     ]);
     return { requests, total };
   }
 
-  async findAllRequestsPaginated(skip?: number, take?: number) {
-    log.debug("Buscando todas las solicitudes paginadas");
+  async findAllRequestsPaginated(skip?: number, take?: number, search?: string) {
+    const q = search?.trim();
+    log.debug("Buscando todas las solicitudes paginadas", { search: q || undefined });
+    const where = this.buildStoreRequestSearchWhere(q);
     const [requests, total] = await Promise.all([
       prisma.storeRequest.findMany({
+        where,
         skip,
         take,
         include: {
@@ -156,9 +162,39 @@ export class StoreRepository {
         },
         orderBy: { createdAt: 'desc' }
       }),
-      prisma.storeRequest.count()
+      prisma.storeRequest.count({ where })
     ]);
     return { requests, total };
+  }
+
+  private buildStoreRequestSearchWhere(search?: string, onlyPending = false): Prisma.StoreRequestWhereInput {
+    const where: Prisma.StoreRequestWhereInput = {};
+    if (onlyPending) where.status = 'PENDING';
+    if (!search) return where;
+
+    where.OR = [
+      { name: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+      { address: { contains: search, mode: 'insensitive' } },
+      { city: { contains: search, mode: 'insensitive' } },
+      { phone: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+      {
+        user: {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } },
+          ],
+        },
+      },
+      {
+        store: {
+          name: { contains: search, mode: 'insensitive' },
+        },
+      },
+    ];
+
+    return where;
   }
 
   async updateRequestStatus(id: string, status: 'APPROVED' | 'REJECTED', adminNote?: string, storeId?: string) {

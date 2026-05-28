@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Copy, Eye, MessageSquare, User } from "lucide-react";
+import { Check, Copy, Eye, Loader2, MessageSquare, User } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
@@ -22,6 +22,7 @@ interface AdminOrderCardDesktopProps {
     onSetConfirmingStatus: (status: PedidoEstado | null) => void;
     onOpenOrderChat?: () => void;
     unreadChatCount?: number;
+    isOpeningChat?: boolean;
 }
 
 export const AdminOrderCardDesktop = ({
@@ -35,9 +36,11 @@ export const AdminOrderCardDesktop = ({
     onSetConfirmingStatus,
     onOpenOrderChat,
     unreadChatCount = 0,
+    isOpeningChat = false,
 }: AdminOrderCardDesktopProps) => {
     const cfg = statusConfig[order.estado];
     const StatusIcon = cfg.icon;
+    const storeName = order.detalles.find((d) => d.store?.name)?.store?.name || "Tienda no disponible";
 
     return (
         <div className="hidden lg:flex items-stretch">
@@ -103,6 +106,16 @@ export const AdminOrderCardDesktop = ({
                             </p>
                         </div>
                     </div>
+                </div>
+
+                {/* Store info */}
+                <div className="min-w-0 w-40 xl:w-52 shrink">
+                    <p className="text-xs text-muted-foreground/60 font-bold uppercase tracking-wider mb-1">
+                        Tienda
+                    </p>
+                    <p className="text-sm font-semibold truncate">
+                        {storeName}
+                    </p>
                 </div>
 
                 {/* Products summary */}
@@ -190,9 +203,14 @@ export const AdminOrderCardDesktop = ({
                                             variant="ghost"
                                             size="icon"
                                             className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary transition-colors"
+                                            disabled={isOpeningChat}
                                             onClick={onOpenOrderChat}
                                         >
-                                            <MessageSquare className="h-4 w-4" />
+                                            {isOpeningChat ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <MessageSquare className="h-4 w-4" />
+                                            )}
                                         </Button>
                                         {unreadChatCount > 0 && (
                                             <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-md shadow-red-500/30 ring-2 ring-background">

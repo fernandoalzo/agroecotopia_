@@ -203,6 +203,12 @@ export class OrdersRepository {
             ...(storeId ? { where: { storeId } } : {}),
             include: {
               producto: true,
+              store: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
         },

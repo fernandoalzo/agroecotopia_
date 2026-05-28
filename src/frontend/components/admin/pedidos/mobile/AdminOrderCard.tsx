@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Copy, Eye, MessageSquare, User } from "lucide-react";
+import { Check, Copy, Eye, Loader2, MessageSquare, User } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
@@ -24,6 +24,7 @@ interface AdminOrderCardMobileProps {
     onSetShowAllItems: (show: boolean) => void;
     onOpenOrderChat?: () => void;
     unreadChatCount?: number;
+    isOpeningChat?: boolean;
 }
 
 export const AdminOrderCardMobile = ({
@@ -39,9 +40,11 @@ export const AdminOrderCardMobile = ({
     onSetShowAllItems,
     onOpenOrderChat,
     unreadChatCount = 0,
+    isOpeningChat = false,
 }: AdminOrderCardMobileProps) => {
     const cfg = statusConfig[order.estado];
     const StatusIcon = cfg.icon;
+    const storeName = order.detalles.find((d) => d.store?.name)?.store?.name || "Tienda no disponible";
 
     return (
         <div className="lg:hidden">
@@ -106,6 +109,16 @@ export const AdminOrderCardMobile = ({
                         {order.usuario?.email || ""}
                     </p>
                 </div>
+            </div>
+
+            {/* ── Store ── */}
+            <div className="px-5 py-3 border-b border-dashed border-border/50">
+                <p className="text-[9px] font-extrabold uppercase tracking-widest text-muted-foreground/50 mb-0.5">
+                    Tienda
+                </p>
+                <p className="text-sm font-semibold text-foreground/85 truncate">
+                    {storeName}
+                </p>
             </div>
 
             {/* ── Line Items ── */}
@@ -230,9 +243,14 @@ export const AdminOrderCardMobile = ({
                                         variant="ghost"
                                         size="icon"
                                         className="h-9 w-9 rounded-xl text-muted-foreground hover:text-primary transition-colors border border-border/30"
+                                        disabled={isOpeningChat}
                                         onClick={onOpenOrderChat}
                                     >
-                                        <MessageSquare className="h-4 w-4" />
+                                        {isOpeningChat ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <MessageSquare className="h-4 w-4" />
+                                        )}
                                     </Button>
                                     {unreadChatCount > 0 && (
                                         <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-md shadow-red-500/30 ring-2 ring-background">

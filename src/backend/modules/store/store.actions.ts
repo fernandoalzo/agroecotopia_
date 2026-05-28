@@ -9,6 +9,8 @@ import { authService } from "../auth";
 
 const log = logger.child("src/backend/modules/store/store.actions.ts");
 
+type StoreListItem = { id: string; name: string };
+
 // --- User Actions ---
 
 export const submitStoreRequestAction = async (data: StoreCreateInput) => {
@@ -60,10 +62,10 @@ export const updateMyStoreAction = async (storeId: string, data: Partial<StoreCr
 
 // --- Admin Actions ---
 
-export const getPendingRequestsAction = async (page: number = 1) => {
+export const getPendingRequestsAction = async (page: number = 1, search?: string) => {
   return withAdmin(async () => {
-    log.info("Action: getPendingRequestsAction", { page });
-    const result = await storeService.getPendingRequests(page);
+    log.info("Action: getPendingRequestsAction", { page, search });
+    const result = await storeService.getPendingRequests(page, 10, search);
     return {
       requests: result.requests,
       totalPages: Math.ceil(result.total / 10),
@@ -73,13 +75,14 @@ export const getPendingRequestsAction = async (page: number = 1) => {
   });
 };
 
-export const getAllRequestsAction = async (page: number = 1) => {
+export const getAllRequestsAction = async (page: number = 1, search?: string) => {
   return withAdmin(async () => {
-    log.info("Action: getAllRequestsAction", { page });
-    const result = await storeService.getAllRequests(page, 10);
+    log.info("Action: getAllRequestsAction", { page, search });
+    const result = await storeService.getAllRequests(page, 10, search);
     return {
       requests: result.requests,
       totalPages: Math.ceil(result.total / 10),
+      total: result.total,
       page
     };
   });
@@ -150,6 +153,6 @@ export const getAllActiveStoresListAction = async () => {
     log.info("Action: getAllActiveStoresListAction");
     // Get up to 1000 active stores for select dropdowns
     const result = await storeService.getAllStores(1, 1000, 'ACTIVE');
-    return result.stores.map((s: any) => ({ id: s.id, name: s.name }));
+    return result.stores.map((s): StoreListItem => ({ id: s.id, name: s.name }));
   });
 };

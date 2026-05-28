@@ -18,7 +18,7 @@ import logger from "@/utils/logger";
 
 const log = logger.child();
 
-export function useProductsLogic(storeId?: string) {
+export function useProductsLogic(storeId?: string, enabled = true) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
@@ -56,6 +56,7 @@ export function useProductsLogic(storeId?: string) {
 
   // Fetch basic data (Categories and Stores)
   useEffect(() => {
+    if (!enabled) return;
     getCategoriesAction().then(setAvailableCategories).catch(log.error);
     if (!storeId) {
       getAllActiveStoresListAction().then(res => {
@@ -66,17 +67,19 @@ export function useProductsLogic(storeId?: string) {
         }
       }).catch(log.error);
     }
-  }, [storeId]);
+  }, [storeId, enabled]);
 
   // Fetch category counts
   useEffect(() => {
+    if (!enabled) return;
     getCategoryCountsAction(storeId).then((counts) => {
       setCategoryCounts(counts);
     });
-  }, [refreshTrigger, storeId]);
+  }, [refreshTrigger, storeId, enabled]);
 
   // Fetch paginated & filtered products
   useEffect(() => {
+    if (!enabled) return;
     const fetchProducts = async () => {
       setLoading(true);
       try {
@@ -102,7 +105,7 @@ export function useProductsLogic(storeId?: string) {
     };
 
     fetchProducts();
-  }, [currentPage, categoryFilter, debouncedSearch, limit, refreshTrigger, storeId]);
+  }, [currentPage, categoryFilter, debouncedSearch, limit, refreshTrigger, storeId, enabled]);
 
   // Handlers
   const handleCreateProduct = async (payload: any, targetStoreId?: string) => {

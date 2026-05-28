@@ -16,9 +16,10 @@ interface AdminOrderCardProps {
   onUpdateStatus: (orderId: string, newStatus: PedidoEstado) => Promise<boolean>;
   onOpenOrderChat?: (order: AdminOrder) => void;
   unreadChatCount?: number;
+  isOpeningChat?: boolean;
 }
 
-export const AdminOrderCard = ({ order, index, isUpdating, onUpdateStatus, onOpenOrderChat, unreadChatCount }: AdminOrderCardProps) => {
+export const AdminOrderCard = ({ order, index, isUpdating, onUpdateStatus, onOpenOrderChat, unreadChatCount, isOpeningChat }: AdminOrderCardProps) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [confirmingStatus, setConfirmingStatus] = useState<PedidoEstado | null>(null);
   const [showAllItems, setShowAllItems] = useState(false);
@@ -56,6 +57,7 @@ export const AdminOrderCard = ({ order, index, isUpdating, onUpdateStatus, onOpe
     onSetConfirmingStatus: setConfirmingStatus,
     onOpenOrderChat: onOpenOrderChat ? () => onOpenOrderChat(order) : undefined,
     unreadChatCount,
+    isOpeningChat,
   };
 
   return (

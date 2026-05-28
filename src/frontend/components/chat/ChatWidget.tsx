@@ -39,13 +39,12 @@ import { usePathname } from "next/navigation";
 
 export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidgetProps = {}) {
   const pathname = usePathname();
-  const chat = useChatWidget(forceShow, targetUserId);
+  const shouldEnableChat = !(pathname?.startsWith("/comunidad") || pathname?.startsWith("/mi-tienda") || pathname?.startsWith("/pedidos/"));
+  const chat = useChatWidget(forceShow, targetUserId, shouldEnableChat);
 
   if (!chat.isClient || chat.status !== "authenticated") return null;
   if (!forceShow && (chat.isRouteAdmin || chat.isAdminUser)) return null;
-  if (pathname?.startsWith("/comunidad")) return null;
-  if (pathname?.startsWith("/mi-tienda")) return null;
-  if (pathname?.startsWith("/pedidos/")) return null;
+  if (!shouldEnableChat) return null;
 
   const isMobileOpen = chat.isClient && chat.isOpen && window.innerWidth < 768;
 

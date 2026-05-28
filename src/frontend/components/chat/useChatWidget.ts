@@ -20,7 +20,7 @@ import type { Message } from "./ChatWidget";
 
 const log = logger.child("src/frontend/components/chat/useChatWidget.ts");
 
-export function useChatWidget(forceShow: boolean, targetUserId?: string) {
+export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled = true) {
     const { data: session, status } = useSession();
     const isAdminUser = session?.user?.role === "admin";
     const chatUserId = session?.user?.id;
@@ -99,15 +99,18 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string) {
     useEffect(() => { setIsClient(true); }, []);
 
     useEffect(() => {
+        if (!enabled) return;
         isOpenRef.current = isOpen;
-    }, [isOpen]);
+    }, [isOpen, enabled]);
 
     useEffect(() => {
+        if (!enabled) return;
         hasInitialScrolledRef.current = false;
-    }, [isOpen, conversation?.id]);
+    }, [isOpen, conversation?.id, enabled]);
 
     // Lock body scroll when chat is open on mobile
     useEffect(() => {
+        if (!enabled) return;
         if (!isOpen || typeof window === "undefined" || window.innerWidth >= 768) return;
 
         const body = document.body;
@@ -118,10 +121,11 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string) {
         return () => {
             body.style.overflow = originalBodyOverflow;
         };
-    }, [isOpen]);
+    }, [isOpen, enabled]);
 
     // Prevent touchmove on non-scrollable areas
     useEffect(() => {
+        if (!enabled) return;
         if (!isOpen || typeof window === "undefined" || window.innerWidth >= 768) return;
         const container = chatContainerRef.current;
         if (!container) return;
@@ -132,10 +136,11 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string) {
         };
         container.addEventListener("touchmove", handleTouchMove, { passive: false });
         return () => container.removeEventListener("touchmove", handleTouchMove);
-    }, [isOpen]);
+    }, [isOpen, enabled]);
 
     // Initialize E2EE
     useEffect(() => {
+        if (!enabled) return;
         const isRouteAdmin = isClient && window.location.pathname.startsWith("/admin");
         if (status !== "authenticated" || !chatUserId) return;
         if (!forceShow && (isRouteAdmin || isAdminUser)) return;
@@ -150,16 +155,18 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string) {
             }
         };
         initE2EE();
-    }, [chatUserId, status, isClient, isAdminUser, forceShow]);
+    }, [chatUserId, status, isClient, isAdminUser, forceShow, enabled]);
 
     // Fetch target user name placeholder
     useEffect(() => {
+        if (!enabled) return;
         if (!isAdminUser || !targetUserId) { setTargetUserName(null); return; }
         setTargetUserName("Cargando...");
-    }, [isAdminUser, targetUserId]);
+    }, [isAdminUser, targetUserId, enabled]);
 
     // Load conversation and messages
     useEffect(() => {
+        if (!enabled) return;
         const isRouteAdmin = isClient && window.location.pathname.startsWith("/admin");
         if (!chatUserId) return;
         if (!forceShow && (isRouteAdmin || isAdminUser)) return;
@@ -229,10 +236,11 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string) {
         };
         initChat();
         return () => { isCancelled = true; };
-    }, [chatUserId, isClient, isAdminUser, isOpen, forceShow]);
+    }, [chatUserId, isClient, isAdminUser, isOpen, forceShow, enabled]);
 
     // WebSocket events
     useEffect(() => {
+        if (!enabled) return;
         const isRouteAdmin = isClient && window.location.pathname.startsWith("/admin");
         if (!socket || !conversation?.id) return;
         if (!forceShow && (isRouteAdmin || isAdminUser)) return;
@@ -322,10 +330,11 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string) {
             socket.off("conversation_deleted", handleConversationDeleted);
             socket.off("key_sync_needed", handleKeySyncNeeded);
         };
-    }, [socket, conversation?.id, chatUserId, isClient, isAdminUser, forceShow]);
+    }, [socket, conversation?.id, chatUserId, isClient, isAdminUser, forceShow, enabled]);
 
     // Scroll management
     useEffect(() => {
+        if (!enabled) return;
         if (isLoading || messages.length === 0 || !isOpen) return;
         const timer = setTimeout(() => {
             const container = messagesScrollRef.current;
@@ -347,10 +356,11 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string) {
             }
         }, 100);
         return () => clearTimeout(timer);
-    }, [messages, isAdminTyping, isLoading, isOpen]);
+    }, [messages, isAdminTyping, isLoading, isOpen, enabled]);
 
     // Advisor message event listener
     useEffect(() => {
+        if (!enabled) return;
         const handleAdvisorMessageEvent = async (e: Event) => {
             const customEvent = e as CustomEvent;
             const { messages } = customEvent.detail;
@@ -365,7 +375,7 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string) {
 
         window.addEventListener("send_advisor_chat_message", handleAdvisorMessageEvent);
         return () => window.removeEventListener("send_advisor_chat_message", handleAdvisorMessageEvent);
-    }, [isAdminUser, targetUserId]);
+    }, [isAdminUser, targetUserId, enabled]);
 
     // ── Handlers ──────────────────────────────────────────────────────
 

@@ -1,5 +1,4 @@
 import { StoreRepository } from "./store.repository";
-import { authService } from "@/backend/modules/auth";
 import prisma from "@/backend/db/prisma";
 import logger from "@/utils/logger";
 import { StoreCreateInput } from "@/types/store";
@@ -65,14 +64,14 @@ export class StoreService {
 
   // --- Admin Flow ---
 
-  async getPendingRequests(page: number = 1, limit: number = 10) {
+  async getPendingRequests(page: number = 1, limit: number = 10, search?: string) {
     const skip = (page - 1) * limit;
-    return await this.storeRepository.findPendingRequests(skip, limit);
+    return await this.storeRepository.findPendingRequests(skip, limit, search);
   }
 
-  async getAllRequests(page: number = 1, limit: number = 10) {
+  async getAllRequests(page: number = 1, limit: number = 10, search?: string) {
     const skip = (page - 1) * limit;
-    return await this.storeRepository.findAllRequestsPaginated(skip, limit);
+    return await this.storeRepository.findAllRequestsPaginated(skip, limit, search);
   }
 
   async getAllStores(page: number = 1, limit: number = 10, status?: 'ACTIVE' | 'SUSPENDED' | 'CLOSED') {
@@ -88,7 +87,7 @@ export class StoreService {
     if (request.status !== 'PENDING') throw new Error(`La solicitud ya fue procesada (${request.status}).`);
 
     // Ensure unique slug
-    let baseSlug = generateSlug(request.name);
+    const baseSlug = generateSlug(request.name);
     let slug = baseSlug;
     let counter = 1;
     while (await this.storeRepository.findBySlug(slug)) {
@@ -124,7 +123,7 @@ export class StoreService {
       });
 
       // 3. Promote user to seller if they are not already seller or admin
-      const userRole = request.user ? (request.user as any).role : null;
+      const userRole = request.user?.role ?? null;
       if (userRole && userRole !== 'seller' && userRole !== 'admin') {
         log.info("Promoviendo usuario a seller", { userId: request.userId, previousRole: userRole });
         await tx.user.update({

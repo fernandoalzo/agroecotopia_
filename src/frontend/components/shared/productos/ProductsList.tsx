@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronLeft, ChevronRight, Package, X, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Package, Plus } from "lucide-react";
 import { Product } from "@prisma/client";
 import { ProductCard } from "./ProductCard";
 import { ProductModal } from "./ProductModal";
@@ -11,6 +11,7 @@ import { ProductCreateModal } from "./ProductCreateModal";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/Loading";
+import { SearchInput } from "@/components/shared/SearchInput";
 import {
   Select,
   SelectContent,
@@ -26,7 +27,6 @@ interface ProductsListProps {
   categoryCounts: Record<string, number>;
   categoryFilter: string | "ALL";
   searchQuery: string;
-  debouncedSearch: string;
   currentPage: number;
   totalPages: number;
   totalCount: number;
@@ -41,8 +41,8 @@ interface ProductsListProps {
   setLimit: (limit: number) => void;
 
   // Mutators
-  onSubmitCreate: (payload: any, storeId?: string) => Promise<boolean>;
-  onSubmitUpdate: (productId: string, payload: any) => Promise<boolean>;
+  onSubmitCreate: (payload: Record<string, unknown>, storeId?: string) => Promise<boolean>;
+  onSubmitUpdate: (productId: string, payload: Record<string, unknown>) => Promise<boolean>;
   onDeleteProduct: (productId: string) => Promise<boolean>;
 }
 
@@ -53,7 +53,6 @@ export const ProductsList = ({
   categoryCounts,
   categoryFilter,
   searchQuery,
-  debouncedSearch,
   currentPage,
   totalPages,
   totalCount,
@@ -242,25 +241,13 @@ export const ProductsList = ({
           ))}
         </div>
 
-        {/* Search bar */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-          <input
-            type="text"
-            placeholder="Buscar por ID, nombre o descripción..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm pl-11 pr-11 py-3 text-sm font-medium placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center rounded-full bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          )}
-        </div>
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Buscar por ID, nombre o descripción..."
+          onClear={() => setSearchQuery("")}
+          containerClassName="max-w-md"
+        />
       </motion.div>
       )}
 
