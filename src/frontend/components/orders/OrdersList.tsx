@@ -1,12 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Package, ChevronRight, Calendar, MapPin, CreditCard, Clock, CheckCircle2, Truck, Timer, XCircle, RefreshCw, Copy, Check } from "lucide-react";
-import { getUserOrdersAction, cancelUserOrderAction, deleteUserOrderAction } from "@/backend/modules/orders/orders.actions";
-import { getUserOrderConversationsAction } from "@/backend/modules/chat/chat.actions";
 import { useCart } from "@/context/CartContext";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
 import { format } from "date-fns";
@@ -37,6 +34,14 @@ interface Order {
     };
   }[];
 }
+
+type OrdersListProps = {
+  orders: Order[];
+  loading: boolean;
+  unreadChatCounts?: Record<string, number>;
+  onCancelOrder: (orderId: string) => Promise<void>;
+  onDeleteOrder: (orderId: string) => Promise<void>;
+};
 
 const statusConfig = {
   [PedidoEstado.PENDIENTE]: {
@@ -71,83 +76,20 @@ const statusConfig = {
   },
 };
 
-export const OrdersList = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+export const OrdersList = ({ orders, loading, unreadChatCounts = {}, onCancelOrder, onDeleteOrder }: OrdersListProps) => {
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [confirmingCancelId, setConfirmingCancelId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [repeatingId, setRepeatingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [unreadChatCounts, setUnreadChatCounts] = useState<Record<string, number>>({});
   const { addToCart } = useCart();
-  const router = useRouter();
-
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const result = await getUserOrdersAction();
-        if (Array.isArray(result)) {
-          setOrders(result as any);
-        }
-      } catch (error) {
-        log.error("Error fetching orders:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrders();
-  }, []);
-
-  useEffect(() => {
-    if (orders.length === 0) {
-      setUnreadChatCounts({});
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadUnreadCounts = async () => {
-      try {
-        const res = await getUserOrderConversationsAction();
-        if (cancelled || !Array.isArray(res)) return;
-
-        const counts = res.reduce((acc: Record<string, number>, conv: any) => {
-          if (conv?.pedido?.id) {
-            acc[conv.pedido.id] = Number(conv.unreadCount) || 0;
-          }
-          return acc;
-        }, {});
-
-        setUnreadChatCounts(counts);
-      } catch (error) {
-        log.error("Error loading order unread counts:", error);
-      }
-    };
-
-    loadUnreadCounts();
-    const interval = setInterval(loadUnreadCounts, 15000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [orders]);
 
   const handleCancelOrder = async (orderId: string) => {
     setCancelingId(orderId);
     try {
-      const result = await cancelUserOrderAction(orderId);
-      if (result && "error" in result) {
-        toast.error("Error", { description: result.error });
-      } else {
-        toast.success("Pedido cancelado", { description: "Tu pedido ha sido cancelado exitosamente." });
-        setOrders((prev) =>
-          prev.map((o) => (o.id === orderId ? { ...o, estado: PedidoEstado.CANCELADO } : o))
-        );
-      }
+      await onCancelOrder(orderId);
+      toast.success("Pedido cancelado", { description: "Tu pedido ha sido cancelado exitosamente." });
     } catch (error) {
       toast.error("Error", { description: "Hubo un problema al cancelar el pedido." });
     } finally {
@@ -159,13 +101,8 @@ export const OrdersList = () => {
   const handleDeleteOrder = async (orderId: string) => {
     setDeletingId(orderId);
     try {
-      const result = await deleteUserOrderAction(orderId);
-      if (result && "error" in result) {
-        toast.error("Error", { description: result.error });
-      } else {
-        toast.success("Pedido eliminado", { description: "El pedido ha sido eliminado permanentemente." });
-        setOrders((prev) => prev.filter((o) => o.id !== orderId));
-      }
+      await onDeleteOrder(orderId);
+      toast.success("Pedido eliminado", { description: "El pedido ha sido eliminado permanentemente." });
     } catch (error) {
       toast.error("Error", { description: "Hubo un problema al eliminar el pedido." });
     } finally {
@@ -194,9 +131,6 @@ export const OrdersList = () => {
         id: "repeat-order-toast",
         description: "Serás redirigido al carrito..."
       });
-      setTimeout(() => {
-        router.push("/cart");
-      }, 1000);
     } else {
       toast.error("No se pudieron agregar los productos al carrito", { id: "repeat-order-error" });
       setRepeatingId(null);

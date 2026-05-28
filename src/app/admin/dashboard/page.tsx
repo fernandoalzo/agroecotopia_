@@ -22,16 +22,35 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSocket } from "@/frontend/context/SocketContext";
 import {
+  getPaginatedProductsAction,
+  searchProductsAction,
+  getCategoryCountsAction,
+  createProductAction,
+  createStoreProductAction,
+  updateProductAction,
+  updateStoreProductAction,
+  deleteProductAction,
+  deleteStoreProductAction,
+  getCategoriesAction,
+} from "@/backend/modules/product/product.actions";
+import {
   getAllRequestsAction,
   approveRequestAction,
   rejectRequestAction,
   getPendingRequestsAction
 } from "@/backend/modules/store/store.actions";
+import {
+  getPaginatedOrdersAction,
+  getOrderStatusCountsAction,
+  updateOrderStatusAction,
+} from "@/backend/modules/orders/orders.actions";
 import { getAdminConversations } from "@/backend/modules/chat/chat.actions";
 import { AdminChatPageContent } from "@/app/admin/chat/page";
 import { useProductsLogic } from "@/frontend/hooks/useProductsLogic";
+import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import logger from "@/utils/logger";
 import { Store } from "lucide-react";
+import { getConversationUnreadCount } from "@/frontend/lib/chatUnread";
 
 const log = logger.child();
 
@@ -57,8 +76,27 @@ function AdminDashboardPageContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingStoresCount, setPendingStoresCount] = useState(0);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [orderStatusCounts, setOrderStatusCounts] = useState<Record<string, number>>({ ALL: 0 });
+  const [orderStatusFilter, setOrderStatusFilter] = useState<"ALL" | any>("ALL");
+  const [orderSearchQuery, setOrderSearchQuery] = useState("");
+  const [orderCurrentPage, setOrderCurrentPage] = useState(1);
+  const [orderTotalPages, setOrderTotalPages] = useState(1);
+  const [orderTotalCount, setOrderTotalCount] = useState(0);
 
-  const { state: productState, actions: productActions } = useProductsLogic();
+  const { state: productState, actions: productActions } = useProductsLogic(undefined, true, {
+    getCategoriesAction,
+    getCategoryCountsAction,
+    getPaginatedProductsAction,
+    searchProductsAction,
+    createProductAction,
+    createStoreProductAction,
+    updateProductAction,
+    updateStoreProductAction,
+    deleteProductAction,
+    deleteStoreProductAction,
+  });
   const loadStoreRequests = async (page: number, search?: string): Promise<StoreRequestsResponse> => {
     const result = await getAllRequestsAction(page, search);
 
@@ -86,7 +124,6 @@ function AdminDashboardPageContent() {
   };
 
   const isAdmin = session?.user?.role === "admin";
-  const userId = session?.user?.id;
 
   // Protect route
   useEffect(() => {
@@ -99,42 +136,29 @@ function AdminDashboardPageContent() {
   }, [status, isAdmin, router]);
 
   // Track unread chat count
-  useEffect(() => {
+  const refreshUnread = async () => {
     if (!isAdmin || activeTab === "chat") {
       setUnreadCount(0);
       return;
     }
-    let isCancelled = false;
 
-    const loadUnread = async () => {
-      try {
-        const res = await getAdminConversations();
-        if (!isCancelled && res && !("error" in res)) {
-          const total = res.reduce((acc: number, conv: any) => acc + (conv.unreadCount || 0), 0);
-          setUnreadCount(total);
-        }
-      } catch (err) {
-        log.error("Error loading dashboard unread count:", err);
+    try {
+      const res = await getAdminConversations();
+      if (res && !("error" in res)) {
+        const total = res.reduce((acc: number, conv: any) => acc + getConversationUnreadCount(conv), 0);
+        setUnreadCount(total);
       }
-    };
-
-    loadUnread();
-    const interval = setInterval(loadUnread, 15000);
-
-    if (socket) {
-      socket.on("new_message_notification", loadUnread);
-      socket.on("conversation_deleted", loadUnread);
+    } catch (err) {
+      log.error("Error loading dashboard unread count:", err);
     }
+  };
 
-    return () => {
-      isCancelled = true;
-      clearInterval(interval);
-      if (socket) {
-        socket.off("new_message_notification", loadUnread);
-        socket.off("conversation_deleted", loadUnread);
-      }
-    };
-  }, [isAdmin, userId, socket, activeTab]);
+  useSocketRefresh({
+    socket,
+    enabled: isAdmin && activeTab !== "chat",
+    refresh: refreshUnread,
+    intervalMs: 15000,
+  });
 
   // Track pending store requests
   useEffect(() => {
@@ -164,6 +188,35 @@ function AdminDashboardPageContent() {
       clearInterval(interval);
     };
   }, [isAdmin, activeTab]);
+
+  useEffect(() => {
+    if (!isAdmin || activeTab !== "orders") return;
+    let cancelled = false;
+    const loadOrders = async () => {
+      setOrdersLoading(true);
+      const result = await getPaginatedOrdersAction({
+        page: orderCurrentPage,
+        limit: 10,
+        estado: orderStatusFilter === "ALL" ? undefined : orderStatusFilter,
+        search: orderSearchQuery || undefined,
+      });
+      const counts = await getOrderStatusCountsAction();
+      if (cancelled) return;
+      if (result && "orders" in result) {
+        setOrders(result.orders as any[]);
+        setOrderTotalPages(result.totalPages);
+        setOrderTotalCount(result.totalCount);
+      }
+      if (counts && typeof counts === "object") {
+        const typed = counts as Record<string, number>;
+        const total = Object.values(typed).reduce((acc, val) => acc + (Number(val) || 0), 0);
+        setOrderStatusCounts({ ALL: total, ...typed });
+      }
+      setOrdersLoading(false);
+    };
+    loadOrders();
+    return () => { cancelled = true; };
+  }, [isAdmin, activeTab, orderCurrentPage, orderStatusFilter, orderSearchQuery]);
 
   const [isMobile, setIsMobile] = useState(false);
 
@@ -358,7 +411,24 @@ function AdminDashboardPageContent() {
                 transition={{ duration: 0.2 }}
                 className="p-4 md:p-8"
               >
-                <AdminOrdersList />
+                <AdminOrdersList
+                  orders={orders}
+                  loading={ordersLoading}
+                  totalPages={orderTotalPages}
+                  totalCount={orderTotalCount}
+                  statusCounts={orderStatusCounts}
+                  currentPage={orderCurrentPage}
+                  statusFilter={orderStatusFilter}
+                  searchQuery={orderSearchQuery}
+                  onPageChange={setOrderCurrentPage}
+                  onSearchChange={setOrderSearchQuery}
+                  onStatusFilterChange={setOrderStatusFilter}
+                  onUpdateStatus={async (orderId, newStatus) => {
+                    const result = await updateOrderStatusAction(orderId, newStatus);
+                    if (result && "error" in result) return false;
+                    return true;
+                  }}
+                />
               </motion.div>
             )}
 

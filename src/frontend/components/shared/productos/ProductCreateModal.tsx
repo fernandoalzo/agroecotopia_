@@ -8,6 +8,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { productSchema, ProductFormValues } from "./schemas/productSchema";
 import { Store } from "lucide-react";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/frontend/components/shared/productos/ProductCreateModal.tsx");
 
 interface ProductCreateModalProps {
   onClose: () => void;
@@ -119,7 +122,7 @@ export const ProductCreateModal = ({
         onClose();
       }
     } catch (error) {
-      console.error(error);
+      log.error("Error submitting product create modal:", error);
     } finally {
       setLoading(false);
     }

@@ -33,14 +33,15 @@ export interface Message {
 export interface ChatWidgetProps {
   forceShow?: boolean;
   targetUserId?: string;
+  chatDeps?: Parameters<typeof useChatWidget>[3];
 }
 
 import { usePathname } from "next/navigation";
 
-export default function ChatWidget({ forceShow = false, targetUserId }: ChatWidgetProps = {}) {
+export default function ChatWidget({ forceShow = false, targetUserId, chatDeps }: ChatWidgetProps = {}) {
   const pathname = usePathname();
   const shouldEnableChat = !(pathname?.startsWith("/comunidad") || pathname?.startsWith("/mi-tienda") || pathname?.startsWith("/pedidos/"));
-  const chat = useChatWidget(forceShow, targetUserId, shouldEnableChat);
+  const chat = useChatWidget(forceShow, targetUserId, shouldEnableChat, chatDeps);
 
   if (!chat.isClient || chat.status !== "authenticated") return null;
   if (!forceShow && (chat.isRouteAdmin || chat.isAdminUser)) return null;

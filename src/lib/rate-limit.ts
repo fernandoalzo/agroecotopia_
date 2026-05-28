@@ -1,4 +1,5 @@
 import { RateLimiterMemory } from "rate-limiter-flexible";
+import { config } from "@/config/config";
 
 declare global {
   var _globalRateLimiter: RateLimiterMemory | undefined;
@@ -30,7 +31,7 @@ export const socketRateLimiter =
     duration: 1,
   });
 
-if (process.env.NODE_ENV !== "production") {
+if (config.isDevelopment) {
   globalThis._globalRateLimiter = globalRateLimiter;
   globalThis._authRateLimiter = authRateLimiter;
   globalThis._socketRateLimiter = socketRateLimiter;

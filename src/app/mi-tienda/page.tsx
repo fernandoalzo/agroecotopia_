@@ -30,6 +30,24 @@ import {
   getSellerOrderConversationsAction,
   markAsRead,
 } from "@/backend/modules/chat/chat.actions";
+import {
+  getPaginatedProductsAction,
+  searchProductsAction,
+  getCategoryCountsAction,
+  createProductAction,
+  createStoreProductAction,
+  updateProductAction,
+  updateStoreProductAction,
+  deleteProductAction,
+  deleteStoreProductAction,
+  getCategoriesAction,
+} from "@/backend/modules/product/product.actions";
+import {
+  getStoreOrdersAction,
+  getStoreOrderStatusCountsAction,
+  updateStoreOrderStatusAction,
+} from "@/backend/modules/orders/orders.actions";
+import { getAllActiveStoresListAction } from "@/backend/modules/store/store.actions";
 import { useProductsLogic } from "@/frontend/hooks/useProductsLogic";
 import { toast } from "sonner";
 import logger from "@/utils/logger";
@@ -60,11 +78,31 @@ function SellerDashboardContent() {
   const [orderChat, setOrderChat] = useState<{ conversation: OrderConversation; messages: Message[] } | null>(null);
   const [orderChatUnreadCounts, setOrderChatUnreadCounts] = useState<Record<string, number>>({});
   const [openingChatOrderId, setOpeningChatOrderId] = useState<string | null>(null);
+  const [storeOrders, setStoreOrders] = useState<AdminOrder[]>([]);
+  const [storeOrdersLoading, setStoreOrdersLoading] = useState(true);
+  const [storeOrderStatusCounts, setStoreOrderStatusCounts] = useState<Record<string, number>>({ ALL: 0 });
+  const [storeOrderStatusFilter, setStoreOrderStatusFilter] = useState<any>("ALL");
+  const [storeOrderSearchQuery, setStoreOrderSearchQuery] = useState("");
+  const [storeOrderCurrentPage, setStoreOrderCurrentPage] = useState(1);
+  const [storeOrderTotalPages, setStoreOrderTotalPages] = useState(1);
+  const [storeOrderTotalCount, setStoreOrderTotalCount] = useState(0);
   const isSeller = session?.user?.role === "seller" || session?.user?.role === "admin";
   
   const activeStore = stores.find(s => s.id === activeStoreId) || null;
 
-  const { state: productState, actions: productActions } = useProductsLogic(activeStoreId || undefined, !!activeStoreId);
+  const { state: productState, actions: productActions } = useProductsLogic(activeStoreId || undefined, !!activeStoreId, {
+    getCategoriesAction,
+    getAllActiveStoresListAction,
+    getCategoryCountsAction,
+    getPaginatedProductsAction,
+    searchProductsAction,
+    createProductAction,
+    createStoreProductAction,
+    updateProductAction,
+    updateStoreProductAction,
+    deleteProductAction,
+    deleteStoreProductAction,
+  });
 
   // Protect route
   useEffect(() => {
@@ -171,6 +209,35 @@ function SellerDashboardContent() {
       clearInterval(interval);
     };
   }, [activeStore?.id, isSeller]);
+
+  useEffect(() => {
+    if (!activeStore?.id || !isSeller || activeTab !== "orders") return;
+    let cancelled = false;
+    const load = async () => {
+      setStoreOrdersLoading(true);
+      const result = await getStoreOrdersAction(activeStore.id, {
+        page: storeOrderCurrentPage,
+        limit: 10,
+        estado: storeOrderStatusFilter === "ALL" ? undefined : storeOrderStatusFilter,
+        search: storeOrderSearchQuery || undefined,
+      });
+      const counts = await getStoreOrderStatusCountsAction(activeStore.id);
+      if (cancelled) return;
+      if (result && "orders" in result) {
+        setStoreOrders(result.orders as AdminOrder[]);
+        setStoreOrderTotalPages(result.totalPages);
+        setStoreOrderTotalCount(result.totalCount);
+      }
+      if (counts && typeof counts === "object") {
+        const typed = counts as Record<string, number>;
+        const total = Object.values(typed).reduce((a, b) => a + (Number(b) || 0), 0);
+        setStoreOrderStatusCounts({ ALL: total, ...typed });
+      }
+      setStoreOrdersLoading(false);
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [activeStore?.id, isSeller, activeTab, storeOrderCurrentPage, storeOrderStatusFilter, storeOrderSearchQuery]);
 
   // Update tab in URL
   const handleTabChange = (tab: SellerTab) => {
@@ -435,12 +502,27 @@ function SellerDashboardContent() {
               >
                 {activeTab === "orders" && activeStore && (
                   <AdminOrdersList
-                  storeId={activeStore.id}
+                  orders={storeOrders}
+                  loading={storeOrdersLoading}
+                  totalPages={storeOrderTotalPages}
+                  totalCount={storeOrderTotalCount}
+                  statusCounts={storeOrderStatusCounts}
+                  currentPage={storeOrderCurrentPage}
+                  statusFilter={storeOrderStatusFilter}
+                  searchQuery={storeOrderSearchQuery}
+                  onPageChange={setStoreOrderCurrentPage}
+                  onSearchChange={setStoreOrderSearchQuery}
+                  onStatusFilterChange={setStoreOrderStatusFilter}
+                  onUpdateStatus={async (orderId, newStatus) => {
+                    const result = await updateStoreOrderStatusAction(activeStore.id, orderId, newStatus);
+                    if (result && "error" in result) return false;
+                    return true;
+                  }}
                   emptyMessage="No hay pedidos para los productos de esta tienda con los filtros aplicados."
                   onOpenOrderChat={handleOpenOrderChat}
                   unreadChatCounts={orderChatUnreadCounts}
                   openingChatOrderId={openingChatOrderId}
-                />
+                  />
                 )}
                 {activeTab === "products" && activeStore && (
                   <ProductsList

@@ -13,13 +13,21 @@ import { ThemeProvider } from "next-themes";
 import { useState, Suspense, useEffect } from "react";
 import ScrollToAnchor from "@/components/ScrollToAnchor";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useSocket } from "@/frontend/context/SocketContext";
+import { getAdminConversations, getOrCreateMyConversation, getConversationMessages, markAsRead, deleteConversationAction, getOrCreateConversationForAdmin } from "@/backend/modules/chat/chat.actions";
+import logger from "@/utils/logger";
+import { getConversationUnreadCount } from "@/frontend/lib/chatUnread";
+import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
+
+const log = logger.child("src/app/Providers.tsx");
 
 function PageFocusTracker() {
   const pathname = usePathname();
 
   useEffect(() => {
     const handleFocus = () => {
-      console.log(`[Page Focus] Estoy en la página: ${pathname}`);
+      log.info("Page focus changed", { pathname });
     };
 
     // Log on initial load / pathname navigation
@@ -32,6 +40,47 @@ function PageFocusTracker() {
   }, [pathname]);
 
   return null;
+}
+
+function AppChromeData() {
+  const { data: session } = useSession();
+  const { socket } = useSocket();
+  const pathname = usePathname();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const refreshUnread = async () => {
+    if (session?.user?.role !== "admin" || pathname?.startsWith("/admin/dashboard")) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const res = await getAdminConversations();
+    if (Array.isArray(res)) {
+      setUnreadCount(res.reduce((acc: number, conv: any) => acc + getConversationUnreadCount(conv), 0));
+    }
+  };
+
+  useSocketRefresh({
+    socket,
+    enabled: session?.user?.role === "admin" && !pathname?.startsWith("/admin/dashboard"),
+    refresh: refreshUnread,
+    intervalMs: 15000,
+  });
+
+  return (
+    <>
+      <GlobalNavbar unreadCount={unreadCount} />
+      <ChatWidget
+        chatDeps={{
+          getOrCreateMyConversation,
+          getConversationMessages,
+          markAsRead,
+          deleteConversationAction,
+          getOrCreateConversationForAdmin,
+        }}
+      />
+    </>
+  );
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -49,9 +98,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
                     <ScrollToAnchor />
                   </Suspense>
                   <PageFocusTracker />
-                  <GlobalNavbar />
+                  <AppChromeData />
                   {children}
-                  <ChatWidget />
                   <Sonner />
                 </TooltipProvider>
               </SocketProvider>

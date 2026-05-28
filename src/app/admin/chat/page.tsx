@@ -16,40 +16,17 @@ import { cn } from "@/lib/utils";
 import logger from "@/utils/logger";
 import { AdminChatView } from "@/frontend/components/admin/chat/AdminChatView";
 import { AccessDeniedView } from "@/frontend/components/admin/chat/AccessDeniedView";
+import { getConversationUnreadCount } from "@/frontend/lib/chatUnread";
+import type { Conversation, User } from "@/frontend/components/admin/chat/types";
 
 const log = logger.child("src/app/admin/chat/page.tsx");
 
 type AdminConversationsResult = Awaited<ReturnType<typeof getAdminConversations>>;
+type AdminUsersListResult = Awaited<ReturnType<typeof getAdminUsersList>>;
 
-let adminConversationsBootstrap:
-  | {
-    userId: string;
-    expiresAt: number;
-    promise: Promise<AdminConversationsResult>;
-  }
-  | null = null;
-
-function getBootstrappedAdminConversations(userId: string) {
-  const now = Date.now();
-  if (adminConversationsBootstrap && adminConversationsBootstrap.userId === userId && adminConversationsBootstrap.expiresAt > now) {
-    return adminConversationsBootstrap.promise;
-  }
-
-  const promise = getAdminConversations();
-  adminConversationsBootstrap = {
-    userId,
-    expiresAt: now + 5000,
-    promise,
-  };
-
-  promise.catch(() => {
-    if (adminConversationsBootstrap?.promise === promise) {
-      adminConversationsBootstrap = null;
-    }
-  });
-
-  return promise;
-}
+const isErrorResult = (value: unknown): value is { error: string } => {
+  return typeof value === "object" && value !== null && "error" in value;
+};
 
 export function AdminChatPageContent({ embedded = false }: { embedded?: boolean } = {}) {
   const { data: session, status } = useSession();
@@ -59,8 +36,8 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
   const isEmbedded = embedded || searchParams.get("embedded") === "true";
   const isDashboardMobileEntry = searchParams.get("from") === "dashboard";
   // Main chat state
-  const [conversations, setConversations] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
-  const [activeConv, setActiveConv] = useState<any>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConv, setActiveConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoadingConvs, setIsLoadingConvs] = useState(true);
@@ -76,7 +53,7 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
   const [keyboardInset, setKeyboardInset] = useState(0);
   // User search and navigation states
   const [sidebarTab, setSidebarTab] = useState<"chats" | "users">("chats");
-  const [usersList, setUsersList] = useState<any[]>([]);
+  const [usersList, setUsersList] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [usersPage, setUsersPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -92,6 +69,7 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
   const messagesScrollRef = useRef<HTMLDivElement>(null);
   const sidebarScrollRef = useRef<HTMLDivElement>(null);
   const hasInitialScrolledRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   const handleCopy = (id: string, text: string) => {
     navigator.clipboard.writeText(text);
@@ -99,10 +77,65 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const decryptConversationList = async (list: Conversation[]) => {
+    return Promise.all(
+      list.map(async (conv) => {
+        const lastMsg = conv.messages?.[0];
+        if (!lastMsg || !lastMsg.isEncrypted) {
+          return { ...conv, unreadCount: getConversationUnreadCount(conv) };
+        }
+
+        try {
+          const targetId = lastMsg.senderId === sessionUserId ? conv.userId : lastMsg.senderId;
+          const decryptedContent = await SignalService.decryptMessage(
+            targetId,
+            lastMsg.content,
+            lastMsg.encryptionType || 1
+          );
+          return {
+            ...conv,
+            unreadCount: getConversationUnreadCount(conv),
+            messages: [{ ...lastMsg, content: decryptedContent }],
+          };
+        } catch {
+          return {
+            ...conv,
+            unreadCount: getConversationUnreadCount(conv),
+            messages: [{ ...lastMsg, content: "🔒 Mensaje cifrado" }],
+          };
+        }
+      })
+    );
+  };
+
+  const refreshConversations = async (withLoading = false) => {
+    if (withLoading) setIsLoadingConvs(true);
+    try {
+      const res = (await getAdminConversations()) as AdminConversationsResult;
+      if (!isMountedRef.current) return;
+      log.debug("DEBUG: Admin conversations loaded:", JSON.stringify(res, null, 2));
+      if (res && !isErrorResult(res)) {
+        const decryptedConversations = await decryptConversationList(res);
+        if (isMountedRef.current) setConversations(decryptedConversations);
+      }
+    } catch (err) {
+      log.error("Error loading admin conversations:", err);
+    } finally {
+      if (withLoading && isMountedRef.current) setIsLoadingConvs(false);
+    }
+  };
+
   // Reset initial scroll state when changing active conversation
   useEffect(() => {
     hasInitialScrolledRef.current = false;
   }, [activeConv?.id]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
 
   const conversationsRef = useRef(conversations);
@@ -223,8 +256,6 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
   useEffect(() => {
     if (status !== "authenticated" || sessionUserRole !== "admin" || !sessionUserId) return;
 
-    let isCancelled = false;
-
     const initE2EE = async () => {
       try {
         signalStore.setUserId(sessionUserId);
@@ -232,58 +263,25 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
         if (didRegister) {
           hasNewKeysRef.current = true;
         }
-        if (!isCancelled) setIsE2EEReady(config.chat.enableE2EE);
+        if (isMountedRef.current) setIsE2EEReady(config.chat.enableE2EE);
       } catch (err) {
         log.error("Error al registrar dispositivo E2EE Admin:", err);
       }
     };
 
-    const loadConversations = async () => {
-      try {
-        const res = await getBootstrappedAdminConversations(sessionUserId);
-        if (isCancelled) return;
-        log.debug("DEBUG: Admin conversations loaded:", JSON.stringify(res, null, 2));
-        if (res && !("error" in res)) {
-          // Decrypt the last message of each conversation
-          const decryptedConversations = await Promise.all(res.map(async (conv: any) => {
-            const lastMsg = conv.messages?.[0];
-            if (lastMsg && lastMsg.isEncrypted) {
-              try {
-                const targetId = lastMsg.senderId === sessionUserId ? conv.userId : lastMsg.senderId;
-                const decryptedContent = await SignalService.decryptMessage(targetId, lastMsg.content, lastMsg.encryptionType || 1);
-                return {
-                  ...conv,
-                  messages: [{ ...lastMsg, content: decryptedContent }]
-                };
-              } catch (e) {
-                return {
-                  ...conv,
-                  messages: [{ ...lastMsg, content: "🔒 Mensaje cifrado" }]
-                };
-              }
-            }
-            return conv;
-          }));
-          if (!isCancelled) setConversations(decryptedConversations);
-        }
-      } catch (err) {
-        log.error("Error loading admin conversations:", err);
-      } finally {
-        if (!isCancelled) setIsLoadingConvs(false);
-      }
-    };
-
     const initializeAdminChat = async () => {
       await initE2EE();
-      if (!isCancelled) {
-        await loadConversations();
-      }
+      await refreshConversations(true);
     };
 
     initializeAdminChat();
 
+    const refreshInterval = window.setInterval(() => {
+      void refreshConversations();
+    }, 10000);
+
     return () => {
-      isCancelled = true;
+      window.clearInterval(refreshInterval);
     };
   }, [status, sessionUserId, sessionUserRole]);
 
@@ -294,8 +292,8 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
     const loadUsers = async () => {
       setIsLoadingUsers(true);
       try {
-        const res = await getAdminUsersList(searchQuery, usersPage);
-        if (res && !("error" in res)) {
+        const res = (await getAdminUsersList(searchQuery, usersPage)) as AdminUsersListResult;
+        if (res && !isErrorResult(res)) {
           setUsersList(res.users);
           setTotalPages(res.totalPages);
           setTotalUsers(res.totalCount);
@@ -435,24 +433,7 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
         const index = prev.findIndex((c) => c.id === conversationId);
         if (index === -1) {
           // If we don't have this conversation in list, reload and decrypt all of them
-          getAdminConversations().then(async (res) => {
-            if (res && !("error" in res)) {
-              const decrypted = await Promise.all(res.map(async (c: any) => {
-                const lm = c.messages?.[0];
-                if (lm && lm.isEncrypted) {
-                  try {
-                    const tId = lm.senderId === sessionUserId ? c.userId : lm.senderId;
-                    const content = await SignalService.decryptMessage(tId, lm.content, lm.encryptionType || 1);
-                    return { ...c, messages: [{ ...lm, content }] };
-                  } catch {
-                    return { ...c, messages: [{ ...lm, content: "🔒 Mensaje cifrado" }] };
-                  }
-                }
-                return c;
-              }));
-              setConversations(decrypted);
-            }
-          });
+          void refreshConversations();
           return prev;
         }
 
@@ -465,7 +446,7 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
 
         // Increment unread count if it's not the active conversation and not sent by me
         const currentActiveConv = activeConvRef.current;
-        if ((!currentActiveConv || currentActiveConv.id !== conversationId) && message.senderRole !== "admin") {
+        if ((!currentActiveConv || currentActiveConv.id !== conversationId) && message.senderId !== sessionUserId) {
           conv.unreadCount = (conv.unreadCount || 0) + 1;
         }
 
@@ -483,7 +464,7 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
         });
 
         // Mark as read immediately
-        if (message.senderRole !== "admin") {
+        if (message.senderId !== sessionUserId) {
           markAsRead(conversationId);
         }
       }
@@ -678,8 +659,8 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
     setIsDeleting(true);
     try {
       const res = await deleteConversationAction(activeConv.id);
-      if (res && "error" in (res as any)) {
-        log.error("Error deleting conversation:", (res as any).error);
+      if (isErrorResult(res)) {
+        log.error("Error deleting conversation:", res.error);
       } else {
         // Emit socket event to notify other participants in real-time
         socket.emit("delete_conversation", { conversationId: activeConv.id });
@@ -702,7 +683,7 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
     setIsLoadingMsgs(true);
     try {
       const res = await getOrCreateConversationForAdmin(targetUserId);
-      if (res && !("error" in res)) {
+      if (res && !isErrorResult(res)) {
         // Find if this conversation is already in our list
         const existingConv = conversations.find((c) => c.id === res.id);
 

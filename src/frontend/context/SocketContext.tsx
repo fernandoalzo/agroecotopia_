@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { io as ClientIO, Socket } from "socket.io-client";
 import logger from "@/utils/logger";
+import { config } from "@/config/config";
 const log = logger.child("src/frontend/context/SocketContext.tsx");
 
 type SocketContextType = {
@@ -26,7 +27,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     if (typeof window === "undefined") return;
 
     // Default to the current page origin (same port) since Next.js and Socket.IO are unified
-    const socketUrl = process.env.NEXT_PUBLIC_WS_URL || window.location.origin;
+    const socketUrl = config.websocket.url || window.location.origin;
     log.info("Connecting to socket server at:", socketUrl);
 
     // Connect to the unified socket.io server

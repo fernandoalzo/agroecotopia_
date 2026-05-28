@@ -1,4 +1,5 @@
 import { Message } from "@/frontend/components/chat/ChatWidget";
+import type { Session } from "next-auth";
 
 export interface Conversation {
   id: string;
@@ -16,11 +17,12 @@ export interface User {
   id: string;
   name?: string | null;
   email?: string | null;
+  role?: string | null;
 }
 
 export interface AdminChatViewProps {
   status: "loading" | "authenticated" | "unauthenticated";
-  session: any;
+  session: Session | null;
   isConnected: boolean;
   isEmbedded: boolean;
   viewportHeight: string;

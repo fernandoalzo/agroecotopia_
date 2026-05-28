@@ -2,6 +2,7 @@ import React from "react";
 import { User } from "lucide-react";
 import { Conversation } from "./types";
 import { Loading } from "@/components/ui/Loading";
+import { getConversationUnreadCount } from "@/frontend/lib/chatUnread";
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -37,7 +38,7 @@ export function ConversationList({
       {conversations.map((conv) => {
         const isActive = activeConv?.id === conv.id;
         const lastMsg = conv.messages?.[0];
-        const hasUnread = conv.unreadCount > 0 && !isActive;
+        const badgeCount = isActive ? 0 : getConversationUnreadCount(conv);
 
         return (
           <button
@@ -85,13 +86,13 @@ export function ConversationList({
                 <p
                   className={`text-xs truncate ${
                     isActive ? "text-primary-foreground/90 font-medium" : "text-muted-foreground"
-                  } ${hasUnread && !isActive ? "text-foreground font-bold" : ""}`}
+                  } ${badgeCount > 0 ? "text-foreground font-bold" : ""}`}
                 >
                   {lastMsg?.content || "Inicia una conversación..."}
                 </p>
-                {hasUnread && (
+                {badgeCount > 0 && (
                   <span className="flex-shrink-0 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold px-1.5 animate-pulse shadow-sm shadow-red-500/20 bg-red-500 text-white">
-                    {conv.unreadCount}
+                    {badgeCount}
                   </span>
                 )}
               </div>

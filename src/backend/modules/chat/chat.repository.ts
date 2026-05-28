@@ -82,7 +82,7 @@ export class ChatRepository {
     });
   }
 
-  async findAllConversations() {
+  async findAllConversations(adminUserId: string) {
     log.debug("Obteniendo todas las conversaciones con último mensaje y conteo de no leídos.");
     const conversations = await prisma.conversation.findMany({
       where: {
@@ -114,7 +114,9 @@ export class ChatRepository {
           where: {
             conversationId: conv.id,
             isRead: false,
-            senderRole: "user",
+            senderId: {
+              not: adminUserId,
+            },
           },
         });
         return {
@@ -219,7 +221,9 @@ export class ChatRepository {
           where: {
             conversationId: conv.id,
             isRead: false,
-            senderId: { not: userId },
+            senderId: {
+              not: userId,
+            },
           },
         }),
       }))
@@ -369,7 +373,9 @@ export class ChatRepository {
           where: {
             conversationId: conv.id,
             isRead: false,
-            senderId: { not: sellerId },
+            senderId: {
+              not: sellerId,
+            },
           },
         }),
       }))

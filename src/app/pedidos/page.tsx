@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -13,6 +13,8 @@ import { AdminOrdersList } from "@/components/admin/pedidos/AdminOrdersList";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/Loading";
 import { cn } from "@/lib/utils";
+import { getUserOrdersAction, cancelUserOrderAction, deleteUserOrderAction } from "@/backend/modules/orders/orders.actions";
+import { getUserOrderConversationsAction } from "@/backend/modules/chat/chat.actions";
 
 import { config } from "@/config/config";
 
@@ -21,6 +23,9 @@ export default function PedidosPage() {
   const router = useRouter();
   const { t } = useLanguage();
   const isAdmin = session?.user?.role === "admin";
+  const [orders, setOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [unreadChatCounts, setUnreadChatCounts] = useState<Record<string, number>>({});
 
   // Protected route logic
   useEffect(() => {
@@ -32,6 +37,67 @@ export default function PedidosPage() {
       router.replace("/admin/dashboard");
     }
   }, [status, isAdmin, router]);
+
+  useEffect(() => {
+    if (status !== "authenticated" || isAdmin) return;
+
+    let cancelled = false;
+
+    const loadOrders = async () => {
+      try {
+        setOrdersLoading(true);
+        const result = await getUserOrdersAction();
+        if (!cancelled && Array.isArray(result)) {
+          setOrders(result as any[]);
+        }
+      } finally {
+        if (!cancelled) setOrdersLoading(false);
+      }
+    };
+
+    loadOrders();
+    return () => {
+      cancelled = true;
+    };
+  }, [status, isAdmin]);
+
+  useEffect(() => {
+    if (status !== "authenticated" || isAdmin || orders.length === 0) {
+      setUnreadChatCounts({});
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadUnreadCounts = async () => {
+      const res = await getUserOrderConversationsAction();
+      if (cancelled || !Array.isArray(res)) return;
+      const counts = res.reduce((acc: Record<string, number>, conv: any) => {
+        if (conv?.pedido?.id) acc[conv.pedido.id] = Number(conv.unreadCount) || 0;
+        return acc;
+      }, {});
+      setUnreadChatCounts(counts);
+    };
+
+    loadUnreadCounts();
+    const interval = setInterval(loadUnreadCounts, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [status, isAdmin, orders]);
+
+  const handleCancelOrder = async (orderId: string) => {
+    const result = await cancelUserOrderAction(orderId);
+    if (result && "error" in result) throw new Error(result.error);
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, estado: "CANCELADO" } : o)));
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    const result = await deleteUserOrderAction(orderId);
+    if (result && "error" in result) throw new Error(result.error);
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+  };
 
   if (status === "loading") {
     return <Loading fullScreen />;
@@ -102,7 +168,15 @@ export default function PedidosPage() {
             <div className="hidden md:block absolute -top-24 -right-24 h-64 w-64 bg-primary/5 blur-3xl rounded-full -z-10" />
             <div className="hidden md:block absolute -bottom-24 -left-24 h-64 w-64 bg-accent/5 blur-3xl rounded-full -z-10" />
             
-            {isAdmin ? <AdminOrdersList /> : <OrdersList />}
+            {isAdmin ? null : (
+              <OrdersList
+                orders={orders}
+                loading={ordersLoading}
+                unreadChatCounts={unreadChatCounts}
+                onCancelOrder={handleCancelOrder}
+                onDeleteOrder={handleDeleteOrder}
+              />
+            )}
           </div>
         </div>
       </main>

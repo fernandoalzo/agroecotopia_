@@ -4,23 +4,31 @@ import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { useLanguage } from "@/context/LanguageContext";
-import {
-    getOrCreateMyConversation,
-    getConversationMessages,
-    markAsRead,
-    deleteConversationAction,
-    getOrCreateConversationForAdmin,
-    sendAdvisorOrderMessagesAction,
-} from "@/backend/modules/chat/chat.actions";
 import { SignalService } from "@/frontend/lib/signalService";
 import { signalStore } from "@/frontend/lib/signalStore";
 import { config } from "@/config/config";
 import logger from "@/utils/logger";
 import type { Message } from "./ChatWidget";
+import { getUnreadMessageCountForUser, isUnreadMessageForUser } from "@/frontend/lib/chatUnread";
 
 const log = logger.child("src/frontend/components/chat/useChatWidget.ts");
 
-export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled = true) {
+type ChatWidgetDeps = {
+    getOrCreateMyConversation: () => Promise<any>;
+    getConversationMessages: (conversationId: string) => Promise<any>;
+    markAsRead: (conversationId: string) => Promise<any>;
+    deleteConversationAction: (conversationId: string) => Promise<any>;
+    getOrCreateConversationForAdmin: (targetUserId: string) => Promise<any>;
+};
+
+export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled = true, deps?: Partial<ChatWidgetDeps>) {
+    const {
+        getOrCreateMyConversation,
+        getConversationMessages,
+        markAsRead,
+        deleteConversationAction,
+        getOrCreateConversationForAdmin,
+    } = deps || {};
     const { data: session, status } = useSession();
     const isAdminUser = session?.user?.role === "admin";
     const chatUserId = session?.user?.id;
@@ -177,8 +185,8 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
             try {
                 signalStore.setUserId(chatUserId);
                 const res = (isAdminUser && targetUserId)
-                    ? await getOrCreateConversationForAdmin(targetUserId)
-                    : await getOrCreateMyConversation();
+                    ? await getOrCreateConversationForAdmin?.(targetUserId)
+                    : await getOrCreateMyConversation?.();
 
                 if (isCancelled) return;
                 if (res && !("error" in res)) {
@@ -186,7 +194,7 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
                     if (isAdminUser && targetUserId && res.user) {
                         setTargetUserName(res.user.name || targetUserId);
                     }
-                    const msgsRes = await getConversationMessages(res.id);
+                    const msgsRes = await getConversationMessages?.(res.id);
                     if (isCancelled) return;
                     if (msgsRes && !("error" in msgsRes)) {
                         const decryptedMsgs = await Promise.all(msgsRes.map(async (m: Message) => {
@@ -219,11 +227,10 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
                         if (!isCancelled) {
                             setMessages(decryptedMsgs);
                             if (isOpen) {
-                                await markAsRead(res.id);
+                                await markAsRead?.(res.id);
                                 setUnreadCount(0);
                             } else {
-                                const unread = msgsRes.filter((m: Message) => !m.isRead && m.senderRole === "admin").length;
-                                setUnreadCount(unread);
+                                setUnreadCount(getUnreadMessageCountForUser(msgsRes, chatUserId));
                             }
                         }
                     }
@@ -299,8 +306,8 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
                 return [...prev, finalMessage];
             });
             if (isOpenRef.current) {
-                markAsRead(conversation.id);
-            } else if (message.senderRole === "admin") {
+                markAsRead?.(conversation.id);
+            } else if (isUnreadMessageForUser(message, chatUserId)) {
                 setUnreadCount((prev) => prev + 1);
             }
         };
@@ -365,12 +372,9 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
             const customEvent = e as CustomEvent;
             const { messages } = customEvent.detail;
 
-            const sendAdvisorMessage = async () => {
-                if (!Array.isArray(messages) || messages.length === 0) return;
-                await sendAdvisorOrderMessagesAction({ messages });
-            };
-
-            await sendAdvisorMessage();
+            if (Array.isArray(messages) && messages.length > 0) {
+                window.dispatchEvent(new CustomEvent("advisor_chat_message_missing_backend", { detail: { messages } }));
+            }
         };
 
         window.addEventListener("send_advisor_chat_message", handleAdvisorMessageEvent);
@@ -442,7 +446,7 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
         if (!conversation?.id || !socket) return;
         setIsDeleting(true);
         try {
-            const res = await deleteConversationAction(conversation.id);
+            const res = await deleteConversationAction?.(conversation.id);
             if (res && "error" in (res as any)) {
                 log.error("Error deleting user conversation:", (res as any).error);
             } else {

@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Footer from "@/components/Footer";
-import { Product } from "@/types";
 import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +31,7 @@ const categoryTranslations: Record<string, { es: string; en: string }> = {
 
 interface ProductsPageClientProps {
   initialData: {
-    products: Product[];
+    products: any[];
     total: number;
     totalPages: number;
   };

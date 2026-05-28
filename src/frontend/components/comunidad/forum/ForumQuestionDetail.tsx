@@ -23,6 +23,9 @@ interface ForumQuestionDetailProps {
 }
 
 import { answerSchema } from "../schemas/answer.schema";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/frontend/components/comunidad/forum/ForumQuestionDetail.tsx");
 
 export default function ForumQuestionDetail({ question, onBack, onRate, onAddAnswer, onEditAnswer, onDeleteAnswer, onDeleteQuestion, currentUserId, currentUserRole }: ForumQuestionDetailProps) {
   const { status } = useSession();
@@ -41,7 +44,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error("Error al copiar", err);
+      log.error("Error al copiar", err);
     }
   };
 

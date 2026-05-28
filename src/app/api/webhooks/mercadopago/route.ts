@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createHmac } from "crypto";
 import { paymentsService } from "@/backend/modules/payments";
 import logger from "@/utils/logger";
+import { config } from "@/config/config";
 
 const log = logger.child("src/app/api/webhooks/mercadopago/route.ts");
 
@@ -26,7 +27,7 @@ function verifyWebhookSignature(
   xRequestId: string | null,
   dataId: string | null
 ): boolean {
-  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+  const secret = config.mercadopago.webhookSecret;
 
   // Si no hay secret configurado, no podemos verificar
   if (!secret) {

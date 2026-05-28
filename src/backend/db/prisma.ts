@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import logger from "@/utils/logger";
 import { ensureDefaultAdminStore } from "./init";
+import { config } from "@/config/config";
 
 const log = logger.child("src/backend/db/prisma.ts");
 
@@ -33,7 +34,7 @@ if (isReused) {
 
 export default prisma;
 
-if (process.env.NODE_ENV !== "production") {
+if (config.isDevelopment) {
   globalThis.prismaGlobal = prisma;
   log.debug("Instancia de PrismaClient almacenada en globalThis (modo desarrollo).");
 }

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Message } from "@/frontend/components/chat/ChatWidget";
 import { Conversation } from "./types";
 import { Loading } from "@/components/ui/Loading";
+import { getFirstUnreadMessageIndex } from "@/frontend/lib/chatUnread";
 
 interface ChatMessageListProps {
   messagesScrollRef: React.RefObject<HTMLDivElement | null>;
@@ -51,7 +52,7 @@ export function ChatMessageList({
       ) : (
         <>
           {(() => {
-            const firstUnreadIndex = messages.findIndex((m) => !m.isRead && m.senderRole !== "admin");
+            const firstUnreadIndex = getFirstUnreadMessageIndex(messages);
             return messages.map((msg, idx) => {
               const isMe = msg.senderRole === "admin";
               const isFirstUnread = idx === firstUnreadIndex;

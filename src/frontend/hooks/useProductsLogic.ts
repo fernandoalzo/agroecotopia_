@@ -1,24 +1,42 @@
 import { useState, useEffect } from "react";
 import { Product } from "@prisma/client";
 import { toast } from "sonner";
-import {
-  getPaginatedProductsAction,
-  searchProductsAction,
-  getCategoryCountsAction,
-  createProductAction,
-  createStoreProductAction,
-  updateProductAction,
-  updateStoreProductAction,
-  deleteProductAction,
-  deleteStoreProductAction,
-  getCategoriesAction
-} from "@/backend/modules/product/product.actions";
-import { getAllActiveStoresListAction } from "@/backend/modules/store/store.actions";
 import logger from "@/utils/logger";
 
 const log = logger.child();
 
-export function useProductsLogic(storeId?: string, enabled = true) {
+type ProductLogicDependencies = {
+  getCategoriesAction: () => Promise<string[]>;
+  getAllActiveStoresListAction: () => Promise<{ id: string; name: string }[] | { error: string }>;
+  getCategoryCountsAction: (storeId?: string) => Promise<Record<string, number>>;
+  getPaginatedProductsAction: (page: number, limit: number, category?: string, storeId?: string) => Promise<any>;
+  searchProductsAction: (query: string, page: number, limit: number, category?: string, storeId?: string) => Promise<any>;
+  createProductAction: (payload: any) => Promise<any>;
+  createStoreProductAction: (storeId: string, payload: any) => Promise<any>;
+  updateProductAction: (productId: string, payload: any) => Promise<any>;
+  updateStoreProductAction: (storeId: string, productId: string, payload: any) => Promise<any>;
+  deleteProductAction: (productId: string) => Promise<any>;
+  deleteStoreProductAction: (storeId: string, productId: string) => Promise<any>;
+};
+
+export function useProductsLogic(
+  storeId?: string,
+  enabled = true,
+  deps?: Partial<ProductLogicDependencies>
+) {
+  const {
+    getCategoriesAction,
+    getAllActiveStoresListAction,
+    getCategoryCountsAction,
+    getPaginatedProductsAction,
+    searchProductsAction,
+    createProductAction,
+    createStoreProductAction,
+    updateProductAction,
+    updateStoreProductAction,
+    deleteProductAction,
+    deleteStoreProductAction,
+  } = deps || {};
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
@@ -57,24 +75,30 @@ export function useProductsLogic(storeId?: string, enabled = true) {
   // Fetch basic data (Categories and Stores)
   useEffect(() => {
     if (!enabled) return;
-    getCategoriesAction().then(setAvailableCategories).catch(log.error);
+    if (getCategoriesAction) {
+      getCategoriesAction().then(setAvailableCategories).catch(log.error);
+    }
     if (!storeId) {
-      getAllActiveStoresListAction().then(res => {
-        if (Array.isArray(res)) {
-          setStoresList(res);
-        } else {
-          log.error("Failed to load stores list", res);
-        }
-      }).catch(log.error);
+      if (getAllActiveStoresListAction) {
+        getAllActiveStoresListAction().then(res => {
+          if (Array.isArray(res)) {
+            setStoresList(res);
+          } else {
+            log.error("Failed to load stores list", res);
+          }
+        }).catch(log.error);
+      }
     }
   }, [storeId, enabled]);
 
   // Fetch category counts
   useEffect(() => {
     if (!enabled) return;
-    getCategoryCountsAction(storeId).then((counts) => {
-      setCategoryCounts(counts);
-    });
+    if (getCategoryCountsAction) {
+      getCategoryCountsAction(storeId).then((counts) => {
+        setCategoryCounts(counts);
+      });
+    }
   }, [refreshTrigger, storeId, enabled]);
 
   // Fetch paginated & filtered products
@@ -87,9 +111,9 @@ export function useProductsLogic(storeId?: string, enabled = true) {
         let result;
 
         if (debouncedSearch.trim() !== "") {
-          result = await searchProductsAction(debouncedSearch, currentPage, limit, catFilter, storeId);
+          result = await searchProductsAction?.(debouncedSearch, currentPage, limit, catFilter, storeId);
         } else {
-          result = await getPaginatedProductsAction(currentPage, limit, catFilter, storeId);
+          result = await getPaginatedProductsAction?.(currentPage, limit, catFilter, storeId);
         }
 
         if (result && "products" in result) {
@@ -112,10 +136,10 @@ export function useProductsLogic(storeId?: string, enabled = true) {
     try {
       let result;
       if (targetStoreId) {
-        result = await createStoreProductAction(targetStoreId, payload);
-      } else {
-        result = await createProductAction(payload);
-      }
+          result = await createStoreProductAction?.(targetStoreId, payload);
+        } else {
+          result = await createProductAction?.(payload);
+        }
 
       if (result && "error" in result) {
         toast.error(result.error || "Error al crear el producto");
@@ -141,10 +165,10 @@ export function useProductsLogic(storeId?: string, enabled = true) {
     try {
       let result;
       if (storeId) {
-        result = await updateStoreProductAction(storeId, productId, payload);
-      } else {
-        result = await updateProductAction(productId, payload);
-      }
+        result = await updateStoreProductAction?.(storeId, productId, payload);
+        } else {
+        result = await updateProductAction?.(productId, payload);
+        }
       
       if (result && "error" in result) {
         toast.error(result.error || "Error al actualizar el producto");
@@ -170,10 +194,10 @@ export function useProductsLogic(storeId?: string, enabled = true) {
     try {
       let result;
       if (storeId) {
-        result = await deleteStoreProductAction(storeId, productId);
-      } else {
-        result = await deleteProductAction(productId);
-      }
+        result = await deleteStoreProductAction?.(storeId, productId);
+        } else {
+        result = await deleteProductAction?.(productId);
+        }
       if (result && "error" in result) {
         toast.error(result.error || "Error al eliminar el producto");
         return false;

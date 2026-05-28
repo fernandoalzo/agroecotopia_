@@ -1,4 +1,9 @@
-import { productService } from "@/backend/modules/product";
+import {
+  getPaginatedProductsAction,
+  searchProductsAction,
+  getCategoriesAction,
+  getCategoryCountsAction,
+} from "@/backend/modules/product/product.actions";
 import ProductsPageClient from "./ProductsPageClient";
 import logger from "@/utils/logger";
 
@@ -17,16 +22,16 @@ export default async function ProductsServerPage(props: {
 
   // Fetch unique categories, category counts and products in parallel
   const [categories, categoryCounts, initialData] = await Promise.all([
-    productService.getCategories(),
-    productService.getCategoryCounts(),
+    getCategoriesAction(),
+    getCategoryCountsAction(),
     query.trim()
       ? (async () => {
           log.debug("Catálogo de productos: realizando búsqueda de texto:", { query, page, limit, category });
-          return productService.searchProducts(query, page, limit, category);
+          return searchProductsAction(query, page, limit, category);
         })()
       : (async () => {
           log.debug("Catálogo de productos: cargando catálogo completo:", { page, limit, category });
-          return productService.getCatalog(page, limit, category);
+          return getPaginatedProductsAction(page, limit, category);
         })()
   ]);
 

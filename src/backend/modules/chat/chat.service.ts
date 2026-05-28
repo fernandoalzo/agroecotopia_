@@ -52,9 +52,9 @@ export class ChatService {
     return this.chatRepository.findMessagesByConversationId(conversationId);
   }
 
-  async getAdminConversations() {
+  async getAdminConversations(adminUserId: string) {
     log.debug("Obteniendo todas las conversaciones para panel de administración.");
-    return this.chatRepository.findAllConversations();
+    return this.chatRepository.findAllConversations(adminUserId);
   }
 
   async getOrCreateOrderConversation(pedidoId: string, storeId: string, currentUserId: string, userRole: Role) {

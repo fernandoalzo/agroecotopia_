@@ -1,7 +1,7 @@
 "use client";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Info, Minus, Plus, ShoppingCart, Store, Tag, X } from "lucide-react";
 import Image from "next/image";
@@ -12,55 +12,24 @@ import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Loading } from "@/components/ui/Loading";
 import { formatPrice } from "@/lib/utils";
 import { getDeterministicImage } from "@/lib/image-utils";
-import { getProductByIdAction } from "@/backend/modules/product/product.actions";
 
 interface ProductModalProps {
   product: Product;
   isOpen: boolean;
   onClose: () => void;
   viewOnly?: boolean;
+  resolvedProduct?: Product;
 }
 
-const ProductModal = ({ product, isOpen, onClose, viewOnly = false }: ProductModalProps) => {
+const ProductModal = ({ product, isOpen, onClose, viewOnly = false, resolvedProduct }: ProductModalProps) => {
   const { addToCart } = useCart();
   const { t } = useLanguage();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
-  const [resolvedProduct, setResolvedProduct] = useState<any>(product);
-  const [isHydratingProduct, setIsHydratingProduct] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const hydrateProduct = async () => {
-      if (!isOpen || !product?.id) {
-        setResolvedProduct(product);
-        return;
-      }
-
-      setIsHydratingProduct(true);
-      try {
-        const fullProduct = await getProductByIdAction(product.id);
-        if (!cancelled) {
-          setResolvedProduct(fullProduct || product);
-        }
-      } finally {
-        if (!cancelled) setIsHydratingProduct(false);
-      }
-    };
-
-    hydrateProduct();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, product]);
-
   const currentProduct = resolvedProduct || product;
 
   const productTranslation = t.products.items[currentProduct.id!] || {
@@ -97,15 +66,10 @@ const ProductModal = ({ product, isOpen, onClose, viewOnly = false }: ProductMod
             {currentProduct.name ? `Detalle de producto: ${currentProduct.name}` : "Detalle de producto"}
           </DialogTitle>
           <div className="max-h-[96vh] overflow-y-auto scrollbar-hide">
-            {isHydratingProduct ? (
-              <div className="min-h-[420px] flex items-center justify-center">
-                <Loading text="" subtext="" className="py-0 scale-75" />
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 relative">
-                <div className="bg-secondary/30 dark:bg-[#121212] p-3 md:p-6 flex items-center justify-center min-h-[240px] md:min-h-[400px] relative overflow-hidden group/modal transition-all duration-500">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent -z-10" />
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/25 dark:bg-primary/20 rounded-full blur-[80px] -z-10 animate-pulse" />
+            <div className="grid md:grid-cols-2 relative">
+              <div className="bg-secondary/30 dark:bg-[#121212] p-3 md:p-6 flex items-center justify-center min-h-[240px] md:min-h-[400px] relative overflow-hidden group/modal transition-all duration-500">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent -z-10" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/25 dark:bg-primary/20 rounded-full blur-[80px] -z-10 animate-pulse" />
 
                   {currentProduct.stock === 0 && (
                     <>
@@ -157,9 +121,9 @@ const ProductModal = ({ product, isOpen, onClose, viewOnly = false }: ProductMod
                       {currentProduct.emoji || "📦"}
                     </motion.div>
                   )}
-                </div>
+              </div>
 
-                <div className="p-5 md:p-7 flex flex-col bg-card">
+              <div className="p-5 md:p-7 flex flex-col bg-card">
                   <div className="text-left space-y-0 mb-4 flex-none">
                     <div className="flex flex-wrap items-center gap-4 mb-2">
                       {categoryNames.length > 0 && (
@@ -294,8 +258,7 @@ const ProductModal = ({ product, isOpen, onClose, viewOnly = false }: ProductMod
                   </div>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
         </DialogContent>
       </Dialog>
 

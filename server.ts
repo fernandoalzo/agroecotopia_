@@ -6,10 +6,11 @@ import { initSocketServer } from "./src/backend/modules/chat/socketHandler";
 import { ensureAdminExists } from "./src/lib/admin-init";
 import logger from "./src/utils/logger";
 import { applyRateLimitMiddleware } from "./src/backend/middlewares/rateLimiter";
+import { config } from "./src/config/config";
 
 const log = logger.child();
 
-const dev = process.env.NODE_ENV !== "production";
+const dev = config.isDevelopment;
 log.info(`Starting server in ${dev ? "development" : "production"} mode...`);
 
 const app = next({ dev });
@@ -54,7 +55,7 @@ app.prepare()
       log.error("Failed to verify default admin exists on server boot:", err);
     });
 
-    const PORT = process.env.PORT || 3000;
+    const PORT = config.app.port;
     httpServer.listen(PORT, () => {
       log.info(`> Monolith custom server ready on http://localhost:${PORT}`);
     });

@@ -1,17 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Filter, ChevronLeft, ChevronRight } from "lucide-react";
-import {
-  getPaginatedOrdersAction,
-  getOrderStatusCountsAction,
-  updateOrderStatusAction,
-  getStoreOrdersAction,
-  getStoreOrderStatusCountsAction,
-  updateStoreOrderStatusAction,
-} from "@/backend/modules/orders/orders.actions";
-import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,127 +16,43 @@ import { AdminOrderCard } from "./AdminOrderCard";
 import { AdminOrder, statusConfig } from "./adminOrderUtils";
 
 interface AdminOrdersListProps {
-  storeId?: string;
+  orders: AdminOrder[];
+  loading: boolean;
+  totalPages: number;
+  totalCount: number;
+  statusCounts: Record<string, number>;
   emptyMessage?: string;
   onOpenOrderChat?: (order: AdminOrder) => void;
   unreadChatCounts?: Record<string, number>;
   openingChatOrderId?: string | null;
+  onUpdateStatus: (orderId: string, newStatus: PedidoEstado) => Promise<boolean>;
+  onPageChange: (page: number) => void;
+  currentPage: number;
+  onSearchChange: (query: string) => void;
+  searchQuery: string;
+  onStatusFilterChange: (status: PedidoEstado | "ALL") => void;
+  statusFilter: PedidoEstado | "ALL";
 }
 
-export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unreadChatCounts, openingChatOrderId }: AdminOrdersListProps) => {
-  const [orders, setOrders] = useState<AdminOrder[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<PedidoEstado | "ALL">("ALL");
-
-  // Search state and debounce
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const LIMIT = 10;
-
-  // Status counts from DB
-  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({ ALL: 0 });
+export const AdminOrdersList = ({
+  orders,
+  loading,
+  totalPages,
+  totalCount,
+  statusCounts,
+  emptyMessage,
+  onOpenOrderChat,
+  unreadChatCounts,
+  openingChatOrderId,
+  onUpdateStatus,
+  onPageChange,
+  currentPage,
+  onSearchChange,
+  searchQuery,
+  onStatusFilterChange,
+  statusFilter,
+}: AdminOrdersListProps) => {
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
-
-  // Debounce search query
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 400);
-    return () => clearTimeout(handler);
-  }, [searchQuery]);
-
-  // Reset page to 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [statusFilter, debouncedSearch]);
-
-  // Fetch status counts from database
-  const fetchCounts = useCallback(async () => {
-    try {
-      const counts = storeId
-        ? await getStoreOrderStatusCountsAction(storeId)
-        : await getOrderStatusCountsAction();
-      if (counts && typeof counts === "object") {
-        const typedCounts = counts as Record<string, number>;
-        const total = Object.values(typedCounts).reduce((acc, val) => acc + (Number(val) || 0), 0);
-        setStatusCounts({
-          ALL: total,
-          ...typedCounts
-        });
-      }
-    } catch (error) {
-      log.error("Error fetching status counts:", error);
-    }
-  }, [storeId]);
-
-  useEffect(() => {
-    fetchCounts();
-  }, [fetchCounts]);
-
-  // Fetch paginated & filtered orders from database
-  useEffect(() => {
-    const fetchOrders = async () => {
-      setLoading(true);
-      try {
-        const params = {
-          page: currentPage,
-          limit: LIMIT,
-          estado: statusFilter === "ALL" ? undefined : statusFilter,
-          search: debouncedSearch ? debouncedSearch : undefined,
-        };
-        const result = storeId
-          ? await getStoreOrdersAction(storeId, params)
-          : await getPaginatedOrdersAction(params);
-
-        if (result && "orders" in result) {
-          setOrders(result.orders as AdminOrder[]);
-          setTotalPages(result.totalPages);
-          setTotalCount(result.totalCount);
-        }
-      } catch (error) {
-        log.error("Error fetching paginated orders:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrders();
-  }, [currentPage, statusFilter, debouncedSearch, storeId]);
-
-  const handleUpdateStatus = async (orderId: string, newStatus: PedidoEstado) => {
-    setUpdatingStatusId(orderId);
-    try {
-      const result = storeId
-        ? await updateStoreOrderStatusAction(storeId, orderId, newStatus)
-        : await updateOrderStatusAction(orderId, newStatus);
-      if (result && "error" in result) {
-        toast.error("Error", { description: result.error });
-        return false;
-      } else {
-        toast.success("Estado actualizado", {
-          description: `Pedido actualizado a ${statusConfig[newStatus].label}`,
-        });
-
-        // Update local order status
-        setOrders((prev) =>
-          prev.map((o) => (o.id === orderId ? { ...o, estado: newStatus } : o))
-        );
-        // Refresh counts from DB
-        await fetchCounts();
-        return true;
-      }
-    } catch {
-      toast.error("Error", { description: "Hubo un problema al actualizar el estado." });
-      return false;
-    } finally {
-      setUpdatingStatusId(null);
-    }
-  };
 
   // ── Admin view ────────────────────────────────────────────────────
   return (
@@ -157,8 +64,8 @@ export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unread
         className="flex flex-col gap-4"
       >
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setStatusFilter("ALL")}
+            <button
+            onClick={() => onStatusFilterChange("ALL")}
             className={cn(
               "rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider border transition-all",
               statusFilter === "ALL"
@@ -173,7 +80,7 @@ export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unread
             return (
               <button
                 key={s}
-                onClick={() => setStatusFilter(s)}
+            onClick={() => onStatusFilterChange(s)}
                 className={cn(
                   "rounded-full px-4 py-2 text-xs font-bold border transition-all flex items-center gap-1.5",
                   statusFilter === s
@@ -189,9 +96,9 @@ export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unread
 
         <SearchInput
           value={searchQuery}
-          onChange={setSearchQuery}
+          onChange={onSearchChange}
           placeholder="Buscar por ID, nombre, email o dirección..."
-          onClear={() => setSearchQuery("")}
+          onClear={() => onSearchChange("")}
           containerClassName="max-w-md"
           inputClassName="pr-4"
         />
@@ -235,7 +142,14 @@ export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unread
                 order={order}
                 index={index}
                 isUpdating={updatingStatusId === order.id}
-                onUpdateStatus={handleUpdateStatus}
+                onUpdateStatus={async (orderId, newStatus) => {
+                  setUpdatingStatusId(orderId);
+                  try {
+                    return await onUpdateStatus(orderId, newStatus);
+                  } finally {
+                    setUpdatingStatusId(null);
+                  }
+                }}
                 onOpenOrderChat={onOpenOrderChat}
                 unreadChatCount={unreadChatCounts?.[order.id] || 0}
                 isOpeningChat={openingChatOrderId === order.id}
@@ -248,8 +162,8 @@ export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unread
       {/* ── Summary footer + Pagination controls ── */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl bg-secondary/20 border border-border/30 px-6 py-4">
         <p className="text-sm text-muted-foreground">
-          Mostrando pedidos <span className="font-bold text-foreground">{orders.length > 0 ? (currentPage - 1) * LIMIT + 1 : 0}</span> al{" "}
-          <span className="font-bold text-foreground">{Math.min(currentPage * LIMIT, totalCount)}</span> de{" "}
+          Mostrando pedidos <span className="font-bold text-foreground">{orders.length > 0 ? (currentPage - 1) * 10 + 1 : 0}</span> al{" "}
+          <span className="font-bold text-foreground">{Math.min(currentPage * 10, totalCount)}</span> de{" "}
           <span className="font-bold text-foreground">{totalCount}</span> totales
         </p>
 
@@ -261,7 +175,7 @@ export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unread
               size="icon"
               className="h-9 w-9 rounded-xl border-border/50 hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-50"
               disabled={currentPage === 1 || loading}
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+            onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -303,7 +217,7 @@ export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unread
                           : "border-border/50 hover:bg-primary/5 hover:text-primary"
                       )}
                       disabled={loading}
-                      onClick={() => setCurrentPage(pageNum)}
+                    onClick={() => onPageChange(pageNum)}
                     >
                       {pageNum}
                     </Button>
@@ -317,7 +231,7 @@ export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unread
               size="icon"
               className="h-9 w-9 rounded-xl border-border/50 hover:bg-primary/5 hover:text-primary transition-all disabled:opacity-50"
               disabled={currentPage === totalPages || loading}
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+            onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -329,10 +243,10 @@ export const AdminOrdersList = ({ storeId, emptyMessage, onOpenOrderChat, unread
             variant="ghost"
             size="sm"
             className="rounded-xl text-xs font-bold text-muted-foreground hover:text-primary"
-            onClick={() => {
-              setStatusFilter("ALL");
-              setSearchQuery("");
-            }}
+              onClick={() => {
+                onStatusFilterChange("ALL");
+                onSearchChange("");
+              }}
           >
             Limpiar filtros
           </Button>

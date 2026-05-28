@@ -52,8 +52,11 @@ export async function getConversationMessages(conversationId: string) {
 
 export async function getAdminConversations() {
   return withAdmin(async () => {
+    const session = await authService.ensureAuthenticated();
+    const adminUserId = session.user?.id;
+    if (!adminUserId) throw new Error("ID de usuario no encontrado en la sesión");
     log.debug("Admin obteniendo lista de todas las conversaciones.");
-    return chatService.getAdminConversations();
+    return chatService.getAdminConversations(adminUserId);
   });
 }
 

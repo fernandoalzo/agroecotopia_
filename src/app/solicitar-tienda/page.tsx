@@ -5,11 +5,23 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Leaf, Store, Mail, Phone, MapPin, Building, ChevronRight, CheckCircle2, ArrowRight, ArrowLeft } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { z } from "zod";
 import { submitStoreRequestAction } from "@/backend/modules/store/store.actions";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { storeRequestSchema, FormErrors } from "@/backend/modules/store/store.schema";
+
+const storeRequestSchema = z.object({
+  name: z.string().min(3, "El nombre de la tienda debe tener al menos 3 caracteres."),
+  description: z.string().min(20, "Por favor, danos una descripción más detallada (mínimo 20 caracteres)."),
+  phone: z.string().min(7, "Ingresa un número de teléfono válido (mínimo 7 dígitos).").optional().or(z.literal("")),
+  email: z.string().email("Ingresa un correo electrónico válido.").optional().or(z.literal("")),
+  address: z.string().min(5, "La dirección debe ser más descriptiva (mínimo 5 caracteres).").optional().or(z.literal("")),
+  city: z.string().min(3, "La ciudad debe tener al menos 3 caracteres.").optional().or(z.literal("")),
+});
+
+type StoreRequestFormInput = z.infer<typeof storeRequestSchema>;
+type FormErrors = Partial<Record<keyof StoreRequestFormInput, string>>;
 
 function SolicitarTiendaContent() {
   const router = useRouter();

@@ -13,6 +13,11 @@ export const config = {
   app: {
     name: process.env.NEXT_PUBLIC_APP_NAME || 'Agrotopia',
     url: (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, ''),
+    port: Number(process.env.PORT || 3000),
+  },
+
+  websocket: {
+    url: process.env.NEXT_PUBLIC_WS_URL,
   },
 
   auth: {

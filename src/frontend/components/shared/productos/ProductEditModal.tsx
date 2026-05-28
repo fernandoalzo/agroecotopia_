@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Save, AlertCircle, ImageIcon, Plus, Trash2, Search, Check } from "lucide-react";
 import { Product } from "@prisma/client";
 import { Button } from "@/components/ui/button";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/frontend/components/shared/productos/ProductEditModal.tsx");
 
 interface ProductEditModalProps {
   product: (Product & { categories?: any[] }) | null;
@@ -110,7 +113,7 @@ export const ProductEditModal = ({
         onClose();
       }
     } catch (error) {
-      console.error(error);
+      log.error("Error saving edited product:", error);
     } finally {
       setLoading(false);
     }
@@ -125,7 +128,7 @@ export const ProductEditModal = ({
         onClose();
       }
     } catch (error) {
-      console.error(error);
+      log.error("Error deleting product:", error);
     } finally {
       setIsDeleting(false);
     }

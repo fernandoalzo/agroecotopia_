@@ -2,7 +2,7 @@ import HeroSection from "@/components/home/HeroSection";
 import ProductsSection from "@/components/home/ProductsSection";
 import Footer from "@/components/Footer";
 import Link from "next/link";
-import { productService } from "@/backend/modules/product";
+import { getPaginatedProductsAction } from "@/backend/modules/product/product.actions";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/app/page.tsx");
@@ -15,7 +15,7 @@ export default async function Home() {
   let products: any[] = [];
   try {
     log.debug("Página de inicio: consultando catálogo de productos.");
-    const result = await productService.getCatalog(1, 40);
+    const result = await getPaginatedProductsAction(1, 40);
     products = result.products;
     log.debug("Página de inicio: catálogo de productos cargado exitosamente.", { totalProductos: products.length });
   } catch (error) {

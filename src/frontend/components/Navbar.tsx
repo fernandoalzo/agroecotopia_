@@ -20,13 +20,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSocket } from "@/frontend/context/SocketContext";
-import { getAdminConversations } from "@/backend/modules/chat/chat.actions";
 import logger from "@/utils/logger";
 import { config } from "@/config/config";
 
 const log = logger.child();
 
-const Navbar = () => {
+type NavbarProps = {
+  unreadCount?: number;
+};
+
+const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
   const [open, setOpen] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [activeSection, setActiveSection] = useState("");
@@ -35,57 +38,7 @@ const Navbar = () => {
   const { t } = useLanguage();
   const { data: session } = useSession();
   const { socket } = useSocket();
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  // Polling interval for admin unread count.
-  // IMPORTANT: Dependencies use stable primitive values to avoid re-running
-  // on every render (session is a new object reference each time from NextAuth).
   const isAdmin = session?.user?.role === "admin";
-  const userId = session?.user?.id;
-  const shouldLoadAdminUnread = isAdmin && !pathname?.startsWith("/admin/dashboard");
-
-  useEffect(() => {
-    if (!shouldLoadAdminUnread) {
-      setUnreadCount(0);
-      return;
-    }
-
-    let isCancelled = false;
-
-    const loadUnreadCount = async () => {
-      if (isCancelled) return;
-      try {
-        const res = await getAdminConversations();
-        if (!isCancelled && res && !("error" in res)) {
-          const total = res.reduce((acc, conv: any) => acc + (conv.unreadCount || 0), 0);
-          setUnreadCount(total);
-        }
-      } catch (err) {
-        if (!isCancelled) {
-          log.error("Error loading navbar unread count:", err);
-        }
-      }
-    };
-
-    loadUnreadCount();
-
-    // Poll every 15 seconds instead of 4 — socket events handle real-time updates
-    const interval = setInterval(loadUnreadCount, 15000);
-
-    if (socket) {
-      socket.on("new_message_notification", loadUnreadCount);
-      socket.on("conversation_deleted", loadUnreadCount);
-    }
-
-    return () => {
-      isCancelled = true;
-      clearInterval(interval);
-      if (socket) {
-        socket.off("new_message_notification", loadUnreadCount);
-        socket.off("conversation_deleted", loadUnreadCount);
-      }
-    };
-  }, [shouldLoadAdminUnread, userId, socket]);
 
   const isAuthenticated = !!session?.user;
   const userName = session?.user?.name ?? (t.navbar?.usuario ?? "Usuario");
