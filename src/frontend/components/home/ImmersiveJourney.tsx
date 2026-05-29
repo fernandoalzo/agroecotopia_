@@ -103,9 +103,14 @@ const ImmersiveJourney = ({ initialProducts }: ImmersiveJourneyProps) => {
   const [mounted, setMounted] = useState(false);
   const [activeStage, setActiveStage] = useState(0);
   const [bgIndex, setBgIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   // Auto-cycle background images every 8 seconds
@@ -161,9 +166,10 @@ const ImmersiveJourney = ({ initialProducts }: ImmersiveJourneyProps) => {
   }, [smoothProgress]);
 
   // Stage 1 (Welcome / Intro) Transforms
-  const introZ = useTransform(smoothProgress, [0, 0.22], [0, 700]);
+  // On mobile, disable the 3D immersion (Z + scale) — only fade out
+  const introZ = useTransform(smoothProgress, [0, 0.22], isMobile ? [0, 0] : [0, 700]);
   const introOpacity = useTransform(smoothProgress, [0.12, 0.22], [1, 0]);
-  const introScale = useTransform(smoothProgress, [0, 0.22], [1, 1.2]);
+  const introScale = useTransform(smoothProgress, [0, 0.22], isMobile ? [1, 1] : [1, 1.2]);
 
   // Stage 2 (Soberanía Alimentaria) Transforms
   const stage2Z = useTransform(smoothProgress, [0.12, 0.28, 0.48], [-1200, 0, 700]);
