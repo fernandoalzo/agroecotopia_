@@ -63,6 +63,12 @@ export class StoreService {
 
   // --- Admin Flow ---
 
+  async getRequestById(requestId: string) {
+    const request = await this.storeRepository.findRequestById(requestId);
+    if (!request) throw new Error("Solicitud no encontrada.");
+    return request;
+  }
+
   async getPendingRequests(page: number = 1, limit: number = 10, search?: string) {
     const skip = (page - 1) * limit;
     return await this.storeRepository.findPendingRequests(skip, limit, search);

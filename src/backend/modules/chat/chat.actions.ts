@@ -5,6 +5,7 @@ import { chatService } from "./index";
 import { authService } from "@/backend/modules/auth";
 import logger from "@/utils/logger";
 import { Role } from "@prisma/client";
+import eventBus from "@/utils/eventBus";
 
 const log = logger.child("src/backend/modules/chat/chat.actions.ts");
 
@@ -67,7 +68,9 @@ export async function markAsRead(conversationId: string) {
     if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
 
     log.debug("Marcando mensajes como leídos:", { conversationId, userId });
-    return chatService.markAsRead(conversationId, userId);
+    const result = await chatService.markAsRead(conversationId, userId);
+    eventBus.emit("unread_count_updated", { conversationId });
+    return result;
   });
 }
 
@@ -189,6 +192,9 @@ export async function sendAdvisorOrderMessagesAction(params: {
         pedidoIds: params.messages.map((m) => m.pedidoId),
         count: createdMessages.length,
       });
+
+      // Notificar que hay nuevos mensajes para que se actualicen los contadores
+      eventBus.emit("unread_count_updated", { role: userRole });
 
       return createdMessages;
     } catch (error) {

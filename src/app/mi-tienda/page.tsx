@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, Suspense, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -51,6 +51,8 @@ import { getAllActiveStoresListAction } from "@/backend/modules/store/store.acti
 import { useProductsLogic } from "@/frontend/hooks/useProductsLogic";
 import { toast } from "sonner";
 import logger from "@/utils/logger";
+import { useSocket } from "@/frontend/context/SocketContext";
+import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 
 const log = logger.child();
 
@@ -176,39 +178,38 @@ function SellerDashboardContent() {
     loadStore();
   }, [session?.user?.id]);
 
-  useEffect(() => {
+  const { socket } = useSocket();
+
+  const loadUnreadCounts = useCallback(async () => {
     if (!activeStore?.id || !isSeller) {
       setOrderChatUnreadCounts({});
       return;
     }
-
-    let cancelled = false;
-
-    const loadUnreadCounts = async () => {
-      try {
-        const res = await getSellerOrderConversationsAction(activeStore.id);
-        if (!cancelled && Array.isArray(res)) {
-          const counts = res.reduce((acc: Record<string, number>, conv: any) => {
-            if (conv?.pedido?.id) {
-              acc[conv.pedido.id] = Number(conv.unreadCount) || 0;
-            }
-            return acc;
-          }, {});
-          setOrderChatUnreadCounts(counts);
-        }
-      } catch (err) {
-        log.error("Error loading seller order unread counts:", err);
+    try {
+      const res = await getSellerOrderConversationsAction(activeStore.id);
+      if (Array.isArray(res)) {
+        const counts = res.reduce((acc: Record<string, number>, conv: any) => {
+          if (conv?.pedido?.id) {
+            acc[conv.pedido.id] = Number(conv.unreadCount) || 0;
+          }
+          return acc;
+        }, {});
+        setOrderChatUnreadCounts(counts);
       }
-    };
-
-    loadUnreadCounts();
-    const interval = setInterval(loadUnreadCounts, 15000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
+    } catch (err) {
+      log.error("Error loading seller order unread counts:", err);
+    }
   }, [activeStore?.id, isSeller]);
+
+  useSocketRefresh({
+    socket,
+    enabled: !!activeStore?.id && !!isSeller,
+    refresh: loadUnreadCounts,
+  });
+
+  useEffect(() => {
+    loadUnreadCounts();
+  }, [loadUnreadCounts]);
 
   useEffect(() => {
     if (!activeStore?.id || !isSeller || activeTab !== "orders") return;
@@ -294,7 +295,7 @@ function SellerDashboardContent() {
     await markAsRead(conversationId);
   };
 
-  if (status === "loading" || loadingStore) {
+  if ((status === "loading" && !session) || loadingStore) {
     return (
       <div className="min-h-screen pt-24 flex items-center justify-center bg-background">
         <Loading />

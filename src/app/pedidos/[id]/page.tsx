@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
@@ -31,6 +31,8 @@ import {
   markAsRead,
 } from "@/backend/modules/chat/chat.actions";
 import { Product } from "@/types";
+import { useSocket } from "@/frontend/context/SocketContext";
+import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import logger from "@/utils/logger";
 import { Loader2 } from "lucide-react";
 
@@ -221,67 +223,65 @@ export default function OrderDetailPage() {
 
   const getUnreadChatCount = (storeId: string) => orderChatUnreadCounts[storeId] ?? orderChatUnreadCounts[order?.id || ""] ?? 0;
 
-  useEffect(() => {
+  const { socket } = useSocket();
+
+  const loadUnreadCounts = useCallback(async () => {
     if (!order?.id || orderStoreIds.length === 0) {
       setOrderChatUnreadCounts({});
       return;
     }
 
-    let cancelled = false;
     const userRole = session?.user?.role;
+    try {
+      if (userRole === "seller" || userRole === "admin") {
+        const results = await Promise.all(
+          orderStoreIds.map(async (storeId) => {
+            const res = await getSellerOrderConversationsAction(storeId);
+            if (!Array.isArray(res)) return { storeId, count: 0 };
+            const matched = res.find((conv: any) => conv?.pedido?.id === order.id);
+            return { storeId, count: Number(matched?.unreadCount) || 0 };
+          })
+        );
 
-    const loadUnreadCounts = async () => {
-      try {
-        if (userRole === "seller" || userRole === "admin") {
-          const results = await Promise.all(
-            orderStoreIds.map(async (storeId) => {
-              const res = await getSellerOrderConversationsAction(storeId);
-              if (!Array.isArray(res)) return { storeId, count: 0 };
-              const matched = res.find((conv: any) => conv?.pedido?.id === order.id);
-              return { storeId, count: Number(matched?.unreadCount) || 0 };
-            })
-          );
-
-          if (cancelled) return;
-
-          const counts = results.reduce((acc: Record<string, number>, item) => {
-            acc[item.storeId] = item.count;
-            acc[order.id] = (acc[order.id] || 0) + item.count;
-            return acc;
-          }, {});
-
-          setOrderChatUnreadCounts(counts);
-          return;
-        }
-
-        const res = await getUserOrderConversationsAction();
-        if (cancelled || !Array.isArray(res)) return;
-
-        const counts = res.reduce((acc: Record<string, number>, conv: any) => {
-          if (conv?.pedido?.id) {
-            const unread = Number(conv.unreadCount) || 0;
-            acc[conv.pedido.id] = unread;
-            if (conv.store?.id) {
-              acc[conv.store.id] = unread;
-            }
-          }
+        const counts = results.reduce((acc: Record<string, number>, item) => {
+          acc[item.storeId] = item.count;
+          acc[order.id] = (acc[order.id] || 0) + item.count;
           return acc;
         }, {});
 
         setOrderChatUnreadCounts(counts);
-      } catch (err) {
-        log.error("Error loading order unread counts:", err);
+        return;
       }
-    };
 
-    loadUnreadCounts();
-    const interval = setInterval(loadUnreadCounts, 15000);
+      const res = await getUserOrderConversationsAction();
+      if (!Array.isArray(res)) return;
 
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
+      const counts = res.reduce((acc: Record<string, number>, conv: any) => {
+        if (conv?.pedido?.id) {
+          const unread = Number(conv.unreadCount) || 0;
+          acc[conv.pedido.id] = unread;
+          if (conv.store?.id) {
+            acc[conv.store.id] = unread;
+          }
+        }
+        return acc;
+      }, {});
+
+      setOrderChatUnreadCounts(counts);
+    } catch (err) {
+      log.error("Error loading order unread counts:", err);
+    }
   }, [order?.id, orderStoreIds.join("|"), session?.user?.role]);
+
+  useSocketRefresh({
+    socket,
+    enabled: !!order?.id && orderStoreIds.length > 0,
+    refresh: loadUnreadCounts,
+  });
+
+  useEffect(() => {
+    loadUnreadCounts();
+  }, [loadUnreadCounts]);
 
   const handleRepeatOrder = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -406,7 +406,7 @@ export default function OrderDetailPage() {
     setOrderChat((current) => (current ? { ...current, unreadCount: 0 } : current));
   };
 
-  if (loading || status === "loading") {
+  if (loading || (status === "loading" && !session)) {
     return <Loading fullScreen />;
   }
 

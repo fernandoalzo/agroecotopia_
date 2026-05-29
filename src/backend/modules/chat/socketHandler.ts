@@ -5,6 +5,7 @@ import { Role } from "@prisma/client";
 import logger from "@/utils/logger";
 import { socketRateLimiter } from "@/lib/rate-limit";
 import { chatService } from "./index";
+import eventBus from "@/utils/eventBus";
 const log = logger.child("src/backend/modules/chat/socketHandler.ts");
 
 function getSocketChatErrorMessage(error: unknown) {
@@ -137,6 +138,19 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
     socket.on("disconnect", () => {
       log.info("Socket disconnected:", socket.id);
     });
+  });
+
+  // Attach eventBus listeners to bridge Server Actions and Socket.IO
+  eventBus.removeAllListeners("store_request_updated");
+  eventBus.on("store_request_updated", () => {
+    log.info("Broadcasting store_request_updated via Socket.IO");
+    io.emit("store_request_updated");
+  });
+
+  eventBus.removeAllListeners("unread_count_updated");
+  eventBus.on("unread_count_updated", (payload) => {
+    log.info("Broadcasting unread_count_updated via Socket.IO");
+    io.emit("unread_count_updated", payload);
   });
 
   return io;

@@ -6,6 +6,7 @@ import { StoreCreateInput } from "@/types/store";
 import { revalidatePath } from "next/cache";
 import logger from "@/utils/logger";
 import { authService } from "../auth";
+import eventBus from "@/utils/eventBus";
 
 const log = logger.child("src/backend/modules/store/store.actions.ts");
 
@@ -21,6 +22,7 @@ export const submitStoreRequestAction = async (data: StoreCreateInput) => {
     
     const request = await storeService.submitStoreRequest(userId, data);
     revalidatePath("/mi-tienda");
+    eventBus.emit("store_request_updated");
     return { success: true, data: request };
   });
 };
@@ -75,6 +77,13 @@ export const getPendingRequestsAction = async (page: number = 1, search?: string
   });
 };
 
+export const getRequestByIdAction = async (requestId: string) => {
+  return withAdmin(async () => {
+    log.info("Action: getRequestByIdAction", { requestId });
+    return await storeService.getRequestById(requestId);
+  });
+};
+
 export const getAllRequestsAction = async (page: number = 1, search?: string) => {
   return withAdmin(async () => {
     log.info("Action: getAllRequestsAction", { page, search });
@@ -101,6 +110,7 @@ export const approveRequestAction = async (requestId: string, adminNote?: string
     const store = await storeService.approveRequest(requestId, adminNote);
     revalidatePath("/admin/dashboard");
     revalidatePath("/products");
+    eventBus.emit("store_request_updated");
     return { success: true, data: store };
   });
 };
@@ -110,6 +120,7 @@ export const rejectRequestAction = async (requestId: string, adminNote: string) 
     log.info("Action: rejectRequestAction", { requestId });
     const request = await storeService.rejectRequest(requestId, adminNote);
     revalidatePath("/admin/dashboard");
+    eventBus.emit("store_request_updated");
     return { success: true, data: request };
   });
 };

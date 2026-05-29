@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, Suspense, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,6 +35,7 @@ import {
 } from "@/backend/modules/product/product.actions";
 import {
   getAllRequestsAction,
+  getRequestByIdAction,
   approveRequestAction,
   rejectRequestAction,
   getPendingRequestsAction
@@ -97,31 +98,39 @@ function AdminDashboardPageContent() {
     deleteProductAction,
     deleteStoreProductAction,
   });
-  const loadStoreRequests = async (page: number, search?: string): Promise<StoreRequestsResponse> => {
+  const loadStoreRequests = React.useCallback(async (page: number, search?: string): Promise<StoreRequestsResponse> => {
     const result = await getAllRequestsAction(page, search);
 
     if (result && "error" in result) {
       throw new Error(result.error);
     }
 
-    return result;
-  };
+    return result as StoreRequestsResponse;
+  }, []);
 
-  const approveStoreRequest = async (requestId: string) => {
+  const approveStoreRequest = React.useCallback(async (requestId: string) => {
     const result = await approveRequestAction(requestId);
     if (result && "error" in result) {
       return { error: result.error };
     }
     return { success: true as const, data: result.data };
-  };
+  }, []);
 
-  const rejectStoreRequest = async (requestId: string, note: string) => {
+  const rejectStoreRequest = React.useCallback(async (requestId: string, note: string) => {
     const result = await rejectRequestAction(requestId, note);
     if (result && "error" in result) {
       return { error: result.error };
     }
     return { success: true as const, data: result.data };
-  };
+  }, []);
+
+  const loadStoreRequestDetail = React.useCallback(async (requestId: string) => {
+    const result = await getRequestByIdAction(requestId);
+    if (result && "error" in result) {
+      throw new Error(result.error);
+    }
+    return result;
+  }, []);
 
   const isAdmin = session?.user?.role === "admin";
 
@@ -136,7 +145,7 @@ function AdminDashboardPageContent() {
   }, [status, isAdmin, router]);
 
   // Track unread chat count
-  const refreshUnread = async () => {
+  const refreshUnread = useCallback(async () => {
     if (!isAdmin || activeTab === "chat") {
       setUnreadCount(0);
       return;
@@ -151,43 +160,44 @@ function AdminDashboardPageContent() {
     } catch (err) {
       log.error("Error loading dashboard unread count:", err);
     }
-  };
+  }, [isAdmin, activeTab]);
 
   useSocketRefresh({
     socket,
     enabled: isAdmin && activeTab !== "chat",
     refresh: refreshUnread,
-    intervalMs: 15000,
   });
 
-  // Track pending store requests
+  // Initial load — useSocketRefresh is purely event-driven
+  useEffect(() => {
+    refreshUnread();
+  }, [refreshUnread]);
+
+  const loadPendingRequests = useCallback(async () => {
+    try {
+      const res = await getPendingRequestsAction();
+      if (res && !("error" in res) && typeof res.total === 'number') {
+        setPendingStoresCount(res.total);
+      }
+    } catch (err) {
+      log.error("Error loading pending stores count:", err);
+    }
+  }, []);
+
+  useSocketRefresh({
+    socket,
+    enabled: isAdmin,
+    refresh: loadPendingRequests,
+    events: ["store_request_updated"],
+  });
+
   useEffect(() => {
     if (!isAdmin) {
       setPendingStoresCount(0);
       return;
     }
-
-    let isCancelled = false;
-
-    const loadPendingRequests = async () => {
-      try {
-        const res = await getPendingRequestsAction();
-        if (!isCancelled && res && !("error" in res) && typeof res.total === 'number') {
-          setPendingStoresCount(res.total);
-        }
-      } catch (err) {
-        log.error("Error loading pending stores count:", err);
-      }
-    };
-
     loadPendingRequests();
-    const interval = setInterval(loadPendingRequests, 30000);
-
-    return () => {
-      isCancelled = true;
-      clearInterval(interval);
-    };
-  }, [isAdmin, activeTab]);
+  }, [isAdmin, loadPendingRequests]);
 
   useEffect(() => {
     if (!isAdmin || activeTab !== "orders") return;
@@ -239,7 +249,9 @@ function AdminDashboardPageContent() {
     window.history.replaceState({}, "", url.toString());
   };
 
-  if (status === "loading") return <Loading fullScreen />;
+  // Only show full-screen loading on the FIRST load, not during session refreshes.
+  // During a refresh, `session` still holds the cached value — don't unmount the UI.
+  if (status === "loading" && !session) return <Loading fullScreen />;
 
   if (status === "unauthenticated" || !isAdmin) {
     return (
@@ -475,6 +487,7 @@ function AdminDashboardPageContent() {
               >
                 <AdminStoreRequests
                   onLoadRequests={loadStoreRequests}
+                  onLoadRequestDetail={loadStoreRequestDetail}
                   onApproveRequest={approveStoreRequest}
                   onRejectRequest={rejectStoreRequest}
                 />

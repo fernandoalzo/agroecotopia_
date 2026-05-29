@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 interface StoreRequestCardProps {
     req: StoreRequest;
     index: number;
-    onSelect: (req: StoreRequest) => void;
+    onSelect: () => void;
 }
 
 export function StoreRequestCard({ req, index, onSelect }: StoreRequestCardProps) {
@@ -39,7 +39,7 @@ export function StoreRequestCard({ req, index, onSelect }: StoreRequestCardProps
         >
             <div
                 className="group overflow-hidden rounded-2xl backdrop-blur-md transition-all duration-300 border bg-card/60 hover:bg-card hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 cursor-pointer"
-                onClick={() => onSelect(req)}
+                onClick={() => onSelect()}
             >
                 <div className="flex flex-col p-0 pointer-events-none">
                     <div className="flex flex-col lg:flex-row lg:items-stretch">

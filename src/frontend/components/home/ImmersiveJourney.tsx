@@ -98,7 +98,7 @@ const ParticleElement = ({ p, smoothProgress }: ParticleElementProps) => {
 const ImmersiveJourney = ({ initialProducts }: ImmersiveJourneyProps) => {
   const { t, language } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   // State to handle hydration and client-side setup
   const [mounted, setMounted] = useState(false);
   const [activeStage, setActiveStage] = useState(0);
@@ -245,8 +245,8 @@ const ImmersiveJourney = ({ initialProducts }: ImmersiveJourneyProps) => {
               className="group relative flex items-center justify-center w-4 h-4 cursor-pointer"
             >
               <span className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${activeStage === idx
-                  ? "bg-primary scale-125 shadow-[0_0_10px_oklch(0.7_0.25_150)]"
-                  : "bg-muted-foreground/30 group-hover:bg-primary/50"
+                ? "bg-primary scale-125 shadow-[0_0_10px_oklch(0.7_0.25_150)]"
+                : "bg-muted-foreground/30 group-hover:bg-primary/50"
                 }`} />
               <span className="absolute right-8 text-xs font-semibold px-2 py-1 rounded bg-card border border-border opacity-0 translate-x-2 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 whitespace-nowrap shadow-md">
                 {labels[idx]}

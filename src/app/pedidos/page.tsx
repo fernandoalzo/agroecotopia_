@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,8 @@ import { Loading } from "@/components/ui/Loading";
 import { cn } from "@/lib/utils";
 import { getUserOrdersAction, cancelUserOrderAction, deleteUserOrderAction } from "@/backend/modules/orders/orders.actions";
 import { getUserOrderConversationsAction } from "@/backend/modules/chat/chat.actions";
+import { useSocket } from "@/frontend/context/SocketContext";
+import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 
 import { config } from "@/config/config";
 
@@ -61,31 +63,31 @@ export default function PedidosPage() {
     };
   }, [status, isAdmin]);
 
-  useEffect(() => {
+  const { socket } = useSocket();
+
+  const loadUnreadCounts = useCallback(async () => {
     if (status !== "authenticated" || isAdmin || orders.length === 0) {
       setUnreadChatCounts({});
       return;
     }
+    const res = await getUserOrderConversationsAction();
+    if (!Array.isArray(res)) return;
+    const counts = res.reduce((acc: Record<string, number>, conv: any) => {
+      if (conv?.pedido?.id) acc[conv.pedido.id] = Number(conv.unreadCount) || 0;
+      return acc;
+    }, {});
+    setUnreadChatCounts(counts);
+  }, [status, isAdmin, orders.length]);
 
-    let cancelled = false;
+  useSocketRefresh({
+    socket,
+    enabled: status === "authenticated" && !isAdmin && orders.length > 0,
+    refresh: loadUnreadCounts,
+  });
 
-    const loadUnreadCounts = async () => {
-      const res = await getUserOrderConversationsAction();
-      if (cancelled || !Array.isArray(res)) return;
-      const counts = res.reduce((acc: Record<string, number>, conv: any) => {
-        if (conv?.pedido?.id) acc[conv.pedido.id] = Number(conv.unreadCount) || 0;
-        return acc;
-      }, {});
-      setUnreadChatCounts(counts);
-    };
-
+  useEffect(() => {
     loadUnreadCounts();
-    const interval = setInterval(loadUnreadCounts, 15000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [status, isAdmin, orders]);
+  }, [loadUnreadCounts]);
 
   const handleCancelOrder = async (orderId: string) => {
     const result = await cancelUserOrderAction(orderId);
@@ -99,7 +101,7 @@ export default function PedidosPage() {
     setOrders((prev) => prev.filter((o) => o.id !== orderId));
   };
 
-  if (status === "loading") {
+  if (status === "loading" && !session) {
     return <Loading fullScreen />;
   }
 

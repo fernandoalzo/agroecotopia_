@@ -12,6 +12,7 @@ import { StoreRequestDetailModal } from "./StoreRequestDetailModal";
 
 interface AdminStoreRequestsProps {
   onLoadRequests: (page: number, search?: string) => Promise<StoreRequestsResponse>;
+  onLoadRequestDetail: (id: string) => Promise<StoreRequest>;
   onApproveRequest: (id: string) => Promise<MutationResult>;
   onRejectRequest: (id: string, note: string) => Promise<MutationResult>;
 }
@@ -27,8 +28,9 @@ type MutationResult =
   | { success: true; data: unknown }
   | { error: string };
 
-export function AdminStoreRequests({
+export const AdminStoreRequests = React.memo(function AdminStoreRequests({
   onLoadRequests,
+  onLoadRequestDetail,
   onApproveRequest,
   onRejectRequest,
 }: AdminStoreRequestsProps) {
@@ -39,7 +41,7 @@ export function AdminStoreRequests({
   const [totalRequests, setTotalRequests] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedRequest, setSelectedRequest] = useState<StoreRequest | null>(null);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -67,7 +69,8 @@ export function AdminStoreRequests({
   useEffect(() => {
     setPage(1);
     loadRequests(1, debouncedSearch);
-  }, [debouncedSearch, loadRequests]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
 
   const visibleRequests = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -96,7 +99,7 @@ export function AdminStoreRequests({
         toast.error(res.error);
       } else {
         toast.success("Tienda aprobada y creada con éxito");
-        setSelectedRequest(null);
+        setSelectedRequestId(null);
         loadRequests(page, debouncedSearch);
       }
     } catch {
@@ -118,7 +121,7 @@ export function AdminStoreRequests({
         toast.error(res.error);
       } else {
         toast.success("Solicitud rechazada");
-        setSelectedRequest(null);
+        setSelectedRequestId(null);
         loadRequests(page, debouncedSearch);
       }
     } catch {
@@ -190,7 +193,7 @@ export function AdminStoreRequests({
                 key={req.id}
                 req={req}
                 index={index}
-                onSelect={setSelectedRequest}
+                onSelect={() => setSelectedRequestId(req.id)}
               />
             ))}
           </AnimatePresence>
@@ -220,12 +223,13 @@ export function AdminStoreRequests({
       )}
 
       <StoreRequestDetailModal
-        request={selectedRequest}
-        onClose={() => setSelectedRequest(null)}
+        requestId={selectedRequestId}
+        onLoadDetail={onLoadRequestDetail}
+        onClose={() => setSelectedRequestId(null)}
         onApprove={handleApprove}
         onReject={handleReject}
         processingId={processingId}
       />
     </div>
   );
-}
+});

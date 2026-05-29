@@ -41,45 +41,45 @@ const SovereigntyStage = ({ t }: SovereigntyStageProps) => {
 
   return (
     <div className="container max-w-3xl mx-auto flex items-center justify-center p-4">
-        <motion.div
-          style={{
-            rotateX: tilt2.rotateX,
-            rotateY: tilt2.rotateY,
-            transformStyle: "preserve-3d"
-          }}
-          onMouseMove={tilt2.handleMouseMove}
-          onMouseLeave={tilt2.handleMouseLeave}
-          className="w-full p-6 sm:p-10 rounded-3xl bg-card/90 border border-primary/20 shadow-2xl hover:shadow-3xl transition-all duration-300 backdrop-blur-md"
-        >
-          <span className="text-[10px] sm:text-xs font-bold text-primary tracking-widest uppercase mb-2 block">
-            {t.about.badge}
-          </span>
-          <h2 className="text-3xl sm:text-5xl font-black text-foreground mb-4 leading-tight">
-            Soberanía <span className="text-primary italic">Alimentaria</span>
-          </h2>
-          <p className="text-muted-foreground text-sm sm:text-base leading-relaxed mb-6">
-            {t.about.description1}
-          </p>
+      <motion.div
+        style={{
+          rotateX: tilt2.rotateX,
+          rotateY: tilt2.rotateY,
+          transformStyle: "preserve-3d"
+        }}
+        onMouseMove={tilt2.handleMouseMove}
+        onMouseLeave={tilt2.handleMouseLeave}
+        className="w-full p-6 sm:p-10 rounded-3xl bg-card/90 border border-primary/20 shadow-2xl hover:shadow-3xl transition-all duration-300 backdrop-blur-md"
+      >
+        <span className="text-[10px] sm:text-xs font-bold text-primary tracking-widest uppercase mb-2 block">
+          {t.about.badge}
+        </span>
+        <h2 className="text-3xl sm:text-5xl font-black text-foreground mb-4 leading-tight">
+          Soberanía <span className="text-primary italic">Alimentaria</span>
+        </h2>
+        <p className="text-muted-foreground text-sm sm:text-base leading-relaxed mb-6">
+          {t.about.description1}
+        </p>
 
-          {/* Features list inside card */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-border/50 pt-6">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-sm sm:text-base font-bold text-foreground">{t.about.pillars.organic.title}</h4>
-                <p className="text-xs text-muted-foreground mt-1">{t.about.pillars.organic.desc}</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-sm sm:text-base font-bold text-foreground">{t.about.pillars.sustainable.title}</h4>
-                <p className="text-xs text-muted-foreground mt-1">{t.about.pillars.sustainable.desc}</p>
-              </div>
+        {/* Features list inside card */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-t border-border/50 pt-6">
+          <div className="flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-sm sm:text-base font-bold text-foreground">{t.about.pillars.organic.title}</h4>
+              <p className="text-xs text-muted-foreground mt-1">{t.about.pillars.organic.desc}</p>
             </div>
           </div>
-        </motion.div>
-      </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-sm sm:text-base font-bold text-foreground">{t.about.pillars.sustainable.title}</h4>
+              <p className="text-xs text-muted-foreground mt-1">{t.about.pillars.sustainable.desc}</p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </div>
   );
 };
 

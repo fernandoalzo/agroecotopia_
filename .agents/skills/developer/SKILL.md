@@ -389,3 +389,43 @@ export const config = {
 - Translation files live in `src/frontend/architecture/languages/`.
 - All user-facing text MUST use the `t` object from `useLanguage()`, never hardcoded strings.
 - The chat system has its own inline translations (inside `ChatWidget.tsx`).
+
+---
+
+## 16. Event-Driven Data Refresh Architecture (Zero-Polling Rule)
+
+To maintain a professional, high-performance architecture, **polling via `setInterval` is STRICTLY FORBIDDEN**. All automatic data refreshing must be push-based using the global `eventBus` and WebSockets.
+
+### 16.1 Server-Side Event Emission (`eventBus`)
+- The backend utilizes a global singleton `eventBus` (`src/utils/eventBus.ts`) to decouple domain logic from WebSockets.
+- **Law**: Server Actions MUST NOT interact with Socket.IO directly. Instead, when a mutation occurs that requires clients to refresh data (e.g., approving an order, receiving a new store request), the Server Action must emit a specific event via the event bus:
+  ```typescript
+  eventBus.emit("store_request_updated")
+  ```
+- The `socketHandler.ts` listens to the `eventBus` and bridges these events to connected clients via `io.emit()`.
+
+### 16.2 Client-Side Refresh (`useSocketRefresh`)
+- Frontend components must listen for these socket events using the custom `useSocketRefresh` hook to trigger their data re-fetches.
+- **Law**: `useSocketRefresh` is purely event-driven. It does NOT execute the refresh function on mount. Consumers MUST handle their own initial data fetching using a standard `useEffect`.
+- Always wrap the `refresh` function passed to `useSocketRefresh` in a `useCallback` to prevent infinite re-render loops.
+
+**Example implementation:**
+```tsx
+const loadData = useCallback(async () => {
+  const data = await getDashboardData();
+  setData(data);
+}, []);
+
+// 1. Initial Load (Manual)
+useEffect(() => {
+  loadData();
+}, [loadData]);
+
+// 2. Event-driven real-time updates (NO setInterval)
+useSocketRefresh({
+  socket,
+  enabled: true,
+  refresh: loadData,
+  events: ["dashboard_data_updated"],
+});
+```

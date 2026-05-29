@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSocket } from "@/frontend/context/SocketContext";
+import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import { getAdminConversations, getConversationMessages, markAsRead, deleteConversationAction, getAdminUsersList, getOrCreateConversationForAdmin } from "@/backend/modules/chat/chat.actions";
 import { Message } from "@/frontend/components/chat/ChatWidget";
 import { SignalService } from "@/frontend/lib/signalService";
@@ -275,15 +276,13 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
     };
 
     initializeAdminChat();
-
-    const refreshInterval = window.setInterval(() => {
-      void refreshConversations();
-    }, 10000);
-
-    return () => {
-      window.clearInterval(refreshInterval);
-    };
   }, [status, sessionUserId, sessionUserRole]);
+
+  useSocketRefresh({
+    socket,
+    enabled: status === "authenticated" && sessionUserRole === "admin",
+    refresh: refreshConversations,
+  });
 
   // Load users list when user searches or paginates
   useEffect(() => {
@@ -712,7 +711,7 @@ export function AdminChatPageContent({ embedded = false }: { embedded?: boolean 
   };
 
   // Guard loading session
-  if (status === "loading") {
+  if (status === "loading" && !session) {
     return (
       <Loading fullScreen={true} />
     );

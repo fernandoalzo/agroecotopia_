@@ -10,7 +10,7 @@ import { SocketProvider } from "@/frontend/context/SocketContext";
 import ChatWidget from "@/frontend/components/chat/ChatWidget";
 import GlobalNavbar from "@/frontend/components/GlobalNavbar";
 import { ThemeProvider } from "next-themes";
-import { useState, Suspense, useEffect } from "react";
+import { useState, Suspense, useEffect, useCallback } from "react";
 import ScrollToAnchor from "@/components/ScrollToAnchor";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -48,8 +48,11 @@ function AppChromeData() {
   const pathname = usePathname();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const refreshUnread = async () => {
-    if (session?.user?.role !== "admin" || pathname?.startsWith("/admin/dashboard")) {
+  const isAdmin = session?.user?.role === "admin";
+  const isOnDashboard = pathname?.startsWith("/admin/dashboard") ?? false;
+
+  const refreshUnread = useCallback(async () => {
+    if (!isAdmin || isOnDashboard) {
       setUnreadCount(0);
       return;
     }
@@ -58,14 +61,18 @@ function AppChromeData() {
     if (Array.isArray(res)) {
       setUnreadCount(res.reduce((acc: number, conv: any) => acc + getConversationUnreadCount(conv), 0));
     }
-  };
+  }, [isAdmin, isOnDashboard]);
 
   useSocketRefresh({
     socket,
-    enabled: session?.user?.role === "admin" && !pathname?.startsWith("/admin/dashboard"),
+    enabled: isAdmin && !isOnDashboard,
     refresh: refreshUnread,
-    intervalMs: 15000,
   });
+
+  // Initial load — useSocketRefresh is purely event-driven
+  useEffect(() => {
+    refreshUnread();
+  }, [refreshUnread]);
 
   return (
     <>

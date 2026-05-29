@@ -41,7 +41,7 @@ export default function CheckoutPage() {
     }
   }, [cart.length, status, router, isSubmitting]);
 
-  if (status === "loading" || isSubmitting || (cart.length === 0 && !isSubmitting)) {
+  if ((status === "loading" && !session) || isSubmitting || (cart.length === 0 && !isSubmitting)) {
     return <Loading fullScreen />;
   }
 

@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import type { Socket } from "socket.io-client";
 
-const DEFAULT_EVENTS = ["new_message_notification", "conversation_deleted"] as const;
+const DEFAULT_EVENTS = ["new_message_notification", "conversation_deleted", "unread_count_updated"] as const;
 
 type UseSocketRefreshOptions = {
   socket?: Socket | null;
   enabled: boolean;
   refresh: () => void | Promise<void>;
-  intervalMs?: number;
   events?: readonly string[];
 };
 
@@ -17,7 +16,6 @@ export function useSocketRefresh({
   socket,
   enabled,
   refresh,
-  intervalMs,
   events = DEFAULT_EVENTS,
 }: UseSocketRefreshOptions) {
   const refreshRef = useRef(refresh);
@@ -26,33 +24,32 @@ export function useSocketRefresh({
     refreshRef.current = refresh;
   }, [refresh]);
 
+  // Memoize the events key so the dependency is a stable string reference
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const eventsKey = useMemo(() => events.join("|"), [events.join("|")]);
+
   useEffect(() => {
     if (!enabled || !socket) return;
 
     let cancelled = false;
-    const eventList = [...events];
+    const eventList = eventsKey.split("|");
 
     const triggerRefresh = () => {
       if (cancelled) return;
       void refreshRef.current();
     };
 
-    triggerRefresh();
-
-    const interval = typeof intervalMs === "number" ? window.setInterval(triggerRefresh, intervalMs) : null;
-
+    // Subscribe to socket events only — no immediate call.
+    // Consumers should handle their own initial data loading via useEffect.
     eventList.forEach((eventName) => {
       socket.on(eventName, triggerRefresh);
     });
 
     return () => {
       cancelled = true;
-      if (interval !== null) {
-        window.clearInterval(interval);
-      }
       eventList.forEach((eventName) => {
         socket.off(eventName, triggerRefresh);
       });
     };
-  }, [socket, enabled, intervalMs, events.join("|")]);
+  }, [socket, enabled, eventsKey]);
 }
