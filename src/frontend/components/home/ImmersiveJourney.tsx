@@ -4,7 +4,7 @@ import { motion, useScroll, useTransform, useSpring, AnimatePresence } from "fra
 import Image from "next/image";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { Leaf, Sprout, Sparkles } from "lucide-react";
+import { Leaf, Sprout, Sparkles, ArrowDown, ArrowUp } from "lucide-react";
 import { Product } from "@/types";
 
 // Import ALL images from assets for dynamic background slideshow
@@ -28,10 +28,11 @@ import WelcomeStage from "./sections/WelcomeStage";
 import SovereigntyStage from "./sections/SovereigntyStage";
 import ProductsStage from "./sections/ProductsStage";
 import CommunityStage from "./sections/CommunityStage";
-import CTAStage from "./sections/CTAStage";
 
 interface ImmersiveJourneyProps {
   initialProducts: Product[];
+  initialForumTopics?: any[];
+  realStats?: { users: number; posts: number; products: number };
 }
 
 interface Particle {
@@ -95,7 +96,7 @@ const ParticleElement = ({ p, smoothProgress }: ParticleElementProps) => {
   );
 };
 
-const ImmersiveJourney = ({ initialProducts }: ImmersiveJourneyProps) => {
+const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: ImmersiveJourneyProps) => {
   const { t, language } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -157,45 +158,41 @@ const ImmersiveJourney = ({ initialProducts }: ImmersiveJourneyProps) => {
   // Update active stage based on scroll progress for the indicator HUD
   useEffect(() => {
     return smoothProgress.on("change", (latest) => {
-      if (latest < 0.2) setActiveStage(0);
-      else if (latest < 0.45) setActiveStage(1);
-      else if (latest < 0.7) setActiveStage(2);
-      else if (latest < 0.9) setActiveStage(3);
-      else setActiveStage(4);
+      if (latest < 0.18) setActiveStage(0);
+      else if (latest < 0.52) setActiveStage(1);
+      else if (latest < 0.84) setActiveStage(2);
+      else setActiveStage(3);
     });
   }, [smoothProgress]);
 
   // Stage 1 (Welcome / Intro) Transforms
   // On mobile, disable the 3D immersion (Z + scale) — only fade out
-  const introZ = useTransform(smoothProgress, [0, 0.22], isMobile ? [0, 0] : [0, 700]);
-  const introOpacity = useTransform(smoothProgress, [0.12, 0.22], [1, 0]);
-  const introScale = useTransform(smoothProgress, [0, 0.22], isMobile ? [1, 1] : [1, 1.2]);
+  const introZ = useTransform(smoothProgress, [0, 0.29], isMobile ? [0, 0] : [0, 700]);
+  const introOpacity = useTransform(smoothProgress, [0.16, 0.29], [1, 0]);
+  const introScale = useTransform(smoothProgress, [0, 0.29], isMobile ? [1, 1] : [1, 1.2]);
 
   // Stage 2 (Soberanía Alimentaria) Transforms
-  const stage2Z = useTransform(smoothProgress, [0.12, 0.28, 0.48], [-1200, 0, 700]);
-  const stage2Opacity = useTransform(smoothProgress, [0.12, 0.24, 0.4, 0.48], [0, 1, 1, 0]);
-  const stage2Scale = useTransform(smoothProgress, [0.12, 0.28, 0.48], [0.7, 1, 1.2]);
+  const stage2Z = useTransform(smoothProgress, [0.16, 0.37, 0.63], [-1200, 0, 700]);
+  const stage2Opacity = useTransform(smoothProgress, [0.16, 0.32, 0.53, 0.63], [0, 1, 1, 0]);
+  const stage2Scale = useTransform(smoothProgress, [0.16, 0.37, 0.63], [0.7, 1, 1.2]);
 
   // Stage 3 (Catalog 3D Showcase) Transforms
-  const stage3Z = useTransform(smoothProgress, [0.38, 0.52, 0.72], [-1200, 0, 700]);
-  const stage3Opacity = useTransform(smoothProgress, [0.38, 0.48, 0.64, 0.72], [0, 1, 1, 0]);
-  const stage3Scale = useTransform(smoothProgress, [0.38, 0.52, 0.72], [0.7, 1, 1.15]);
+  const stage3Z = useTransform(smoothProgress, [0.50, 0.68, 0.95], [-1200, 0, 700]);
+  const stage3Opacity = useTransform(smoothProgress, [0.50, 0.63, 0.84, 0.95], [0, 1, 1, 0]);
+  const stage3Scale = useTransform(smoothProgress, [0.50, 0.68, 0.95], [0.6, 0.85, 1.0]);
 
   // Stage 4 (Community & Network) Transforms
-  const stage4Z = useTransform(smoothProgress, [0.62, 0.76, 0.92], [-1200, 0, 700]);
-  const stage4Opacity = useTransform(smoothProgress, [0.62, 0.72, 0.86, 0.92], [0, 1, 1, 0]);
-  const stage4Scale = useTransform(smoothProgress, [0.62, 0.76, 0.92], [0.7, 1, 1.15]);
+  const stage4Z = useTransform(smoothProgress, [0.82, 1.0], [-1200, 0]);
+  const stage4Opacity = useTransform(smoothProgress, [0.82, 0.95, 1.0], [0, 1, 1]);
+  const stage4Scale = useTransform(smoothProgress, [0.82, 1.0], [0.7, 1]);
 
-  // Stage 5 (Cosechando Futuro / CTA) Transforms
-  const stage5Z = useTransform(smoothProgress, [0.84, 0.95], [-1000, 0]);
-  const stage5Opacity = useTransform(smoothProgress, [0.84, 0.92], [0, 1]);
-  const stage5Scale = useTransform(smoothProgress, [0.84, 0.95], [0.85, 1]);
+
 
   const startJourney = () => {
     const scrollHeight = containerRef.current?.scrollHeight || 0;
     const maxScroll = Math.max(0, scrollHeight - window.innerHeight);
     window.scrollTo({
-      top: 0.32 * maxScroll,
+      top: 0.37 * maxScroll,
       behavior: "smooth"
     });
   };
@@ -218,23 +215,22 @@ const ImmersiveJourney = ({ initialProducts }: ImmersiveJourneyProps) => {
     <div
       ref={containerRef}
       className="relative w-full bg-background"
-      style={{ height: "480vh" }} // Provides the scroll headroom
+      style={{ height: "313vh" }} // Provides the scroll headroom, ending exactly at stage 4
     >
       {/* PERSISTENT HUD: Navigation dots and scroll indicators */}
       <div className="fixed right-6 top-1/2 -translate-y-1/2 z-50 hidden md:flex flex-col gap-4 items-center bg-background/30 backdrop-blur-md px-3 py-6 rounded-full border border-primary/10 shadow-lg">
-        {[0, 1, 2, 3, 4].map((idx) => {
+        {[0, 1, 2, 3].map((idx) => {
           const labels = [
             language === "es" ? "Inicio" : "Welcome",
             language === "es" ? "Soberanía" : "Sovereignty",
             language === "es" ? "Nuestra Tierra" : "Harvest Showcase",
-            language === "es" ? "Comunidad" : "Our Network",
-            language === "es" ? "Cosechar" : "Future"
+            language === "es" ? "Comunidad" : "Our Network"
           ];
           return (
             <button
               key={idx}
               onClick={() => {
-                const targetScroll = [0, 0.32, 0.52, 0.76, 0.98][idx];
+                const targetScroll = [0, 0.37, 0.68, 1.0][idx];
                 const scrollHeight = containerRef.current?.scrollHeight || 0;
                 const maxScroll = Math.max(0, scrollHeight - window.innerHeight);
                 window.scrollTo({
@@ -358,26 +354,42 @@ const ImmersiveJourney = ({ initialProducts }: ImmersiveJourneyProps) => {
             }}
             className={`absolute inset-0 flex items-center justify-center p-4 sm:p-8 ${activeStage === 3 ? "pointer-events-auto" : "pointer-events-none"}`}
           >
-            <CommunityStage t={t} language={language} />
+            <CommunityStage t={t} language={language} initialForumTopics={initialForumTopics} realStats={realStats} />
           </motion.div>
 
-          {/* ==========================================
-              STAGE 5: COSECHANDO FUTURO / CTA (Z = -4000)
-              ========================================== */}
-          <motion.div
-            style={{
-              z: stage5Z,
-              opacity: stage5Opacity,
-              scale: stage5Scale,
-              transformStyle: "preserve-3d",
-              zIndex: activeStage === 4 ? 30 : 0
-            }}
-            className={`absolute inset-0 flex flex-col items-center justify-center p-4 overflow-y-auto ${activeStage === 4 ? "pointer-events-auto" : "pointer-events-none"}`}
-          >
-            <CTAStage t={t} language={language} />
-          </motion.div>
+
 
         </div>
+
+        {/* FLOATING ACTION BUTTON (NEXT STAGE / RETURN) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: [0, activeStage === 3 ? -8 : 8, 0] }}
+          transition={{ 
+            opacity: { duration: 0.3 },
+            y: { repeat: Infinity, duration: 2 } 
+          }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-1.5 cursor-pointer text-muted-foreground hover:text-primary transition-colors"
+          onClick={() => {
+              const isLast = activeStage === 3;
+              const nextStage = isLast ? 0 : Math.min(activeStage + 1, 3);
+              const targetScroll = [0, 0.37, 0.68, 1.0][nextStage];
+              const scrollHeight = containerRef.current?.scrollHeight || 0;
+              const maxScroll = Math.max(0, scrollHeight - window.innerHeight);
+              window.scrollTo({
+                top: targetScroll * maxScroll,
+                behavior: "smooth"
+              });
+            }}
+          >
+            {activeStage === 3 && <ArrowUp className="w-5 h-5 text-primary" />}
+            <span className="text-xs tracking-widest font-semibold uppercase opacity-75">
+              {activeStage === 3 
+                ? (language === "es" ? "Volver al inicio" : "Back to top")
+                : (language === "es" ? "Desliza para avanzar" : "Scroll to explore")}
+            </span>
+            {activeStage !== 3 && <ArrowDown className="w-5 h-5 text-primary" />}
+        </motion.div>
       </div>
     </div>
   );

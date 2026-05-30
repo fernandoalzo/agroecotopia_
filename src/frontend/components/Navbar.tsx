@@ -68,6 +68,11 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
     if (!open) {
       setConfirmLogout(false);
     }
+    
+    // Dispatch event to notify other components (like ChatWidget) about menu state
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("mobile-menu-state", { detail: open }));
+    }
   }, [open]);
 
   return (

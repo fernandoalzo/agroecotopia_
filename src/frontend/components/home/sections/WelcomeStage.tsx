@@ -65,17 +65,7 @@ const WelcomeStage = ({ t, language, onStartJourney }: WelcomeStageProps) => {
           </button>
         </motion.div>
 
-        <motion.div
-          animate={{ y: [0, 8, 0] }}
-          transition={{ repeat: Infinity, duration: 2 }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 cursor-pointer text-muted-foreground hover:text-primary transition-colors"
-          onClick={onStartJourney}
-        >
-          <span className="text-xs tracking-widest font-semibold uppercase opacity-75">
-            {language === "es" ? "Desliza para avanzar" : "Scroll to explore"}
-          </span>
-          <ArrowDown className="w-5 h-5 text-primary" />
-        </motion.div>
+
       </div>
     </>
   );

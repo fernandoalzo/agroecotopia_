@@ -33,7 +33,7 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
 
       {/* Floating product showcase - 3D grid layout */}
       {featuredProducts.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6 overflow-y-auto max-h-[66vh] py-2 px-3 no-scrollbar mb-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6 overflow-y-auto max-h-[55vh] py-2 px-3 no-scrollbar mb-2">
           {featuredProducts.map((p, i) => {
             return (
               <motion.div

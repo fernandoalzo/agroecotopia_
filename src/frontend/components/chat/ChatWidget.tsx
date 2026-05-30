@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { MessageSquare, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useChatWidget } from "./useChatWidget";
 import { ChatHeader } from "./ChatHeader";
 import { ChatMessageList } from "./ChatMessageList";
@@ -43,11 +44,25 @@ export default function ChatWidget({ forceShow = false, targetUserId, chatDeps }
   const shouldEnableChat = !(pathname?.startsWith("/comunidad") || pathname?.startsWith("/mi-tienda") || pathname?.startsWith("/pedidos/"));
   const chat = useChatWidget(forceShow, targetUserId, shouldEnableChat, chatDeps);
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleMobileMenu = (e: CustomEvent<boolean>) => {
+      setIsMobileMenuOpen(e.detail);
+    };
+    window.addEventListener("mobile-menu-state", handleMobileMenu as EventListener);
+    return () => window.removeEventListener("mobile-menu-state", handleMobileMenu as EventListener);
+  }, []);
+
   if (!chat.isClient || chat.status !== "authenticated") return null;
   if (!forceShow && (chat.isRouteAdmin || chat.isAdminUser)) return null;
   if (!shouldEnableChat) return null;
 
   const isMobileOpen = chat.isClient && chat.isOpen && window.innerWidth < 768;
+
+  // Don't render the widget at all on mobile if the menu is open,
+  // or just hide it using CSS classes below. We can just hide the container.
+  if (isMobileMenuOpen && window.innerWidth < 1024) return null;
 
   return (
     <>
