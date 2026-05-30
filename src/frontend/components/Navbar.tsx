@@ -557,6 +557,52 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                     </div>
                   )}
 
+                  {/* Store Dashboard Button — visible for sellers */}
+                  {isAuthenticated && session?.user?.role === "seller" && (
+                    <div className="relative group">
+                      <Link href="/mi-tienda" onClick={() => setOpen(false)}
+                        className="flex items-center justify-between gap-4 rounded-3xl bg-[#0f2a1d] border border-white/10 px-8 py-6 text-white shadow-xl active:scale-95 transition-all overflow-hidden relative"
+                      >
+                        <div className="flex items-center gap-5 relative z-10">
+                          <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
+                            <Package className="h-6 w-6 text-white" />
+                          </div>
+                          <span className="font-display text-2xl font-black tracking-tight uppercase">
+                            Mi Tienda
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 relative z-10">
+                          <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center">
+                            <ChevronRight className="h-4 w-4 text-white/40" />
+                          </div>
+                        </div>
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* Request Store Button — visible for regular users */}
+                  {isAuthenticated && session?.user?.role === "user" && (
+                    <div className="relative group">
+                      <Link href="/solicitar-tienda" onClick={() => setOpen(false)}
+                        className="flex items-center justify-between gap-4 rounded-3xl bg-[#0f2a1d] border border-white/10 px-8 py-6 text-white shadow-xl active:scale-95 transition-all overflow-hidden relative"
+                      >
+                        <div className="flex items-center gap-5 relative z-10">
+                          <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
+                            <Leaf className="h-6 w-6 text-white" />
+                          </div>
+                          <span className="font-display text-2xl font-black tracking-tight uppercase">
+                            Vender con Nosotros
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 relative z-10">
+                          <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center">
+                            <ChevronRight className="h-4 w-4 text-white/40" />
+                          </div>
+                        </div>
+                      </Link>
+                    </div>
+                  )}
+
                   {/* Cart Button */}
                   <div className="relative group">
                     <Link href="/cart" onClick={() => setOpen(false)}
