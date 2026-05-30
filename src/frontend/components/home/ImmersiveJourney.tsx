@@ -276,7 +276,9 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
                 fill
                 sizes="100vw"
                 className="object-cover"
-                priority
+                priority={bgIndex === 0}
+                unoptimized={true}
+                quality={75}
               />
             </motion.div>
           </AnimatePresence>
