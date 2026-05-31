@@ -1,27 +1,10 @@
 "use client";
 
 import { motion, useScroll, useTransform, useSpring, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Leaf, Sprout, Sparkles, ArrowDown, ArrowUp } from "lucide-react";
 import { Product } from "@/types";
-
-// Import ALL images from assets for dynamic background slideshow
-import heroAgro from "@/assets/hero-agro.jpg";
-import communityImg from "@/assets/agro_community_journey.png";
-import ecoProducts from "@/assets/eco_products_journey.png";
-import strawberry from "@/assets/beautiful-strawberry-garden-sunrise-doi-ang-khang-chiang-mai-thailand.jpg";
-import envConservation from "@/assets/environmental-conservation-plant-sustainability.jpg";
-import sunnyMeadow from "@/assets/sunny-meadow-landscape.jpg";
-import cityMountains from "@/assets/city-with-mountains-background.jpg";
-import coffeStillLife1 from "@/assets/delicious-organic-coffee-still-life (1).jpg";
-import coffeStillLife2 from "@/assets/delicious-organic-coffee-still-life.jpg";
-import greenTea from "@/assets/green-tea-plantations-hilltop-chiang-rai-province-thailand-landscape-view-nature.jpg";
-import treeBranchCity from "@/assets/tree-branch-with-city-background.jpg";
-import tropicalSunset from "@/assets/tropical-sunset-palm-trees-mountain-silhouette-beauty-generated-by-ai.jpg";
-
-const BG_IMAGES = [heroAgro, communityImg, ecoProducts, strawberry, envConservation, sunnyMeadow, cityMountains, coffeStillLife1, coffeStillLife2, greenTea, treeBranchCity, tropicalSunset];
 
 // Import modular sections
 import WelcomeStage from "./sections/WelcomeStage";
@@ -103,7 +86,6 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
   // State to handle hydration and client-side setup
   const [mounted, setMounted] = useState(false);
   const [activeStage, setActiveStage] = useState(0);
-  const [bgIndex, setBgIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -113,15 +95,6 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
-
-  // Auto-cycle background images every 8 seconds
-  useEffect(() => {
-    if (!mounted) return;
-    const interval = setInterval(() => {
-      setBgIndex((prev) => (prev + 1) % BG_IMAGES.length);
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [mounted]);
 
   // Track scroll position within the entire height of the container
   const { scrollYProgress } = useScroll({
@@ -259,30 +232,56 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
         <div className="absolute inset-0 bg-radial-[circle_at_center,_var(--color-primary)_0%,_transparent_75%] opacity-5 mix-blend-screen pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background/90 to-background pointer-events-none" />
 
-        {/* DYNAMIC BACKGROUND SLIDESHOW — always visible across all stages */}
-        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-          <AnimatePresence initial={false}>
-            <motion.div
-              key={bgIndex}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 1.8, ease: "easeInOut" }}
-              className="absolute inset-0"
-            >
-              <Image
-                src={BG_IMAGES[bgIndex]}
-                alt="Agroecotopia Background"
-                fill
-                sizes="100vw"
-                className="object-cover"
-                priority={bgIndex === 0}
-                unoptimized={true}
-                quality={75}
-              />
-            </motion.div>
-          </AnimatePresence>
-          <div className="absolute inset-0 bg-background/75 backdrop-blur-[1px]" />
+        {/* LIGHTWEIGHT DYNAMIC WAVE & GLOW BACKGROUND */}
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden bg-background">
+          <div className="absolute inset-0 opacity-40 mix-blend-screen">
+             <motion.div 
+               animate={{ 
+                 x: ["-5%", "0%", "-5%"], 
+                 y: ["-5%", "5%", "-5%"],
+                 scale: [1, 1.1, 1] 
+               }} 
+               transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
+               className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(ellipse_at_center,_hsl(var(--primary))_0%,_transparent_60%)] blur-3xl opacity-20"
+             />
+             <motion.div 
+               animate={{ 
+                 x: ["0%", "-5%", "0%"],
+                 y: ["5%", "-5%", "5%"],
+                 scale: [1, 1.05, 1] 
+               }} 
+               transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+               className="absolute top-[20%] right-[-20%] w-[120%] h-[120%] bg-[radial-gradient(circle_at_center,_hsl(var(--accent))_0%,_transparent_70%)] blur-[100px] opacity-15"
+             />
+          </div>
+          
+          <svg className="absolute bottom-0 w-[200%] h-[40vh] opacity-30" viewBox="0 0 1440 320" preserveAspectRatio="none">
+            <motion.path 
+              fill="hsl(var(--primary))" 
+              animate={{
+                d: [
+                  "M0,160L48,176C96,192,192,224,288,213.3C384,203,480,149,576,144C672,139,768,181,864,197.3C960,213,1056,203,1152,176C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z",
+                  "M0,192L48,176C96,160,192,128,288,144C384,160,480,224,576,240C672,256,768,224,864,197.3C960,171,1056,149,1152,149.3C1248,149,1344,171,1392,181.3L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z",
+                  "M0,160L48,176C96,192,192,224,288,213.3C384,203,480,149,576,144C672,139,768,181,864,197.3C960,213,1056,203,1152,176C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
+                ],
+                x: ["0%", "-50%", "0%"]
+              }}
+              transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
+            />
+            <motion.path 
+              fill="hsl(var(--accent))" 
+              className="opacity-60"
+              animate={{
+                d: [
+                  "M0,256L48,229.3C96,203,192,149,288,144C384,139,480,181,576,197.3C672,213,768,203,864,186.7C960,171,1056,149,1152,154.7C1248,160,1344,192,1392,208L1440,224L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z",
+                  "M0,160L48,176C96,192,192,224,288,213.3C384,203,480,149,576,144C672,139,768,181,864,197.3C960,213,1056,203,1152,176C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z",
+                  "M0,256L48,229.3C96,203,192,149,288,144C384,139,480,181,576,197.3C672,213,768,203,864,186.7C960,171,1056,149,1152,154.7C1248,160,1344,192,1392,208L1440,224L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
+                ],
+                x: ["-50%", "0%", "-50%"]
+              }}
+              transition={{ duration: 32, repeat: Infinity, ease: "linear" }}
+            />
+          </svg>
         </div>
 
         {/* 3D SCENE PERSPECTIVE WRAPPER */}
