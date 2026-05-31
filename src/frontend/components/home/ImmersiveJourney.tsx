@@ -180,7 +180,13 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
       const rect = containerRef.current.getBoundingClientRect();
       const absoluteTop = window.scrollY + rect.top;
       const totalScrollableDistance = Math.max(0, rect.height - window.innerHeight);
-      const targetScrollY = absoluteTop + (targetProgress * totalScrollableDistance);
+      let targetScrollY = absoluteTop + (targetProgress * totalScrollableDistance);
+      
+      // Force an overscroll on the last stage to ensure useScroll progress reaches exactly 1.0.
+      // This compensates for mobile browsers changing window.innerHeight (address bar hiding).
+      if (clampedIndex === 3) {
+        targetScrollY += 300;
+      }
       
       window.scrollTo({
         top: targetScrollY,
