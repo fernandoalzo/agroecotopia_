@@ -42,10 +42,10 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
   };
 
   return (
-    <div className="container max-w-7xl mx-auto flex flex-col h-full justify-center">
+    <div className="w-full flex flex-col h-full justify-center">
 
       {/* Header Title */}
-      <div className="text-center mb-6 shrink-0">
+      <div className="container max-w-7xl mx-auto text-center mb-6 shrink-0 px-4">
         <span className="text-xs font-bold text-primary tracking-widest uppercase mb-1 block">
           {language === "es" ? "Nuestra Cosecha" : "Our Harvest"}
         </span>
@@ -59,7 +59,7 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
 
       {/* Floating product showcase - 3D single-line layout */}
       {featuredProducts.length > 0 ? (
-        <div className="relative w-full max-w-[90vw] md:max-w-6xl mx-auto flex items-center group">
+        <div className="relative w-[calc(100%+2rem)] sm:w-[calc(100%+4rem)] -mx-4 sm:-mx-8 flex items-center group">
           {/* Left Arrow */}
           <button 
             type="button"
@@ -116,7 +116,7 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
       )}
 
       {/* View all products button */}
-      <div className="text-center mt-8 shrink-0">
+      <div className="container max-w-7xl mx-auto text-center mt-8 shrink-0 px-4">
         <button
           onClick={(e) => {
             e.stopPropagation();
