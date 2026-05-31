@@ -68,24 +68,11 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
     if (!open) {
       setConfirmLogout(false);
     }
-    
-    if (typeof window !== "undefined") {
-      // Dispatch event to notify other components (like ChatWidget) about menu state
-      window.dispatchEvent(new CustomEvent("mobile-menu-state", { detail: open }));
-      
-      // Lock body scroll when mobile menu is open
-      if (open) {
-        document.body.style.overflow = "hidden";
-      } else {
-        document.body.style.overflow = "";
-      }
-    }
 
-    return () => {
-      if (typeof window !== "undefined") {
-        document.body.style.overflow = "";
-      }
-    };
+    // Dispatch event to notify other components (like ChatWidget) about menu state
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("mobile-menu-state", { detail: open }));
+    }
   }, [open]);
 
   return (

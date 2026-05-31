@@ -175,24 +175,12 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
     const clampedIndex = Math.max(0, Math.min(3, stageIndex));
     targetStageRef.current = clampedIndex;
     const targetProgress = snapPoints[clampedIndex];
-    
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const absoluteTop = window.scrollY + rect.top;
-      const totalScrollableDistance = Math.max(0, rect.height - window.innerHeight);
-      let targetScrollY = absoluteTop + (targetProgress * totalScrollableDistance);
-      
-      // Force an overscroll on the last stage to ensure useScroll progress reaches exactly 1.0.
-      // This compensates for mobile browsers changing window.innerHeight (address bar hiding).
-      if (clampedIndex === 3) {
-        targetScrollY += 300;
-      }
-      
-      window.scrollTo({
-        top: targetScrollY,
-        behavior: "smooth"
-      });
-    }
+    const scrollHeight = containerRef.current?.scrollHeight || 0;
+    const maxScroll = Math.max(0, scrollHeight - window.innerHeight);
+    window.scrollTo({
+      top: targetProgress * maxScroll,
+      behavior: "smooth"
+    });
   }, [snapPoints]);
 
   // ── Scroll Snapping: intercept wheel / touch / keyboard to navigate section-by-section ──
@@ -217,18 +205,16 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
 
       if (nextStage !== current) {
         isAnimating.current = true;
-        
-        // Kill native momentum scroll on mobile by briefly toggling overflow
+
+        // Kill native momentum scroll on mobile by briefly hiding overflow
         const originalOverflow = document.body.style.overflow;
         document.body.style.overflow = "hidden";
-        // Force reflow to guarantee the browser registers the state change (killing momentum)
-        void document.body.offsetHeight;
-        document.body.style.overflow = originalOverflow;
-        
+
         scrollToStage(nextStage);
-        
-        setTimeout(() => { 
-          isAnimating.current = false; 
+
+        setTimeout(() => {
+          document.body.style.overflow = originalOverflow;
+          isAnimating.current = false;
         }, ANIMATION_LOCK_MS);
       }
     };
