@@ -233,8 +233,8 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background/90 to-background pointer-events-none" />
 
         {/* LIGHTWEIGHT DYNAMIC WAVE & GLOW BACKGROUND */}
-        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden bg-background">
-          <div className="absolute inset-0 opacity-40 mix-blend-screen">
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden bg-background transition-colors duration-500">
+          <div className="absolute inset-0 opacity-40 dark:opacity-60 mix-blend-multiply dark:mix-blend-screen">
              <motion.div 
                animate={{ 
                  x: ["-5%", "0%", "-5%"], 
@@ -242,7 +242,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
                  scale: [1, 1.1, 1] 
                }} 
                transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-               className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(ellipse_at_center,_hsl(var(--primary))_0%,_transparent_60%)] blur-3xl opacity-20"
+               className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/50 via-primary/10 to-transparent blur-3xl opacity-30 dark:opacity-50"
              />
              <motion.div 
                animate={{ 
@@ -251,13 +251,13 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
                  scale: [1, 1.05, 1] 
                }} 
                transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
-               className="absolute top-[20%] right-[-20%] w-[120%] h-[120%] bg-[radial-gradient(circle_at_center,_hsl(var(--accent))_0%,_transparent_70%)] blur-[100px] opacity-15"
+               className="absolute top-[20%] right-[-20%] w-[120%] h-[120%] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-accent/50 via-accent/10 to-transparent blur-[100px] opacity-25 dark:opacity-40"
              />
           </div>
           
-          <svg className="absolute bottom-0 w-[200%] h-[40vh] opacity-30" viewBox="0 0 1440 320" preserveAspectRatio="none">
+          <svg className="absolute bottom-0 w-[200%] h-[40vh] opacity-40 dark:opacity-60" viewBox="0 0 1440 320" preserveAspectRatio="none">
             <motion.path 
-              fill="hsl(var(--primary))" 
+              className="fill-primary"
               animate={{
                 d: [
                   "M0,160L48,176C96,192,192,224,288,213.3C384,203,480,149,576,144C672,139,768,181,864,197.3C960,213,1056,203,1152,176C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z",
@@ -269,8 +269,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
               transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
             />
             <motion.path 
-              fill="hsl(var(--accent))" 
-              className="opacity-60"
+              className="fill-accent opacity-60 dark:opacity-80"
               animate={{
                 d: [
                   "M0,256L48,229.3C96,203,192,149,288,144C384,139,480,181,576,197.3C672,213,768,203,864,186.7C960,171,1056,149,1152,154.7C1248,160,1344,192,1392,208L1440,224L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z",
