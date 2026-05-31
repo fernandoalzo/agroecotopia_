@@ -175,12 +175,18 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
     const clampedIndex = Math.max(0, Math.min(3, stageIndex));
     targetStageRef.current = clampedIndex;
     const targetProgress = snapPoints[clampedIndex];
-    const scrollHeight = containerRef.current?.scrollHeight || 0;
-    const maxScroll = Math.max(0, scrollHeight - window.innerHeight);
-    window.scrollTo({
-      top: targetProgress * maxScroll,
-      behavior: "smooth"
-    });
+    
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const absoluteTop = window.scrollY + rect.top;
+      const totalScrollableDistance = Math.max(0, rect.height - window.innerHeight);
+      const targetScrollY = absoluteTop + (targetProgress * totalScrollableDistance);
+      
+      window.scrollTo({
+        top: targetScrollY,
+        behavior: "smooth"
+      });
+    }
   }, [snapPoints]);
 
   // ── Scroll Snapping: intercept wheel / touch / keyboard to navigate section-by-section ──
