@@ -87,6 +87,11 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
   const [mounted, setMounted] = useState(false);
   const [activeStage, setActiveStage] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const touchStartY = useRef<number>(0);
+  const targetStageRef = useRef(0);       // Tracks INTENDED destination (not mid-animation state)
+  const isAnimating = useRef(false);       // Animation lock — blocks all events during transition
+  const wheelAccumulator = useRef(0);      // Absorbs trackpad inertia before triggering
+  const wheelResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -131,10 +136,12 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
   // Update active stage based on scroll progress for the indicator HUD
   useEffect(() => {
     return smoothProgress.on("change", (latest) => {
-      if (latest < 0.18) setActiveStage(0);
-      else if (latest < 0.52) setActiveStage(1);
-      else if (latest < 0.84) setActiveStage(2);
-      else setActiveStage(3);
+      let stage = 0;
+      if (latest < 0.18) stage = 0;
+      else if (latest < 0.52) stage = 1;
+      else if (latest < 0.84) stage = 2;
+      else stage = 3;
+      setActiveStage(stage);
     });
   }, [smoothProgress]);
 
@@ -160,15 +167,120 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
   const stage4Scale = useTransform(smoothProgress, [0.82, 1.0], [0.7, 1]);
 
 
+  // Snap points for each stage (progress values matching navigation targets)
+  const snapPoints = useMemo(() => [0, 0.37, 0.68, 1.0], []);
 
-  const startJourney = () => {
+  // Centralized scroll-to-stage function
+  const scrollToStage = useCallback((stageIndex: number) => {
+    const clampedIndex = Math.max(0, Math.min(3, stageIndex));
+    targetStageRef.current = clampedIndex;
+    const targetProgress = snapPoints[clampedIndex];
     const scrollHeight = containerRef.current?.scrollHeight || 0;
     const maxScroll = Math.max(0, scrollHeight - window.innerHeight);
     window.scrollTo({
-      top: 0.37 * maxScroll,
+      top: targetProgress * maxScroll,
       behavior: "smooth"
     });
-  };
+  }, [snapPoints]);
+
+  // ── Scroll Snapping: intercept wheel / touch / keyboard to navigate section-by-section ──
+  useEffect(() => {
+    if (!mounted) return;
+
+    const ANIMATION_LOCK_MS = 1200; // Full lockout during smooth scroll animation
+    const WHEEL_THRESHOLD = 60;     // Accumulated delta required to trigger snap
+
+    const isInContainer = () => {
+      const container = containerRef.current;
+      if (!container) return false;
+      const rect = container.getBoundingClientRect();
+      return rect.top <= window.innerHeight && rect.bottom >= 0;
+    };
+
+    const snapToDirection = (direction: number) => {
+      if (isAnimating.current) return;
+
+      const current = targetStageRef.current;
+      const nextStage = Math.max(0, Math.min(3, current + direction));
+
+      if (nextStage !== current) {
+        isAnimating.current = true;
+        scrollToStage(nextStage);
+        setTimeout(() => { isAnimating.current = false; }, ANIMATION_LOCK_MS);
+      }
+    };
+
+    // Desktop: accumulate wheel delta → snap once threshold is crossed
+    const handleWheel = (e: WheelEvent) => {
+      if (!isInContainer()) return;
+      e.preventDefault();
+
+      if (isAnimating.current) return;
+
+      // Accumulate delta from trackpad inertia
+      wheelAccumulator.current += e.deltaY;
+
+      // Reset accumulator after brief pause (gesture ended)
+      if (wheelResetTimer.current) clearTimeout(wheelResetTimer.current);
+      wheelResetTimer.current = setTimeout(() => {
+        wheelAccumulator.current = 0;
+      }, 200);
+
+      // Only trigger when accumulated delta exceeds threshold
+      if (Math.abs(wheelAccumulator.current) < WHEEL_THRESHOLD) return;
+
+      const direction = wheelAccumulator.current > 0 ? 1 : -1;
+      wheelAccumulator.current = 0; // Reset after triggering
+      snapToDirection(direction);
+    };
+
+    // Mobile: touch swipe → one section per swipe
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!isInContainer()) return;
+
+      const deltaY = touchStartY.current - e.changedTouches[0].clientY;
+      const SWIPE_THRESHOLD = 50;
+
+      if (Math.abs(deltaY) < SWIPE_THRESHOLD) return;
+
+      const direction = deltaY > 0 ? 1 : -1;
+      snapToDirection(direction);
+    };
+
+    // Keyboard: arrow keys, PageUp/Down, Space → one section per press
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isInContainer()) return;
+
+      let direction = 0;
+      if (e.key === "ArrowDown" || e.key === "PageDown" || e.key === " ") direction = 1;
+      else if (e.key === "ArrowUp" || e.key === "PageUp") direction = -1;
+      else return;
+
+      e.preventDefault();
+      snapToDirection(direction);
+    };
+
+    window.addEventListener("wheel", handleWheel, { passive: false });
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
+      window.removeEventListener("keydown", handleKeyDown);
+      if (wheelResetTimer.current) clearTimeout(wheelResetTimer.current);
+    };
+  }, [mounted, scrollToStage]);
+
+  const startJourney = useCallback(() => {
+    scrollToStage(1);
+  }, [scrollToStage]);
 
   if (!mounted) {
     return (
@@ -202,15 +314,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
           return (
             <button
               key={idx}
-              onClick={() => {
-                const targetScroll = [0, 0.37, 0.68, 1.0][idx];
-                const scrollHeight = containerRef.current?.scrollHeight || 0;
-                const maxScroll = Math.max(0, scrollHeight - window.innerHeight);
-                window.scrollTo({
-                  top: targetScroll * maxScroll,
-                  behavior: "smooth"
-                });
-              }}
+              onClick={() => scrollToStage(idx)}
               className="group relative flex items-center justify-center w-4 h-4 cursor-pointer"
             >
               <span className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${activeStage === idx
@@ -235,28 +339,28 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
         {/* LIGHTWEIGHT DYNAMIC WAVE & GLOW BACKGROUND */}
         <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden bg-background transition-colors duration-500">
           <div className="absolute inset-0 opacity-40 dark:opacity-60 mix-blend-multiply dark:mix-blend-screen">
-             <motion.div 
-               animate={{ 
-                 x: ["-5%", "0%", "-5%"], 
-                 y: ["-5%", "5%", "-5%"],
-                 scale: [1, 1.1, 1] 
-               }} 
-               transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-               className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/50 via-primary/10 to-transparent blur-3xl opacity-30 dark:opacity-50"
-             />
-             <motion.div 
-               animate={{ 
-                 x: ["0%", "-5%", "0%"],
-                 y: ["5%", "-5%", "5%"],
-                 scale: [1, 1.05, 1] 
-               }} 
-               transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
-               className="absolute top-[20%] right-[-20%] w-[120%] h-[120%] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-accent/50 via-accent/10 to-transparent blur-[100px] opacity-25 dark:opacity-40"
-             />
+            <motion.div
+              animate={{
+                x: ["-5%", "0%", "-5%"],
+                y: ["-5%", "5%", "-5%"],
+                scale: [1, 1.1, 1]
+              }}
+              transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/50 via-primary/10 to-transparent blur-3xl opacity-30 dark:opacity-50"
+            />
+            <motion.div
+              animate={{
+                x: ["0%", "-5%", "0%"],
+                y: ["5%", "-5%", "5%"],
+                scale: [1, 1.05, 1]
+              }}
+              transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute top-[20%] right-[-20%] w-[120%] h-[120%] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-accent/50 via-accent/10 to-transparent blur-[100px] opacity-25 dark:opacity-40"
+            />
           </div>
-          
+
           <svg className="absolute bottom-0 w-[200%] h-[40vh] opacity-40 dark:opacity-60" viewBox="0 0 1440 320" preserveAspectRatio="none">
-            <motion.path 
+            <motion.path
               className="fill-primary"
               animate={{
                 d: [
@@ -268,7 +372,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
               }}
               transition={{ duration: 28, repeat: Infinity, ease: "linear" }}
             />
-            <motion.path 
+            <motion.path
               className="fill-accent opacity-60 dark:opacity-80"
               animate={{
                 d: [
@@ -362,7 +466,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
         </div>
 
         {/* FLOATING ACTION BUTTON (NEXT STAGE / RETURN) */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: [0, activeStage === 3 ? -8 : 8, 0] }}
           transition={{ 
@@ -370,17 +474,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
             y: { repeat: Infinity, duration: 2 } 
           }}
           className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-1.5 cursor-pointer text-muted-foreground hover:text-primary transition-colors"
-          onClick={() => {
-              const isLast = activeStage === 3;
-              const nextStage = isLast ? 0 : Math.min(activeStage + 1, 3);
-              const targetScroll = [0, 0.37, 0.68, 1.0][nextStage];
-              const scrollHeight = containerRef.current?.scrollHeight || 0;
-              const maxScroll = Math.max(0, scrollHeight - window.innerHeight);
-              window.scrollTo({
-                top: targetScroll * maxScroll,
-                behavior: "smooth"
-              });
-            }}
+          onClick={() => scrollToStage(activeStage === 3 ? 0 : activeStage + 1)}
           >
             {activeStage === 3 && <ArrowUp className="w-5 h-5 text-primary" />}
             <span className="text-xs tracking-widest font-semibold uppercase opacity-75">
@@ -389,7 +483,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
                 : (language === "es" ? "Desliza para avanzar" : "Scroll to explore")}
             </span>
             {activeStage !== 3 && <ArrowDown className="w-5 h-5 text-primary" />}
-        </motion.div>
+        </motion.div> */}
       </div>
     </div>
   );
