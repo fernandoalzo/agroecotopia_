@@ -218,14 +218,16 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
       if (nextStage !== current) {
         isAnimating.current = true;
         
-        // Kill native momentum scroll on mobile by briefly hiding overflow
+        // Kill native momentum scroll on mobile by briefly toggling overflow
         const originalOverflow = document.body.style.overflow;
         document.body.style.overflow = "hidden";
+        // Force reflow to guarantee the browser registers the state change (killing momentum)
+        void document.body.offsetHeight;
+        document.body.style.overflow = originalOverflow;
         
         scrollToStage(nextStage);
         
         setTimeout(() => { 
-          document.body.style.overflow = originalOverflow;
           isAnimating.current = false; 
         }, ANIMATION_LOCK_MS);
       }
