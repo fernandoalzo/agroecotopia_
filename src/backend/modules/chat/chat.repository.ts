@@ -520,4 +520,78 @@ export class ChatRepository {
       currentPage: page,
     };
   }
+
+  async upsertE2EEDevice(data: {
+    userId: string;
+    registrationId: number;
+    identityKey: string;
+    identityPrivateKey?: string | null;
+    signedPreKeyId: number;
+    signedPreKey: string;
+    signedPreKeyPrivateKey?: string | null;
+    signedPreKeySig: string;
+    preKeys: Array<{ keyId: number; publicKey: string }>;
+  }) {
+    log.info("Registrando claves E2EE para usuario:", { userId: data.userId, preKeysCount: data.preKeys.length });
+
+    return prisma.$transaction(async (tx) => {
+      const device = await tx.e2EEDevice.upsert({
+        where: { userId: data.userId },
+        update: {
+          registrationId: data.registrationId,
+          identityKey: data.identityKey,
+          identityPrivateKey: data.identityPrivateKey,
+          signedPreKeyId: data.signedPreKeyId,
+          signedPreKey: data.signedPreKey,
+          signedPreKeyPrivateKey: data.signedPreKeyPrivateKey,
+          signedPreKeySig: data.signedPreKeySig,
+        },
+        create: {
+          userId: data.userId,
+          registrationId: data.registrationId,
+          identityKey: data.identityKey,
+          identityPrivateKey: data.identityPrivateKey,
+          signedPreKeyId: data.signedPreKeyId,
+          signedPreKey: data.signedPreKey,
+          signedPreKeyPrivateKey: data.signedPreKeyPrivateKey,
+          signedPreKeySig: data.signedPreKeySig,
+        },
+      });
+
+      await tx.e2EEPreKey.deleteMany({
+        where: { deviceId: device.id },
+      });
+
+      if (data.preKeys.length > 0) {
+        await tx.e2EEPreKey.createMany({
+          data: data.preKeys.map((preKey) => ({
+            deviceId: device.id,
+            keyId: preKey.keyId,
+            publicKey: preKey.publicKey,
+          })),
+        });
+      }
+
+      return device;
+    });
+  }
+
+  async findAdminE2EEDeviceOwner() {
+    return prisma.user.findFirst({
+      where: { role: "admin" },
+      include: { e2eeDevice: true },
+    });
+  }
+
+  async findE2EEDeviceBundle(userId: string) {
+    return prisma.e2EEDevice.findUnique({
+      where: { userId },
+      include: {
+        preKeys: {
+          take: 1,
+          orderBy: { keyId: "asc" },
+        },
+      },
+    });
+  }
 }

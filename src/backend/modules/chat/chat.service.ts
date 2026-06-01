@@ -168,4 +168,75 @@ export class ChatService {
     log.debug("Buscando usuarios paginados para chat de admin:", { searchQuery, page });
     return this.chatRepository.findUsersPaginated(searchQuery, page);
   }
+
+  async registerE2EEDevice(
+    userId: string,
+    data: {
+      registrationId: number;
+      identityKey: string;
+      identityPrivateKey?: string | null;
+      signedPreKeyId: number;
+      signedPreKey: string;
+      signedPreKeyPrivateKey?: string | null;
+      signedPreKeySig: string;
+      preKeys: Array<{ keyId: number; publicKey: string }>;
+    }
+  ) {
+    if (
+      data.registrationId == null ||
+      !data.identityKey ||
+      data.signedPreKeyId == null ||
+      !data.signedPreKey ||
+      !data.signedPreKeySig ||
+      !Array.isArray(data.preKeys)
+    ) {
+      throw new Error("INVALID_E2EE_PAYLOAD");
+    }
+
+    return this.chatRepository.upsertE2EEDevice({ userId, ...data });
+  }
+
+  async getE2EEBundle(requestingUserId: string, targetUserIdOrAlias: string) {
+    let targetUserId = targetUserIdOrAlias;
+
+    if (targetUserIdOrAlias === "admin") {
+      const admin = await this.chatRepository.findAdminE2EEDeviceOwner();
+      if (!admin?.e2eeDevice) {
+        throw new Error("ADMIN_DEVICE_NOT_FOUND");
+      }
+      targetUserId = admin.id;
+    }
+
+    const device = await this.chatRepository.findE2EEDeviceBundle(targetUserId);
+    if (!device) {
+      throw new Error("DEVICE_NOT_FOUND");
+    }
+
+    const preKey = device.preKeys[0] ?? null;
+    const isSelf = targetUserId === requestingUserId;
+
+    return {
+      registrationId: device.registrationId,
+      identityKey: device.identityKey,
+      signedPreKey: {
+        keyId: device.signedPreKeyId,
+        publicKey: device.signedPreKey,
+        signature: device.signedPreKeySig,
+      },
+      preKey: preKey
+        ? {
+            keyId: preKey.keyId,
+            publicKey: preKey.publicKey,
+          }
+        : null,
+      ...(isSelf
+        ? {
+            privateKeys: {
+              identityPrivateKey: device.identityPrivateKey,
+              signedPreKeyPrivateKey: device.signedPreKeyPrivateKey,
+            },
+          }
+        : {}),
+    };
+  }
 }

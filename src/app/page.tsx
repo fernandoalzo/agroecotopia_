@@ -2,47 +2,72 @@ import ImmersiveJourney from "@/components/home/ImmersiveJourney";
 import Footer from "@/components/Footer";
 import { getPaginatedProductsAction } from "@/backend/modules/product/product.actions";
 import { getPostsAction } from "@/backend/modules/forum/forum.actions";
-import prisma from "@/backend/db/prisma";
+import { getHomeStatsAction } from "@/backend/modules/stats/stats.actions";
 import logger from "@/utils/logger";
+import type { Product } from "@/types";
 
 const log = logger.child("src/app/page.tsx");
 
 export const dynamic = "force-dynamic";
 
+type HomeForumPost = {
+  title: string;
+  createdAt: Date | string;
+  author?: {
+    name?: string | null;
+    image?: string | null;
+  } | null;
+  _count?: {
+    answers?: number;
+  };
+};
+type HomeForumTopic = {
+  title: string;
+  author: string;
+  avatar: string;
+  participants: number;
+  posts: number;
+  time: string;
+  color: string;
+};
+
+function formatRelativeAge(now: number, createdAt: Date | string) {
+  const diff = now - new Date(createdAt).getTime();
+  const minutes = Math.floor(diff / 60000);
+
+  if (minutes < 60) return `${minutes}m`;
+
+  const hours = Math.floor(minutes / 60);
+  return hours >= 24 ? `${Math.floor(hours / 24)}d` : `${hours}h`;
+}
+
 export default async function Home() {
   log.info("Renderizando página de inicio (Home Page).");
 
-  let products: any[] = [];
+  let products: Product[] = [];
   try {
     log.debug("Página de inicio: consultando catálogo de productos.");
     const result = await getPaginatedProductsAction(1, 40);
-    products = result.products;
+    products = result.products as unknown as Product[];
     log.debug("Página de inicio: catálogo de productos cargado exitosamente.", { totalProductos: products.length });
   } catch (error) {
     log.error("Página de inicio: error al cargar el catálogo de productos:", error);
   }
 
-  let forumTopics: any[] = [];
+  let forumTopics: HomeForumTopic[] = [];
   try {
     const res = await getPostsAction(undefined, undefined, 3, undefined, "popular");
     if (res.success && res.posts) {
       const colors = ["bg-emerald-500", "bg-amber-500", "bg-blue-500"];
-      forumTopics = res.posts.map((post: any, i: number) => {
-        const diff = Date.now() - new Date(post.createdAt).getTime();
-        const minutes = Math.floor(diff / 60000);
-        let timeStr = `${minutes}m`;
-        if (minutes >= 60) {
-          const hours = Math.floor(minutes / 60);
-          timeStr = hours >= 24 ? `${Math.floor(hours / 24)}d` : `${hours}h`;
-        }
-        
+      const now = new Date().getTime();
+      forumTopics = (res.posts as HomeForumPost[]).map((post, i) => {
         return {
           title: post.title,
           author: post.author?.name || "Usuario",
           avatar: post.author?.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${post.author?.name || 'User'}`,
           participants: (post._count?.answers || 0) + 1,
           posts: post._count?.answers || 0,
-          time: timeStr,
+          time: formatRelativeAge(now, post.createdAt),
           color: colors[i % colors.length]
         };
       });
@@ -53,12 +78,8 @@ export default async function Home() {
 
   let realStats = { users: 500, posts: 100, products: 15 };
   try {
-    const [users, posts, productsCount] = await Promise.all([
-      prisma.user.count(),
-      prisma.forumPost.count(),
-      prisma.product.count()
-    ]);
-    realStats = { users, posts, products: productsCount };
+    const result = await getHomeStatsAction();
+    realStats = result.stats;
   } catch (error) {
     log.error("Página de inicio: error al cargar estadísticas globales:", error);
   }
@@ -74,4 +95,3 @@ export default async function Home() {
     </div>
   );
 }
-

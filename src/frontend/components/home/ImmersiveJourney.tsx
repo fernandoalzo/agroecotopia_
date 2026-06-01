@@ -212,6 +212,17 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
     const ANIMATION_LOCK_MS = 1200; // Full lockout during smooth scroll animation
     const WHEEL_THRESHOLD = 60;     // Accumulated delta required to trigger snap
 
+    const shouldIgnoreGlobalNavigation = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return false;
+
+      const interactiveElement = target.closest(
+        'input, textarea, select, button, a, [role="button"], [contenteditable="true"], [data-home-snap-ignore="true"]'
+      );
+
+      return Boolean(interactiveElement);
+    };
+
     const isInContainer = () => {
       const container = containerRef.current;
       if (!container) return false;
@@ -243,6 +254,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
 
     // Desktop: accumulate wheel delta → snap once threshold is crossed
     const handleWheel = (e: WheelEvent) => {
+      if (shouldIgnoreGlobalNavigation(e)) return;
       if (!isInContainer()) return;
       e.preventDefault();
 
@@ -267,10 +279,12 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
 
     // Mobile: touch swipe → one section per swipe
     const handleTouchStart = (e: TouchEvent) => {
+      if (shouldIgnoreGlobalNavigation(e)) return;
       touchStartY.current = e.touches[0].clientY;
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
+      if (shouldIgnoreGlobalNavigation(e)) return;
       if (!isInContainer()) return;
 
       const deltaY = touchStartY.current - e.changedTouches[0].clientY;
@@ -284,6 +298,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
 
     // Keyboard: arrow keys, PageUp/Down, Space → one section per press
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (shouldIgnoreGlobalNavigation(e)) return;
       if (!isInContainer()) return;
 
       let direction = 0;

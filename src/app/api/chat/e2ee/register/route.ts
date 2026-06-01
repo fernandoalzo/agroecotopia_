@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/utils/auth';
-import prisma from '@/backend/db/prisma';
+import { chatService } from "@/backend/modules/chat";
 import logger from '@/utils/logger';
 
 const log = logger.child("src/app/api/chat/e2ee/register/route.ts");
@@ -25,47 +25,15 @@ export async function POST(req: Request) {
 
     log.info("E2EE Registro: Iniciando transacción de registro de claves para el usuario:", { userId, preKeysCount: preKeys.length });
 
-    // Use a transaction to update or create the device and prekeys
-    await prisma.$transaction(async (tx) => {
-      // Upsert the device
-      const device = await tx.e2EEDevice.upsert({
-        where: { userId },
-        update: {
-          registrationId,
-          identityKey,
-          identityPrivateKey,
-          signedPreKeyId,
-          signedPreKey,
-          signedPreKeyPrivateKey,
-          signedPreKeySig,
-        },
-        create: {
-          userId,
-          registrationId,
-          identityKey,
-          identityPrivateKey,
-          signedPreKeyId,
-          signedPreKey,
-          signedPreKeyPrivateKey,
-          signedPreKeySig,
-        },
-      });
-
-      // Delete old prekeys
-      await tx.e2EEPreKey.deleteMany({
-        where: { deviceId: device.id },
-      });
-
-      // Insert new prekeys
-      if (preKeys.length > 0) {
-        await tx.e2EEPreKey.createMany({
-          data: preKeys.map((pk: any) => ({
-            deviceId: device.id,
-            keyId: pk.keyId,
-            publicKey: pk.publicKey,
-          })),
-        });
-      }
+    await chatService.registerE2EEDevice(userId, {
+      registrationId,
+      identityKey,
+      identityPrivateKey,
+      signedPreKeyId,
+      signedPreKey,
+      signedPreKeyPrivateKey,
+      signedPreKeySig,
+      preKeys,
     });
 
     log.info("E2EE Registro: Registro de claves completado exitosamente para el usuario:", { userId });

@@ -75,12 +75,14 @@ export default function ChatWidget({ forceShow = false, targetUserId, chatDeps }
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             onClick={() => chat.setIsOpen(false)}
+            data-home-snap-ignore="true"
             className="fixed inset-0 bg-black/35 backdrop-blur-[3px] z-[998] cursor-pointer"
           />
         )}
       </AnimatePresence>
 
       <div
+        data-home-snap-ignore="true"
         className={isMobileOpen
           ? "fixed inset-0 z-[999] font-sans"
           : "fixed bottom-5 right-5 z-[999] md:bottom-8 md:right-8 font-sans"
