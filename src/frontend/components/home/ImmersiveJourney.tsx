@@ -87,6 +87,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
   const [mounted, setMounted] = useState(false);
   const [activeStage, setActiveStage] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [renderedStages, setRenderedStages] = useState([true, true, true, true]);
   const touchStartY = useRef<number>(0);
   const targetStageRef = useRef(0);       // Tracks INTENDED destination (not mid-animation state)
   const isAnimating = useRef(false);       // Animation lock — blocks all events during transition
@@ -133,15 +134,36 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
     return arr;
   }, []);
 
-  // Update active stage based on scroll progress for the indicator HUD
+  // Update active stage AND conditionally mount/unmount stages based on scroll progress.
+  // Stages whose opacity is 0 are removed from the DOM entirely so they cannot
+  // intercept pointer events in the preserve-3d compositing context.
   useEffect(() => {
-    return smoothProgress.on("change", (latest) => {
+    let prevRendered = [true, true, true, true];
+
+    return smoothProgress.on("change", (v) => {
+      // ── Active stage (for HUD indicator + pointer-events class) ──
       let stage = 0;
-      if (latest < 0.18) stage = 0;
-      else if (latest < 0.52) stage = 1;
-      else if (latest < 0.84) stage = 2;
+      if (v < 0.18) stage = 0;
+      else if (v < 0.52) stage = 1;
+      else if (v < 0.84) stage = 2;
       else stage = 3;
       setActiveStage(stage);
+
+      // ── Conditional rendering: mount a stage only when its opacity could be > 0 ──
+      // Thresholds include a small margin beyond the opacity=0 boundaries so
+      // stages mount slightly before they fade in and unmount slightly after they fade out.
+      const next = [
+        v < 0.33,                    // Stage 0 fades out at 0.29
+        v > 0.12 && v < 0.67,        // Stage 1 fades in at 0.16, out at 0.63
+        v > 0.46 && v < 0.99,        // Stage 2 fades in at 0.50, out at 0.95
+        v > 0.78                     // Stage 3 fades in at 0.82
+      ];
+
+      if (next[0] !== prevRendered[0] || next[1] !== prevRendered[1] ||
+          next[2] !== prevRendered[2] || next[3] !== prevRendered[3]) {
+        prevRendered = next;
+        setRenderedStages(next);
+      }
     });
   }, [smoothProgress]);
 
@@ -409,68 +431,70 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
           {/* ==========================================
               STAGE 1: PORTADA & BIENVENIDA (Z = 0)
               ========================================== */}
-          <motion.div
-            style={{
-              z: introZ,
-              opacity: introOpacity,
-              scale: introScale,
-              transformStyle: "preserve-3d",
-              zIndex: activeStage === 0 ? 30 : 0
-            }}
-            className={`absolute inset-0 flex items-center justify-center p-4 ${activeStage === 0 ? "pointer-events-auto" : "pointer-events-none"}`}
-          >
-            <WelcomeStage t={t} language={language} onStartJourney={startJourney} />
-          </motion.div>
+          {renderedStages[0] && (
+            <motion.div
+              style={{
+                z: introZ,
+                opacity: introOpacity,
+                scale: introScale,
+                zIndex: activeStage === 0 ? 30 : 0
+              }}
+              className={`absolute inset-0 flex items-center justify-center p-4 ${activeStage === 0 ? "pointer-events-auto" : "pointer-events-none"}`}
+            >
+              <WelcomeStage t={t} language={language} onStartJourney={startJourney} />
+            </motion.div>
+          )}
 
           {/* ==========================================
               STAGE 2: SOBERANÍA ALIMENTARIA (Z = -1000)
               ========================================== */}
-          <motion.div
-            style={{
-              z: stage2Z,
-              opacity: stage2Opacity,
-              scale: stage2Scale,
-              transformStyle: "preserve-3d",
-              zIndex: activeStage === 1 ? 30 : 0
-            }}
-            className={`absolute inset-0 flex items-center justify-center p-4 sm:p-8 ${activeStage === 1 ? "pointer-events-auto" : "pointer-events-none"}`}
-          >
-            <SovereigntyStage t={t} />
-          </motion.div>
+          {renderedStages[1] && (
+            <motion.div
+              style={{
+                z: stage2Z,
+                opacity: stage2Opacity,
+                scale: stage2Scale,
+                zIndex: activeStage === 1 ? 30 : 0
+              }}
+              className={`absolute inset-0 flex items-center justify-center p-4 sm:p-8 ${activeStage === 1 ? "pointer-events-auto" : "pointer-events-none"}`}
+            >
+              <SovereigntyStage t={t} />
+            </motion.div>
+          )}
 
           {/* ==========================================
               STAGE 3: CATÁLOGO FLOTANTE 3D (Z = -2000)
               ========================================== */}
-          <motion.div
-            style={{
-              z: stage3Z,
-              opacity: stage3Opacity,
-              scale: stage3Scale,
-              transformStyle: "preserve-3d",
-              zIndex: activeStage === 2 ? 30 : 0
-            }}
-            className={`absolute inset-0 flex items-center justify-center p-4 sm:p-8 ${activeStage === 2 ? "pointer-events-auto" : "pointer-events-none"}`}
-          >
-            <ProductsStage t={t} language={language} featuredProducts={featuredProducts} />
-          </motion.div>
+          {renderedStages[2] && (
+            <motion.div
+              style={{
+                z: stage3Z,
+                opacity: stage3Opacity,
+                scale: stage3Scale,
+                zIndex: activeStage === 2 ? 30 : 0
+              }}
+              className={`absolute inset-0 flex items-center justify-center p-4 sm:p-8 ${activeStage === 2 ? "pointer-events-auto" : "pointer-events-none"}`}
+            >
+              <ProductsStage t={t} language={language} featuredProducts={featuredProducts} />
+            </motion.div>
+          )}
 
           {/* ==========================================
               STAGE 4: COMUNIDAD & RED (Z = -3000)
               ========================================== */}
-          <motion.div
-            style={{
-              z: stage4Z,
-              opacity: stage4Opacity,
-              scale: stage4Scale,
-              transformStyle: "preserve-3d",
-              zIndex: activeStage === 3 ? 30 : 0
-            }}
-            className={`absolute inset-0 flex items-center justify-center p-4 sm:p-8 ${activeStage === 3 ? "pointer-events-auto" : "pointer-events-none"}`}
-          >
-            <CommunityStage t={t} language={language} initialForumTopics={initialForumTopics} realStats={realStats} />
-          </motion.div>
-
-
+          {renderedStages[3] && (
+            <motion.div
+              style={{
+                z: stage4Z,
+                opacity: stage4Opacity,
+                scale: stage4Scale,
+                zIndex: activeStage === 3 ? 30 : 0
+              }}
+              className={`absolute inset-0 flex items-center justify-center p-4 sm:p-8 ${activeStage === 3 ? "pointer-events-auto" : "pointer-events-none"}`}
+            >
+              <CommunityStage t={t} language={language} initialForumTopics={initialForumTopics} realStats={realStats} />
+            </motion.div>
+          )}
 
         </div>
 

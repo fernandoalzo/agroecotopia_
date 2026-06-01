@@ -88,9 +88,6 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
                     z: 30,
                     boxShadow: "0px 15px 30px rgba(var(--color-primary), 0.12)"
                   }}
-                  style={{
-                    transformStyle: "preserve-3d"
-                  }}
                   className="transition-all duration-300 relative shrink-0 snap-center w-[240px] sm:w-[280px]"
                 >
                   <ProductCard p={p} />
