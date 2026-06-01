@@ -6,7 +6,6 @@ import { MessageSquare } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 import { Question } from "@/frontend/components/comunidad/forum/forum.types";
-import { getPostByIdAction, createAnswerAction, rateItemAction, editAnswerAction, deleteAnswerAction, deletePostAction } from "@/backend/modules/forum/forum.actions";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -14,7 +13,25 @@ import ForumQuestionDetail from "@/frontend/components/comunidad/forum/ForumQues
 import ForumStatsPanel from "@/frontend/components/comunidad/forum/ForumStatsPanel";
 import { Loading } from "@/frontend/components/ui/Loading";
 
-export default function PostPageClient({ id }: { id: string }) {
+interface PostPageClientProps {
+  id: string;
+  getPostById: (id: string) => Promise<any>;
+  createAnswer: (data: { content: string; postId: string }) => Promise<any>;
+  rateItem: (data: { itemId: string; itemType: "post" | "answer"; value: number }) => Promise<any>;
+  editAnswer: (data: { answerId: string; content: string }) => Promise<any>;
+  deleteAnswer: (answerId: string) => Promise<any>;
+  deletePost: (postId: string) => Promise<any>;
+}
+
+export default function PostPageClient({
+  id,
+  getPostById,
+  createAnswer,
+  rateItem,
+  editAnswer,
+  deleteAnswer,
+  deletePost,
+}: PostPageClientProps) {
   const router = useRouter();
   const { data: session, status } = useSession();
   
@@ -25,7 +42,7 @@ export default function PostPageClient({ id }: { id: string }) {
   const { data: postData, isLoading } = useQuery({
     queryKey: ["forumPost", id],
     queryFn: async () => {
-      const res = await getPostByIdAction(id);
+      const res = await getPostById(id);
       if (!res.success) throw new Error(res.error);
       return res.post;
     },
@@ -64,7 +81,7 @@ export default function PostPageClient({ id }: { id: string }) {
 
   const createAnswerMutation = useMutation({
     mutationFn: async (content: string) => {
-      const res = await createAnswerAction({ content, postId: id });
+      const res = await createAnswer({ content, postId: id });
       if ("error" in res) throw new Error(res.error);
       if (!res.success) throw new Error("Unknown error");
       return res.answer;
@@ -80,7 +97,7 @@ export default function PostPageClient({ id }: { id: string }) {
 
   const rateItemMutation = useMutation({
     mutationFn: async (data: { itemId: string; rating: number; isQuestion: boolean }) => {
-      const res = await rateItemAction({ 
+      const res = await rateItem({ 
         itemId: data.itemId, 
         itemType: data.isQuestion ? "post" : "answer", 
         value: data.rating 
@@ -116,7 +133,7 @@ export default function PostPageClient({ id }: { id: string }) {
 
   const editAnswerMutation = useMutation({
     mutationFn: async (data: { answerId: string; content: string }) => {
-      const res = await editAnswerAction(data);
+      const res = await editAnswer(data);
       if ("error" in res) throw new Error(res.error);
       if (!res.success) throw new Error("Unknown error");
       return res.answer;
@@ -132,7 +149,7 @@ export default function PostPageClient({ id }: { id: string }) {
 
   const deleteAnswerMutation = useMutation({
     mutationFn: async (answerId: string) => {
-      const res = await deleteAnswerAction(answerId);
+      const res = await deleteAnswer(answerId);
       if ("error" in res) throw new Error(res.error);
       if (!res.success) throw new Error("Unknown error");
     },
@@ -155,7 +172,7 @@ export default function PostPageClient({ id }: { id: string }) {
 
   const deletePostMutation = useMutation({
     mutationFn: async (postId: string) => {
-      const res = await deletePostAction(postId);
+      const res = await deletePost(postId);
       if ("error" in res) throw new Error(res.error);
       if (!res.success) throw new Error("Unknown error");
     },

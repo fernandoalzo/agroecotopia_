@@ -3,11 +3,32 @@
 import { useState, useEffect } from "react";
 import CommunityQAForum from "@/frontend/components/comunidad/CommunityQAForum";
 import { Question } from "@/frontend/components/comunidad/forum/forum.types";
-import { getPostsAction, createPostAction, rateItemAction, getCommunityStatsAction, getTopContributorsAction, getTrendingLabelsAction } from "@/backend/modules/forum/forum.actions";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-export default function ComunidadPageClient() {
+interface ComunidadPageClientProps {
+  getPosts: (...args: any[]) => Promise<any>;
+  createPost: (postData: { title: string; body: string; labels: string[] }) => Promise<any>;
+  rateItem: (data: { itemId: string; itemType: "post" | "answer"; value: number }) => Promise<any>;
+  getCommunityStats: () => Promise<any>;
+  getTopContributors: () => Promise<any>;
+  getTrendingLabels: () => Promise<any>;
+}
+
+interface TopContributorResult {
+  name: string;
+  role: string;
+  points: number;
+}
+
+export default function ComunidadPageClient({
+  getPosts,
+  createPost,
+  rateItem,
+  getCommunityStats,
+  getTopContributors,
+  getTrendingLabels,
+}: ComunidadPageClientProps) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [activeCommunityStats, setActiveCommunityStats] = useState({ totalMembers: "0", onlineNow: "0" });
   const [topContributors, setTopContributors] = useState<any[]>([]);
@@ -55,7 +76,7 @@ export default function ComunidadPageClient() {
   } = useInfiniteQuery({
     queryKey: ["forumPosts", activeFilters, searchQuery, sortBy],
     queryFn: async ({ pageParam = undefined }: { pageParam: string | undefined }) => {
-      const res = await getPostsAction(activeFilters, searchQuery, 10, pageParam, sortBy);
+      const res = await getPosts(activeFilters, searchQuery, 10, pageParam, sortBy);
       if (!res.success) throw new Error(res.error);
       return { posts: res.posts, nextCursor: res.nextCursor };
     },
@@ -88,7 +109,7 @@ export default function ComunidadPageClient() {
   const { data: communityStats } = useQuery({
     queryKey: ["communityStats"],
     queryFn: async () => {
-      const res = await getCommunityStatsAction();
+      const res = await getCommunityStats();
       if ("error" in res) throw new Error(res.error);
       if (!res.success) throw new Error("Unknown error");
       return res.stats;
@@ -99,7 +120,7 @@ export default function ComunidadPageClient() {
   const { data: topContributorsData } = useQuery({
     queryKey: ["topContributors"],
     queryFn: async () => {
-      const res = await getTopContributorsAction();
+      const res = await getTopContributors();
       if ("error" in res) throw new Error(res.error);
       if (!res.success) throw new Error("Unknown error");
       return res.contributors;
@@ -109,7 +130,7 @@ export default function ComunidadPageClient() {
   const { data: trendingLabels } = useQuery({
     queryKey: ["trendingLabels"],
     queryFn: async () => {
-      const res = await getTrendingLabelsAction();
+      const res = await getTrendingLabels();
       if (!res.success) throw new Error(res.error);
       return res.labels;
     },
@@ -126,7 +147,7 @@ export default function ComunidadPageClient() {
 
   useEffect(() => {
     if (topContributorsData) {
-      const mapped = topContributorsData.map((c, index) => ({
+      const mapped = topContributorsData.map((c: TopContributorResult, index: number) => ({
         name: c.name,
         role: c.role,
         points: c.points > 1000 ? (c.points / 1000).toFixed(1) + "k" : c.points.toString(),
@@ -141,7 +162,7 @@ export default function ComunidadPageClient() {
 
   const createPostMutation = useMutation({
     mutationFn: async (postData: { title: string; body: string; labels: string[] }) => {
-      const res = await createPostAction(postData);
+      const res = await createPost(postData);
       if ("error" in res) throw new Error(res.error);
       if (!res.success) throw new Error("Unknown error");
       return res.post;
@@ -157,7 +178,7 @@ export default function ComunidadPageClient() {
 
   const rateItemMutation = useMutation({
     mutationFn: async (data: { itemId: string; rating: number }) => {
-      const res = await rateItemAction({ itemId: data.itemId, itemType: "post", value: data.rating });
+      const res = await rateItem({ itemId: data.itemId, itemType: "post", value: data.rating });
       if ("error" in res) throw new Error(res.error);
       if (!res.success) throw new Error("Unknown error");
       return res.rating;
