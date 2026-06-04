@@ -54,7 +54,7 @@ export class OrdersRepository {
     log.debug("Buscando tiendas asociadas a productos:", { productIdsCount: productIds.length });
     return await prisma.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, storeId: true },
+      select: { id: true, storeId: true, store: { select: { ownerId: true } } },
     });
   }
 

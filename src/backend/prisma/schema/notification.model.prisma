@@ -1,0 +1,120 @@
+// ─────────────────────────────────────────────────────────────
+// Notification System — Prisma Models
+// Architecture: Event-Driven with Lazy Broadcast Materialization
+// ─────────────────────────────────────────────────────────────
+
+// ─── Enums ───────────────────────────────────────────────────
+
+enum AudienceType {
+  INDIVIDUAL
+  GROUP
+  BROADCAST
+}
+
+enum RecipientStatus {
+  PENDING
+  DELIVERED
+  READ
+}
+
+// ─── Domain Events (Immutable Audit Log) ─────────────────────
+
+model DomainEvent {
+  id        String @id @default(cuid())
+  eventType String // e.g. "comment_created", "order_status_changed"
+  actorId   String
+  actor     User   @relation("DomainEventActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  entityType String // e.g. "ForumPost", "Pedido", "Store"
+  entityId   String // ID of the related entity
+
+  payload   Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  notifications Notification[]
+
+  @@index([eventType])
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+// ─── Notifications (Logical Unit) ────────────────────────────
+
+model Notification {
+  id        String @id @default(cuid())
+  type      String // e.g. "comment", "order_update", "announcement"
+  title     String
+  message   String
+  creatorId String
+  creator   User   @relation("NotificationCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  audienceType AudienceType
+  audienceRef  String? // groupId for GROUP, userId for INDIVIDUAL, null for BROADCAST
+
+  eventId String?
+  event   DomainEvent? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  recipients NotificationRecipient[]
+
+  @@index([type])
+  @@index([creatorId])
+  @@index([audienceType])
+  @@index([createdAt])
+  @@index([audienceType, createdAt])
+}
+
+// ─── Recipients (Per-User Delivery Tracking) ─────────────────
+// For INDIVIDUAL/GROUP: created eagerly on dispatch.
+// For BROADCAST: created lazily when user marks as read (lazy materialization).
+
+model NotificationRecipient {
+  id             String          @id @default(cuid())
+  notificationId String
+  notification   Notification    @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status         RecipientStatus @default(PENDING)
+  readAt         DateTime?
+  deliveredAt    DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime        @default(now())
+
+  @@unique([notificationId, userId])
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@index([notificationId])
+}
+
+// ─── Groups (Reusable User Groups) ──────────────────────────
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdBy   String
+  creator     User     @relation("GroupCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members GroupMember[]
+
+  @@index([name])
+}
+
+// ─── Group Membership ────────────────────────────────────────
+
+model GroupMember {
+  groupId  String
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt DateTime @default(now())
+
+  @@id([groupId, userId])
+  @@index([userId])
+  @@index([groupId])
+}

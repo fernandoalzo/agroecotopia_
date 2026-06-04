@@ -135,6 +135,20 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
       }
     });
 
+    // ─── Notification private channels ───
+    socket.on("join_notifications", ({ userId }: { userId: string }) => {
+      if (userId) {
+        socket.join(`user:${userId}:notifications`);
+        log.debug(`Socket ${socket.id} joined notifications room: user:${userId}:notifications`);
+      }
+    });
+
+    socket.on("leave_notifications", ({ userId }: { userId: string }) => {
+      if (userId) {
+        socket.leave(`user:${userId}:notifications`);
+      }
+    });
+
     socket.on("disconnect", () => {
       log.info("Socket disconnected:", socket.id);
     });
@@ -151,6 +165,23 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
   eventBus.on("unread_count_updated", (payload) => {
     log.info("Broadcasting unread_count_updated via Socket.IO");
     io.emit("unread_count_updated", payload);
+  });
+
+  // ─── Notifications Bridge ───
+  eventBus.removeAllListeners("notification_dispatched");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  eventBus.on("notification_dispatched", (payload: { userIds: string[]; notification: any }) => {
+    log.info("Broadcasting notification_dispatched to private channels", { recipientCount: payload.userIds.length });
+    for (const userId of payload.userIds) {
+      io.to(`user:${userId}:notifications`).emit("new_notification", payload.notification);
+    }
+  });
+
+  eventBus.removeAllListeners("notification_broadcast");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  eventBus.on("notification_broadcast", (payload: { notification: any }) => {
+    log.info("Broadcasting notification_broadcast globally");
+    io.emit("new_notification", payload.notification);
   });
 
   return io;

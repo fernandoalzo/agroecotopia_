@@ -19,6 +19,7 @@ import { getAdminConversations, getOrCreateMyConversation, getConversationMessag
 import logger from "@/utils/logger";
 import { getConversationUnreadCount } from "@/frontend/lib/chatUnread";
 import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
+import { NotificationProvider } from "@/frontend/context/NotificationContext";
 
 const log = logger.child("src/app/Providers.tsx");
 
@@ -100,15 +101,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <QueryClientProvider client={queryClient}>
             <CartProvider>
               <SocketProvider>
-                <TooltipProvider>
-                  <Suspense fallback={null}>
-                    <ScrollToAnchor />
-                  </Suspense>
-                  <PageFocusTracker />
-                  <AppChromeData />
-                  {children}
-                  <Sonner />
-                </TooltipProvider>
+                <NotificationProvider>
+                  <TooltipProvider>
+                    <Suspense fallback={null}>
+                      <ScrollToAnchor />
+                    </Suspense>
+                    <PageFocusTracker />
+                    <AppChromeData />
+                    {children}
+                    <Sonner />
+                  </TooltipProvider>
+                </NotificationProvider>
               </SocketProvider>
             </CartProvider>
           </QueryClientProvider>

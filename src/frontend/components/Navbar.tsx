@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSocket } from "@/frontend/context/SocketContext";
+import { NotificationBell } from "@/frontend/components/notifications/NotificationBell";
 import logger from "@/utils/logger";
 import { config } from "@/config/config";
 
@@ -282,8 +283,14 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
 
 
 
-          {/* Auth Button — standalone, outside settings dropdown */}
-          <div className="hidden lg:block">
+          {/* Auth Button and Notifications — standalone, outside settings dropdown */}
+          <div className="hidden lg:flex items-center gap-2">
+            {isAuthenticated && (
+              <div className="flex shrink-0 items-center bg-background/50 backdrop-blur-xl p-1 rounded-full border border-border/50 shadow-sm mr-1">
+                <NotificationBell />
+              </div>
+            )}
+            
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -406,6 +413,15 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                 </div>
               </button>
             </div>
+          </div>
+
+          {/* Mobile Notification Bell */}
+          <div className="relative shrink-0 lg:hidden">
+            {isAuthenticated && (
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border bg-card/80 backdrop-blur-xl border-border/60 dark:bg-white/5 dark:border-white/10 shadow-sm mr-2">
+                <NotificationBell isMobile />
+              </div>
+            )}
           </div>
 
           {/* Mobile Cart Button */}

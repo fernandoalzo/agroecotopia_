@@ -86,6 +86,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
   const [storeOrderCurrentPage, setStoreOrderCurrentPage] = useState(1);
   const [storeOrderTotalPages, setStoreOrderTotalPages] = useState(1);
   const [storeOrderTotalCount, setStoreOrderTotalCount] = useState(0);
+  const [storeOrdersRefresh, setStoreOrdersRefresh] = useState(0);
   const isSeller = session?.user?.role === "seller" || session?.user?.role === "admin";
   
   const activeStore = stores.find(s => s.id === activeStoreId) || null;
@@ -236,7 +237,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     };
     load();
     return () => { cancelled = true; };
-  }, [activeStore?.id, isSeller, activeTab, storeOrderCurrentPage, storeOrderStatusFilter, storeOrderSearchQuery]);
+  }, [activeStore?.id, isSeller, activeTab, storeOrderCurrentPage, storeOrderStatusFilter, storeOrderSearchQuery, storeOrdersRefresh]);
 
   // Update tab in URL
   const handleTabChange = (tab: SellerTab) => {
@@ -515,6 +516,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                   onUpdateStatus={async (orderId, newStatus) => {
                     const result = await actions.updateStoreOrderStatus(activeStore.id, orderId, newStatus);
                     if (result && "error" in result) return false;
+                    setStoreOrdersRefresh(prev => prev + 1);
                     return true;
                   }}
                   emptyMessage="No hay pedidos para los productos de esta tienda con los filtros aplicados."

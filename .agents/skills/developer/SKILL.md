@@ -429,3 +429,49 @@ useSocketRefresh({
   events: ["dashboard_data_updated"],
 });
 ```
+
+---
+
+## 17. Event-Driven Notifications System (Production-Grade)
+
+To guarantee scalability, persistence, and real-time delivery, all system notifications MUST use the dedicated Event-Driven Notifications System. **Never implement ad-hoc or polling-based notification mechanisms.**
+
+### 17.1 Architecture & Components
+- **Domain Event Log**: Every notification starts as an immutable `DomainEvent` representing the business action (e.g., `order_created`, `post_liked`).
+- **Logical Notification**: A single `Notification` record is created linking back to the `DomainEvent`.
+- **Audience Resolver**: Uses the Strategy Pattern to determine recipients dynamically (`INDIVIDUAL`, `BROADCAST`, `GROUP`).
+- **Materialization**: 
+  - `INDIVIDUAL` and `GROUP` notifications generate physical `NotificationRecipient` records immediately in the database.
+  - `BROADCAST` notifications use **Lazy Materialization** ($O(1)$ dispatch) and are merged virtually during query time to save database space.
+
+### 17.2 Dispatching Rule (STRICT LAW)
+- **Law**: Whenever a business event occurs that requires notifying users, developers MUST use `notificationsService.dispatchNotification()`.
+- **Never** write directly to the `Notification` table from other domains or controllers. Always use the encapsulated service.
+- **Example Usage** (e.g., inside `orders.service.ts`):
+  ```typescript
+  import { notificationsService } from "@/backend/modules/notifications";
+
+  await notificationsService.dispatchNotification({
+    eventType: "order_created",
+    actorId: data.usuarioId,
+    entityType: "Pedido",
+    entityId: pedido.id,
+    notification: {
+      type: "new_order",
+      title: "Nuevo Pedido",
+      message: "Tienes un nuevo pedido por $214.00.",
+      audienceType: "INDIVIDUAL",
+      audienceRef: storeOwnerId,
+      metadata: { actionUrl: "/mi-tienda" } // Required for interactive navigation
+    },
+  });
+  ```
+
+### 17.3 Real-Time Delivery (Socket Bridge)
+- The `notificationsService` automatically emits internal node events via the global `eventBus`.
+- `socketHandler.ts` listens to these events and bridges them to the private Socket.IO channels of the affected users (e.g., `user:{userId}:notifications`).
+- The frontend consumes this via the `NotificationContext` (`useNotifications` hook) which optimistically updates the UI Bell icon and manages read states.
+
+### 17.4 Interactive Navigation
+- **Law**: Notifications that require user interaction or routing MUST include an `actionUrl` inside the `metadata` JSON object.
+- The `NotificationBell.tsx` component automatically parses `metadata.actionUrl`. When the user clicks the notification, it marks it as read, closes the panel, and routes the user seamlessly.

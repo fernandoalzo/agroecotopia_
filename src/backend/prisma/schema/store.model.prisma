@@ -27,11 +27,11 @@ model Store {
   city    String?
 
   // Relaciones
-  owner        User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  products     Product[]
-  orderDetails DetallePedido[]
+  owner         User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  products      Product[]
+  orderDetails  DetallePedido[]
   conversations Conversation[]
-  requests     StoreRequest[]  @relation("StoreToRequests")
+  requests      StoreRequest[]  @relation("StoreToRequests")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -1,6 +1,7 @@
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import { ordersService } from '@/backend/modules/orders';
 import { PedidoEstado } from '@prisma/client';
+import prisma from "@/backend/db/prisma";
 import { config } from '@/config/config';
 import logger from '@/utils/logger';
 
@@ -86,15 +87,19 @@ export class PaymentsService {
       log.info(`MercadoPago webhook payment status update: Order ${pedidoId} is ${status}`);
 
       if (status === "approved") {
+        const admin = await prisma.user.findFirst({ where: { role: 'admin' }});
+        const actorId = admin?.id as string;
         // Update order status to CONFIRMADO
-        await ordersService.updateEstado(pedidoId, PedidoEstado.CONFIRMADO);
+        await ordersService.updateEstado(pedidoId, PedidoEstado.CONFIRMADO, actorId);
         // Save the payment ID
         await ordersService.updatePedido(pedidoId, {
           pagoId: paymentId
         } as any);
       } else if (status === "rejected" || status === "cancelled") {
+        const admin = await prisma.user.findFirst({ where: { role: 'admin' }});
+        const actorId = admin?.id as string;
         // Update order status to CANCELADO
-        await ordersService.updateEstado(pedidoId, PedidoEstado.CANCELADO, `Pago rechazado o cancelado en MercadoPago. Status: ${status}`);
+        await ordersService.updateEstado(pedidoId, PedidoEstado.CANCELADO, actorId, `Pago rechazado o cancelado en MercadoPago. Status: ${status}`);
       }
 
       return { success: true, pedidoId, status };

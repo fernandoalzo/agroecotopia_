@@ -83,6 +83,7 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
   const [orderCurrentPage, setOrderCurrentPage] = useState(1);
   const [orderTotalPages, setOrderTotalPages] = useState(1);
   const [orderTotalCount, setOrderTotalCount] = useState(0);
+  const [ordersRefresh, setOrdersRefresh] = useState(0);
 
   const { state: productState, actions: productActions } = useProductsLogic(undefined, true, {
     getCategoriesAction: actions.getCategories,
@@ -224,7 +225,7 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
     };
     loadOrders();
     return () => { cancelled = true; };
-  }, [actions, isAdmin, activeTab, orderCurrentPage, orderStatusFilter, orderSearchQuery]);
+  }, [actions, isAdmin, activeTab, orderCurrentPage, orderStatusFilter, orderSearchQuery, ordersRefresh]);
 
   const [isMobile, setIsMobile] = useState(false);
 
@@ -436,6 +437,7 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                   onUpdateStatus={async (orderId, newStatus) => {
                     const result = await actions.updateOrderStatus(orderId, newStatus);
                     if (result && "error" in result) return false;
+                    setOrdersRefresh(prev => prev + 1);
                     return true;
                   }}
                 />

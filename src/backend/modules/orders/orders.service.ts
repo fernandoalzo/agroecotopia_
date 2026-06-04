@@ -1,6 +1,7 @@
 import { OrdersRepository } from "./orders.repository";
 import { PedidoEstado, Prisma } from "@prisma/client";
 import logger from "@/utils/logger";
+import { notificationsService } from "@/backend/modules/notifications";
 
 const log = logger.child("src/backend/modules/orders/orders.service.ts");
 
@@ -30,6 +31,8 @@ export class OrdersService {
     const dbProducts = await this.ordersRepository.findProductsStoreIds(productIds);
 
     const productStoreMap = new Map(dbProducts.map(p => [p.id, p.storeId]));
+    const storeOwnersMap = new Map(dbProducts.map(p => [p.storeId, p.store?.ownerId]));
+
     const missingProduct = productIds.find((productId) => !productStoreMap.has(productId));
     if (missingProduct) {
       log.warn("Intento de crear pedido con producto inexistente:", { productoId: missingProduct });
@@ -65,6 +68,30 @@ export class OrdersService {
     });
 
     log.info("Pedidos creados exitosamente por tienda:", { pedidoIds: pedidos.map((pedido) => pedido.id) });
+
+    // Despachar notificaciones a los dueños de las tiendas
+    for (const pedido of pedidos) {
+      const ownerId = storeOwnersMap.get(pedido.detalles[0]?.storeId);
+      if (ownerId && ownerId !== data.usuarioId) {
+        notificationsService.dispatchNotification({
+          eventType: "order_created",
+          actorId: data.usuarioId,
+          entityType: "Pedido",
+          entityId: pedido.id,
+          notification: {
+            type: "new_order",
+            title: "Nuevo Pedido Recibido",
+            message: `¡Tienes un nuevo pedido por $${Number(pedido.total).toFixed(2)}! Por favor prepáralo pronto.`,
+            audienceType: "INDIVIDUAL",
+            audienceRef: ownerId,
+            metadata: { actionUrl: "/mi-tienda" }
+          },
+        }).catch(err => {
+          log.error("Error al despachar notificación de nuevo pedido:", err);
+        });
+      }
+    }
+
     return pedidos.map((pedido) => this.serializePedido(pedido));
   }
 
@@ -113,7 +140,7 @@ export class OrdersService {
     } as Prisma.PedidoCreateInput, tx);
   }
 
-  async updateEstado(pedidoId: string, nuevoEstado: PedidoEstado, motivoCancelacion?: string) {
+  async updateEstado(pedidoId: string, nuevoEstado: PedidoEstado, actorId: string, motivoCancelacion?: string) {
     log.info("Iniciando transición de estado del pedido:", { pedidoId, nuevoEstado });
     return await this.ordersRepository.executeTransaction(async (tx) => {
       // 1. Leer pedido actual dentro de la transacción
@@ -196,6 +223,23 @@ export class OrdersService {
 
       // 6. Refrescar pedido con estado actualizado
       const pedidoActualizado = await this.ordersRepository.findById(pedidoId, tx);
+      
+      // 7. Notificar al comprador del cambio de estado
+      notificationsService.dispatchNotification({
+        eventType: "order_status_changed",
+        actorId,
+        entityType: "Pedido",
+        entityId: pedidoId,
+        notification: {
+          type: "order_update",
+          title: "Actualización de Pedido",
+          message: `Tu pedido #${pedidoId.slice(-6).toUpperCase()} ha cambiado a estado: ${nuevoEstado}.`,
+          audienceType: "INDIVIDUAL",
+          audienceRef: pedidoActualizado.usuarioId,
+          metadata: { actionUrl: `/pedidos/${pedidoId}` }
+        }
+      }).catch(err => log.error("Error despachando notificación de cambio de estado:", err));
+
       return this.serializePedido(pedidoActualizado);
     });
   }
@@ -232,7 +276,7 @@ export class OrdersService {
     };
   }
 
-  async updateEstadoForStore(storeId: string, pedidoId: string, nuevoEstado: PedidoEstado, motivoCancelacion?: string) {
+  async updateEstadoForStore(storeId: string, pedidoId: string, nuevoEstado: PedidoEstado, actorId: string, motivoCancelacion?: string) {
     log.info("Validando pedido de tienda antes de actualizar estado:", { storeId, pedidoId, nuevoEstado });
     const pedido = await this.ordersRepository.findById(pedidoId);
 
@@ -247,7 +291,7 @@ export class OrdersService {
       throw new Error("No tienes permiso para gestionar este pedido");
     }
 
-    return await this.updateEstado(pedidoId, nuevoEstado, motivoCancelacion);
+    return await this.updateEstado(pedidoId, nuevoEstado, actorId, motivoCancelacion);
   }
 
   async getOrderStatusCounts(storeId?: string) {

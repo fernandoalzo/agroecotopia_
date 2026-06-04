@@ -53,8 +53,12 @@ export async function updateOrderStatusAction(
 ) {
   return await withAdmin(async () => {
     try {
+      const session = await authService.getSession();
+      const userId = session?.user?.id;
+      if (!userId) throw new Error("UNAUTHORIZED");
+
       log.info("Admin actualizando estado del pedido:", { pedidoId, nuevoEstado, motivoCancelacion });
-      const pedido = await ordersService.updateEstado(pedidoId, nuevoEstado, motivoCancelacion);
+      const pedido = await ordersService.updateEstado(pedidoId, nuevoEstado, userId, motivoCancelacion);
       log.info("Estado del pedido actualizado exitosamente:", { pedidoId, nuevoEstado });
       revalidatePath("/admin/pedidos");
       revalidatePath(`/perfil/pedidos/${pedidoId}`);
@@ -164,6 +168,7 @@ export async function cancelUserOrderAction(pedidoId: string) {
       const pedidoCancelado = await ordersService.updateEstado(
         pedidoId, 
         PedidoEstado.CANCELADO, 
+        userId,
         "Cancelado por el usuario"
       );
       
@@ -256,8 +261,12 @@ export async function updateStoreOrderStatusAction(
 ) {
   return await withStoreOwner(storeId, async () => {
     try {
+      const session = await authService.getSession();
+      const userId = session?.user?.id;
+      if (!userId) throw new Error("UNAUTHORIZED");
+
       log.info("Seller actualizando estado de pedido de tienda:", { storeId, pedidoId, nuevoEstado });
-      const pedido = await ordersService.updateEstadoForStore(storeId, pedidoId, nuevoEstado, motivoCancelacion);
+      const pedido = await ordersService.updateEstadoForStore(storeId, pedidoId, nuevoEstado, userId, motivoCancelacion);
       log.info("Estado del pedido de tienda actualizado exitosamente:", { storeId, pedidoId, nuevoEstado });
       revalidatePath("/mi-tienda");
       revalidatePath("/admin/pedidos");
