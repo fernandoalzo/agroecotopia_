@@ -74,11 +74,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.name = user.name;
       }
 
-      // Always sync role from DB on every token refresh.
-      // This ensures the role is never stale — even if the JWT cookie
-      // was minted before the role-fix, or if the admin promotes/demotes
-      // a user while they're logged in.
-      if (token.id) {
+      // Always sync from DB using email to ensure we get the real DB ID and Role
+      if (token.email) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: token.email },
+            select: { id: true, role: true },
+          });
+          if (dbUser) {
+            token.id = dbUser.id; // Override potentially incorrect OAuth ID with DB CUID
+            token.role = dbUser.role;
+          } else {
+            token.role = "user";
+          }
+        } catch (error) {
+          if (!token.role) {
+            token.role = "user";
+          }
+        }
+      } else if (token.id) {
+        // Fallback
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
@@ -86,8 +101,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
           token.role = dbUser?.role || "user";
         } catch (error) {
-          // On transient DB errors, preserve existing role to avoid
-          // downgrading an admin mid-session due to a blip
           if (!token.role) {
             token.role = "user";
           }

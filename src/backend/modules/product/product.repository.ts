@@ -23,7 +23,13 @@ export class ProductRepository {
       take,
       include: { 
         categories: true,
-        store: { select: { id: true, name: true, slug: true, logo: true } } 
+        promotions: { where: { isActive: true } },
+        store: { 
+          select: { 
+            id: true, name: true, slug: true, logo: true,
+            promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
+          } 
+        }
       },
       orderBy: { createdAt: "desc" },
     });
@@ -52,7 +58,13 @@ export class ProductRepository {
       where: { id },
       include: { 
         categories: true,
-        store: { select: { id: true, name: true, slug: true, logo: true } }
+        promotions: { where: { isActive: true } },
+        store: { 
+          select: { 
+            id: true, name: true, slug: true, logo: true,
+            promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
+          } 
+        }
       },
     });
   }
@@ -61,9 +73,15 @@ export class ProductRepository {
     log.debug("Buscando producto por id y tienda:", { id, storeId });
     return prisma.product.findFirst({
       where: { id, storeId },
-      include: {
+      include: { 
         categories: true,
-        store: { select: { id: true, name: true, slug: true, logo: true } }
+        promotions: { where: { isActive: true } },
+        store: { 
+          select: { 
+            id: true, name: true, slug: true, logo: true,
+            promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
+          } 
+        }
       },
     });
   }
@@ -99,7 +117,13 @@ export class ProductRepository {
       take,
       include: { 
         categories: true,
-        store: { select: { id: true, name: true, slug: true, logo: true } }
+        promotions: { where: { isActive: true } },
+        store: { 
+          select: { 
+            id: true, name: true, slug: true, logo: true,
+            promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
+          } 
+        }
       },
       orderBy: { createdAt: "desc" },
     });
@@ -155,7 +179,13 @@ export class ProductRepository {
       },
       include: { 
         categories: true,
-        store: { select: { id: true, name: true, slug: true, logo: true } }
+        promotions: { where: { isActive: true } },
+        store: { 
+          select: { 
+            id: true, name: true, slug: true, logo: true,
+            promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
+          } 
+        }
       },
     }) as unknown as Promise<Product>;
   }
@@ -185,7 +215,13 @@ export class ProductRepository {
       data: updateData,
       include: { 
         categories: true,
-        store: { select: { id: true, name: true, slug: true, logo: true } }
+        promotions: { where: { isActive: true } },
+        store: { 
+          select: { 
+            id: true, name: true, slug: true, logo: true,
+            promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
+          } 
+        }
       },
     }) as unknown as Promise<Product>;
   }
@@ -210,9 +246,15 @@ export class ProductRepository {
     return prisma.product.update({
       where: { id, storeId },
       data: updateData,
-      include: {
+      include: { 
         categories: true,
-        store: { select: { id: true, name: true, slug: true, logo: true } }
+        promotions: { where: { isActive: true } },
+        store: { 
+          select: { 
+            id: true, name: true, slug: true, logo: true,
+            promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
+          } 
+        }
       },
     }) as unknown as Promise<Product>;
   }
@@ -226,7 +268,13 @@ export class ProductRepository {
       where: { id },
       include: { 
         categories: true,
-        store: { select: { id: true, name: true, slug: true, logo: true } }
+        promotions: { where: { isActive: true } },
+        store: { 
+          select: { 
+            id: true, name: true, slug: true, logo: true,
+            promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
+          } 
+        }
       },
     }) as unknown as Promise<Product>;
   }
@@ -235,9 +283,15 @@ export class ProductRepository {
     log.info("Eliminando producto de tienda:", { id, storeId });
     return prisma.product.delete({
       where: { id, storeId },
-      include: {
+      include: { 
         categories: true,
-        store: { select: { id: true, name: true, slug: true, logo: true } }
+        promotions: { where: { isActive: true } },
+        store: { 
+          select: { 
+            id: true, name: true, slug: true, logo: true,
+            promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
+          } 
+        }
       },
     }) as unknown as Promise<Product>;
   }
@@ -253,7 +307,13 @@ export class ProductRepository {
       take,
       include: { 
         categories: true,
-        store: { select: { id: true, name: true, slug: true, logo: true } }
+        promotions: { where: { isActive: true } },
+        store: { 
+          select: { 
+            id: true, name: true, slug: true, logo: true,
+            promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
+          } 
+        }
       },
       orderBy: { createdAt: "desc" },
     });

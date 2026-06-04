@@ -33,4 +33,10 @@ export class UserRepository {
       data: { role },
     });
   }
+  async findAdmins() {
+    log.debug("Buscando usuarios con rol de admin");
+    return await prisma.user.findMany({
+      where: { role: "admin" },
+    });
+  }
 }

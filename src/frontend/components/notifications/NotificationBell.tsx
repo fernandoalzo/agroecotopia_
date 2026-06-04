@@ -24,6 +24,12 @@ export function NotificationBell({ isMobile }: { isMobile?: boolean }) {
     const metadata = n.notification.metadata as { actionUrl?: string } | undefined | null;
     if (metadata?.actionUrl) {
       router.push(metadata.actionUrl);
+    } else if (n.notification.type === "store_request") {
+      router.push("/admin/dashboard?tab=store_requests");
+    } else if (n.notification.type === "store_request_approved") {
+      router.push("/mi-tienda");
+    } else if (n.notification.type === "store_request_rejected") {
+      router.push("/solicitar-tienda");
     } else if (n.notification.type === "new_order") {
       router.push("/mi-tienda");
     }

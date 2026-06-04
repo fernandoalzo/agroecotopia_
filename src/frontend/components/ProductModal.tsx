@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { formatPrice } from "@/lib/utils";
 import { getDeterministicImage } from "@/lib/image-utils";
+import { calculateDiscountedPrice } from "@/utils/promotions";
 
 interface ProductModalProps {
   product: Product;
@@ -31,6 +32,13 @@ const ProductModal = ({ product, isOpen, onClose, viewOnly = false, resolvedProd
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
   const currentProduct = resolvedProduct || product;
+
+  const discountedPrice = calculateDiscountedPrice(
+    currentProduct.price,
+    (currentProduct as any).promotions,
+    (currentProduct as any).store?.promotions
+  );
+  const hasDiscount = discountedPrice !== null;
 
   const productTranslation = t.products.items[currentProduct.id!] || {
     name: currentProduct.name,
@@ -151,12 +159,29 @@ const ProductModal = ({ product, isOpen, onClose, viewOnly = false, resolvedProd
                       </div>
                     )}
 
-                    <div className="font-display text-2xl md:text-3xl font-black text-primary mt-4">
-                      {formatPrice(currentProduct.price)}
-                      <span className="text-sm font-body text-muted-foreground ml-2 font-medium">
-                        {t.products.taxesIncluded}
-                      </span>
-                    </div>
+                    {hasDiscount ? (
+                      <div className="mt-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="bg-red-500 text-white text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm shadow-sm">Oferta</span>
+                        </div>
+                        <div className="font-display text-lg text-muted-foreground line-through decoration-muted-foreground/50">
+                          {formatPrice(currentProduct.price)}
+                        </div>
+                        <div className="font-display text-2xl md:text-3xl font-black text-red-600">
+                          {formatPrice(discountedPrice)}
+                          <span className="text-sm font-body text-muted-foreground ml-2 font-medium">
+                            {t.products.taxesIncluded}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="font-display text-2xl md:text-3xl font-black text-primary mt-4">
+                        {formatPrice(currentProduct.price)}
+                        <span className="text-sm font-body text-muted-foreground ml-2 font-medium">
+                          {t.products.taxesIncluded}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex-1 min-h-[100px]">

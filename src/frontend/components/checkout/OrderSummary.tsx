@@ -10,6 +10,7 @@ import { Leaf, ShoppingBag, CreditCard, Clock, CheckCircle2 } from "lucide-react
 import { motion } from "framer-motion";
 
 import { config } from "@/config/config";
+import { calculateDiscountedPrice } from "@/utils/promotions";
 
 interface OrderSummaryProps {
   isSubmitting?: boolean;
@@ -89,20 +90,50 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
               unit: item.product.unidad
             };
 
+            const discountedPrice = calculateDiscountedPrice(
+              item.product.price,
+              (item.product as any).promotions,
+              (item.product as any).store?.promotions
+            );
+            const hasDiscount = discountedPrice !== null;
+            const finalPrice = hasDiscount ? discountedPrice : item.product.price;
+
             return (
               <div key={item.product.id} className="group flex justify-between items-center py-2 transition-all hover:translate-x-1">
                 <div className="flex-1">
                   <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
                     {productTranslation.name}
                   </p>
-                  <p className="text-xs text-muted-foreground font-medium">
-                    {item.quantity} x {formatPrice(item.product.price)}
-                  </p>
+                  {hasDiscount ? (
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="text-muted-foreground line-through decoration-muted-foreground/50">
+                        {item.quantity} x {formatPrice(item.product.price)}
+                      </span>
+                      <span className="font-bold text-red-600">
+                        {item.quantity} x {formatPrice(finalPrice)}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground font-medium">
+                      {item.quantity} x {formatPrice(item.product.price)}
+                    </p>
+                  )}
                 </div>
                 <div className="text-right ml-4">
-                  <p className="text-sm font-black text-foreground">
-                    {formatPrice(item.product.price * item.quantity)}
-                  </p>
+                  {hasDiscount ? (
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] text-muted-foreground line-through decoration-muted-foreground/50">
+                        {formatPrice(item.product.price * item.quantity)}
+                      </span>
+                      <p className="text-sm font-black text-red-600">
+                        {formatPrice(finalPrice * item.quantity)}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm font-black text-foreground">
+                      {formatPrice(item.product.price * item.quantity)}
+                    </p>
+                  )}
                 </div>
               </div>
             );
@@ -117,6 +148,16 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
             <span className="text-muted-foreground font-medium">{t.cart.subtotal}</span>
             <span className="text-foreground font-bold">{formattedSubtotal}</span>
           </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground font-medium">{t.cart.taxes}</span>
+            <span className="text-foreground font-bold">
+              {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
+                style: "currency",
+                currency: language === 'es' ? "COP" : "USD",
+                maximumFractionDigits: 0,
+              }).format(subtotal * 0.19)}
+            </span>
+          </div>
           <div className="flex justify-between text-sm items-center">
             <span className="text-muted-foreground font-medium">{t.cart.shipping}</span>
             <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-tighter ring-1 ring-primary/20">
@@ -128,7 +169,11 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
             <span className="text-base font-black text-foreground uppercase tracking-tight">{t.cart.total}</span>
             <div className="text-right">
               <span className="block text-3xl font-display font-black text-primary leading-none">
-                {formattedTotal}
+                {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
+                  style: "currency",
+                  currency: language === 'es' ? "COP" : "USD",
+                  maximumFractionDigits: 0,
+                }).format(subtotal + subtotal * 0.19)}
               </span>
               <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1 block">
                 {t.products.taxesIncluded}

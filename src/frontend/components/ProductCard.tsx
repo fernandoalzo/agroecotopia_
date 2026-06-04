@@ -9,6 +9,7 @@ import { formatPrice } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
 import { getDeterministicImage } from "@/lib/image-utils";
 import { config } from "@/config/config";
+import { calculateDiscountedPrice } from "@/utils/promotions";
 
 interface ProductCardProps {
   p: Product;
@@ -25,6 +26,14 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
     description: p.description,
     unit: p.unidad
   };
+
+  const discountedPrice = calculateDiscountedPrice(
+    p.price,
+    (p as any).promotions,
+    (p as any).store?.promotions
+  );
+  
+  const hasDiscount = discountedPrice !== null;
 
   // Mock data for Amazon-style feel
   // We use a constant seed based on name to keep it consistent per product
@@ -44,6 +53,14 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
           onClick={() => setIsModalOpen(true)}
           className="group relative flex flex-col md:flex-row w-full bg-card border border-border shadow-sm hover:shadow-md transition-all duration-300 rounded-lg overflow-hidden cursor-pointer p-4 gap-6"
         >
+          {hasDiscount && (
+            <div className="absolute top-0 left-0 z-10 pointer-events-none">
+              <div className="bg-red-500 text-white text-[10px] font-black uppercase tracking-widest py-1 px-8 -translate-x-[25%] translate-y-4 -rotate-45 shadow-sm shadow-red-500/20">
+                Oferta
+              </div>
+            </div>
+          )}
+          
           {/* List Image */}
           <div className="relative w-full md:w-[240px] aspect-square bg-secondary/40 dark:bg-[#121212] flex items-center justify-center rounded-md overflow-hidden flex-shrink-0 transition-all duration-500">
             {p.images && p.images.length > 0 && p.images[0]?.trim() !== "" ? (
@@ -105,10 +122,26 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
               </span>
             </div>
 
-            <div className="flex items-baseline gap-1 mb-4">
-              <span className="text-sm font-bold">$</span>
-              <span className="text-3xl font-black text-foreground">{p.price.toLocaleString()}</span>
-              {p.unidad && <span className="text-xs text-muted-foreground font-medium ml-1">/ {p.unidad}</span>}
+            <div className="flex flex-col mb-4">
+              {hasDiscount ? (
+                <>
+                  <div className="flex items-baseline gap-1 text-muted-foreground line-through decoration-muted-foreground/50">
+                    <span className="text-sm font-bold">$</span>
+                    <span className="text-xl font-bold">{p.price.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 text-red-600">
+                    <span className="text-sm font-bold">$</span>
+                    <span className="text-3xl font-black">{discountedPrice.toLocaleString()}</span>
+                    {p.unidad && <span className="text-xs text-muted-foreground font-medium ml-1 text-foreground">/ {p.unidad}</span>}
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-baseline gap-1">
+                  <span className="text-sm font-bold">$</span>
+                  <span className="text-3xl font-black text-foreground">{p.price.toLocaleString()}</span>
+                  {p.unidad && <span className="text-xs text-muted-foreground font-medium ml-1">/ {p.unidad}</span>}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2 mb-6">
@@ -156,6 +189,14 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
           onClick={() => setIsModalOpen(true)}
           className="group relative flex flex-col w-full bg-card border border-border shadow-card hover:shadow-card-hover hover:scale-[1.03] hover:-translate-y-2 hover:border-primary transition-all duration-500 rounded-xl overflow-hidden cursor-pointer"
         >
+          {hasDiscount && (
+            <div className="absolute top-0 right-0 z-20 pointer-events-none">
+              <div className="bg-red-500 text-white text-[8px] font-black uppercase tracking-widest py-0.5 px-6 translate-x-[30%] translate-y-2 rotate-45 shadow-sm shadow-red-500/20">
+                Oferta
+              </div>
+            </div>
+          )}
+
           <div className="relative aspect-square w-full bg-secondary/40 dark:bg-[#121212] flex items-center justify-center overflow-hidden transition-all duration-500">
             {p.images && p.images.length > 0 && p.images[0]?.trim() !== "" ? (
               <Image
@@ -201,9 +242,24 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
             </div>
 
             <div className="mt-auto">
-              <div className="flex items-baseline gap-0.5">
-                <span className="text-[10px] font-bold">$</span>
-                <span className="text-lg font-black text-foreground">{p.price.toLocaleString()}</span>
+              <div className="flex flex-col gap-0.5">
+                {hasDiscount ? (
+                  <>
+                    <div className="flex items-baseline gap-0.5 text-muted-foreground line-through decoration-muted-foreground/50">
+                      <span className="text-[8px] font-bold">$</span>
+                      <span className="text-xs font-bold">{p.price.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-baseline gap-0.5 text-red-600">
+                      <span className="text-[10px] font-bold">$</span>
+                      <span className="text-lg font-black">{discountedPrice.toLocaleString()}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-baseline gap-0.5">
+                    <span className="text-[10px] font-bold">$</span>
+                    <span className="text-lg font-black text-foreground">{p.price.toLocaleString()}</span>
+                  </div>
+                )}
               </div>
               {p.stock === 0 ? (
                 <p className="text-[10px] font-bold text-red-600 uppercase mt-1">{t.products.outOfStock}</p>
@@ -229,6 +285,14 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
         onClick={() => setIsModalOpen(true)}
         className="group relative flex flex-col w-full h-full bg-card border border-border shadow-card hover:shadow-card-hover hover:scale-[1.03] hover:-translate-y-2 hover:border-primary transition-all duration-500 rounded-xl overflow-hidden cursor-pointer"
       >
+        {hasDiscount && (
+          <div className="absolute top-0 right-0 z-30 pointer-events-none">
+            <div className="bg-red-500 text-white text-[10px] font-black uppercase tracking-widest py-1 px-8 translate-x-[25%] translate-y-4 rotate-45 shadow-sm shadow-red-500/20">
+              Oferta
+            </div>
+          </div>
+        )}
+
         {/* Amazon-style Badges */}
         <div className="absolute top-0 left-0 z-20 flex flex-col gap-1 p-2">
           {isBestSeller && (
@@ -316,10 +380,26 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
 
           {/* Price Section */}
           <div className="mt-auto pt-2">
-            <div className="flex items-baseline gap-1">
-              <span className="text-xs font-bold self-start mt-1">$</span>
-              <span className="text-2xl font-black text-foreground">{p.price.toLocaleString()}</span>
-              {p.unidad && <span className="text-[10px] text-muted-foreground font-medium ml-1">/ {p.unidad}</span>}
+            <div className="flex flex-col mb-1">
+              {hasDiscount ? (
+                <>
+                  <div className="flex items-baseline gap-1 text-muted-foreground line-through decoration-muted-foreground/50">
+                    <span className="text-[10px] font-bold self-start mt-1">$</span>
+                    <span className="text-lg font-bold">{p.price.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 text-red-600">
+                    <span className="text-xs font-bold self-start mt-1">$</span>
+                    <span className="text-2xl font-black">{discountedPrice.toLocaleString()}</span>
+                    {p.unidad && <span className="text-[10px] text-muted-foreground font-medium ml-1 text-foreground">/ {p.unidad}</span>}
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-baseline gap-1">
+                  <span className="text-xs font-bold self-start mt-1">$</span>
+                  <span className="text-2xl font-black text-foreground">{p.price.toLocaleString()}</span>
+                  {p.unidad && <span className="text-[10px] text-muted-foreground font-medium ml-1">/ {p.unidad}</span>}
+                </div>
+              )}
             </div>
 
             {/* Delivery/Stock Info */}

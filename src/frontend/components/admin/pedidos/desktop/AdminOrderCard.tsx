@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Copy, Eye, Loader2, MessageSquare, User } from "lucide-react";
+import { Check, Copy, Eye, Loader2, MessageSquare, User, Tag } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
@@ -41,6 +41,12 @@ export const AdminOrderCardDesktop = ({
     const cfg = statusConfig[order.estado];
     const StatusIcon = cfg.icon;
     const storeName = order.detalles.find((d) => d.store?.name)?.store?.name || "Tienda no disponible";
+
+    const totalDiscount = order.detalles.reduce((acc, d) => {
+        const diff = d.producto.price - d.precioUnitario;
+        return acc + (diff > 0 ? diff * d.cantidad : 0);
+    }, 0);
+    const hasDiscount = totalDiscount > 0;
 
     return (
         <div className="hidden lg:flex items-stretch">
@@ -135,12 +141,19 @@ export const AdminOrderCardDesktop = ({
 
                 {/* Total */}
                 <div className="w-24 xl:w-28 shrink-0 text-right">
-                    <p className="text-xs text-muted-foreground/60 font-bold uppercase tracking-wider mb-0.5">
-                        Total
+                    <p className="text-xs text-muted-foreground/60 font-bold uppercase tracking-wider mb-0.5 flex items-center justify-end gap-1">
+                        Total {hasDiscount && <Tag className="h-3 w-3 text-red-500" />}
                     </p>
-                    <p className="text-sm font-bold">
-                        ${order.total.toLocaleString("es-CO")}
-                    </p>
+                    {hasDiscount ? (
+                        <div className="flex flex-col items-end leading-tight">
+                            <span className="text-[10px] line-through text-muted-foreground/50">${(order.total + totalDiscount).toLocaleString("es-CO")}</span>
+                            <span className="text-sm font-black text-red-600">${order.total.toLocaleString("es-CO")}</span>
+                        </div>
+                    ) : (
+                        <p className="text-sm font-bold">
+                            ${order.total.toLocaleString("es-CO")}
+                        </p>
+                    )}
                 </div>
 
                 {/* Actions */}

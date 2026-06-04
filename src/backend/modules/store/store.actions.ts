@@ -7,6 +7,8 @@ import { revalidatePath } from "next/cache";
 import logger from "@/utils/logger";
 import { authService } from "../auth";
 import eventBus from "@/utils/eventBus";
+import { notificationsService } from "../notifications";
+import { userRepository } from "../user";
 
 const log = logger.child("src/backend/modules/store/store.actions.ts");
 
@@ -23,6 +25,33 @@ export const submitStoreRequestAction = async (data: StoreCreateInput) => {
     const request = await storeService.submitStoreRequest(userId, data);
     revalidatePath("/mi-tienda");
     eventBus.emit("store_request_updated");
+
+    // Notify all admins about the new store request
+    try {
+      const admins = await userRepository.findAdmins();
+      for (const admin of admins) {
+        if (admin.id === userId) continue; // Don't self-notify
+        await notificationsService.dispatchNotification({
+          eventType: "store_request_created",
+          actorId: userId,
+          entityType: "StoreRequest",
+          entityId: request.id,
+          payload: { storeName: data.name },
+          notification: {
+            type: "store_request",
+            title: "Nueva solicitud de tienda",
+            message: `Se ha recibido una nueva solicitud de tienda: "${data.name}". Revísala en el panel de administración.`,
+            audienceType: "INDIVIDUAL",
+            audienceRef: admin.id,
+            metadata: { requestId: request.id, storeName: data.name },
+          },
+        });
+      }
+    } catch (notifError) {
+      // Don't fail the store request if notification dispatch fails
+      log.error("Error al notificar admins sobre nueva solicitud de tienda:", notifError);
+    }
+
     return { success: true, data: request };
   });
 };
@@ -107,10 +136,39 @@ export const getAllStoresAction = async (page: number = 1, status?: 'ACTIVE' | '
 export const approveRequestAction = async (requestId: string, adminNote?: string) => {
   return withAdmin(async () => {
     log.info("Action: approveRequestAction", { requestId });
+    const adminId = await authService.getCurrentUserId();
+
+    // Fetch request before approval to get requester info
+    const requestData = await storeService.getRequestById(requestId);
+
     const store = await storeService.approveRequest(requestId, adminNote);
     revalidatePath("/admin/dashboard");
     revalidatePath("/products");
     eventBus.emit("store_request_updated");
+
+    // Notify the requester that their store was approved
+    try {
+      if (adminId && requestData.userId) {
+        await notificationsService.dispatchNotification({
+          eventType: "store_request_approved",
+          actorId: adminId,
+          entityType: "StoreRequest",
+          entityId: requestId,
+          payload: { storeName: requestData.name },
+          notification: {
+            type: "store_request_approved",
+            title: "¡Tu tienda ha sido aprobada! 🎉",
+            message: `Tu solicitud para "${requestData.name}" ha sido aprobada. Ya puedes empezar a gestionar tu tienda.`,
+            audienceType: "INDIVIDUAL",
+            audienceRef: requestData.userId,
+            metadata: { requestId, storeName: requestData.name },
+          },
+        });
+      }
+    } catch (notifError) {
+      log.error("Error al notificar usuario sobre aprobación de tienda:", notifError);
+    }
+
     return { success: true, data: store };
   });
 };
@@ -118,9 +176,38 @@ export const approveRequestAction = async (requestId: string, adminNote?: string
 export const rejectRequestAction = async (requestId: string, adminNote: string) => {
   return withAdmin(async () => {
     log.info("Action: rejectRequestAction", { requestId });
+    const adminId = await authService.getCurrentUserId();
+
+    // Fetch request before rejection to get requester info
+    const requestData = await storeService.getRequestById(requestId);
+
     const request = await storeService.rejectRequest(requestId, adminNote);
     revalidatePath("/admin/dashboard");
     eventBus.emit("store_request_updated");
+
+    // Notify the requester that their store was rejected
+    try {
+      if (adminId && requestData.userId) {
+        await notificationsService.dispatchNotification({
+          eventType: "store_request_rejected",
+          actorId: adminId,
+          entityType: "StoreRequest",
+          entityId: requestId,
+          payload: { storeName: requestData.name, reason: adminNote },
+          notification: {
+            type: "store_request_rejected",
+            title: "Solicitud de tienda no aprobada",
+            message: `Tu solicitud para "${requestData.name}" no fue aprobada. Motivo: ${adminNote}`,
+            audienceType: "INDIVIDUAL",
+            audienceRef: requestData.userId,
+            metadata: { requestId, storeName: requestData.name },
+          },
+        });
+      }
+    } catch (notifError) {
+      log.error("Error al notificar usuario sobre rechazo de tienda:", notifError);
+    }
+
     return { success: true, data: request };
   });
 };

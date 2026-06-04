@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useLanguage } from "@/context/LanguageContext";
 import { motion } from "framer-motion";
-import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw, Copy, Check, ChevronRight, MessageSquare } from "lucide-react";
+import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw, Copy, Check, ChevronRight, MessageSquare, Tag } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
@@ -543,13 +543,34 @@ export default function OrderDetailPageClient({
                         </div>
                         <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                           <div className="min-w-0">
-                            <h4 className="font-bold text-sm md:text-base leading-tight text-foreground/90 mb-1.5 group-hover:text-primary transition-colors">{detalle.producto.name}</h4>
-                            <p className="text-xs font-bold text-muted-foreground">
-                              {detalle.cantidad} {detalle.unidadMedida} <span className="mx-1 text-muted-foreground/50">×</span> ${(detalle.precioUnitario || 0).toLocaleString("es-CO")}
+                            <h4 className="font-bold text-sm md:text-base leading-tight text-foreground/90 mb-1.5 group-hover:text-primary transition-colors flex items-center gap-2">
+                              {detalle.producto.name}
+                              {detalle.precioUnitario < detalle.producto.price && (
+                                <Badge className="bg-red-500 text-white hover:bg-red-600 text-[10px] px-1.5 py-0">OFERTA</Badge>
+                              )}
+                            </h4>
+                            <p className="text-xs font-bold text-muted-foreground flex items-center gap-1">
+                              <span>{detalle.cantidad} {detalle.unidadMedida}</span>
+                              <span className="text-muted-foreground/50">×</span>
+                              {detalle.precioUnitario < detalle.producto.price && (
+                                <span className="line-through text-muted-foreground/50">${(detalle.producto.price || 0).toLocaleString("es-CO")}</span>
+                              )}
+                              <span className={cn(detalle.precioUnitario < detalle.producto.price && "text-red-600 font-black")}>
+                                ${(detalle.precioUnitario || 0).toLocaleString("es-CO")}
+                              </span>
                             </p>
                           </div>
                           <div className="flex items-center gap-4 mt-2 sm:mt-0 shrink-0">
-                            <p className="font-black text-base md:text-lg text-foreground/90">${(detalle.subtotal || 0).toLocaleString("es-CO")}</p>
+                            <div className="flex flex-col items-end">
+                              {detalle.precioUnitario < detalle.producto.price && (
+                                <span className="text-xs line-through text-muted-foreground/50">
+                                  ${((detalle.producto.price || 0) * detalle.cantidad).toLocaleString("es-CO")}
+                                </span>
+                              )}
+                              <p className={cn("font-black text-base md:text-lg", detalle.precioUnitario < detalle.producto.price ? "text-red-600" : "text-foreground/90")}>
+                                ${(detalle.subtotal || 0).toLocaleString("es-CO")}
+                              </p>
+                            </div>
                             <ChevronRight className="w-5 h-5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
                           </div>
                         </div>
@@ -616,10 +637,29 @@ export default function OrderDetailPageClient({
                 </div>
 
                 <div className="pt-4 pb-6">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground/60">Total a Pagar</span>
-                    <span className="text-4xl font-black tracking-tight text-primary">${order.total.toLocaleString("es-CO")}</span>
-                  </div>
+                  {(() => {
+                    const totalDiscount = order.detalles.reduce((acc: number, d: any) => {
+                      const diff = (d.producto.price || 0) - d.precioUnitario;
+                      return acc + (diff > 0 ? diff * d.cantidad : 0);
+                    }, 0);
+                    const hasDiscount = totalDiscount > 0;
+                    
+                    return (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground/60 flex items-center gap-1">
+                          Total a Pagar {hasDiscount && <Tag className="h-4 w-4 text-red-500" />}
+                        </span>
+                        {hasDiscount ? (
+                          <div className="flex flex-col">
+                            <span className="text-lg line-through text-muted-foreground/50">${(order.total + totalDiscount).toLocaleString("es-CO")}</span>
+                            <span className="text-4xl font-black tracking-tight text-red-600">${order.total.toLocaleString("es-CO")}</span>
+                          </div>
+                        ) : (
+                          <span className="text-4xl font-black tracking-tight text-primary">${order.total.toLocaleString("es-CO")}</span>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {order.estado === PedidoEstado.PENDIENTE && (
                     isConfirmingCancel ? (

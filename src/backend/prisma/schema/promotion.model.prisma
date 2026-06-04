@@ -1,0 +1,31 @@
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum PromotionScope {
+  ENTIRE_STORE
+  SPECIFIC_PRODUCTS
+  SINGLE_PRODUCT
+}
+
+model Promotion {
+  id            String         @id @default(cuid())
+  storeId       String
+  name          String
+  description   String?        @db.Text
+  discountType  DiscountType
+  discountValue Decimal        @db.Decimal(12, 2)
+  expiresAt     DateTime
+  scope         PromotionScope @default(SPECIFIC_PRODUCTS)
+  isActive      Boolean        @default(true)
+
+  store    Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  products Product[] @relation("ProductPromotions")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId])
+  @@index([isActive])
+}

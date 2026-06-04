@@ -5,6 +5,8 @@ import { CartItem, CartContextType, Product } from "@/types";
 import { toast } from "sonner";
 import logger from "@/utils/logger";
 
+import { calculateDiscountedPrice } from "@/utils/promotions";
+
 const log = logger.child("src/frontend/context/CartContext.tsx");
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -87,7 +89,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
   
   const totalPrice = cart.reduce((total, item) => {
-    return total + (item.product.price * item.quantity);
+    const discountedPrice = calculateDiscountedPrice(
+      item.product.price,
+      (item.product as any).promotions,
+      (item.product as any).store?.promotions
+    );
+    const finalPrice = discountedPrice !== null ? discountedPrice : item.product.price;
+    return total + (finalPrice * item.quantity);
   }, 0);
 
   return (

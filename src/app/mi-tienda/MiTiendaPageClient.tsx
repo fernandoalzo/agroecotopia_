@@ -13,6 +13,7 @@ import {
   ShoppingBag,
   AlertCircle,
   ChevronDown,
+  Tag,
 } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { cn } from "@/lib/utils";
@@ -28,10 +29,13 @@ import { toast } from "sonner";
 import logger from "@/utils/logger";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
+import { PromotionsList } from "@/components/seller/promotions/PromotionsList";
+import { PromotionCreateModal } from "@/components/seller/promotions/PromotionCreateModal";
+import { Promotion } from "@prisma/client";
 
 const log = logger.child();
 
-type SellerTab = "orders" | "products" | "store_info";
+type SellerTab = "orders" | "products" | "promotions" | "store_info";
 
 interface MiTiendaActions {
   getMyStores: () => Promise<any>;
@@ -54,11 +58,19 @@ interface MiTiendaActions {
   getStoreOrderStatusCounts: (storeId: string) => Promise<any>;
   updateStoreOrderStatus: (...args: any[]) => Promise<any>;
   getAllActiveStoresList: () => Promise<any>;
+  
+  // Promotions
+  getPromotionsByStore: (storeId: string) => Promise<any>;
+  createPromotion: (storeId: string, data: any) => Promise<any>;
+  updatePromotion: (storeId: string, id: string, data: any) => Promise<any>;
+  togglePromotion: (storeId: string, id: string, isActive: boolean) => Promise<any>;
+  deletePromotion: (storeId: string, id: string) => Promise<any>;
 }
 
 const SIDEBAR_ITEMS: { id: SellerTab; labelEs: string; labelEn: string; icon: React.ElementType }[] = [
   { id: "orders", labelEs: "Pedidos", labelEn: "Orders", icon: ClipboardList },
   { id: "products", labelEs: "Mis Productos", labelEn: "My Products", icon: Package },
+  { id: "promotions", labelEs: "Promociones", labelEn: "Promotions", icon: Tag },
   { id: "store_info", labelEs: "Mi Tienda", labelEn: "My Store", icon: Store },
 ];
 
@@ -89,6 +101,10 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
   const [storeOrdersRefresh, setStoreOrdersRefresh] = useState(0);
   const isSeller = session?.user?.role === "seller" || session?.user?.role === "admin";
   
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [loadingPromotions, setLoadingPromotions] = useState(false);
+  const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
+
   const activeStore = stores.find(s => s.id === activeStoreId) || null;
 
   const { state: productState, actions: productActions } = useProductsLogic(activeStoreId || undefined, !!activeStoreId, {
@@ -142,6 +158,25 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
       return false;
     }
   };
+
+  const loadPromotions = useCallback(async () => {
+    if (!activeStoreId || activeTab !== "promotions") return;
+    setLoadingPromotions(true);
+    try {
+      const res = await actions.getPromotionsByStore(activeStoreId);
+      if (res && res.success) {
+        setPromotions(res.promotions);
+      }
+    } catch (err) {
+      log.error("Error cargando promociones:", err);
+    } finally {
+      setLoadingPromotions(false);
+    }
+  }, [activeStoreId, activeTab, actions]);
+
+  useEffect(() => {
+    loadPromotions();
+  }, [loadPromotions]);
 
   const loadStore = async () => {
     if (!session?.user?.id) return;
@@ -548,6 +583,32 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                     onDeleteProduct={productActions.handleDeleteProduct}
                   />
                 )}
+                {activeTab === "promotions" && activeStore && (
+                  <PromotionsList
+                    storeId={activeStore.id}
+                    promotions={promotions}
+                    loading={loadingPromotions}
+                    onCreateNew={() => setIsPromoModalOpen(true)}
+                    onToggleStatus={async (id, isActive) => {
+                      const res = await actions.togglePromotion(activeStore.id, id, isActive);
+                      if (res && res.success) {
+                        toast.success(`Promoción ${isActive ? 'activada' : 'desactivada'}`);
+                        loadPromotions();
+                        return true;
+                      }
+                      return false;
+                    }}
+                    onDelete={async (id) => {
+                      const res = await actions.deletePromotion(activeStore.id, id);
+                      if (res && res.success) {
+                        toast.success("Promoción eliminada");
+                        loadPromotions();
+                        return true;
+                      }
+                      return false;
+                    }}
+                  />
+                )}
                 {activeTab === "store_info" && activeStore && (
                   <SellerStoreInfo 
                     store={activeStore} 
@@ -560,6 +621,24 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
           </div>
         </div>
       </main>
+      
+      {isPromoModalOpen && activeStore && (
+        <PromotionCreateModal
+          storeId={activeStore.id}
+          getProducts={(id) => actions.getPaginatedProducts(1, 1000, undefined, id)}
+          searchProducts={(query) => actions.searchProducts(query, 1, 50, undefined, activeStore.id)}
+          onClose={() => setIsPromoModalOpen(false)}
+          onSubmit={async (data) => {
+            const res = await actions.createPromotion(activeStore.id, data);
+            if (res && res.success) {
+              loadPromotions();
+              return true;
+            }
+            throw new Error(res?.error || "Error");
+          }}
+        />
+      )}
+
       {orderChat && (
         <OrderChatPanel
           conversation={orderChat.conversation}

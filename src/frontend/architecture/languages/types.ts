@@ -107,6 +107,7 @@ export interface Translations {
     viewProducts: string;
     orderSummary: string;
     subtotal: string;
+    taxes: string;
     shipping: string;
     toCalculate: string;
     completeOrder: string;

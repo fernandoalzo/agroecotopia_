@@ -22,6 +22,13 @@ import {
   getStoreOrderStatusCountsAction,
   updateStoreOrderStatusAction,
 } from "@/backend/modules/orders/orders.actions";
+import {
+  createPromotionAction,
+  getPromotionsByStoreAction,
+  updatePromotionAction,
+  togglePromotionAction,
+  deletePromotionAction,
+} from "@/backend/modules/promotion/promotion.actions";
 import MiTiendaPage from "./MiTiendaPageClient";
 
 export default function Page() {
@@ -48,6 +55,12 @@ export default function Page() {
         getStoreOrderStatusCounts: getStoreOrderStatusCountsAction,
         updateStoreOrderStatus: updateStoreOrderStatusAction,
         getAllActiveStoresList: getAllActiveStoresListAction,
+        // Promotions
+        createPromotion: createPromotionAction,
+        getPromotionsByStore: getPromotionsByStoreAction,
+        updatePromotion: updatePromotionAction,
+        togglePromotion: togglePromotionAction,
+        deletePromotion: deletePromotionAction,
       }}
     />
   );

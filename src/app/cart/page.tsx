@@ -11,6 +11,7 @@ import Image from "next/image";
 import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, Leaf, Tag } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
 import { formatPrice } from "@/lib/utils";
+import { calculateDiscountedPrice } from "@/utils/promotions";
 
 const CartContent = () => {
   const { cart, removeFromCart, updateQuantity, totalPrice } = useCart();
@@ -84,6 +85,14 @@ const CartContent = () => {
               unit: item.product.unidad
             };
 
+            const discountedPrice = calculateDiscountedPrice(
+              item.product.price,
+              (item.product as any).promotions,
+              (item.product as any).store?.promotions
+            );
+            const hasDiscount = discountedPrice !== null;
+            const finalPrice = hasDiscount ? discountedPrice : item.product.price;
+
             return (
               <motion.div 
                 key={item.product.id} 
@@ -93,6 +102,13 @@ const CartContent = () => {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="flex gap-4 p-4 rounded-2xl border border-border bg-card shadow-sm items-center relative overflow-hidden transition-all hover:shadow-md"
               >
+                {hasDiscount && (
+                  <div className="absolute top-0 right-0 z-10 pointer-events-none">
+                    <div className="bg-red-500 text-white text-[8px] font-black uppercase tracking-widest py-0.5 px-6 translate-x-[30%] translate-y-2 rotate-45 shadow-sm shadow-red-500/20">
+                      Oferta
+                    </div>
+                  </div>
+                )}
                 {/* Item Image */}
                 <div className="h-20 w-20 shrink-0 md:h-24 md:w-24 bg-primary/5 rounded-xl flex items-center justify-center text-4xl shadow-inner relative overflow-hidden">
                   {item.product.images && item.product.images.length > 0 && item.product.images[0]?.trim() !== "" ? (
@@ -110,15 +126,26 @@ const CartContent = () => {
 
                 {/* Item Details */}
                 <div className="flex-1 flex flex-col justify-center">
-                  <h3 className="font-display font-bold text-sm md:text-base leading-tight mb-1">{productTranslation.name}</h3>
-                  <div className="flex items-center gap-2 mb-2">
+                  <h3 className="font-display font-bold text-sm md:text-base leading-tight mb-1 pr-6">{productTranslation.name}</h3>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
                     <div className="flex items-center gap-1 text-primary/70 uppercase font-black text-[8px] tracking-widest shrink-0 bg-primary/5 px-1.5 py-0.5 rounded-sm border border-primary/10">
                       <Tag className="w-2.5 h-2.5" />
                       {item.product.categories.map((c: any) => c.name).join(", ")}
                     </div>
-                    <span className="text-[10px] text-muted-foreground font-medium">
-                      {formatPrice(item.product.price)} / ud
-                    </span>
+                    {hasDiscount ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-muted-foreground line-through decoration-muted-foreground/50">
+                          {formatPrice(item.product.price)}
+                        </span>
+                        <span className="text-[11px] text-red-600 font-bold">
+                          {formatPrice(finalPrice)} {item.product.unidad ? `/ ${item.product.unidad}` : ""}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground font-medium">
+                        {formatPrice(item.product.price)} {item.product.unidad ? `/ ${item.product.unidad}` : ""}
+                      </span>
+                    )}
                   </div>
                   
                   {/* Controls */}
@@ -181,6 +208,16 @@ const CartContent = () => {
               <span className="font-medium text-foreground">{formattedTotal}</span>
             </div>
             <div className="flex justify-between">
+              <span>{t.cart.taxes}</span>
+              <span className="font-medium text-foreground">
+                {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
+                  style: "currency",
+                  currency: language === 'es' ? "COP" : "USD",
+                  maximumFractionDigits: 0,
+                }).format(totalPrice * 0.19)}
+              </span>
+            </div>
+            <div className="flex justify-between">
               <span>{t.cart.shipping}</span>
               <span className="font-medium text-primary">{t.cart.toCalculate}</span>
             </div>
@@ -188,10 +225,19 @@ const CartContent = () => {
           
           <div className="h-px bg-border w-full mb-6" />
           
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex justify-between items-center mb-2">
               <span className="font-bold text-foreground">{t.cart.total}</span>
-              <span className="font-display text-2xl font-black text-primary">{formattedTotal}</span>
+              <span className="font-display text-2xl font-black text-primary">
+                {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
+                  style: "currency",
+                  currency: language === 'es' ? "COP" : "USD",
+                  maximumFractionDigits: 0,
+                }).format(totalPrice + totalPrice * 0.19)}
+              </span>
             </div>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest text-right mb-8">
+              {t.products.taxesIncluded}
+            </p>
  
             <Button 
               onClick={handleCompleteOrder}

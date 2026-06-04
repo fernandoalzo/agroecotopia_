@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Copy, Eye, Loader2, MessageSquare, User } from "lucide-react";
+import { Check, Copy, Eye, Loader2, MessageSquare, User, Tag } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
@@ -45,6 +45,12 @@ export const AdminOrderCardMobile = ({
     const cfg = statusConfig[order.estado];
     const StatusIcon = cfg.icon;
     const storeName = order.detalles.find((d) => d.store?.name)?.store?.name || "Tienda no disponible";
+
+    const totalDiscount = order.detalles.reduce((acc, d) => {
+        const diff = d.producto.price - d.precioUnitario;
+        return acc + (diff > 0 ? diff * d.cantidad : 0);
+    }, 0);
+    const hasDiscount = totalDiscount > 0;
 
     return (
         <div className="lg:hidden">
@@ -175,12 +181,19 @@ export const AdminOrderCardMobile = ({
 
             {/* ── Total Row ── */}
             <div className="px-5 py-5 flex items-end justify-between bg-primary/[0.02]">
-                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/60 mb-0.5">
-                    Total a Pagar
+                <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/60 mb-0.5 flex items-center gap-1">
+                    Total a Pagar {hasDiscount && <Tag className="h-3.5 w-3.5 text-red-500" />}
                 </p>
-                <p className="text-2xl font-black tracking-tight text-foreground">
-                    ${order.total.toLocaleString("es-CO")}
-                </p>
+                {hasDiscount ? (
+                    <div className="flex flex-col items-end leading-tight">
+                        <span className="text-sm line-through text-muted-foreground/50">${(order.total + totalDiscount).toLocaleString("es-CO")}</span>
+                        <span className="text-2xl font-black tracking-tight text-red-600">${order.total.toLocaleString("es-CO")}</span>
+                    </div>
+                ) : (
+                    <p className="text-2xl font-black tracking-tight text-foreground">
+                        ${order.total.toLocaleString("es-CO")}
+                    </p>
+                )}
             </div>
 
             {/* ── Mobile action buttons ── */}

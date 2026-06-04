@@ -20,6 +20,7 @@ export interface AdminOrder {
     producto: {
       name: string;
       images: string[];
+      price: number;
     };
     store?: {
       id: string;

@@ -17,6 +17,7 @@ import { PAYMENT_METHODS, PaymentHandlerFactory } from "@/utils/PaymentsMethods"
 // import { placeOrderAction } from "@/backend/modules/orders"; // moved to API route
 import { Loading } from "@/components/ui/Loading";
 import logger from "@/utils/logger";
+import { calculateDiscountedPrice } from "@/utils/promotions";
 
 const log = logger.child("src/app/checkout/page.tsx");
 
@@ -61,7 +62,7 @@ export default function CheckoutPage() {
         detalles: cart.map(item => ({
           productoId: item.product.id!,
           cantidad: item.quantity,
-          precioUnitario: item.product.price,
+          precioUnitario: calculateDiscountedPrice(item.product.price, (item.product as any).promotions, (item.product as any).store?.promotions),
           unidadMedida: item.product.unidad || "unidad"
         }))
       };

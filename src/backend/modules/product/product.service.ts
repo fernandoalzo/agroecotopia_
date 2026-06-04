@@ -201,10 +201,21 @@ export class ProductService {
   /**
    * Convierte objetos Decimal de Prisma a numbers para que sean serializables
    */
-  private serializeProduct(product: Product) {
+  private serializeProduct(product: any) {
     return {
       ...product,
       stock: Number(product.stock),
+      promotions: product.promotions?.map((p: any) => ({
+        ...p,
+        discountValue: Number(p.discountValue),
+      })),
+      store: product.store ? {
+        ...product.store,
+        promotions: product.store.promotions?.map((p: any) => ({
+          ...p,
+          discountValue: Number(p.discountValue),
+        }))
+      } : undefined
     };
   }
 }

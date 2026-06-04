@@ -32,6 +32,7 @@ model Store {
   orderDetails  DetallePedido[]
   conversations Conversation[]
   requests      StoreRequest[]  @relation("StoreToRequests")
+  promotions    Promotion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
