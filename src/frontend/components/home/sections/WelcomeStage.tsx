@@ -2,6 +2,9 @@
 
 import { motion } from "framer-motion";
 import { Sprout, ArrowRight, ArrowDown } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 interface WelcomeStageProps {
   t: any;
@@ -10,6 +13,9 @@ interface WelcomeStageProps {
 }
 
 const WelcomeStage = ({ t, language, onStartJourney }: WelcomeStageProps) => {
+  const router = useRouter();
+  const [isNavigating, setIsNavigating] = useState(false);
+
   return (
     <>
       {/* Gradient veil for text readability — background image is handled by ImmersiveJourney slideshow */}
@@ -17,7 +23,11 @@ const WelcomeStage = ({ t, language, onStartJourney }: WelcomeStageProps) => {
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background" />
       </div>
 
-      <div className="max-w-4xl text-center z-20">
+      <motion.div 
+        animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : {}}
+        transition={{ duration: 0.8, ease: "easeInOut" }}
+        className="max-w-4xl text-center z-20"
+      >
         <motion.span
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -57,16 +67,21 @@ const WelcomeStage = ({ t, language, onStartJourney }: WelcomeStageProps) => {
           className="flex flex-col sm:flex-row gap-4 justify-center items-center"
         >
           <button
-            onClick={onStartJourney}
+            onClick={() => {
+              setIsNavigating(true);
+              setTimeout(() => {
+                router.push('/products');
+              }, 800);
+            }}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-8 py-4 font-display text-base font-bold text-white shadow-xl shadow-primary/20 hover:bg-primary/95 transition-all hover:scale-105 active:scale-95 group cursor-pointer"
           >
-            {language === "es" ? "Iniciar Recorrido" : "Start Journey"}
+            {language === "es" ? "Mira nuestros productos" : "View our products"}
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </button>
         </motion.div>
 
 
-      </div>
+      </motion.div>
     </>
   );
 };

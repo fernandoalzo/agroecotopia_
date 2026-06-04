@@ -45,6 +45,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
   const tilt4 = useTiltEffect();
   const router = useRouter();
   const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const defaultTopics = [
     {
@@ -81,6 +82,8 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
   return (
     <div className="container max-w-5xl mx-auto flex items-center justify-center p-4">
       <motion.div
+        animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : {}}
+        transition={isNavigating ? { duration: 0.8, ease: "easeInOut" } : {}}
         style={{
           rotateX: tilt4.rotateX,
           rotateY: tilt4.rotateY,
@@ -131,7 +134,10 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                window.location.href = "/comunidad";
+                setIsNavigating(true);
+                setTimeout(() => {
+                  router.push("/comunidad");
+                }, 800);
               }}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary/10 border border-primary/20 text-primary px-6 py-3 text-sm font-bold hover:bg-primary hover:text-white transition-all w-full sm:w-auto cursor-pointer relative z-50"
             >
