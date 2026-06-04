@@ -108,6 +108,12 @@ export class OrdersRepository {
         detalles: {
           include: {
             producto: true,
+            store: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },

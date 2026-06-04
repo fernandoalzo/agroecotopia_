@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Leaf, Menu, X, ShoppingCart, LogIn, LogOut, Package, ChevronDown, ChevronRight, MessageSquare, LayoutDashboard } from "lucide-react";
+import { Leaf, Menu, X, ShoppingCart, LogIn, LogOut, Package, ChevronDown, ChevronRight, MessageSquare, LayoutDashboard, Store } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -349,7 +349,7 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-sm">Mi Tienda</span>
                           </div>
-                          <Package className="h-4 w-4 text-primary" />
+                          <Store className="h-4 w-4 text-primary" />
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-border/50 my-1" />
@@ -586,7 +586,7 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                       >
                         <div className="flex items-center gap-5 relative z-10">
                           <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
-                            <Package className="h-6 w-6 text-white" />
+                            <Store className="h-6 w-6 text-white" />
                           </div>
                           <span className="font-display text-2xl font-black tracking-tight uppercase">
                             Mi Tienda
