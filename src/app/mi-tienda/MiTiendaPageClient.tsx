@@ -64,6 +64,7 @@ interface MiTiendaActions {
   // Promotions
   getPromotionsByStore: (storeId: string) => Promise<any>;
   createPromotion: (storeId: string, data: any) => Promise<any>;
+  updatePromotion: (storeId: string, id: string, data: any) => Promise<any>;
   togglePromotion: (storeId: string, id: string, isActive: boolean) => Promise<any>;
   deletePromotion: (storeId: string, id: string) => Promise<any>;
 
