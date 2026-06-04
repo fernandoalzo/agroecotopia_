@@ -35,7 +35,7 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [activeSection, setActiveSection] = useState("");
   const pathname = usePathname();
-  const { totalItems } = useCart();
+  const { totalItems, clearCart } = useCart();
   const { t } = useLanguage();
   const { data: session } = useSession();
   const { socket } = useSocket();
@@ -369,7 +369,10 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                     </>
                   )}
                   <DropdownMenuItem
-                    onClick={() => signOut({ callbackUrl: "/" })}
+                    onClick={() => {
+                      clearCart();
+                      signOut({ callbackUrl: "/" });
+                    }}
                     className="text-red-500 focus:bg-red-500/10 focus:text-red-600 cursor-pointer flex items-center justify-between rounded-xl px-2 py-2 transition-colors"
                   >
                     <span className="font-medium text-sm">{t.navbar?.cerrarSesion ?? "Cerrar Sesión"}</span>
@@ -699,7 +702,11 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => { setOpen(false); signOut({ callbackUrl: "/" }); }}
+                            onClick={() => { 
+                              clearCart();
+                              setOpen(false); 
+                              signOut({ callbackUrl: "/" }); 
+                            }}
                             className="flex-1 rounded-xl bg-red-500 py-3 text-sm font-bold text-white transition-all active:scale-95 hover:bg-red-600 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(239,68,68,0.3)]"
                           >
                             {t.navbar?.salir ?? "Salir"} <LogOut className="h-4 w-4" />
