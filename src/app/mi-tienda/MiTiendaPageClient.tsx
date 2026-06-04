@@ -14,6 +14,7 @@ import {
   AlertCircle,
   ChevronDown,
   Tag,
+  Settings,
 } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { cn } from "@/lib/utils";
@@ -31,11 +32,12 @@ import { useSocket } from "@/frontend/context/SocketContext";
 import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import { PromotionsList } from "@/components/seller/promotions/PromotionsList";
 import { PromotionCreateModal } from "@/components/seller/promotions/PromotionCreateModal";
+import { StoreConfigurationPanel } from "@/components/seller/configuration/StoreConfigurationPanel";
 import { Promotion } from "@prisma/client";
 
 const log = logger.child();
 
-type SellerTab = "orders" | "products" | "promotions" | "store_info";
+type SellerTab = "orders" | "products" | "promotions" | "store_info" | "configuration";
 
 interface MiTiendaActions {
   getMyStores: () => Promise<any>;
@@ -62,9 +64,14 @@ interface MiTiendaActions {
   // Promotions
   getPromotionsByStore: (storeId: string) => Promise<any>;
   createPromotion: (storeId: string, data: any) => Promise<any>;
-  updatePromotion: (storeId: string, id: string, data: any) => Promise<any>;
   togglePromotion: (storeId: string, id: string, isActive: boolean) => Promise<any>;
   deletePromotion: (storeId: string, id: string) => Promise<any>;
+
+  // Taxes
+  createStoreTax: (storeId: string, data: any) => Promise<any>;
+  getStoreTaxes: (storeId: string) => Promise<any>;
+  updateStoreTax: (storeId: string, id: string, data: any) => Promise<any>;
+  deleteStoreTax: (storeId: string, id: string) => Promise<any>;
 }
 
 const SIDEBAR_ITEMS: { id: SellerTab; labelEs: string; labelEn: string; icon: React.ElementType }[] = [
@@ -72,6 +79,7 @@ const SIDEBAR_ITEMS: { id: SellerTab; labelEs: string; labelEn: string; icon: Re
   { id: "products", labelEs: "Mis Productos", labelEn: "My Products", icon: Package },
   { id: "promotions", labelEs: "Promociones", labelEn: "Promotions", icon: Tag },
   { id: "store_info", labelEs: "Mi Tienda", labelEn: "My Store", icon: Store },
+  { id: "configuration", labelEs: "Configuración", labelEn: "Configuration", icon: Settings },
 ];
 
 function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
@@ -478,19 +486,21 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
-              <button
-                key={item.id}
-                onClick={() => handleTabChange(item.id)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/15"
-                    : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                )}
-              >
-                <Icon className={cn("w-5 h-5 shrink-0 transition-transform duration-200", isActive && "scale-110")} />
-                <span className="flex-1 text-left">{item.labelEs}</span>
-              </button>
+              <React.Fragment key={item.id}>
+                {item.id === "configuration" && <div className="h-px bg-border/50 my-2 mx-2" />}
+                <button
+                  onClick={() => handleTabChange(item.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/15"
+                      : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                  )}
+                >
+                  <Icon className={cn("w-5 h-5 shrink-0 transition-transform duration-200", isActive && "scale-110")} />
+                  <span className="flex-1 text-left">{item.labelEs}</span>
+                </button>
+              </React.Fragment>
             );
           })}
         </nav>
@@ -520,6 +530,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
               {activeTab === "orders" && "Gestiona los pedidos que contienen productos de esta tienda"}
               {activeTab === "products" && "Gestiona los productos de tu tienda"}
               {activeTab === "store_info" && "Información y configuración de tu tienda"}
+              {activeTab === "configuration" && "Configura impuestos y otros ajustes de la tienda"}
             </p>
           </div>
         </div>
@@ -615,6 +626,9 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                     onStoreUpdated={loadStore} 
                     onUpdateStore={handleUpdateStore}
                   />
+                )}
+                {activeTab === "configuration" && activeStore && (
+                  <StoreConfigurationPanel store={activeStore} actions={actions} />
                 )}
               </motion.div>
             </AnimatePresence>

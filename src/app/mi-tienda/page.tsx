@@ -29,6 +29,12 @@ import {
   togglePromotionAction,
   deletePromotionAction,
 } from "@/backend/modules/promotion/promotion.actions";
+import {
+  createStoreTaxAction,
+  getStoreTaxesAction,
+  updateStoreTaxAction,
+  deleteStoreTaxAction
+} from "@/backend/modules/store/storeTax.actions";
 import MiTiendaPage from "./MiTiendaPageClient";
 
 export default function Page() {
@@ -61,6 +67,11 @@ export default function Page() {
         updatePromotion: updatePromotionAction,
         togglePromotion: togglePromotionAction,
         deletePromotion: deletePromotionAction,
+        // Taxes
+        createStoreTax: createStoreTaxAction,
+        getStoreTaxes: getStoreTaxesAction,
+        updateStoreTax: updateStoreTaxAction,
+        deleteStoreTax: deleteStoreTaxAction,
       }}
     />
   );

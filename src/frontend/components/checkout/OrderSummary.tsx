@@ -20,6 +20,47 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
   const { cart, totalPrice } = useCart();
   const { t, language } = useLanguage();
   const [showConfirm, setShowConfirm] = useState(false);
+  const [calculatedTaxes, setCalculatedTaxes] = useState<number>(0);
+  const [taxBreakdown, setTaxBreakdown] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    const fetchTaxes = async () => {
+      const cartItems = cart.map(item => {
+        const discountedPrice = calculateDiscountedPrice(
+          item.product.price,
+          (item.product as any).promotions,
+          (item.product as any).store?.promotions
+        );
+        const finalPrice = discountedPrice !== null ? discountedPrice : item.product.price;
+        return {
+          storeId: item.product.storeId || (item.product as any).store?.id || "",
+          subtotal: finalPrice * item.quantity
+        };
+      });
+
+      try {
+        const res = await fetch('/api/calculate-taxes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cartItems }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setCalculatedTaxes(data.taxes);
+          setTaxBreakdown(data.taxBreakdown || []);
+        }
+      } catch (err) {
+        console.error('Error fetching taxes:', err);
+      }
+    };
+
+    if (cart.length > 0) {
+      fetchTaxes();
+    } else {
+      setCalculatedTaxes(0);
+      setTaxBreakdown([]);
+    }
+  }, [cart]);
 
   const formattedTotal = new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
     style: "currency",
@@ -148,16 +189,31 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
             <span className="text-muted-foreground font-medium">{t.cart.subtotal}</span>
             <span className="text-foreground font-bold">{formattedSubtotal}</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground font-medium">{t.cart.taxes}</span>
-            <span className="text-foreground font-bold">
-              {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
-                style: "currency",
-                currency: language === 'es' ? "COP" : "USD",
-                maximumFractionDigits: 0,
-              }).format(subtotal * 0.19)}
-            </span>
-          </div>
+          {taxBreakdown.length > 0 ? (
+            taxBreakdown.map((tax, idx) => (
+              <div key={idx} className="flex justify-between text-sm">
+                <span className="text-muted-foreground font-medium">{tax.name} ({tax.percentage}%)</span>
+                <span className="text-foreground font-bold">
+                  {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
+                    style: "currency",
+                    currency: language === 'es' ? "COP" : "USD",
+                    maximumFractionDigits: 0,
+                  }).format(tax.amount)}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground font-medium">{t.cart.taxes}</span>
+              <span className="text-foreground font-bold">
+                {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
+                  style: "currency",
+                  currency: language === 'es' ? "COP" : "USD",
+                  maximumFractionDigits: 0,
+                }).format(calculatedTaxes)}
+              </span>
+            </div>
+          )}
           <div className="flex justify-between text-sm items-center">
             <span className="text-muted-foreground font-medium">{t.cart.shipping}</span>
             <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-tighter ring-1 ring-primary/20">
@@ -173,7 +229,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
                   style: "currency",
                   currency: language === 'es' ? "COP" : "USD",
                   maximumFractionDigits: 0,
-                }).format(subtotal + subtotal * 0.19)}
+                }).format(subtotal + calculatedTaxes)}
               </span>
               <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1 block">
                 {t.products.taxesIncluded}

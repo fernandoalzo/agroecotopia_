@@ -16,7 +16,6 @@ export async function placeOrderAction(data: {
   direccionEntrega: string;
   notasCliente?: string;
   costoEnvio: number;
-  impuestosPorcentaje: number;
   metodoPago?: string;
   detalles: {
     productoId: string;
@@ -279,3 +278,36 @@ export async function updateStoreOrderStatusAction(
     }
   });
 }
+
+/**
+ * Calcula los impuestos totales para un carrito de compras.
+ */
+export async function calculateCartTaxesAction(cartItems: { storeId: string; subtotal: number }[]) {
+  try {
+    let totalTaxes = 0;
+    
+    // Group subtotals by store
+    const storeSubtotals = cartItems.reduce((acc, item) => {
+      acc[item.storeId] = (acc[item.storeId] || 0) + item.subtotal;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Fetch active taxes for each store and calculate
+    const { storeTaxService } = await import("@/backend/modules/store");
+    
+    for (const [storeId, subtotal] of Object.entries(storeSubtotals)) {
+      const activeTaxes = await storeTaxService.getTaxesByStoreId(storeId);
+      const totalTaxPercentage = activeTaxes
+        .filter((t: any) => t.isActive)
+        .reduce((sum: number, t: any) => sum + Number(t.percentage), 0);
+      
+      totalTaxes += subtotal * (totalTaxPercentage / 100);
+    }
+    
+    return { success: true, taxes: totalTaxes };
+  } catch (error: any) {
+    log.error("Error calculating cart taxes:", error);
+    return { success: false, taxes: 0 };
+  }
+}
+

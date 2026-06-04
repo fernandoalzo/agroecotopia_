@@ -2,8 +2,10 @@ import { OrdersRepository } from "./orders.repository";
 import { PedidoEstado, Prisma } from "@prisma/client";
 import logger from "@/utils/logger";
 import { notificationsService } from "@/backend/modules/notifications";
+import { storeTaxService } from "@/backend/modules/store";
 
 const log = logger.child("src/backend/modules/orders/orders.service.ts");
+
 
 type CreatePedidoDetalle = {
   productoId: string;
@@ -18,7 +20,6 @@ type CreatePedidoData = {
   direccionEntrega: string;
   notasCliente?: string;
   costoEnvio: number;
-  impuestosPorcentaje: number;
   metodoPago?: string;
   detalles: CreatePedidoDetalle[];
 };
@@ -116,10 +117,16 @@ export class OrdersService {
       };
     });
 
-    const impuestos = subtotal * (data.impuestosPorcentaje / 100);
+    const activeTaxes = await storeTaxService.getTaxesByStoreId(storeId);
+    const totalTaxPercentage = activeTaxes
+      .filter((t: any) => t.isActive)
+      .reduce((sum: number, t: any) => sum + Number(t.percentage), 0);
+
+    const impuestos = subtotal * (totalTaxPercentage / 100);
     const shippingRatio = allItemsSubtotal > 0 ? subtotal / allItemsSubtotal : 0;
     const costoEnvio = data.costoEnvio * shippingRatio;
     const total = subtotal + impuestos + costoEnvio;
+
 
     log.info("Creando pedido de tienda en base de datos:", { usuarioId: data.usuarioId, storeId, subtotal, impuestos, costoEnvio, total, cantidadItems: detalles.length });
 

@@ -133,7 +133,7 @@ export const es: Translations = {
     viewProducts: "Ver Productos",
     orderSummary: "Resumen de orden",
     subtotal: "Subtotal",
-    taxes: "Impuestos (19%)",
+    taxes: "Impuestos",
     shipping: "Envío",
     toCalculate: "Por calcular",
     completeOrder: "Completar Pedido",

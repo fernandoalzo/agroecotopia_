@@ -12,12 +12,54 @@ import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, Leaf, Tag } from "lucide-
 import { useLanguage } from "@/context/LanguageContext";
 import { formatPrice } from "@/lib/utils";
 import { calculateDiscountedPrice } from "@/utils/promotions";
+import { useEffect, useState } from "react";
 
 const CartContent = () => {
   const { cart, removeFromCart, updateQuantity, totalPrice } = useCart();
   const { t, language } = useLanguage();
   const { status } = useSession();
   const router = useRouter();
+  const [calculatedTaxes, setCalculatedTaxes] = useState<number>(0);
+  const [taxBreakdown, setTaxBreakdown] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchTaxes = async () => {
+      const cartItems = cart.map(item => {
+        const discountedPrice = calculateDiscountedPrice(
+          item.product.price,
+          (item.product as any).promotions,
+          (item.product as any).store?.promotions
+        );
+        const finalPrice = discountedPrice !== null ? discountedPrice : item.product.price;
+        return {
+          storeId: item.product.storeId || (item.product as any).store?.id || "",
+          subtotal: finalPrice * item.quantity
+        };
+      });
+
+      try {
+        const res = await fetch('/api/calculate-taxes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cartItems }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setCalculatedTaxes(data.taxes);
+          setTaxBreakdown(data.taxBreakdown || []);
+        }
+      } catch (err) {
+        console.error('Error fetching taxes:', err);
+      }
+    };
+
+    if (cart.length > 0) {
+      fetchTaxes();
+    } else {
+      setCalculatedTaxes(0);
+      setTaxBreakdown([]);
+    }
+  }, [cart]);
 
   if (cart.length === 0) {
     return (
@@ -207,16 +249,31 @@ const CartContent = () => {
               <span>{t.cart.subtotal}</span>
               <span className="font-medium text-foreground">{formattedTotal}</span>
             </div>
-            <div className="flex justify-between">
-              <span>{t.cart.taxes}</span>
-              <span className="font-medium text-foreground">
-                {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
-                  style: "currency",
-                  currency: language === 'es' ? "COP" : "USD",
-                  maximumFractionDigits: 0,
-                }).format(totalPrice * 0.19)}
-              </span>
-            </div>
+            {taxBreakdown.length > 0 ? (
+              taxBreakdown.map((tax, idx) => (
+                <div key={idx} className="flex justify-between">
+                  <span>{tax.name} ({tax.percentage}%)</span>
+                  <span className="font-medium text-foreground">
+                    {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
+                      style: "currency",
+                      currency: language === 'es' ? "COP" : "USD",
+                      maximumFractionDigits: 0,
+                    }).format(tax.amount)}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="flex justify-between">
+                <span>{t.cart.taxes}</span>
+                <span className="font-medium text-foreground">
+                  {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
+                    style: "currency",
+                    currency: language === 'es' ? "COP" : "USD",
+                    maximumFractionDigits: 0,
+                  }).format(calculatedTaxes)}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span>{t.cart.shipping}</span>
               <span className="font-medium text-primary">{t.cart.toCalculate}</span>
@@ -232,7 +289,7 @@ const CartContent = () => {
                   style: "currency",
                   currency: language === 'es' ? "COP" : "USD",
                   maximumFractionDigits: 0,
-                }).format(totalPrice + totalPrice * 0.19)}
+                }).format(totalPrice + calculatedTaxes)}
               </span>
             </div>
             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest text-right mb-8">
