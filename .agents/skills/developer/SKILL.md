@@ -126,6 +126,11 @@ The app uses `next-auth` (v5 Beta).
 - Use `shadcn/ui` components from `src/frontend/components/ui/` as building blocks.
 - **Premium Aesthetic Rule**: Do not create generic, simple MVPs. Use smooth gradients, hover effects, and `framer-motion` to maintain a professional, dynamic design.
 - **Form Validation**: Always use `react-hook-form` coupled with `zod` (`@hookform/resolvers`) for robust form state and validation.
+- **Double-Submit Prevention (STRICT LAW)**: All forms and submission buttons MUST implement a loading state (e.g., `isSubmitting`) to prevent multiple rapid submissions (double-submit). You must:
+  1. Have an `isSubmitting` state (or `isLoading` from react-query/form).
+  2. Abort the submit handler early if `isSubmitting` is true.
+  3. Set it to `true` before the async operation and use a `finally` block to reset it to `false`.
+  4. Disable the submit button (`disabled={isSubmitting}`) and provide visual feedback (e.g., change text to "Guardando...", adjust opacity, change cursor).
 
 ---
 

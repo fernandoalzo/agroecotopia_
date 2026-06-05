@@ -47,6 +47,7 @@ export default function CheckoutPage() {
   }
 
   const handleCheckoutSubmit = async (values: CheckoutValues) => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
 
     try {

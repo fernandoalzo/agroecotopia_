@@ -20,6 +20,7 @@ export function StoreTaxesSection({ store, actions }: StoreTaxesSectionProps) {
   const [name, setName] = useState("");
   const [percentage, setPercentage] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadTaxes = async () => {
     setLoading(true);
@@ -61,7 +62,7 @@ export function StoreTaxesSection({ store, actions }: StoreTaxesSectionProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !percentage) return;
+    if (!name || !percentage || isSubmitting) return;
     
     const pct = parseFloat(percentage);
     if (isNaN(pct) || pct < 0 || pct > 100) {
@@ -69,6 +70,7 @@ export function StoreTaxesSection({ store, actions }: StoreTaxesSectionProps) {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       if (editingTax) {
         await actions.updateStoreTax(store.id, editingTax.id, { name, percentage: pct, isActive });
@@ -81,6 +83,8 @@ export function StoreTaxesSection({ store, actions }: StoreTaxesSectionProps) {
       loadTaxes();
     } catch (err) {
       toast.error("Error al guardar impuesto");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -248,9 +252,10 @@ export function StoreTaxesSection({ store, actions }: StoreTaxesSectionProps) {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Guardar
+                  {isSubmitting ? "Guardando..." : "Guardar"}
                 </button>
               </div>
             </form>

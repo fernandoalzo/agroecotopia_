@@ -75,6 +75,7 @@ function SolicitarTiendaContent({ submitStoreRequest }: SolicitarTiendaPageClien
   };
 
   const handleConfirmedSubmit = async () => {
+    if (loading) return;
     setLoading(true);
     const result = storeRequestSchema.safeParse(formData);
     if (!result.success) return;

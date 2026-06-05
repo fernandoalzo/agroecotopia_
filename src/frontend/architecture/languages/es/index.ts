@@ -73,7 +73,7 @@ export const es: Translations = {
     outOfStock: "Agotado",
     viewAll: "Ver todo el catálogo",
     fullCatalog: "Catálogo Completo",
-    ourHarvest: "Nuestra Cosecha",
+    ourHarvest: "Nuestros productos",
     catalogDescription: "Explora nuestra selección completa de productos agroecológicos, cultivados y seleccionados con los más altos estándares de calidad y sostenibilidad.",
     searchPlaceholder: "Busca el producto ideal...",
     showingResults: "Mostrando {count} resultados",

@@ -73,7 +73,7 @@ export const en: Translations = {
     outOfStock: "Sold Out",
     viewAll: "See full catalog",
     fullCatalog: "Full Catalog",
-    ourHarvest: "Our Harvest",
+    ourHarvest: "Our Products",
     catalogDescription: "Explore our complete selection of agroecological products, grown and selected with the highest standards of quality and sustainability.",
     searchPlaceholder: "Search for the ideal product...",
     showingResults: "Showing {count} results",

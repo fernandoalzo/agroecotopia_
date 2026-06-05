@@ -113,6 +113,7 @@ export const ProductCreateModal = ({
   });
 
   const onSubmit = async (data: any) => {
+    if (loading) return;
     setLoading(true);
     try {
       const payload = {

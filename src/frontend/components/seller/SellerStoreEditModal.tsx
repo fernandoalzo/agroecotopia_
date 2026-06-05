@@ -50,6 +50,7 @@ export const SellerStoreEditModal = ({ store, onClose, onSuccess, onUpdateStore 
   });
 
   const onSubmit = async (data: StoreRequestFormInput) => {
+    if (loading) return;
     setLoading(true);
     try {
       const success = await onUpdateStore(store.id, data);
