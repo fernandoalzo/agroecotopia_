@@ -2,7 +2,7 @@
 
 import React from "react";
 import { StoreRequest } from "@/types/store";
-import { Store } from "lucide-react";
+import { Store, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { motion } from "framer-motion";
@@ -73,6 +73,9 @@ export function StoreRequestCard({ req, index, onSelect }: StoreRequestCardProps
                                         <span>{format(new Date(req.createdAt), "dd MMM, yy", { locale: es })}</span>
                                     </p>
                                 </div>
+                                <div className="shrink-0 text-muted-foreground group-hover:text-primary transition-colors group-hover:translate-x-0.5 transform duration-300">
+                                    <ChevronRight className="w-5 h-5" />
+                                </div>
                             </div>
                         </div>
 
@@ -136,6 +139,11 @@ export function StoreRequestCard({ req, index, onSelect }: StoreRequestCardProps
                                     <p className="text-sm font-bold">
                                         {format(new Date(req.createdAt), "dd MMM, yy", { locale: es })}
                                     </p>
+                                </div>
+
+                                {/* Arrow Icon */}
+                                <div className="shrink-0 flex items-center justify-center pl-2 text-muted-foreground group-hover:text-primary transition-all duration-300 group-hover:translate-x-1">
+                                    <ChevronRight className="w-5 h-5" />
                                 </div>
 
                             </div>
