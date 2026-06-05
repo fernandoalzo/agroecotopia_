@@ -1,4 +1,9 @@
 import { ForumRepository } from "./forum.repository";
+import { notificationsService } from "@/backend/modules/notifications";
+import { userRepository } from "@/backend/modules/user";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/backend/modules/forum/forum.service.ts");
 
 export class ForumService {
   constructor(private readonly forumRepository: ForumRepository) { }
@@ -17,7 +22,33 @@ export class ForumService {
       throw new Error("You must select at least one label.");
     }
 
-    return await this.forumRepository.createPost(data, authorId);
+    const post = await this.forumRepository.createPost(data, authorId);
+
+    // Notify all admins about the new post
+    userRepository.findAdmins().then(admins => {
+      for (const admin of admins) {
+        notificationsService.dispatchNotification({
+          eventType: "post_created",
+          actorId: authorId,
+          entityType: "Post",
+          entityId: post.id,
+          notification: {
+            type: "new_forum_post",
+            title: "Nueva Publicación en la Comunidad",
+            message: `Se ha creado una nueva publicación: "${post.title}".`,
+            audienceType: "INDIVIDUAL",
+            audienceRef: admin.id,
+            metadata: { actionUrl: `/comunidad/post/${post.id}` },
+          },
+        }).catch(err => {
+          log.error("Error al despachar notificación a admin:", err);
+        });
+      }
+    }).catch(err => {
+      log.error("Error al buscar admins para notificación:", err);
+    });
+
+    return post;
   }
 
   async getPosts(activeFilters?: Record<string, string[]>, searchQuery?: string, limit?: number, cursor?: string, sortBy?: "newest" | "popular") {
