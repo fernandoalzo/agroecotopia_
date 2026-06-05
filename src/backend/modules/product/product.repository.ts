@@ -21,14 +21,14 @@ export class ProductRepository {
       where,
       skip,
       take,
-      include: { 
+      include: {
         categories: true,
         promotions: { where: { isActive: true } },
-        store: { 
-          select: { 
+        store: {
+          select: {
             id: true, name: true, slug: true, logo: true,
             promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
-          } 
+          }
         }
       },
       orderBy: { createdAt: "desc" },
@@ -56,14 +56,14 @@ export class ProductRepository {
     log.debug("Buscando producto por id:", { id });
     return prisma.product.findUnique({
       where: { id },
-      include: { 
+      include: {
         categories: true,
         promotions: { where: { isActive: true } },
-        store: { 
-          select: { 
+        store: {
+          select: {
             id: true, name: true, slug: true, logo: true,
             promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
-          } 
+          }
         }
       },
     });
@@ -73,14 +73,14 @@ export class ProductRepository {
     log.debug("Buscando producto por id y tienda:", { id, storeId });
     return prisma.product.findFirst({
       where: { id, storeId },
-      include: { 
+      include: {
         categories: true,
         promotions: { where: { isActive: true } },
-        store: { 
-          select: { 
+        store: {
+          select: {
             id: true, name: true, slug: true, logo: true,
             promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
-          } 
+          }
         }
       },
     });
@@ -115,14 +115,14 @@ export class ProductRepository {
       where: where as any,
       skip,
       take,
-      include: { 
+      include: {
         categories: true,
         promotions: { where: { isActive: true } },
-        store: { 
-          select: { 
+        store: {
+          select: {
             id: true, name: true, slug: true, logo: true,
             promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
-          } 
+          }
         }
       },
       orderBy: { createdAt: "desc" },
@@ -177,14 +177,14 @@ export class ProductRepository {
           }))
         } : undefined,
       },
-      include: { 
+      include: {
         categories: true,
         promotions: { where: { isActive: true } },
-        store: { 
-          select: { 
+        store: {
+          select: {
             id: true, name: true, slug: true, logo: true,
             promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
-          } 
+          }
         }
       },
     }) as unknown as Promise<Product>;
@@ -213,14 +213,14 @@ export class ProductRepository {
     return prisma.product.update({
       where: { id },
       data: updateData,
-      include: { 
+      include: {
         categories: true,
         promotions: { where: { isActive: true } },
-        store: { 
-          select: { 
+        store: {
+          select: {
             id: true, name: true, slug: true, logo: true,
             promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
-          } 
+          }
         }
       },
     }) as unknown as Promise<Product>;
@@ -246,14 +246,14 @@ export class ProductRepository {
     return prisma.product.update({
       where: { id, storeId },
       data: updateData,
-      include: { 
+      include: {
         categories: true,
         promotions: { where: { isActive: true } },
-        store: { 
-          select: { 
+        store: {
+          select: {
             id: true, name: true, slug: true, logo: true,
             promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
-          } 
+          }
         }
       },
     }) as unknown as Promise<Product>;
@@ -266,14 +266,14 @@ export class ProductRepository {
     log.info(`Eliminando producto: ${id}`);
     return prisma.product.delete({
       where: { id },
-      include: { 
+      include: {
         categories: true,
         promotions: { where: { isActive: true } },
-        store: { 
-          select: { 
+        store: {
+          select: {
             id: true, name: true, slug: true, logo: true,
             promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
-          } 
+          }
         }
       },
     }) as unknown as Promise<Product>;
@@ -283,14 +283,14 @@ export class ProductRepository {
     log.info("Eliminando producto de tienda:", { id, storeId });
     return prisma.product.delete({
       where: { id, storeId },
-      include: { 
+      include: {
         categories: true,
         promotions: { where: { isActive: true } },
-        store: { 
-          select: { 
+        store: {
+          select: {
             id: true, name: true, slug: true, logo: true,
             promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
-          } 
+          }
         }
       },
     }) as unknown as Promise<Product>;
@@ -305,14 +305,14 @@ export class ProductRepository {
       where: { storeId },
       skip,
       take,
-      include: { 
+      include: {
         categories: true,
         promotions: { where: { isActive: true } },
-        store: { 
-          select: { 
+        store: {
+          select: {
             id: true, name: true, slug: true, logo: true,
             promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
-          } 
+          }
         }
       },
       orderBy: { createdAt: "desc" },
@@ -346,12 +346,12 @@ export class ProductRepository {
   async getCategoryCounts(storeId?: string): Promise<Record<string, number>> {
     log.debug("Obteniendo conteo de productos por categoría", { storeId });
     const categories = await prisma.categoria.findMany({
-      include: { 
-        _count: { 
-          select: { 
-            products: storeId ? { where: { storeId } } : true 
-          } 
-        } 
+      include: {
+        _count: {
+          select: {
+            products: storeId ? { where: { storeId } } : true
+          }
+        }
       }
     });
     const counts: Record<string, number> = {};

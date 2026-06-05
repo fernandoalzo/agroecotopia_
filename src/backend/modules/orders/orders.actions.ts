@@ -252,6 +252,32 @@ export async function getStoreOrderStatusCountsAction(storeId: string) {
   });
 }
 
+/**
+ * Obtiene pedidos paginados Y conteo de estados en una sola llamada (paralelo en servidor).
+ * Esto evita la serialización de Server Actions de Next.js.
+ */
+export async function getStoreOrdersWithCountsAction(
+  storeId: string,
+  params: { page: number; limit: number; estado?: PedidoEstado; search?: string }
+) {
+  return await withStoreOwner(storeId, async () => {
+    log.info(`Action: getStoreOrdersWithCountsAction`, { storeId, params });
+    try {
+      const [ordersResult, statusCounts] = await Promise.all([
+        ordersService.getPaginatedPedidos({ ...params, storeId }),
+        ordersService.getOrderStatusCounts(storeId),
+      ]);
+      return { ordersResult, statusCounts };
+    } catch (error: any) {
+      log.error("Error getting store orders with counts:", error);
+      return {
+        ordersResult: { orders: [], totalCount: 0, totalPages: 0, page: params.page, limit: params.limit },
+        statusCounts: {},
+      };
+    }
+  });
+}
+
 export async function updateStoreOrderStatusAction(
   storeId: string,
   pedidoId: string,

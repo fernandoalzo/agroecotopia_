@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense, useCallback } from "react";
+import React, { useEffect, useState, Suspense, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -58,6 +58,7 @@ interface MiTiendaActions {
   getCategories: () => Promise<any>;
   getStoreOrders: (...args: any[]) => Promise<any>;
   getStoreOrderStatusCounts: (storeId: string) => Promise<any>;
+  getStoreOrdersWithCounts: (storeId: string, params: { page: number; limit: number; estado?: any; search?: string }) => Promise<any>;
   updateStoreOrderStatus: (...args: any[]) => Promise<any>;
   getAllActiveStoresList: () => Promise<any>;
   
@@ -76,10 +77,10 @@ interface MiTiendaActions {
 }
 
 const SIDEBAR_ITEMS: { id: SellerTab; labelEs: string; labelEn: string; icon: React.ElementType }[] = [
+  { id: "store_info", labelEs: "Mi Tienda", labelEn: "My Store", icon: Store },
   { id: "orders", labelEs: "Pedidos", labelEn: "Orders", icon: ClipboardList },
   { id: "products", labelEs: "Mis Productos", labelEn: "My Products", icon: Package },
   { id: "promotions", labelEs: "Promociones", labelEn: "Promotions", icon: Tag },
-  { id: "store_info", labelEs: "Mi Tienda", labelEn: "My Store", icon: Store },
   { id: "configuration", labelEs: "Configuración", labelEn: "Configuration", icon: Settings },
 ];
 
@@ -116,7 +117,8 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
 
   const activeStore = stores.find(s => s.id === activeStoreId) || null;
 
-  const { state: productState, actions: productActions } = useProductsLogic(activeStoreId || undefined, !!activeStoreId, {
+  // Only fetch products data when the user is on the products tab
+  const { state: productState, actions: productActions } = useProductsLogic(activeStoreId || undefined, activeTab === "products" && !!activeStoreId, {
     getCategoriesAction: actions.getCategories,
     getAllActiveStoresListAction: actions.getAllActiveStoresList,
     getCategoryCountsAction: actions.getCategoryCounts,
@@ -216,8 +218,12 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     }
   };
 
-  // Load store
+  // Load store — ref guard prevents duplicate calls from session flicker
+  const loadedForUserRef = useRef<string | null>(null);
   useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId || loadedForUserRef.current === userId) return;
+    loadedForUserRef.current = userId;
     loadStore();
   }, [session?.user?.id]);
 
@@ -259,21 +265,22 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     let cancelled = false;
     const load = async () => {
       setStoreOrdersLoading(true);
-      const result = await actions.getStoreOrders(activeStore.id, {
+      // Single server action that runs both queries in parallel on the server
+      const response = await actions.getStoreOrdersWithCounts(activeStore.id, {
         page: storeOrderCurrentPage,
         limit: 10,
         estado: storeOrderStatusFilter === "ALL" ? undefined : storeOrderStatusFilter,
         search: storeOrderSearchQuery || undefined,
       });
-      const counts = await actions.getStoreOrderStatusCounts(activeStore.id);
       if (cancelled) return;
-      if (result && "orders" in result) {
-        setStoreOrders(result.orders as AdminOrder[]);
-        setStoreOrderTotalPages(result.totalPages);
-        setStoreOrderTotalCount(result.totalCount);
+      const { ordersResult, statusCounts } = response || {};
+      if (ordersResult && "orders" in ordersResult) {
+        setStoreOrders(ordersResult.orders as AdminOrder[]);
+        setStoreOrderTotalPages(ordersResult.totalPages);
+        setStoreOrderTotalCount(ordersResult.totalCount);
       }
-      if (counts && typeof counts === "object") {
-        const typed = counts as Record<string, number>;
+      if (statusCounts && typeof statusCounts === "object") {
+        const typed = statusCounts as Record<string, number>;
         const total = Object.values(typed).reduce((a, b) => a + (Number(b) || 0), 0);
         setStoreOrderStatusCounts({ ALL: total, ...typed });
       }

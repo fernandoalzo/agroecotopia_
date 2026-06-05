@@ -18,9 +18,9 @@ interface ProductEditModalProps {
   onDeleteProduct: (productId: string) => Promise<boolean>;
 }
 
-export const ProductEditModal = ({ 
-  product, 
-  onClose, 
+export const ProductEditModal = ({
+  product,
+  onClose,
   storeId,
   availableCategories,
   onSubmitForm,
@@ -36,7 +36,7 @@ export const ProductEditModal = ({
   const [newCategory, setNewCategory] = useState("");
   const [isCategoryFocused, setIsCategoryFocused] = useState(false);
 
-  const filteredCategories = availableCategories.filter(cat => 
+  const filteredCategories = availableCategories.filter(cat =>
     cat.toLowerCase().includes(newCategory.toLowerCase()) && !categoriesList.includes(cat)
   );
 
@@ -90,7 +90,7 @@ export const ProductEditModal = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
+
     // Numeric conversions
     if (name === "price" || name === "stock") {
       setFormData((prev: any) => ({ ...prev, [name]: value === "" ? "" : Number(value) }));
@@ -168,7 +168,7 @@ export const ProductEditModal = ({
           </div>
 
           <div className="p-6 space-y-6">
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left Column */}
               <div className="space-y-4">
@@ -255,8 +255,8 @@ export const ProductEditModal = ({
                           onFocus={() => setIsCategoryFocused(true)}
                           onBlur={() => setTimeout(() => setIsCategoryFocused(false), 200)}
                           className={`w-full border border-border/50 bg-background pl-10 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all placeholder:text-muted-foreground/40
-                            ${isCategoryFocused && (newCategory.trim() !== "" || filteredCategories.length > 0) 
-                              ? 'rounded-t-xl border-b-transparent focus:ring-0 shadow-[0_4px_20px_-10px_rgba(var(--primary),0.3)]' 
+                            ${isCategoryFocused && (newCategory.trim() !== "" || filteredCategories.length > 0)
+                              ? 'rounded-t-xl border-b-transparent focus:ring-0 shadow-[0_4px_20px_-10px_rgba(var(--primary),0.3)]'
                               : 'rounded-xl focus:ring-2 focus:ring-primary/30 shadow-sm'
                             }`}
                           placeholder="Buscar o crear categoría..."
@@ -306,11 +306,11 @@ export const ProductEditModal = ({
                       <div className="flex flex-wrap gap-2 mt-3">
                         <AnimatePresence>
                           {categoriesList.map((cat, index) => (
-                            <motion.div 
+                            <motion.div
                               initial={{ scale: 0.8, opacity: 0 }}
                               animate={{ scale: 1, opacity: 1 }}
                               exit={{ scale: 0.8, opacity: 0 }}
-                              key={index} 
+                              key={index}
                               className="flex items-center gap-1.5 bg-background border border-border shadow-sm text-foreground text-xs font-bold px-3 py-1.5 rounded-full"
                             >
                               <span className="w-1.5 h-1.5 rounded-full bg-primary" />
@@ -398,7 +398,7 @@ export const ProductEditModal = ({
                 placeholder="Descripción detallada del producto..."
               />
             </div>
-            
+
             <div className="flex items-start gap-3 p-4 rounded-xl bg-primary/5 border border-primary/10">
               <AlertCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
               <p className="text-xs text-primary/80 leading-relaxed font-medium">
@@ -411,7 +411,7 @@ export const ProductEditModal = ({
           <div className="sticky bottom-0 z-20 px-6 py-4 border-t border-border/50 bg-card/80 backdrop-blur-md">
             <AnimatePresence mode="wait">
               {showDeleteConfirm ? (
-                <motion.div 
+                <motion.div
                   key="delete-confirm"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -423,16 +423,16 @@ export const ProductEditModal = ({
                     ¿Estás seguro de eliminar este producto? Esta acción es irreversible.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    <Button 
-                      variant="outline" 
-                      className="rounded-xl font-bold" 
+                    <Button
+                      variant="outline"
+                      className="rounded-xl font-bold"
                       onClick={() => setShowDeleteConfirm(false)}
                       disabled={isDeleting}
                     >
                       Cancelar
                     </Button>
-                    <Button 
-                      className="rounded-xl font-bold shadow-md bg-red-600 text-white hover:bg-red-700 shadow-red-600/20 hover:shadow-red-600/40" 
+                    <Button
+                      className="rounded-xl font-bold shadow-md bg-red-600 text-white hover:bg-red-700 shadow-red-600/20 hover:shadow-red-600/40"
                       onClick={handleDelete}
                       disabled={isDeleting}
                     >
@@ -441,32 +441,32 @@ export const ProductEditModal = ({
                   </div>
                 </motion.div>
               ) : (
-                <motion.div 
+                <motion.div
                   key="actions"
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
                   className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-4"
                 >
-                  <Button 
-                    variant="ghost" 
-                    className="rounded-xl font-bold text-red-500 hover:text-red-600 hover:bg-red-500/10" 
+                  <Button
+                    variant="ghost"
+                    className="rounded-xl font-bold text-red-500 hover:text-red-600 hover:bg-red-500/10"
                     onClick={() => setShowDeleteConfirm(true)}
                     disabled={loading}
                   >
                     Eliminar Producto
                   </Button>
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <Button 
-                      variant="outline" 
-                      className="rounded-xl font-bold px-6" 
+                    <Button
+                      variant="outline"
+                      className="rounded-xl font-bold px-6"
                       onClick={onClose}
                       disabled={loading}
                     >
                       Cancelar
                     </Button>
-                    <Button 
-                      className="rounded-xl font-bold px-8 shadow-md shadow-primary/20 transition-all hover:shadow-primary/40" 
+                    <Button
+                      className="rounded-xl font-bold px-8 shadow-md shadow-primary/20 transition-all hover:shadow-primary/40"
                       onClick={handleSave}
                       disabled={loading}
                     >

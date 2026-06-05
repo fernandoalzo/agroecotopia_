@@ -20,6 +20,7 @@ import {
 import {
   getStoreOrdersAction,
   getStoreOrderStatusCountsAction,
+  getStoreOrdersWithCountsAction,
   updateStoreOrderStatusAction,
 } from "@/backend/modules/orders/orders.actions";
 import {
@@ -59,6 +60,7 @@ export default function Page() {
         getCategories: getCategoriesAction,
         getStoreOrders: getStoreOrdersAction,
         getStoreOrderStatusCounts: getStoreOrderStatusCountsAction,
+        getStoreOrdersWithCounts: getStoreOrdersWithCountsAction,
         updateStoreOrderStatus: updateStoreOrderStatusAction,
         getAllActiveStoresList: getAllActiveStoresListAction,
         // Promotions
