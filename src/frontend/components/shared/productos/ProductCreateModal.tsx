@@ -35,9 +35,15 @@ export const ProductCreateModal = ({
   const [isCategoryFocused, setIsCategoryFocused] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string>("");
 
-  const filteredCategories = availableCategories.filter(cat =>
-    cat.toLowerCase().includes(newCategory.toLowerCase()) && !categoriesList.includes(cat)
-  );
+  // Show all categories when input is empty, or filter when typing
+  const filteredCategories = newCategory.trim() === ""
+    ? availableCategories
+    : availableCategories.filter(cat =>
+        cat.toLowerCase().includes(newCategory.toLowerCase())
+      );
+
+  // Determine if dropdown should be visible
+  const showDropdown = isCategoryFocused && (filteredCategories.length > 0 || newCategory.trim() !== "");
 
   const handleAddCategory = () => {
     if (newCategory.trim() !== "" && !categoriesList.includes(newCategory.trim())) {
@@ -45,6 +51,18 @@ export const ProductCreateModal = ({
       setCategoriesList(updatedList);
       setValue("categories", updatedList, { shouldValidate: true });
       setNewCategory("");
+    }
+  };
+
+  const toggleCategory = (cat: string) => {
+    if (categoriesList.includes(cat)) {
+      const updatedList = categoriesList.filter(c => c !== cat);
+      setCategoriesList(updatedList);
+      setValue("categories", updatedList, { shouldValidate: true });
+    } else {
+      const updatedList = [...categoriesList, cat];
+      setCategoriesList(updatedList);
+      setValue("categories", updatedList, { shouldValidate: true });
     }
   };
 
@@ -278,7 +296,7 @@ export const ProductCreateModal = ({
                             onFocus={() => setIsCategoryFocused(true)}
                             onBlur={() => setTimeout(() => setIsCategoryFocused(false), 200)}
                             className={`w-full border border-border/50 bg-background pl-10 pr-4 py-2.5 text-sm font-medium focus:outline-none transition-all placeholder:text-muted-foreground/40
-                              ${isCategoryFocused && (newCategory.trim() !== "" || filteredCategories.length > 0)
+                              ${showDropdown
                                 ? 'rounded-t-xl border-b-transparent focus:ring-0 shadow-[0_4px_20px_-10px_rgba(var(--primary),0.3)]'
                                 : 'rounded-xl focus:ring-2 focus:ring-primary/30 shadow-sm'
                               }`}
@@ -286,7 +304,7 @@ export const ProductCreateModal = ({
                           />
                         </div>
                         <AnimatePresence>
-                          {isCategoryFocused && (newCategory.trim() !== "" || filteredCategories.length > 0) && (
+                          {showDropdown && (
                             <motion.div
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
@@ -294,22 +312,40 @@ export const ProductCreateModal = ({
                               className="absolute z-20 w-full top-full bg-card border border-border/50 border-t-0 rounded-b-xl shadow-[0_15px_30px_-15px_rgba(var(--primary),0.2)] max-h-48 overflow-y-auto custom-scrollbar p-1"
                             >
                               {filteredCategories.length > 0 ? (
-                                filteredCategories.map(cat => (
-                                  <button
-                                    key={cat}
-                                    type="button"
-                                    onClick={() => selectCategory(cat)}
-                                    className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium hover:bg-secondary/70 rounded-lg transition-colors group text-left"
-                                  >
-                                    <span className="text-foreground/90">{cat}</span>
-                                    <span className="text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <Plus className="h-3.5 w-3.5" />
-                                    </span>
-                                  </button>
-                                ))
+                                filteredCategories.map(cat => {
+                                  const isSelected = categoriesList.includes(cat);
+                                  return (
+                                    <button
+                                      key={cat}
+                                      type="button"
+                                      onClick={() => toggleCategory(cat)}
+                                      className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors group text-left ${
+                                        isSelected
+                                          ? 'bg-primary/10 text-primary'
+                                          : 'hover:bg-secondary/70 text-foreground/90'
+                                      }`}
+                                    >
+                                      <span className="flex items-center gap-2">
+                                        <span className={`flex items-center justify-center h-4 w-4 rounded border transition-all ${
+                                          isSelected
+                                            ? 'bg-primary border-primary text-primary-foreground'
+                                            : 'border-border/70 group-hover:border-primary/50'
+                                        }`}>
+                                          {isSelected && <Check className="h-3 w-3" />}
+                                        </span>
+                                        {cat}
+                                      </span>
+                                      {!isSelected && (
+                                        <span className="text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <Plus className="h-3.5 w-3.5" />
+                                        </span>
+                                      )}
+                                    </button>
+                                  );
+                                })
                               ) : null}
 
-                              {newCategory.trim() !== "" && !availableCategories.includes(newCategory.trim()) && (
+                              {newCategory.trim() !== "" && !availableCategories.some(c => c.toLowerCase() === newCategory.trim().toLowerCase()) && (
                                 <button
                                   type="button"
                                   onClick={handleAddCategory}
@@ -318,7 +354,7 @@ export const ProductCreateModal = ({
                                   <div className="flex items-center justify-center bg-primary/20 rounded-md p-1">
                                     <Plus className="h-3.5 w-3.5" />
                                   </div>
-                                  Crear "{newCategory.trim()}"
+                                  Crear &quot;{newCategory.trim()}&quot;
                                 </button>
                               )}
                             </motion.div>
@@ -326,7 +362,7 @@ export const ProductCreateModal = ({
                         </AnimatePresence>
                       </div>
                       {categoriesList.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-3">
+                        <div className="flex flex-wrap gap-2 mt-3 max-h-32 overflow-y-auto custom-scrollbar p-1">
                           <AnimatePresence>
                             {categoriesList.map((cat, index) => (
                               <motion.div
