@@ -11,12 +11,14 @@ interface CheckoutFormSectionProps {
   t: Translations;
   onSubmit: (data: CheckoutValues) => void;
   defaultValues?: Partial<CheckoutValues>;
+  onCityChange?: (city: string) => void;
 }
 
 export const CheckoutFormSection: React.FC<CheckoutFormSectionProps> = ({ 
   t, 
   onSubmit, 
-  defaultValues 
+  defaultValues,
+  onCityChange
 }) => {
   return (
     <motion.div 
@@ -38,6 +40,7 @@ export const CheckoutFormSection: React.FC<CheckoutFormSectionProps> = ({
         <CheckoutForm 
           onSubmit={onSubmit} 
           defaultValues={defaultValues}
+          onCityChange={onCityChange}
         />
       </div>
     </motion.div>

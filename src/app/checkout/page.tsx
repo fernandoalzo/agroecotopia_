@@ -27,6 +27,7 @@ export default function CheckoutPage() {
   const { cart, totalPrice, clearCart } = useCart();
   const { t, language } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [destinationCity, setDestinationCity] = useState("");
 
   // Protected route logic
   useEffect(() => {
@@ -122,6 +123,7 @@ export default function CheckoutPage() {
                 fullName: session?.user?.name || "",
                 email: session?.user?.email || "",
               }}
+              onCityChange={setDestinationCity}
             />
 
             {/* Summary/Invoice Section */}
@@ -131,7 +133,7 @@ export default function CheckoutPage() {
               transition={{ delay: 0.4 }}
               className="lg:col-span-5 lg:sticky lg:top-24"
             >
-              <OrderSummary isSubmitting={isSubmitting} />
+              <OrderSummary isSubmitting={isSubmitting} destinationCity={destinationCity} />
             </motion.div>
           </div>
         </div>

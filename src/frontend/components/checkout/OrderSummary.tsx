@@ -14,14 +14,17 @@ import { calculateDiscountedPrice } from "@/utils/promotions";
 
 interface OrderSummaryProps {
   isSubmitting?: boolean;
+  destinationCity?: string;
 }
 
-export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
+export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destinationCity }) => {
   const { cart, totalPrice } = useCart();
   const { t, language } = useLanguage();
   const [showConfirm, setShowConfirm] = useState(false);
   const [calculatedTaxes, setCalculatedTaxes] = useState<number>(0);
   const [taxBreakdown, setTaxBreakdown] = useState<any[]>([]);
+  const [shippingCost, setShippingCost] = useState<number>(0);
+  const [shippingBreakdown, setShippingBreakdown] = useState<any[]>([]);
 
   React.useEffect(() => {
     const fetchTaxes = async () => {
@@ -49,8 +52,20 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
           setCalculatedTaxes(data.taxes);
           setTaxBreakdown(data.taxBreakdown || []);
         }
+        
+        // Also fetch shipping
+        const shipRes = await fetch('/api/calculate-shipping', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cartItems, destinationCity: destinationCity || "" }),
+        });
+        const shipData = await shipRes.json();
+        if (shipData.success) {
+          setShippingCost(shipData.totalShippingCost);
+          setShippingBreakdown(shipData.storeBreakdown || []);
+        }
       } catch (err) {
-        console.error('Error fetching taxes:', err);
+        console.error('Error fetching taxes/shipping:', err);
       }
     };
 
@@ -59,8 +74,10 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
     } else {
       setCalculatedTaxes(0);
       setTaxBreakdown([]);
+      setShippingCost(0);
+      setShippingBreakdown([]);
     }
-  }, [cart]);
+  }, [cart, destinationCity]);
 
   const formattedTotal = new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
     style: "currency",
@@ -216,9 +233,19 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
           )}
           <div className="flex justify-between text-sm items-center">
             <span className="text-muted-foreground font-medium">{t.cart.shipping}</span>
-            <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-tighter ring-1 ring-primary/20">
-              {t.cart.toCalculate}
-            </span>
+            {shippingCost > 0 ? (
+              <span className="text-foreground font-bold">
+                {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
+                  style: "currency",
+                  currency: language === 'es' ? "COP" : "USD",
+                  maximumFractionDigits: 0,
+                }).format(shippingCost)}
+              </span>
+            ) : (
+              <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-tighter ring-1 ring-primary/20">
+                {t.cart.toCalculate}
+              </span>
+            )}
           </div>
           <Separator className="bg-primary/10 h-0.5" />
           <div className="flex justify-between items-end pt-2">
@@ -229,7 +256,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting }) => {
                   style: "currency",
                   currency: language === 'es' ? "COP" : "USD",
                   maximumFractionDigits: 0,
-                }).format(subtotal + calculatedTaxes)}
+                }).format(subtotal + calculatedTaxes + shippingCost)}
               </span>
               <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1 block">
                 {t.products.taxesIncluded}

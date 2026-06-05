@@ -45,6 +45,7 @@ export function StoreRequestDetailModal({
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectNote, setRejectNote] = useState("");
   const [confirmAction, setConfirmAction] = useState<"approve" | "reject" | null>(null);
+  const [isLocalSubmitting, setIsLocalSubmitting] = useState(false);
 
   // Fetch details from DB when requestId changes
   useEffect(() => {
@@ -108,17 +109,24 @@ export function StoreRequestDetailModal({
     },
   };
 
+  useEffect(() => {
+    if (!isProcessing) {
+      setIsLocalSubmitting(false);
+    }
+  }, [isProcessing]);
+
   const handleRejectSubmit = () => {
+    if (isProcessing || isLocalSubmitting) return;
     if (!rejectNote.trim() || !activeRequest) return;
+    setIsLocalSubmitting(true);
     onReject(activeRequest.id, rejectNote);
-    setIsRejecting(false);
-    setRejectNote("");
   };
 
   const handleClose = () => {
     setIsRejecting(false);
     setRejectNote("");
     setConfirmAction(null);
+    setIsLocalSubmitting(false);
     onClose();
   };
 
@@ -210,7 +218,11 @@ export function StoreRequestDetailModal({
                     </div>
                     <button
                       onClick={handleClose}
-                      className="p-2 text-muted-foreground/50 hover:text-foreground transition-colors"
+                      disabled={isProcessing || isLocalSubmitting}
+                      className={cn(
+                        "p-2 text-muted-foreground/50 hover:text-foreground transition-colors",
+                        (isProcessing || isLocalSubmitting) && "opacity-50 cursor-not-allowed"
+                      )}
                     >
                       <X className="w-6 h-6 stroke-[1.5]" />
                     </button>
@@ -333,8 +345,8 @@ export function StoreRequestDetailModal({
                                 setIsRejecting(false);
                                 setRejectNote("");
                               }}
-                              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-secondary hover:bg-secondary/80 transition-colors"
-                              disabled={isProcessing}
+                              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-secondary hover:bg-secondary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={isProcessing || isLocalSubmitting}
                             >
                               Cancelar
                             </button>
@@ -346,9 +358,9 @@ export function StoreRequestDetailModal({
                                   ? "bg-red-500 hover:bg-red-600 shadow-md shadow-red-500/20"
                                   : "bg-red-500/50 cursor-not-allowed"
                               )}
-                              disabled={isProcessing || !rejectNote.trim()}
+                              disabled={isProcessing || isLocalSubmitting || !rejectNote.trim()}
                             >
-                              {isProcessing ? (
+                              {isProcessing || isLocalSubmitting ? (
                                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                               ) : (
                                 "Confirmar Rechazo"
@@ -377,7 +389,7 @@ export function StoreRequestDetailModal({
                           <button
                             onClick={() => setConfirmAction("reject")}
                             className="flex-1 py-3 rounded-xl text-sm font-bold text-red-600 bg-red-500/10 hover:bg-red-500/15 border border-red-500/10 hover:border-red-500/20 transition-all flex items-center justify-center gap-2"
-                            disabled={isProcessing}
+                            disabled={isProcessing || isLocalSubmitting}
                           >
                             <XCircle className="w-4 h-4" />
                             Rechazar Solicitud
@@ -385,7 +397,7 @@ export function StoreRequestDetailModal({
                           <button
                             onClick={() => setConfirmAction("approve")}
                             className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30"
-                            disabled={isProcessing}
+                            disabled={isProcessing || isLocalSubmitting}
                           >
                             <CheckCircle className="w-4 h-4" />
                             Aprobar Tienda
@@ -417,21 +429,24 @@ export function StoreRequestDetailModal({
                             <button
                               type="button"
                               onClick={() => setConfirmAction(null)}
-                              className="flex-1 py-2.5 rounded-xl text-sm font-bold border border-border/50 bg-card text-foreground/70 hover:bg-secondary transition-all active:scale-[0.98]"
+                              disabled={isProcessing || isLocalSubmitting}
+                              className="flex-1 py-2.5 rounded-xl text-sm font-bold border border-border/50 bg-card text-foreground/70 hover:bg-secondary transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               No
                             </button>
                             <button
                               type="button"
                               onClick={() => {
+                                if (isProcessing || isLocalSubmitting) return;
                                 if (confirmAction === "approve") {
+                                  setIsLocalSubmitting(true);
                                   onApprove(activeRequest.id);
                                 } else {
                                   setIsRejecting(true);
                                   setConfirmAction(null);
                                 }
                               }}
-                              disabled={isProcessing}
+                              disabled={isProcessing || isLocalSubmitting}
                               className={cn(
                                 "flex-1 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-70 active:scale-[0.98] flex items-center justify-center gap-2",
                                 confirmAction === "approve"
@@ -439,7 +454,7 @@ export function StoreRequestDetailModal({
                                   : "bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/20"
                               )}
                             >
-                              {isProcessing ? (
+                              {isProcessing || isLocalSubmitting ? (
                                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                               ) : confirmAction === "approve" ? (
                                 <>

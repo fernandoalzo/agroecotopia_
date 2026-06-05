@@ -36,6 +36,14 @@ import {
   updateStoreTaxAction,
   deleteStoreTaxAction
 } from "@/backend/modules/store/storeTax.actions";
+import {
+  getStoreShippingZonesAction,
+  createStoreShippingZoneAction,
+  updateStoreShippingZoneAction,
+  deleteStoreShippingZoneAction,
+  addShippingRateAction,
+  deleteShippingRateAction,
+} from "@/backend/modules/shipping/shipping.actions";
 import MiTiendaPage from "./MiTiendaPageClient";
 
 export default function Page() {
@@ -74,6 +82,13 @@ export default function Page() {
         getStoreTaxes: getStoreTaxesAction,
         updateStoreTax: updateStoreTaxAction,
         deleteStoreTax: deleteStoreTaxAction,
+        // Shipping
+        getStoreShippingZones: getStoreShippingZonesAction,
+        createStoreShippingZone: createStoreShippingZoneAction,
+        updateStoreShippingZone: updateStoreShippingZoneAction,
+        deleteStoreShippingZone: deleteStoreShippingZoneAction,
+        addShippingRate: addShippingRateAction,
+        deleteShippingRate: deleteShippingRateAction,
       }}
     />
   );

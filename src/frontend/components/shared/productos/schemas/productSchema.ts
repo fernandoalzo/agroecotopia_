@@ -10,6 +10,9 @@ export const productSchema = z.object({
   tag: z.string().optional(),
   emoji: z.string().optional(),
   images: z.array(z.string()).optional(),
+  peso: z.coerce.number().min(0, "El peso no puede ser negativo").optional(),
+  dimensiones: z.string().optional(),
+  envioGratis: z.boolean().default(false),
 });
 
 export type ProductFormValues = z.infer<typeof productSchema>;

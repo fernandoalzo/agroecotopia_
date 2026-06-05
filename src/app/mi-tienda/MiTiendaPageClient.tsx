@@ -74,6 +74,14 @@ interface MiTiendaActions {
   getStoreTaxes: (storeId: string) => Promise<any>;
   updateStoreTax: (storeId: string, id: string, data: any) => Promise<any>;
   deleteStoreTax: (storeId: string, id: string) => Promise<any>;
+
+  // Shipping
+  getStoreShippingZones: (storeId: string) => Promise<any>;
+  createStoreShippingZone: (storeId: string, data: any) => Promise<any>;
+  updateStoreShippingZone: (zoneId: string, data: any) => Promise<any>;
+  deleteStoreShippingZone: (zoneId: string) => Promise<any>;
+  addShippingRate: (zoneId: string, data: any) => Promise<any>;
+  deleteShippingRate: (rateId: string) => Promise<any>;
 }
 
 const SIDEBAR_ITEMS: { id: SellerTab; labelEs: string; labelEn: string; icon: React.ElementType }[] = [

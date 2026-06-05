@@ -109,6 +109,9 @@ export const ProductCreateModal = ({
       tag: "",
       emoji: "",
       imagesText: "",
+      peso: "" as any,
+      dimensiones: "",
+      envioGratis: false,
     },
   });
 
@@ -126,6 +129,9 @@ export const ProductCreateModal = ({
         tag: data.tag || "",
         emoji: data.emoji || "",
         images: imagesList,
+        peso: data.peso ? Number(data.peso) : null,
+        dimensiones: data.dimensiones || null,
+        envioGratis: data.envioGratis || false,
       };
 
       const targetStoreId = storeId || selectedStoreId;
@@ -270,6 +276,43 @@ export const ProductCreateModal = ({
                         placeholder="Ej. 🍅"
                       />
                     </div>
+                  </div>
+
+                  {/* Shipping Fields */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+                        Peso (kg)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        {...register("peso", { valueAsNumber: true })}
+                        className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        placeholder="Ej. 1.5"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+                        Dimensiones
+                      </label>
+                      <input
+                        {...register("dimensiones")}
+                        className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        placeholder="Ej. 10x10x10 cm"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 bg-secondary/30 p-3 rounded-xl border border-border/50">
+                    <input
+                      type="checkbox"
+                      id="envioGratis"
+                      {...register("envioGratis")}
+                      className="rounded border-border/50 text-primary focus:ring-primary/30"
+                    />
+                    <label htmlFor="envioGratis" className="text-sm font-bold text-foreground cursor-pointer">
+                      Envío Gratis
+                    </label>
                   </div>
                 </div>
 

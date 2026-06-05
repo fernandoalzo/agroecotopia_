@@ -23,9 +23,10 @@ import { PAYMENT_METHODS } from "@/utils/PaymentsMethods";
 interface CheckoutFormProps {
   onSubmit: (data: CheckoutValues) => void;
   defaultValues?: Partial<CheckoutValues>;
+  onCityChange?: (city: string) => void;
 }
 
-export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultValues }) => {
+export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultValues, onCityChange }) => {
   const { t } = useLanguage();
 
   const form = useForm<CheckoutValues>({
@@ -40,6 +41,13 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
       paymentMethod: (defaultValues?.paymentMethod as any) || "advisor",
     },
   });
+
+  const watchCity = form.watch("city");
+  React.useEffect(() => {
+    if (onCityChange) {
+      onCityChange(watchCity || "");
+    }
+  }, [watchCity, onCityChange]);
 
   return (
     <Form {...form}>

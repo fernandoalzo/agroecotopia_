@@ -63,7 +63,7 @@ const CartContent = () => {
 
   if (cart.length === 0) {
     return (
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col items-center justify-center py-24 text-center"
@@ -71,16 +71,16 @@ const CartContent = () => {
         <div className="relative mb-8">
           <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl animate-pulse" />
           <div className="relative rounded-full bg-primary/10 p-10 shadow-inner border border-primary/20">
-            <motion.div 
+            <motion.div
               className="text-primary"
-              animate={{ 
+              animate={{
                 scale: [1, 1.15, 1],
                 rotate: [0, -5, 5, 0]
               }}
-              transition={{ 
-                duration: 4, 
-                repeat: Infinity, 
-                ease: "easeInOut" 
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeInOut"
               }}
             >
               <ShoppingCart className="h-16 w-16 drop-shadow-[0_0_15px_rgba(var(--primary),0.3)]" />
@@ -112,7 +112,7 @@ const CartContent = () => {
       router.push("/login?callbackUrl=/checkout");
       return;
     }
-    
+
     router.push("/checkout");
   };
 
@@ -136,8 +136,8 @@ const CartContent = () => {
             const finalPrice = hasDiscount ? discountedPrice : item.product.price;
 
             return (
-              <motion.div 
-                key={item.product.id} 
+              <motion.div
+                key={item.product.id}
                 layout
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -154,9 +154,9 @@ const CartContent = () => {
                 {/* Item Image */}
                 <div className="h-20 w-20 shrink-0 md:h-24 md:w-24 bg-primary/5 rounded-xl flex items-center justify-center text-4xl shadow-inner relative overflow-hidden">
                   {item.product.images && item.product.images.length > 0 && item.product.images[0]?.trim() !== "" ? (
-                    <Image 
-                      src={item.product.images[0]} 
-                      alt={productTranslation.name} 
+                    <Image
+                      src={item.product.images[0]}
+                      alt={productTranslation.name}
                       fill
                       sizes="80px"
                       className="object-cover"
@@ -189,18 +189,18 @@ const CartContent = () => {
                       </span>
                     )}
                   </div>
-                  
+
                   {/* Controls */}
                   <div className="flex items-center gap-3">
                     <div className="flex items-center bg-secondary rounded-full overflow-hidden border border-border/50">
-                      <button 
+                      <button
                         onClick={() => updateQuantity(item.product.id!, item.quantity - 1)}
                         className="p-1 px-3 hover:bg-black/5 active:bg-black/10 transition-colors rounded-l-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-inset"
                       >
                         <Minus className="w-3 h-3" />
                       </button>
                       <span className="w-6 text-center font-bold text-xs">{item.quantity}</span>
-                      <button 
+                      <button
                         onClick={() => updateQuantity(item.product.id!, item.quantity + 1)}
                         className="p-1 px-3 hover:bg-black/5 active:bg-black/10 transition-colors rounded-r-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-inset"
                       >
@@ -212,7 +212,7 @@ const CartContent = () => {
 
                 {/* Remove Button & Total Price */}
                 <div className="flex flex-col items-end gap-2 shrink-0 pr-2">
-                  <button 
+                  <button
                     onClick={() => removeFromCart(item.product.id!)}
                     className="text-muted-foreground/60 hover:text-destructive transition-colors p-2 rounded-full hover:bg-destructive/10"
                     aria-label={t.cart.remove}
@@ -223,27 +223,27 @@ const CartContent = () => {
               </motion.div>
             );
           })}
-         </AnimatePresence>
-         
-          {/* Agregar mas productos button */}
-          <div className="pt-6">
-            <Link href="/products">
-              <Button 
-                size="lg"
-                className="w-full rounded-2xl py-6 font-display font-bold text-lg hover:scale-[1.02] transition-transform active:scale-95 shadow-lg shadow-primary/20 text-[#fefce8] flex items-center justify-center gap-3"
-              >
-                <ShoppingCart className="w-4 h-4" />
-                Agregar mas productos
-              </Button>
-            </Link>
-          </div>
-       </div>
- 
-       {/* Summary Sidebar */}
-       <div className="lg:col-span-1">
+        </AnimatePresence>
+
+        {/* Agregar mas productos button */}
+        <div className="pt-6">
+          <Link href="/products">
+            <Button
+              size="lg"
+              className="w-full rounded-2xl py-6 font-display font-bold text-lg hover:scale-[1.02] transition-transform active:scale-95 shadow-lg shadow-primary/20 text-[#fefce8] flex items-center justify-center gap-3"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              Agregar mas productos
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Summary Sidebar */}
+      <div className="lg:col-span-1">
         <div className="sticky top-24 rounded-3xl border border-border bg-card p-6 shadow-xl">
           <h3 className="font-display text-xl font-bold mb-6">{t.cart.orderSummary}</h3>
-          
+
           <div className="space-y-4 font-body text-sm text-muted-foreground mb-6">
             <div className="flex justify-between">
               <span>{t.cart.subtotal}</span>
@@ -279,31 +279,31 @@ const CartContent = () => {
               <span className="font-medium text-primary">{t.cart.toCalculate}</span>
             </div>
           </div>
-          
+
           <div className="h-px bg-border w-full mb-6" />
-          
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-bold text-foreground">{t.cart.total}</span>
-              <span className="font-display text-2xl font-black text-primary">
-                {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
-                  style: "currency",
-                  currency: language === 'es' ? "COP" : "USD",
-                  maximumFractionDigits: 0,
-                }).format(totalPrice + calculatedTaxes)}
-              </span>
-            </div>
-            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest text-right mb-8">
-              {t.products.taxesIncluded}
-            </p>
- 
-            <Button 
-              onClick={handleCompleteOrder}
-              className="w-full rounded-2xl py-6 font-display font-bold text-lg hover:scale-[1.02] transition-transform active:scale-95 shadow-lg shadow-primary/20 text-[#fefce8]"
-            >
-              {t.cart.completeOrder}
-            </Button>
+
+          <div className="flex justify-between items-center mb-2">
+            <span className="font-bold text-foreground">{t.cart.total}</span>
+            <span className="font-display text-2xl font-black text-primary">
+              {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
+                style: "currency",
+                currency: language === 'es' ? "COP" : "USD",
+                maximumFractionDigits: 0,
+              }).format(totalPrice + calculatedTaxes)}
+            </span>
+          </div>
+          <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest text-right mb-8">
+            {t.products.taxesIncluded}
+          </p>
+
+          <Button
+            onClick={handleCompleteOrder}
+            className="w-full rounded-2xl py-6 font-display font-bold text-lg hover:scale-[1.02] transition-transform active:scale-95 shadow-lg shadow-primary/20 text-[#fefce8]"
+          >
+            {t.cart.completeOrder}
+          </Button>
           <p className="text-center text-xs text-muted-foreground mt-4 flex items-center justify-center gap-1.5">
-             <Leaf className="w-3 h-3 text-primary" /> {t.cart.securePayment}
+            <Leaf className="w-3 h-3 text-primary" /> {t.cart.securePayment}
           </p>
         </div>
       </div>
@@ -313,7 +313,7 @@ const CartContent = () => {
 
 export default function CartPage() {
   const { t } = useLanguage();
-  
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1 pt-24 pb-16">
@@ -327,7 +327,7 @@ export default function CartPage() {
               {t.cart.title.split(' ')[0]} <span className="text-primary">{t.cart.title.split(' ').slice(1).join(' ')}</span>
             </h1>
           </div>
-          
+
           <CartContent />
         </div>
       </main>
