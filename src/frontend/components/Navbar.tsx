@@ -11,6 +11,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 import UserMenu from "@/components/auth/UserMenu";
 import Image from "next/image";
+import { AnimatedLogo } from "./AnimatedLogo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,81 +84,7 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
       <div className="pointer-events-none absolute inset-x-0 -bottom-6 h-6 bg-gradient-to-b from-background/30 to-transparent" />
       <div className="mx-auto flex h-14 items-center justify-between px-4 lg:h-20 lg:px-6 max-w-[1440px]">
         <div className="flex items-center justify-start">
-          <Link href="/" className="group relative flex shrink-0 items-center gap-1.5 font-display text-lg font-bold lg:gap-3 lg:text-2xl transition-all duration-300">
-            {/* Animated Logo Container */}
-            <div className="relative flex items-center justify-center">
-              <motion.div
-                animate={{
-                  rotate: [0, 5, -5, 0],
-                  scale: [1, 1.05, 0.95, 1],
-                }}
-                transition={{
-                  duration: 6,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-                className="relative z-10"
-              >
-                <Leaf className="h-6 w-6 text-primary lg:h-8 lg:w-8 transition-transform duration-500 group-hover:rotate-[25deg] group-hover:scale-125" />
-              </motion.div>
-
-              {/* Subtle aura behind the leaf */}
-              <div className="absolute inset-0 -z-10 h-full w-full rounded-full bg-primary/20 blur-xl transition-all duration-500 group-hover:bg-primary/40 group-hover:blur-2xl" />
-            </div>
-
-            {/* Premium Typography Container */}
-            <div className="relative overflow-hidden">
-              <div className="flex items-center tracking-tight lg:tracking-tighter">
-                {config.app.name.split("").map((letter, i) => (
-                  <motion.span
-                    key={i}
-                    initial={{ y: 0 }}
-                    whileHover={{
-                      y: -2,
-                      color: "var(--color-primary)",
-                      textShadow: "0 0 8px oklch(var(--color-primary) / 0.5)", // Subtle neon glow on hover
-                      transition: { duration: 0.1 }
-                    }}
-                    className={cn(
-                      "inline-block transition-all duration-300",
-                      // Unified primary green for the entire brand title for consistency and maximum legibility
-                      "text-primary font-bold md:font-black",
-                      // Slightly smaller on mobile to prevent overflow
-                      "text-[15px] lg:text-2xl"
-                    )}
-                  >
-                    {letter}
-                  </motion.span>
-                ))}
-              </div>
-
-              {/* Sophisticated Shine Sweep */}
-              <motion.div
-                className="absolute inset-0 z-20 pointer-events-none"
-                initial={{ x: "-100%", opacity: 0 }}
-                whileHover={{
-                  x: ["-100%", "200%"],
-                  opacity: [0, 0.5, 0],
-                  transition: {
-                    duration: 1,
-                    repeat: Infinity,
-                    repeatDelay: 0.2,
-                    ease: "easeInOut"
-                  }
-                }}
-              >
-                <div className="h-full w-1/2 bg-gradient-to-r from-transparent via-primary/30 to-transparent skew-x-[-25deg] blur-md dark:via-white/10" />
-              </motion.div>
-
-              {/* Luxury Underline */}
-              <motion.div
-                className="absolute -bottom-1 left-0 h-[2px] bg-gradient-to-r from-primary via-accent to-transparent"
-                initial={{ width: 0, opacity: 0 }}
-                whileHover={{ width: "100%", opacity: 1 }}
-                transition={{ duration: 0.4, ease: "circOut" }}
-              />
-            </div>
-          </Link>
+          <AnimatedLogo />
         </div>
 
         {/* Right Side Action Group: Contains Nav Pill, Auth, and Settings with homogeneous spacing */}
@@ -464,12 +391,12 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-0 top-0 z-[60] flex h-screen w-full flex-col bg-primary dark:bg-[#0a1f14] lg:hidden overflow-y-auto"
+            className="fixed inset-0 top-0 z-[60] flex h-screen w-full flex-col bg-background lg:hidden overflow-y-auto"
           >
             {/* Background pattern layer - Organic Leaf SVGs from Visual Concept */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.07] mix-blend-overlay">
+            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.03] mix-blend-overlay dark:opacity-[0.05]">
               <div className="absolute top-0 -left-10 w-64 h-64 rotate-12">
-                <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-white">
+                <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-foreground">
                   <path d="M40 160C40 160 20 120 40 80C60 40 100 20 140 40C180 60 180 120 160 140C140 160 100 180 40 160Z" stroke="currentColor" strokeWidth="1" />
                   <path d="M40 160L140 40" stroke="currentColor" strokeWidth="0.5" />
                   <path d="M80 120C100 110 120 100 140 100" stroke="currentColor" strokeWidth="0.5" />
@@ -477,26 +404,26 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                 </svg>
               </div>
               <div className="absolute bottom-20 -right-16 w-80 h-80 -rotate-45">
-                <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-white">
+                <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full text-foreground">
                   <path d="M40 160C40 160 20 120 40 80C60 40 100 20 140 40C180 60 180 120 160 140C140 160 100 180 40 160Z" stroke="currentColor" strokeWidth="1" />
                   <path d="M40 160L140 40" stroke="currentColor" strokeWidth="0.5" />
                 </svg>
               </div>
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full opacity-20">
-                <div className="w-full h-full bg-[radial-gradient(circle,transparent_20%,#000_100%)] mix-blend-multiply" />
+                <div className="w-full h-full bg-[radial-gradient(circle,transparent_20%,#000_100%)] mix-blend-multiply dark:mix-blend-screen" />
               </div>
             </div>
 
             <div className="relative flex flex-col min-h-full px-6 pt-24 pb-20">
               {/* Top Header inside menu */}
               <div className="absolute top-6 left-6 flex items-center gap-2">
-                <Leaf className="h-6 w-6 text-white/90" />
-                <span className="font-display text-xl font-bold text-white tracking-tight">{config.app.name}</span>
+                <Leaf className="h-6 w-6 text-primary" />
+                <span className="font-display text-xl font-bold text-foreground tracking-tight">{config.app.name}</span>
               </div>
 
               <button
                 onClick={() => setOpen(false)}
-                className="absolute top-6 right-6 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md border border-white/20 active:scale-90 transition-all"
+                className="absolute top-6 right-6 flex h-11 w-11 items-center justify-center rounded-full bg-secondary text-secondary-foreground backdrop-blur-md border border-border active:scale-90 transition-all"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -515,7 +442,7 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                       onClick={() => setOpen(false)}
                       className={cn(
                         "group relative flex items-center justify-between py-2 transition-all",
-                        isActive(l.href) ? "text-white" : "text-white/60 hover:text-white"
+                        isActive(l.href) ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                       )}
                     >
                       <span className="font-display text-4xl font-black tracking-tighter">
@@ -524,19 +451,19 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                       {isActive(l.href) && (
                         <motion.div
                           layoutId="activeIndicator"
-                          className="h-2 w-2 rounded-full bg-accent"
+                          className="h-2 w-2 rounded-full bg-primary"
                         />
                       )}
 
                       {/* Hover effect underline */}
-                      <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-accent transition-all duration-300 group-hover:w-16" />
+                      <span className="absolute -bottom-1 left-0 h-[2px] w-0 bg-primary transition-all duration-300 group-hover:w-16" />
                     </Link>
                   </motion.div>
                 ))}
               </div>
 
               <div className="mt-auto space-y-8">
-                <div className="h-px w-full bg-gradient-to-r from-white/20 via-white/5 to-transparent" />
+                <div className="h-px w-full bg-gradient-to-r from-border via-border/50 to-transparent" />
 
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
@@ -550,17 +477,17 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                   {isAuthenticated && (
                     <div className="relative group">
                       <Link href={isAdmin ? "/admin/dashboard" : "/pedidos"} onClick={() => setOpen(false)}
-                        className="flex items-center justify-between gap-4 rounded-3xl bg-[#0f2a1d] border border-white/10 px-8 py-6 text-white shadow-xl active:scale-95 transition-all overflow-hidden relative"
+                        className="flex items-center justify-between gap-4 rounded-3xl bg-card border border-border px-8 py-6 text-card-foreground shadow-lg active:scale-95 transition-all overflow-hidden relative"
                       >
                         <div className="flex items-center gap-5 relative z-10">
-                          <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
+                          <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20">
                             {isAdmin ? (
-                              <LayoutDashboard className="h-6 w-6 text-white" />
+                              <LayoutDashboard className="h-6 w-6 text-primary" />
                             ) : (
-                              <Package className="h-6 w-6 text-white" />
+                              <Package className="h-6 w-6 text-primary" />
                             )}
                             {isAdmin && unreadCount > 0 && (
-                              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#0f2a1d] animate-pulse" />
+                              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-background animate-pulse" />
                             )}
                           </div>
                           <span className="font-display text-2xl font-black tracking-tight uppercase">
@@ -573,8 +500,8 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                               {unreadCount}
                             </span>
                           )}
-                          <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center">
-                            <ChevronRight className="h-4 w-4 text-white/40" />
+                          <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center">
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </div>
                       </Link>
@@ -585,19 +512,19 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                   {isAuthenticated && session?.user?.role === "seller" && (
                     <div className="relative group">
                       <Link href="/mi-tienda" onClick={() => setOpen(false)}
-                        className="flex items-center justify-between gap-4 rounded-3xl bg-[#0f2a1d] border border-white/10 px-8 py-6 text-white shadow-xl active:scale-95 transition-all overflow-hidden relative"
+                        className="flex items-center justify-between gap-4 rounded-3xl bg-card border border-border px-8 py-6 text-card-foreground shadow-lg active:scale-95 transition-all overflow-hidden relative"
                       >
                         <div className="flex items-center gap-5 relative z-10">
-                          <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
-                            <Store className="h-6 w-6 text-white" />
+                          <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20">
+                            <Store className="h-6 w-6 text-primary" />
                           </div>
                           <span className="font-display text-2xl font-black tracking-tight uppercase">
                             Mi Tienda
                           </span>
                         </div>
                         <div className="flex items-center gap-3 relative z-10">
-                          <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center">
-                            <ChevronRight className="h-4 w-4 text-white/40" />
+                          <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center">
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </div>
                       </Link>
@@ -608,19 +535,19 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                   {isAuthenticated && session?.user?.role === "user" && (
                     <div className="relative group">
                       <Link href="/solicitar-tienda" onClick={() => setOpen(false)}
-                        className="flex items-center justify-between gap-4 rounded-3xl bg-[#0f2a1d] border border-white/10 px-8 py-6 text-white shadow-xl active:scale-95 transition-all overflow-hidden relative"
+                        className="flex items-center justify-between gap-4 rounded-3xl bg-card border border-border px-8 py-6 text-card-foreground shadow-lg active:scale-95 transition-all overflow-hidden relative"
                       >
                         <div className="flex items-center gap-5 relative z-10">
-                          <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
-                            <Leaf className="h-6 w-6 text-white" />
+                          <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20">
+                            <Leaf className="h-6 w-6 text-primary" />
                           </div>
                           <span className="font-display text-2xl font-black tracking-tight uppercase">
                             Vender con Nosotros
                           </span>
                         </div>
                         <div className="flex items-center gap-3 relative z-10">
-                          <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center">
-                            <ChevronRight className="h-4 w-4 text-white/40" />
+                          <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center">
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </div>
                       </Link>
@@ -630,17 +557,17 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                   {/* Cart Button */}
                   <div className="relative group">
                     <Link href="/cart" onClick={() => setOpen(false)}
-                      className="flex items-center justify-between gap-4 rounded-3xl bg-[#0f2a1d] border border-white/10 px-8 py-6 text-white shadow-[0_20px_40px_rgba(0,0,0,0.4)] active:scale-95 transition-all overflow-hidden relative"
+                      className="flex items-center justify-between gap-4 rounded-3xl bg-card border border-border px-8 py-6 text-card-foreground shadow-lg active:scale-95 transition-all overflow-hidden relative"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                       <div className="flex items-center gap-5 relative z-10">
-                        <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-white/10 border border-white/10">
-                          <ShoppingCart className="h-6 w-6 text-white" />
+                        <div className="relative flex items-center justify-center h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20">
+                          <ShoppingCart className="h-6 w-6 text-primary" />
                         </div>
                         <span className="font-display text-2xl font-black tracking-tight uppercase">{t.navbar.miCarrito}</span>
                       </div>
-                      <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center relative z-10">
-                        <Leaf className="h-4 w-4 text-white/40 group-hover:text-accent transition-colors" />
+                      <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center relative z-10">
+                        <Leaf className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
                     </Link>
                     <AnimatePresence>
@@ -649,7 +576,7 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                           initial={{ scale: 0, x: 10, y: -10 }}
                           animate={{ scale: 1, x: 0, y: 0 }}
                           exit={{ scale: 0, x: 10, y: -10 }}
-                          className="absolute -right-3 -top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-[#ff3b30] text-[15px] font-black text-white shadow-[0_10px_20px_rgba(255,59,48,0.5)] border-[3px] border-[#0f2a1d]"
+                          className="absolute -right-3 -top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-[#ff3b30] text-[15px] font-black text-white shadow-[0_10px_20px_rgba(255,59,48,0.5)] border-[3px] border-background"
                         >
                           {totalItems}
                         </motion.div>
@@ -659,9 +586,9 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
 
                   {/* Separator for Auth Section */}
                   <div className="flex items-center gap-4 pt-4">
-                    <div className="h-px flex-1 bg-white/10" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">{t.navbar.miCuenta || "Mi Cuenta"}</span>
-                    <div className="h-px flex-1 bg-white/10" />
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">{t.navbar.miCuenta || "Mi Cuenta"}</span>
+                    <div className="h-px flex-1 bg-border" />
                   </div>
 
                   {/* Auth Button — Mobile (Now at the end) */}
@@ -670,33 +597,33 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                       <button
                         type="button"
                         onClick={() => setConfirmLogout(true)}
-                        className="flex items-center justify-between gap-4 w-full rounded-3xl bg-[#0f2a1d] hover:bg-[#1a3d2c] border border-white/10 px-8 py-5 text-white shadow-xl active:scale-95 transition-all"
+                        className="flex items-center justify-between gap-4 w-full rounded-3xl bg-card hover:bg-accent border border-border px-8 py-5 text-card-foreground shadow-lg active:scale-95 transition-all"
                       >
                         <div className="flex items-center gap-4">
                           <div className="relative h-10 w-10">
-                            <div className="relative h-full w-full overflow-hidden rounded-xl ring-2 ring-white/20">
+                            <div className="relative h-full w-full overflow-hidden rounded-xl ring-2 ring-primary/20">
                               {userImage ? (
                                 <Image src={userImage} alt={userName} fill className="object-cover rounded-xl" sizes="40px" />
                               ) : (
-                                <div className="flex h-full w-full items-center justify-center bg-white/10 text-white font-bold text-lg rounded-xl">{userInitial}</div>
+                                <div className="flex h-full w-full items-center justify-center bg-primary/10 text-primary font-bold text-lg rounded-xl">{userInitial}</div>
                               )}
                             </div>
                           </div>
                           <div className="text-left">
                             <span className="block font-display text-lg font-bold tracking-tight">{userName}</span>
-                            <span className="block text-xs text-white/60">{t.navbar?.miPerfil ?? "Mi Perfil"}</span>
+                            <span className="block text-xs text-muted-foreground">{t.navbar?.miPerfil ?? "Mi Perfil"}</span>
                           </div>
                         </div>
-                        <LogOut className="h-5 w-5 text-white/40" />
+                        <LogOut className="h-5 w-5 text-muted-foreground" />
                       </button>
                     ) : (
-                      <div className="flex flex-col gap-3 rounded-3xl bg-red-950/50 border border-red-500/20 p-5 shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <p className="text-center text-sm font-medium text-white mb-1">{t.navbar?.confirmarCerrarSesion ?? "¿Estás seguro de cerrar sesión?"}</p>
+                      <div className="flex flex-col gap-3 rounded-3xl bg-destructive/10 border border-destructive/20 p-5 shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <p className="text-center text-sm font-medium text-foreground mb-1">{t.navbar?.confirmarCerrarSesion ?? "¿Estás seguro de cerrar sesión?"}</p>
                         <div className="flex gap-3">
                           <button
                             type="button"
                             onClick={() => setConfirmLogout(false)}
-                            className="flex-1 rounded-xl bg-white/10 py-3 text-sm font-bold text-white transition-all active:scale-95 hover:bg-white/20"
+                            className="flex-1 rounded-xl bg-secondary py-3 text-sm font-bold text-secondary-foreground transition-all active:scale-95 hover:bg-secondary/80"
                           >
                             {t.navbar?.cancelar ?? "Cancelar"}
                           </button>
@@ -707,7 +634,7 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                               setOpen(false); 
                               signOut({ callbackUrl: "/" }); 
                             }}
-                            className="flex-1 rounded-xl bg-red-500 py-3 text-sm font-bold text-white transition-all active:scale-95 hover:bg-red-600 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(239,68,68,0.3)]"
+                            className="flex-1 rounded-xl bg-destructive py-3 text-sm font-bold text-destructive-foreground transition-all active:scale-95 hover:bg-destructive/90 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(239,68,68,0.3)]"
                           >
                             {t.navbar?.salir ?? "Salir"} <LogOut className="h-4 w-4" />
                           </button>
@@ -716,19 +643,19 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                     )
                   ) : (
                     <Link href="/login" onClick={() => setOpen(false)}
-                      className="flex items-center justify-between gap-4 w-full rounded-3xl bg-white text-primary px-8 py-5 shadow-xl active:scale-95 transition-all"
+                      className="flex items-center justify-between gap-4 w-full rounded-3xl bg-primary text-primary-foreground px-8 py-5 shadow-lg active:scale-95 transition-all"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary/10">
+                        <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary-foreground/20">
                           <LogIn className="h-5 w-5" />
                         </div>
                         <span className="font-display text-xl font-bold tracking-tight">{t.auth?.signIn ?? "Ingresar"}</span>
                       </div>
-                      <Leaf className="h-4 w-4 text-primary/40" />
+                      <Leaf className="h-4 w-4 text-primary-foreground/60" />
                     </Link>
                   )}
 
-                  <div className="flex justify-center gap-6 pt-4 text-white/30">
+                  <div className="flex justify-center gap-6 pt-4 text-muted-foreground">
                     <div className="text-[10px] uppercase font-bold tracking-widest">© 2024 {config.app.name}</div>
                   </div>
                 </motion.div>
