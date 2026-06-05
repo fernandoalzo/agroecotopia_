@@ -115,12 +115,12 @@ export default function PostPageClient({
     },
   });
 
-  const añadirNuevaRespuesta = (content: string) => {
+  const añadirNuevaRespuesta = async (content: string) => {
     if (status !== "authenticated") {
       toast.error("Debes iniciar sesión para responder");
       return;
     }
-    createAnswerMutation.mutate(content);
+    await createAnswerMutation.mutateAsync(content);
   };
 
   const handleRate = (itemId: string, rating: number, isQuestion: boolean = false) => {

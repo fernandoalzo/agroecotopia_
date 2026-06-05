@@ -14,7 +14,7 @@ interface ForumQuestionDetailProps {
   question: Question;
   onBack: () => void;
   onRate: (id: string, rating: number, isQuestion: boolean) => void;
-  onAddAnswer: (content: string) => void;
+  onAddAnswer: (content: string) => Promise<void> | void;
   onEditAnswer?: (answerId: string, content: string) => void;
   onDeleteAnswer?: (answerId: string) => void;
   onDeleteQuestion?: (questionId: string) => void;
@@ -34,6 +34,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canDeleteQuestion = currentUserId && (currentUserId === question.authorId || currentUserRole === "admin");
 
@@ -48,16 +49,20 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
     }
   };
 
-  const handleAddAnswer = () => {
+  const handleAddAnswer = async () => {
+    if (isSubmitting) return;
     try {
       const validatedData = answerSchema.parse({ content: replyContent });
-      onAddAnswer(validatedData.content);
+      setIsSubmitting(true);
+      await onAddAnswer(validatedData.content);
       setReplyContent("");
       setError("");
     } catch (err) {
       if (err instanceof z.ZodError) {
         setError(err.issues[0].message);
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -203,9 +208,10 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
           <div className="flex justify-end">
             <button
               onClick={handleAddAnswer}
-              className="px-6 py-2.5 bg-primary text-primary-foreground rounded-full font-bold hover:bg-primary/90 transition-all text-sm"
+              disabled={isSubmitting}
+              className={`px-6 py-2.5 bg-primary text-primary-foreground rounded-full font-bold hover:bg-primary/90 transition-all text-sm ${isSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
-              Publicar Respuesta
+              {isSubmitting ? 'Enviando...' : 'Publicar Respuesta'}
             </button>
           </div>
         </div>

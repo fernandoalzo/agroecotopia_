@@ -17,7 +17,7 @@ type CommunityQAForumProps = {
   questions: Question[];
   activeCommunityStats: any;
   topContributors: any[];
-  crearNuevaPublicacion: (data: any) => void;
+  crearNuevaPublicacion: (data: any) => Promise<void> | void;
   handleRate: (itemId: string, rating: number) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;

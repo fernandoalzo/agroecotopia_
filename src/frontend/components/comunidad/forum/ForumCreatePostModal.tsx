@@ -78,7 +78,7 @@ function MultiLabelSelect({
 interface ForumCreatePostModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (post: { title: string; body: string; labels: string[] }) => void;
+  onSubmit: (post: { title: string; body: string; labels: string[] }) => Promise<void> | void;
 }
 
 type FormField = {
@@ -101,13 +101,16 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
     labels: [] as string[]
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     try {
       const validatedData = postSchema.parse(formData);
       setErrors({});
-      onSubmit(validatedData);
+      setIsSubmitting(true);
+      await onSubmit(validatedData);
 
       // Reset
       setFormData({
@@ -126,6 +129,8 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
         });
         setErrors(fieldErrors);
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -223,10 +228,11 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
                   </button>
                   <button
                     type="submit"
-                    className="flex items-center gap-2 px-8 py-2.5 rounded-full bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+                    disabled={isSubmitting}
+                    className={`flex items-center gap-2 px-8 py-2.5 rounded-full bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all ${isSubmitting ? 'opacity-60 cursor-not-allowed hover:scale-100' : ''}`}
                   >
                     <Send className="w-4 h-4" />
-                    Publicar
+                    {isSubmitting ? 'Publicando...' : 'Publicar'}
                   </button>
                 </div>
               </form>

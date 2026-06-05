@@ -1,7 +1,7 @@
 import { ForumRepository } from "./forum.repository";
 
 export class ForumService {
-  constructor(private readonly forumRepository: ForumRepository) {}
+  constructor(private readonly forumRepository: ForumRepository) { }
 
   async createPost(
     data: { title: string; body: string; labels: string[] },
@@ -10,8 +10,8 @@ export class ForumService {
     if (!data.title || data.title.length < 5) {
       throw new Error("Title must be at least 5 characters long.");
     }
-    if (!data.body || data.body.length < 20) {
-      throw new Error("Body must be at least 20 characters long.");
+    if (!data.body || data.body.length < 10) {
+      throw new Error("Body must be at least 10 characters long.");
     }
     if (!data.labels || data.labels.length === 0) {
       throw new Error("You must select at least one label.");

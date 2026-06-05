@@ -192,8 +192,8 @@ export default function ComunidadPageClient({
     },
   });
 
-  const crearNuevaPublicacion = (postData: { title: string; body: string; labels: string[] }) => {
-    createPostMutation.mutate(postData);
+  const crearNuevaPublicacion = async (postData: { title: string; body: string; labels: string[] }) => {
+    await createPostMutation.mutateAsync(postData);
   };
 
   const handleRate = (itemId: string, rating: number) => {
