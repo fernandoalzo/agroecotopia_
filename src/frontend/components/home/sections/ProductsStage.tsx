@@ -42,10 +42,10 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
   };
 
   return (
-    <div className="w-full flex flex-col h-full justify-center">
+    <div className="w-full flex flex-col h-full pt-8 sm:pt-14 pb-6 sm:pb-8 gap-3 sm:gap-4">
 
       {/* Header Title */}
-      <div className="container max-w-7xl mx-auto text-center mb-6 shrink-0 px-4">
+      <div className="shrink-0 container max-w-7xl mx-auto text-center px-4">
         <span className="text-xs font-bold text-primary tracking-widest uppercase mb-1 block">
           {language === "es" ? "Nuestra Cosecha" : "Our Harvest"}
         </span>
@@ -57,63 +57,65 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
         </p>
       </div>
 
-      {/* Floating product showcase - 3D single-line layout */}
-      {featuredProducts.length > 0 ? (
-        <div className="relative w-[calc(100%+2rem)] sm:w-[calc(100%+4rem)] -mx-4 sm:-mx-8 flex items-center group">
-          {/* Left Arrow */}
-          <button 
-            type="button"
-            onClick={scrollLeft}
-            className="absolute left-0 md:-left-6 lg:-left-12 z-40 p-2 sm:p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg text-primary hover:bg-primary hover:text-white transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 disabled:opacity-0"
-            aria-label="Scroll left"
-          >
-            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
+      {/* Floating product showcase - fills remaining space */}
+      <div className="flex-1 min-h-0 flex items-center">
+        {featuredProducts.length > 0 ? (
+          <div className="relative w-full max-w-6xl mx-auto flex items-center group px-8 sm:px-12">
+            {/* Left Arrow */}
+            <button 
+              type="button"
+              onClick={scrollLeft}
+              className="absolute left-0 z-40 p-1.5 sm:p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg text-primary hover:bg-primary hover:text-white transition-all opacity-100"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
 
-          <div 
-            ref={scrollContainerRef}
-            className="flex overflow-x-auto gap-4 md:gap-6 py-6 px-4 sm:px-8 no-scrollbar snap-x snap-mandatory w-full"
-            style={{ scrollBehavior: "smooth" }}
-          >
-            {featuredProducts.map((p, i) => {
-              return (
-                <motion.div
-                  key={p.id || p.name}
-                  initial={{ opacity: 0, x: 50 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: i * 0.1 }}
-                  whileHover={{
-                    scale: 1.05,
-                    z: 30,
-                    boxShadow: "0px 15px 30px rgba(var(--color-primary), 0.12)"
-                  }}
-                  className="transition-all duration-300 relative shrink-0 snap-center w-[240px] sm:w-[280px]"
-                >
-                  <ProductCard p={p} />
-                </motion.div>
-              );
-            })}
+            <div 
+              ref={scrollContainerRef}
+              className="flex overflow-x-auto gap-3 sm:gap-4 py-2 sm:py-3 px-2 no-scrollbar snap-x snap-mandatory w-full"
+              style={{ scrollBehavior: "smooth" }}
+            >
+              {featuredProducts.map((p, i) => {
+                return (
+                  <motion.div
+                    key={p.id || p.name}
+                    initial={{ opacity: 0, x: 50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: i * 0.1 }}
+                    whileHover={{
+                      scale: 1.05,
+                      z: 30,
+                      boxShadow: "0px 15px 30px rgba(var(--color-primary), 0.12)"
+                    }}
+                    className="transition-all duration-300 relative shrink-0 snap-center w-[180px] sm:w-[220px] lg:w-[240px]"
+                  >
+                    <ProductCard p={p} variant="compact" />
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* Right Arrow */}
+            <button 
+              type="button"
+              onClick={scrollRight}
+              className="absolute right-0 z-40 p-1.5 sm:p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg text-primary hover:bg-primary hover:text-white transition-all opacity-100"
+              aria-label="Scroll right"
+            >
+              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
           </div>
-
-          {/* Right Arrow */}
-          <button 
-            type="button"
-            onClick={scrollRight}
-            className="absolute right-0 md:-right-6 lg:-right-12 z-40 p-2 sm:p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg text-primary hover:bg-primary hover:text-white transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100"
-            aria-label="Scroll right"
-          >
-            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
-        </div>
-      ) : (
-        <div className="text-center py-10 bg-card/50 rounded-2xl border border-dashed border-border/80">
-          <p className="text-muted-foreground">{t.products.noResults}</p>
-        </div>
-      )}
+        ) : (
+          <div className="w-full text-center py-10 bg-card/50 rounded-2xl border border-dashed border-border/80 mx-4">
+            <p className="text-muted-foreground">{t.products.noResults}</p>
+          </div>
+        )}
+      </div>
 
       {/* View all products button */}
-      <div className="container max-w-7xl mx-auto text-center mt-8 shrink-0 px-4">
+      <div className="shrink-0 container max-w-7xl mx-auto text-center px-4">
         <button
           onClick={(e) => {
             e.stopPropagation();
