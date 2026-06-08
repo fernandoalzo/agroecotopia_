@@ -351,9 +351,9 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
                 }}
                 transition={{
                   type: "spring",
-                  stiffness: 350,
-                  damping: 26,
-                  mass: isActive ? 0.7 : 0.9,
+                  stiffness: 200,
+                  damping: 18,
+                  mass: isActive ? 0.8 : 1.0,
                 }}
                 whileHover={
                   !isMobile && isActive && echoingIndex === null
@@ -362,7 +362,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
                         scale: 1.04,
                         rotateX: 0,
                         rotateY: 0,
-                        transition: { type: "spring", stiffness: 400, damping: 20 },
+                        transition: { type: "spring", stiffness: 250, damping: 16 },
                       }
                     : {}
                 }
