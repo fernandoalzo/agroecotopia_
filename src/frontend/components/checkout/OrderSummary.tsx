@@ -27,7 +27,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
   const [shippingBreakdown, setShippingBreakdown] = useState<any[]>([]);
 
   React.useEffect(() => {
-    const fetchTaxes = async () => {
+    const fetchTaxesAndShipping = async () => {
       const cartItems = cart.map(item => {
         const discountedPrice = calculateDiscountedPrice(
           item.product.price,
@@ -52,25 +52,34 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
           setCalculatedTaxes(data.taxes);
           setTaxBreakdown(data.taxBreakdown || []);
         }
-        
-        // Also fetch shipping
-        const shipRes = await fetch('/api/calculate-shipping', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cartItems, destinationCity: destinationCity || "" }),
-        });
-        const shipData = await shipRes.json();
-        if (shipData.success) {
-          setShippingCost(shipData.totalShippingCost);
-          setShippingBreakdown(shipData.storeBreakdown || []);
-        }
       } catch (err) {
-        console.error('Error fetching taxes/shipping:', err);
+        console.error('Error fetching taxes:', err);
+      }
+
+      // Only fetch shipping when a city is selected
+      if (destinationCity && destinationCity.trim()) {
+        try {
+          const shipRes = await fetch('/api/calculate-shipping', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cartItems, destinationCity }),
+          });
+          const shipData = await shipRes.json();
+          if (shipData.success) {
+            setShippingCost(shipData.totalShippingCost);
+            setShippingBreakdown(shipData.storeBreakdown || []);
+          }
+        } catch (err) {
+          console.error('Error fetching shipping:', err);
+        }
+      } else {
+        setShippingCost(0);
+        setShippingBreakdown([]);
       }
     };
 
     if (cart.length > 0) {
-      fetchTaxes();
+      fetchTaxesAndShipping();
     } else {
       setCalculatedTaxes(0);
       setTaxBreakdown([]);
@@ -233,7 +242,11 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
           )}
           <div className="flex justify-between text-sm items-center">
             <span className="text-muted-foreground font-medium">{t.cart.shipping}</span>
-            {shippingCost > 0 ? (
+            {!destinationCity || !destinationCity.trim() ? (
+              <span className="text-[10px] font-black bg-muted text-muted-foreground px-2 py-0.5 rounded-full uppercase tracking-tighter ring-1 ring-border">
+                {t.cart.toCalculate}
+              </span>
+            ) : shippingCost > 0 ? (
               <span className="text-foreground font-bold">
                 {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
                   style: "currency",

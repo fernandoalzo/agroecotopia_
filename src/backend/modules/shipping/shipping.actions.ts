@@ -2,6 +2,10 @@
 
 import prisma from "@/backend/db/prisma";
 import { withStoreOwner } from "@/lib/auth-guards";
+import { shippingService } from "./shipping.service";
+import logger from "@/utils/logger";
+
+const log = logger.child();
 
 export async function getStoreShippingZonesAction(storeId: string) {
   return withStoreOwner(storeId, async () => {
@@ -134,6 +138,16 @@ export async function deleteShippingRateAction(rateId: string) {
   } catch (error: any) {
     console.error("Error deleteShippingRateAction:", error);
     return { error: error.message || "Error al eliminar la tarifa de envío" };
+  }
+}
+
+export async function getAllCitiesAction() {
+  try {
+    const cities = await shippingService.getAllCities();
+    return { success: true, cities };
+  } catch (error: any) {
+    log.error("Error getAllCitiesAction:", error);
+    return { error: error.message || "Error al obtener ciudades" };
   }
 }
 

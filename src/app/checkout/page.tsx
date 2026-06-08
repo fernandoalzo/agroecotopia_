@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { useQuery } from "@tanstack/react-query";
 import { CheckoutFormSection } from "@/components/checkout/CheckoutFormSection";
 import { OrderSummary } from "@/components/checkout/OrderSummary";
 import { CheckoutHeader } from "@/components/checkout/CheckoutHeader";
@@ -18,6 +19,7 @@ import { PAYMENT_METHODS, PaymentHandlerFactory } from "@/utils/PaymentsMethods"
 import { Loading } from "@/components/ui/Loading";
 import logger from "@/utils/logger";
 import { calculateDiscountedPrice } from "@/utils/promotions";
+import { getAllCitiesAction } from "@/backend/modules/shipping/shipping.actions";
 
 const log = logger.child("src/app/checkout/page.tsx");
 
@@ -28,6 +30,16 @@ export default function CheckoutPage() {
   const { t, language } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [destinationCity, setDestinationCity] = useState("");
+
+  const { data: availableCities, isLoading: isCitiesLoading } = useQuery({
+    queryKey: ["checkoutCities"],
+    queryFn: async () => {
+      const res = await getAllCitiesAction();
+      if (!res.success) throw new Error((res as any).error || "Error al cargar ciudades");
+      return res.cities as string[];
+    },
+    staleTime: 60000,
+  });
 
   // Protected route logic
   useEffect(() => {
@@ -124,6 +136,7 @@ export default function CheckoutPage() {
                 email: session?.user?.email || "",
               }}
               onCityChange={setDestinationCity}
+              availableCities={availableCities ?? []}
             />
 
             {/* Summary/Invoice Section */}

@@ -13,6 +13,26 @@ export interface CartItemForShipping {
 
 export const shippingService = {
   /**
+   * Retorna todas las ciudades disponibles en todas las zonas de envío activas.
+   */
+  async getAllCities(): Promise<string[]> {
+    const zones = await prisma.storeShippingZone.findMany({
+      where: { isActive: true },
+      select: { ciudades: true },
+    });
+
+    const citySet = new Set<string>();
+    for (const zone of zones) {
+      for (const city of zone.ciudades) {
+        const normalized = city.trim();
+        if (normalized) citySet.add(normalized);
+      }
+    }
+
+    return [...citySet].sort((a, b) => a.localeCompare(b, "es"));
+  },
+
+  /**
    * Calcula el envío de un carrito agrupando por tiendas y verificando
    * sus tarifas y zonas.
    * 

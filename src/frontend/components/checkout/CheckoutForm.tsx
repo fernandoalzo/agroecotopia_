@@ -17,6 +17,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/context/LanguageContext";
 import { User, Mail, Phone, MapPin, Building2, FileText } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { PAYMENT_METHODS } from "@/utils/PaymentsMethods";
 
@@ -24,9 +31,10 @@ interface CheckoutFormProps {
   onSubmit: (data: CheckoutValues) => void;
   defaultValues?: Partial<CheckoutValues>;
   onCityChange?: (city: string) => void;
+  availableCities: string[];
 }
 
-export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultValues, onCityChange }) => {
+export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultValues, onCityChange, availableCities }) => {
   const { t } = useLanguage();
 
   const form = useForm<CheckoutValues>({
@@ -128,13 +136,27 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
                   <Building2 className="w-4 h-4 text-primary" />
                   {t.checkout.city}
                 </FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="Bogotá" 
-                    className="bg-background/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 rounded-xl h-12 transition-all" 
-                    {...field} 
-                  />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="bg-background/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 rounded-xl h-12 transition-all">
+                      <SelectValue placeholder="Selecciona una ciudad" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent
+                    position="popper"
+                    className="bg-background/90 backdrop-blur-xl border-border/50 rounded-xl shadow-2xl shadow-black/10 max-h-56"
+                  >
+                    {availableCities.map((city) => (
+                      <SelectItem
+                        key={city}
+                        value={city}
+                        className="rounded-lg focus:bg-primary/10 focus:text-foreground py-2.5"
+                      >
+                        {city}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
