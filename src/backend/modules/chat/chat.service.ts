@@ -1,6 +1,7 @@
 import { ChatRepository } from "./chat.repository";
 import { ConversationType, PedidoEstado, Role } from "@prisma/client";
 import logger from "@/utils/logger";
+import { notificationsService } from "@/backend/modules/notifications";
 
 const log = logger.child("src/backend/modules/chat/chat.service.ts");
 
@@ -131,11 +132,63 @@ export class ChatService {
       throw new Error("UNAUTHORIZED_ACCESS");
     }
 
-    await this.canSendMessage(data.conversationId, data.senderId, sender.role);
-    return await this.chatRepository.createRealtimeMessage({
+    const conversation = await this.canSendMessage(data.conversationId, data.senderId, sender.role);
+    const message = await this.chatRepository.createRealtimeMessage({
       ...data,
       senderRole: sender.role,
     });
+
+    // ─── Dispatch notification for ORDER messages ───
+    log.debug("sendRealtimeMessage - conversation check:", {
+      type: conversation.type,
+      hasPedido: !!conversation.pedido,
+      pedidoId: conversation.pedido?.id,
+      senderId: data.senderId,
+      sellerId: conversation.seller?.id,
+      userId: conversation.userId,
+    });
+
+    if (conversation.type === ConversationType.ORDER && conversation.pedido) {
+      const isSeller = data.senderId === conversation.seller?.id;
+      const recipientId = isSeller ? conversation.userId : conversation.seller?.id;
+
+      log.debug("sendRealtimeMessage - notification check:", {
+        isSeller,
+        recipientId,
+        senderId: data.senderId,
+        shouldDispatch: !!(recipientId && recipientId !== data.senderId),
+      });
+
+      if (recipientId && recipientId !== data.senderId) {
+        const actionUrl = isSeller
+          ? `/pedidos/${conversation.pedido.id}`
+          : "/mi-tienda";
+
+        notificationsService.dispatchNotification({
+          eventType: "order_message_sent",
+          actorId: data.senderId,
+          entityType: "Pedido",
+          entityId: conversation.pedido.id,
+          notification: {
+            type: "order_message",
+            title: isSeller ? "Respuesta del vendedor" : "Nuevo mensaje en tu pedido",
+            message: data.content.length > 120 ? data.content.slice(0, 120) + "..." : data.content,
+            audienceType: "INDIVIDUAL",
+            audienceRef: recipientId,
+            metadata: { actionUrl },
+          },
+        }).then((result) => {
+          log.info("Notificación de mensaje despachada exitosamente:", {
+            notificationId: result.notification.id,
+            recipientCount: result.recipientCount,
+          });
+        }).catch((err) => {
+          log.error("Error al despachar notificación de mensaje:", err);
+        });
+      }
+    }
+
+    return message;
   }
 
   async markAsRead(conversationId: string, currentUserId: string) {
