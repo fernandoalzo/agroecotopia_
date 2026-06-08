@@ -63,7 +63,7 @@ export default function CheckoutPage() {
         detalles: cart.map(item => ({
           productoId: item.product.id!,
           cantidad: item.quantity,
-          precioUnitario: calculateDiscountedPrice(item.product.price, (item.product as any).promotions, (item.product as any).store?.promotions),
+          precioUnitario: calculateDiscountedPrice(item.product.price, (item.product as any).promotions, (item.product as any).store?.promotions) ?? item.product.price,
           unidadMedida: item.product.unidad || "unidad"
         }))
       };

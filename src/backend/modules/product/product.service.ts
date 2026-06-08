@@ -205,6 +205,7 @@ export class ProductService {
     return {
       ...product,
       stock: Number(product.stock),
+      peso: product.peso ? Number(product.peso) : null,
       promotions: product.promotions?.map((p: any) => ({
         ...p,
         discountValue: Number(p.discountValue),
