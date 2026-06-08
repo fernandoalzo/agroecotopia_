@@ -43,7 +43,6 @@ function formatRelativeAge(now: number, createdAt: Date | string) {
 
 export default async function Home() {
   log.info("Renderizando página de inicio (Home Page).");
-
   let products: Product[] = [];
   try {
     log.debug("Página de inicio: consultando catálogo de productos.");
@@ -56,6 +55,7 @@ export default async function Home() {
 
   let forumTopics: HomeForumTopic[] = [];
   try {
+    log.debug("Página de inicio: consultando foro.");
     const res = await getPostsAction(undefined, undefined, 3, undefined, "popular");
     if (res.success && res.posts) {
       const colors = ["bg-emerald-500", "bg-amber-500", "bg-blue-500"];
@@ -71,6 +71,7 @@ export default async function Home() {
           color: colors[i % colors.length]
         };
       });
+      log.debug("Página de inicio: foro cargado exitosamente.", { topics: forumTopics.length });
     }
   } catch (error) {
     log.error("Página de inicio: error al cargar el foro:", error);
@@ -78,8 +79,10 @@ export default async function Home() {
 
   let realStats = { users: 500, posts: 100, products: 15 };
   try {
+    log.debug("Página de inicio: consultando estadísticas globales.");
     const result = await getHomeStatsAction();
     realStats = result.stats;
+    log.debug("Página de inicio: estadísticas globales cargadas exitosamente.", { stats: realStats });
   } catch (error) {
     log.error("Página de inicio: error al cargar estadísticas globales:", error);
   }
