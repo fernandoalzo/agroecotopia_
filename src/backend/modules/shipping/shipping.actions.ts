@@ -48,6 +48,14 @@ export async function getStoreShippingZonesAction(storeId: string) {
 export async function createStoreShippingZoneAction(storeId: string, data: { name: string; ciudades: string[] }) {
   return withStoreOwner(storeId, async () => {
     try {
+      const duplicates = await shippingService.validateZoneCities(storeId, data.ciudades);
+      if (duplicates.length > 0) {
+        return {
+          error: `Las siguientes ciudades ya están asignadas a otra zona: ${duplicates.join(", ")}`,
+          duplicates,
+        };
+      }
+
       const zone = await prisma.storeShippingZone.create({
         data: {
           storeId,
@@ -58,7 +66,7 @@ export async function createStoreShippingZoneAction(storeId: string, data: { nam
 
       return { success: true, zone: { id: zone.id, name: zone.nombreZona, ciudades: zone.ciudades } };
     } catch (error: any) {
-      console.error("Error createStoreShippingZoneAction:", error);
+      log.error("Error createStoreShippingZoneAction:", error);
       return { error: error.message || "Error al crear la zona de envío" };
     }
   });
@@ -67,9 +75,25 @@ export async function createStoreShippingZoneAction(storeId: string, data: { nam
 
 
 export async function updateStoreShippingZoneAction(zoneId: string, data: { name: string; ciudades: string[] }) {
-  // We can't use withStoreOwner here easily because we only have zoneId.
-  // Actually, we could check the zone's storeId. For now, assuming standard usage:
   try {
+    const current = await prisma.storeShippingZone.findUnique({ where: { id: zoneId }, select: { storeId: true } });
+    if (!current) {
+      return { error: "Zona de envío no encontrada" };
+    }
+
+    const storeGuard = await withStoreOwner(current.storeId, async () => true as const);
+    if (typeof storeGuard === "object" && "error" in storeGuard) {
+      return storeGuard;
+    }
+
+    const duplicates = await shippingService.validateZoneCities(current.storeId, data.ciudades, zoneId);
+    if (duplicates.length > 0) {
+      return {
+        error: `Las siguientes ciudades ya están asignadas a otra zona: ${duplicates.join(", ")}`,
+        duplicates,
+      };
+    }
+
     const zone = await prisma.storeShippingZone.update({
       where: { id: zoneId },
       data: {
@@ -80,7 +104,7 @@ export async function updateStoreShippingZoneAction(zoneId: string, data: { name
 
     return { success: true, zone: { id: zone.id, name: zone.nombreZona, ciudades: zone.ciudades } };
   } catch (error: any) {
-    console.error("Error updateStoreShippingZoneAction:", error);
+    log.error("Error updateStoreShippingZoneAction:", error);
     return { error: error.message || "Error al actualizar la zona de envío" };
   }
 }

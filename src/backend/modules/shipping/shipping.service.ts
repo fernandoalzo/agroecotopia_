@@ -4,6 +4,10 @@ import { TipoTarifaEnvio } from "@prisma/client";
 
 const log = logger.child("shipping.service");
 
+function normalizeCity(city: string): string {
+  return city.trim().toLowerCase();
+}
+
 export interface CartItemForShipping {
   productId: string;
   storeId: string;
@@ -12,6 +16,42 @@ export interface CartItemForShipping {
 }
 
 export const shippingService = {
+  /**
+   * Valida que ninguna ciudad del array esté ya asignada a otra zona de la misma tienda.
+   * @param storeId   Tienda a la que pertenecen las zonas
+   * @param ciudades  Lista de ciudades a validar
+   * @param excludeZoneId  Opcional: ID de zona a excluir (útil al actualizar)
+   * @returns Lista de ciudades duplicadas (vacía si todo es válido)
+   */
+  async validateZoneCities(
+    storeId: string,
+    ciudades: string[],
+    excludeZoneId?: string,
+  ): Promise<string[]> {
+    const cleanInput = [...new Set(ciudades.map(normalizeCity).filter(Boolean))];
+    if (cleanInput.length === 0) return [];
+
+    const existingZones = await prisma.storeShippingZone.findMany({
+      where: {
+        storeId,
+        ...(excludeZoneId ? { id: { not: excludeZoneId } } : {}),
+      },
+      select: { ciudades: true, nombreZona: true },
+    });
+
+    const existingCities = new Set<string>();
+    for (const zone of existingZones) {
+      for (const c of zone.ciudades) {
+        existingCities.add(normalizeCity(c));
+      }
+    }
+
+    return ciudades.filter((c) => {
+      const key = normalizeCity(c);
+      return key && existingCities.has(key);
+    });
+  },
+
   /**
    * Retorna las zonas de envío con sus ciudades agrupadas,
    * asegurando que cada ciudad aparezca solo una vez (en la primera zona que la contiene).
