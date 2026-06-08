@@ -855,6 +855,19 @@ export default function OrderDetailPageClient({
                     )
                   )}
 
+                  {isBuyer && (order.estado === PedidoEstado.EN_CAMINO || order.estado === PedidoEstado.ENTREGADO) && (
+                    <Button
+                      variant="outline"
+                      className="mt-6 w-full rounded-2xl text-muted-foreground border-border/20 hover:bg-muted/50 cursor-not-allowed opacity-50"
+                      disabled
+                    >
+                      <Truck className="mr-2 h-4 w-4" />
+                      {order.estado === PedidoEstado.EN_CAMINO
+                        ? "El pedido está en camino, ya no se puede cancelar"
+                        : "El pedido ya fue entregado, no se puede cancelar"}
+                    </Button>
+                  )}
+
                   {isBuyer && order.estado === PedidoEstado.CANCELADO && (
                     isConfirmingDelete ? (
                       <div className="mt-6 flex gap-2 w-full">
@@ -1141,7 +1154,7 @@ export default function OrderDetailPageClient({
       )}
 
       {/* Floating Chat Button */}
-      {orderStoreIds.length > 0 && !orderChat && (
+      {orderStoreIds.length > 0 && !orderChat && order.estado !== PedidoEstado.ENTREGADO && (
         <div className="fixed bottom-6 right-6 z-[998]">
           <AnimatePresence>
             <motion.button
