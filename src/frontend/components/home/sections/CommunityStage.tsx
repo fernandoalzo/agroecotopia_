@@ -83,6 +83,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [echoingIndex, setEchoingIndex] = useState<number | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
   const autoRotateRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const defaultTopics: Array<{
@@ -97,7 +98,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
       posts: 156,
       time: "2h",
       color: "bg-emerald-500",
-      href: "/comunidad?post=" + slugify(language === "es" ? "compostaje-verano" : "composting-summer")
+      href: "/comunidad/post/" + slugify(language === "es" ? "compostaje-verano" : "composting-summer")
     },
     {
       title: language === "es" ? "Intercambio de semillas nativas y ancestrales" : "Native and ancestral seeds exchange",
@@ -107,7 +108,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
       posts: 89,
       time: "5h",
       color: "bg-amber-500",
-      href: "/comunidad?post=" + slugify(language === "es" ? "intercambio-semillas" : "seed-exchange")
+      href: "/comunidad/post/" + slugify(language === "es" ? "intercambio-semillas" : "seed-exchange")
     },
     {
       title: language === "es" ? "Control orgánico de plagas en invernaderos" : "Organic pest control in greenhouses",
@@ -117,13 +118,13 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
       posts: 312,
       time: "1d",
       color: "bg-blue-500",
-      href: "/comunidad?post=" + slugify(language === "es" ? "control-plagas" : "pest-control")
+      href: "/comunidad/post/" + slugify(language === "es" ? "control-plagas" : "pest-control")
     }
   ];
 
   const topicsToRender = initialForumTopics && initialForumTopics.length > 0
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ? initialForumTopics.map((t: any) => ({ ...t, href: t.href || `/comunidad?post=${t.id || slugify(t.title)}` }))
+    ? initialForumTopics.map((t: any) => ({ ...t, href: t.href || `/comunidad/post/${t.id || slugify(t.title)}` }))
     : defaultTopics;
 
   // Auto-rotation carousel
@@ -138,6 +139,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
   const handleCardClick = useCallback(
     (index: number, href: string) => {
       if (echoingIndex !== null) return;
+      setIsNavigating(true);
       setEchoingIndex(index);
       setTimeout(() => {
         router.push(href);
@@ -190,7 +192,11 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
       />
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-16 items-center">
+      <motion.div
+        animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : {}}
+        transition={{ duration: 0.8, ease: "easeInOut" }}
+        className="relative z-10 w-full max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-16 items-center"
+      >
         {/* Left column: text + stats */}
         <div className="flex flex-col">
           {/* Badge */}
@@ -299,12 +305,14 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
             className="mt-4 sm:mt-6"
           >
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                router.push("/comunidad");
+              onClick={() => {
+                setIsNavigating(true);
+                setTimeout(() => {
+                  router.push("/comunidad");
+                }, 800);
               }}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent/10 border border-accent/20 text-accent px-5 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-bold hover:bg-accent hover:text-white transition-all duration-300 w-full sm:w-auto cursor-pointer relative z-50 active:scale-95 hover:shadow-lg hover:shadow-accent/20"
+              disabled={isNavigating}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent/10 border border-accent/20 text-accent px-5 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-bold hover:bg-accent hover:text-white transition-all duration-300 w-full sm:w-auto cursor-pointer relative z-50 active:scale-95 hover:shadow-lg hover:shadow-accent/20 disabled:opacity-70"
             >
               <span style={{ animation: "cta-shift 2s ease-in-out infinite" }}>
                 {t.comunidadPage.hero.ctaPrimary}
@@ -486,7 +494,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
           </div>
           )}
         </motion.div>
-      </div>
+      </motion.div>
 
       <style>{`
         @keyframes gradient-community {

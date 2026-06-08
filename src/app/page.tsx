@@ -11,6 +11,7 @@ const log = logger.child("src/app/page.tsx");
 export const dynamic = "force-dynamic";
 
 type HomeForumPost = {
+  id: string;
   title: string;
   createdAt: Date | string;
   author?: {
@@ -22,6 +23,7 @@ type HomeForumPost = {
   };
 };
 type HomeForumTopic = {
+  id: string;
   title: string;
   author: string;
   avatar: string;
@@ -62,6 +64,7 @@ export default async function Home() {
       const now = new Date().getTime();
       forumTopics = (res.posts as HomeForumPost[]).map((post, i) => {
         return {
+          id: (post as any).id || "",
           title: post.title,
           author: post.author?.name || "Usuario",
           avatar: post.author?.image || `https://api.dicebear.com/7.x/notionists/svg?seed=${post.author?.name || 'User'}`,
