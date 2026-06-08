@@ -31,12 +31,12 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [destinationCity, setDestinationCity] = useState("");
 
-  const { data: availableCities, isLoading: isCitiesLoading } = useQuery({
+  const { data: cityZones, isLoading: isCitiesLoading } = useQuery({
     queryKey: ["checkoutCities"],
     queryFn: async () => {
       const res = await getAllCitiesAction();
       if (!res.success) throw new Error((res as any).error || "Error al cargar ciudades");
-      return res.cities as string[];
+      return res.cities as { name: string; cities: string[] }[];
     },
     staleTime: 60000,
   });
@@ -136,7 +136,7 @@ export default function CheckoutPage() {
                 email: session?.user?.email || "",
               }}
               onCityChange={setDestinationCity}
-              availableCities={availableCities ?? []}
+              cityZones={cityZones ?? []}
             />
 
             {/* Summary/Invoice Section */}

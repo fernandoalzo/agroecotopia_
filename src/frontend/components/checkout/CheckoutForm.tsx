@@ -21,6 +21,8 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectLabel,
+  SelectGroup,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -31,10 +33,10 @@ interface CheckoutFormProps {
   onSubmit: (data: CheckoutValues) => void;
   defaultValues?: Partial<CheckoutValues>;
   onCityChange?: (city: string) => void;
-  availableCities: string[];
+  cityZones: { name: string; cities: string[] }[];
 }
 
-export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultValues, onCityChange, availableCities }) => {
+export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultValues, onCityChange, cityZones }) => {
   const { t } = useLanguage();
 
   const form = useForm<CheckoutValues>({
@@ -144,16 +146,25 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
                   </FormControl>
                   <SelectContent
                     position="popper"
-                    className="bg-background/90 backdrop-blur-xl border-border/50 rounded-xl shadow-2xl shadow-black/10 max-h-56"
+                    className="bg-background/90 backdrop-blur-xl border-border/50 rounded-xl shadow-2xl shadow-black/10 max-h-72"
                   >
-                    {availableCities.map((city) => (
-                      <SelectItem
-                        key={city}
-                        value={city}
-                        className="rounded-lg focus:bg-primary/10 focus:text-foreground py-2.5"
-                      >
-                        {city}
-                      </SelectItem>
+                    {cityZones.map((zone) => (
+                      <React.Fragment key={zone.name}>
+                        <SelectGroup>
+                          <SelectLabel className="text-[10px] font-black uppercase tracking-widest text-primary/70 px-3 py-1.5">
+                            {zone.name}
+                          </SelectLabel>
+                          {zone.cities.map((city) => (
+                            <SelectItem
+                              key={city}
+                              value={city}
+                              className="rounded-lg focus:bg-primary/10 focus:text-foreground py-2.5 pl-8"
+                            >
+                              {city}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </React.Fragment>
                     ))}
                   </SelectContent>
                 </Select>

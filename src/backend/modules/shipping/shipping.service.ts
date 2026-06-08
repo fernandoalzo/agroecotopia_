@@ -13,23 +13,34 @@ export interface CartItemForShipping {
 
 export const shippingService = {
   /**
-   * Retorna todas las ciudades disponibles en todas las zonas de envío activas.
+   * Retorna las zonas de envío con sus ciudades agrupadas,
+   * asegurando que cada ciudad aparezca solo una vez (en la primera zona que la contiene).
    */
-  async getAllCities(): Promise<string[]> {
+  async getAllCities(): Promise<{ name: string; cities: string[] }[]> {
     const zones = await prisma.storeShippingZone.findMany({
       where: { isActive: true },
-      select: { ciudades: true },
+      select: { nombreZona: true, ciudades: true },
+      orderBy: { nombreZona: "asc" },
     });
 
-    const citySet = new Set<string>();
+    const seen = new Set<string>();
+    const result: { name: string; cities: string[] }[] = [];
+
     for (const zone of zones) {
-      for (const city of zone.ciudades) {
-        const normalized = city.trim();
-        if (normalized) citySet.add(normalized);
+      const raw = [...new Set(zone.ciudades.map((c) => c.trim()).filter(Boolean))];
+      const unique = raw.filter((c) => {
+        const key = c.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      }).sort((a, b) => a.localeCompare(b, "es"));
+
+      if (unique.length > 0) {
+        result.push({ name: zone.nombreZona, cities: unique });
       }
     }
 
-    return [...citySet].sort((a, b) => a.localeCompare(b, "es"));
+    return result;
   },
 
   /**
