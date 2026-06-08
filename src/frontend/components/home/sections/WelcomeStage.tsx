@@ -93,7 +93,7 @@ const WelcomeStage = ({ t, language, onStartJourney }: WelcomeStageProps) => {
       />
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-3xl mx-auto px-4 text-center">
+      <div className="relative z-10 w-full max-w-3xl mx-auto px-4 py-4 text-center">
         {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: -8 }}
@@ -118,7 +118,7 @@ const WelcomeStage = ({ t, language, onStartJourney }: WelcomeStageProps) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="text-4xl sm:text-6xl md:text-7xl font-black leading-[1.05] mb-4"
+          className="text-4xl sm:text-6xl md:text-7xl font-black leading-[1.15] sm:leading-[1.2] mb-4"
         >
           <span className="text-foreground">{t.hero.title}</span>
           <br />
@@ -139,7 +139,7 @@ const WelcomeStage = ({ t, language, onStartJourney }: WelcomeStageProps) => {
         />
 
         {/* Description — CSS word reveal */}
-        <p className="text-muted-foreground/90 text-sm sm:text-lg leading-relaxed max-w-xl mx-auto mb-8">
+        <p className="text-muted-foreground/90 text-sm sm:text-lg leading-[2] sm:leading-[2.2] max-w-xl mx-auto mb-10">
           {words.map((word: string, i: number) => (
             <span
               key={i}
