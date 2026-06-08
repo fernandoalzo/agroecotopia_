@@ -201,6 +201,28 @@ export class NotificationsService {
   }
 
   /**
+   * Combined initial data fetch — unread count + first page of notifications
+   * in a single call. Runs all queries in parallel to minimize latency.
+   */
+  async getNotificationInitialData(userId: string) {
+    log.debug("Obteniendo datos iniciales de notificaciones:", { userId });
+
+    const [notificationsResult, unreadCount] = await Promise.all([
+      this.getMyNotifications(userId, { page: 1, limit: 20 }),
+      this.getUnreadCount(userId),
+    ]);
+
+    return {
+      unreadCount,
+      recipients: notificationsResult.recipients,
+      totalCount: notificationsResult.totalCount,
+      totalPages: notificationsResult.totalPages,
+      page: notificationsResult.page,
+      limit: notificationsResult.limit,
+    };
+  }
+
+  /**
    * Mark a notification as read.
    * Handles both explicit recipients and broadcast materialization.
    */
@@ -321,8 +343,16 @@ export class NotificationsService {
    * The virtual ID uses the format "broadcast:{notificationId}" so the client
    * can distinguish it when calling markAsRead.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private mapBroadcastToVirtualRecipient(notification: any): NotificationRecipientWithDetails {
+  private mapBroadcastToVirtualRecipient(notification: {
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    audienceType: string;
+    metadata: Prisma.JsonValue;
+    createdAt: Date;
+    creator: { id: string; name: string | null; image: string | null };
+  }): NotificationRecipientWithDetails {
     return {
       id: `broadcast:${notification.id}`,
       notificationId: notification.id,
@@ -335,7 +365,7 @@ export class NotificationsService {
         type: notification.type,
         title: notification.title,
         message: notification.message,
-        audienceType: notification.audienceType,
+        audienceType: notification.audienceType as AudienceType,
         metadata: notification.metadata as Record<string, unknown>,
         createdAt: notification.createdAt.toISOString(),
         creator: notification.creator,

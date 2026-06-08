@@ -1,14 +1,19 @@
 "use client";
 
 import { Users, TrendingUp } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { config } from "@/config/config";
 
 export default function ForumStatsPanel({
   activeCommunityStats,
-  topContributors
+  topContributors,
+  isStatsLoading,
+  isContributorsLoading,
 }: {
-  activeCommunityStats: any;
-  topContributors: any[];
+  activeCommunityStats: { totalMembers: string; onlineNow: string };
+  topContributors: { name: string; role: string; points: string; rank: number }[];
+  isStatsLoading?: boolean;
+  isContributorsLoading?: boolean;
 }) {
   return (
     <div className="hidden xl:block xl:col-span-3 sticky top-28 space-y-10 px-2">
@@ -21,10 +26,17 @@ export default function ForumStatsPanel({
         </h3>
 
         <div className="flex">
-          <div>
-            <span className="block font-black text-3xl text-foreground tracking-tight">{activeCommunityStats.totalMembers}</span>
-            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mt-1 block">Participantes</span>
-          </div>
+          {isStatsLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-9 w-24 rounded-md" />
+              <Skeleton className="h-3 w-20 rounded-md" />
+            </div>
+          ) : (
+            <div>
+              <span className="block font-black text-3xl text-foreground tracking-tight">{activeCommunityStats.totalMembers}</span>
+              <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mt-1 block">Participantes</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -36,21 +48,36 @@ export default function ForumStatsPanel({
         </h3>
 
         <div className="space-y-5">
-          {topContributors.map((user) => (
-            <div key={user.name} className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-secondary/80 flex items-center justify-center text-muted-foreground relative">
-                <span className="text-xs font-bold text-foreground">{user.name.charAt(0)}</span>
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-background rounded-full flex items-center justify-center">
-                  <span className="text-[9px] font-black text-primary">{user.rank}</span>
+          {isContributorsLoading ? (
+            <>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="w-8 h-8 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-3.5 w-28 rounded-md" />
+                    <Skeleton className="h-2.5 w-16 rounded-md" />
+                  </div>
+                  <Skeleton className="h-3.5 w-10 rounded-md" />
                 </div>
+              ))}
+            </>
+          ) : (
+            topContributors.map((user) => (
+              <div key={user.name} className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-secondary/80 flex items-center justify-center text-muted-foreground relative">
+                  <span className="text-xs font-bold text-foreground">{user.name.charAt(0)}</span>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-background rounded-full flex items-center justify-center">
+                    <span className="text-[9px] font-black text-primary">{user.rank}</span>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <span className="font-bold text-sm text-foreground block">{user.name}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{user.role}</span>
+                </div>
+                <span className="text-xs font-black text-primary">{user.points}</span>
               </div>
-              <div className="flex-1">
-                <span className="font-bold text-sm text-foreground block">{user.name}</span>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{user.role}</span>
-              </div>
-              <span className="text-xs font-black text-primary">{user.points}</span>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 

@@ -12,6 +12,11 @@ model ForumPost {
   ratings     ForumRating[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+
+  @@index([createdAt])
+  @@index([ratingTotal, createdAt])
+  @@index([authorId])
+  @@index([labels], type: Gin)
 }
 
 model ForumAnswer {

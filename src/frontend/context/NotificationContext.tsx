@@ -7,6 +7,7 @@ import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import {
   getMyNotificationsAction,
   getMyUnreadCountAction,
+  getNotificationInitialDataAction,
   markNotificationAsReadAction,
   markAllNotificationsAsReadAction,
   deleteNotificationAction,
@@ -81,14 +82,34 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     }
   }, [userId]);
 
+  // Combined initial load — single action, single auth check, parallel queries
+  const fetchInitialData = useCallback(async () => {
+    if (!userId) return;
+    try {
+      setIsLoading(true);
+      const result = await getNotificationInitialDataAction();
+      if ("error" in result) {
+        log.error("Error fetching initial notification data:", result.error);
+        return;
+      }
+      setUnreadCount(result.unreadCount);
+      setNotifications(result.recipients);
+      setHasMore(result.page < result.totalPages);
+      setPage(result.page);
+    } catch (error) {
+      log.error("Failed to fetch initial notification data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId]);
+
   // Initial load
   useEffect(() => {
     if (userId && !initialized.current) {
       initialized.current = true;
-      fetchUnreadCount();
-      fetchNotifications(1, false);
+      fetchInitialData();
     }
-  }, [userId, fetchUnreadCount, fetchNotifications]);
+  }, [userId, fetchInitialData]);
 
   // Realtime Socket.IO connection
   useEffect(() => {

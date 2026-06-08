@@ -60,6 +60,21 @@ export async function getMyUnreadCountAction() {
   });
 }
 
+export async function getNotificationInitialDataAction() {
+  return withAuth(async () => {
+    const session = await authService.ensureAuthenticated();
+    const userId = session.user?.id;
+    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
+
+    try {
+      return await notificationsService.getNotificationInitialData(userId);
+    } catch (error) {
+      log.error("Error obteniendo datos iniciales de notificaciones:", error);
+      return { error: getNotificationActionErrorMessage(error) };
+    }
+  });
+}
+
 export async function markNotificationAsReadAction(recipientId: string) {
   return withAuth(async () => {
     const session = await authService.ensureAuthenticated();

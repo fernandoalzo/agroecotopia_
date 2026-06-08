@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquare } from "lucide-react";
+
 import { useSession } from "next-auth/react";
 
-import { Question } from "@/frontend/components/comunidad/forum/forum.types";
+import { Question, type RawAnswer, type RawPost } from "@/frontend/components/comunidad/forum/forum.types";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -13,14 +13,16 @@ import ForumQuestionDetail from "@/frontend/components/comunidad/forum/ForumQues
 import ForumStatsPanel from "@/frontend/components/comunidad/forum/ForumStatsPanel";
 import { Loading } from "@/frontend/components/ui/Loading";
 
+type ActionResult = { success?: boolean; [key: string]: unknown };
+
 interface PostPageClientProps {
   id: string;
-  getPostById: (id: string) => Promise<any>;
-  createAnswer: (data: { content: string; postId: string }) => Promise<any>;
-  rateItem: (data: { itemId: string; itemType: "post" | "answer"; value: number }) => Promise<any>;
-  editAnswer: (data: { answerId: string; content: string }) => Promise<any>;
-  deleteAnswer: (answerId: string) => Promise<any>;
-  deletePost: (postId: string) => Promise<any>;
+  getPostById: (id: string) => Promise<ActionResult>;
+  createAnswer: (data: { content: string; postId: string }) => Promise<ActionResult>;
+  rateItem: (data: { itemId: string; itemType: "post" | "answer"; value: number }) => Promise<ActionResult>;
+  editAnswer: (data: { answerId: string; content: string }) => Promise<ActionResult>;
+  deleteAnswer: (answerId: string) => Promise<ActionResult>;
+  deletePost: (postId: string) => Promise<ActionResult>;
 }
 
 export default function PostPageClient({
@@ -34,7 +36,7 @@ export default function PostPageClient({
 }: PostPageClientProps) {
   const router = useRouter();
   const { data: session, status } = useSession();
-  
+
   const [question, setQuestion] = useState<Question | null>(null);
 
   const queryClient = useQueryClient();
@@ -43,8 +45,8 @@ export default function PostPageClient({
     queryKey: ["forumPost", id],
     queryFn: async () => {
       const res = await getPostById(id);
-      if (!res.success) throw new Error(res.error);
-      return res.post;
+      if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
+      return res.post as RawPost & { answers: RawAnswer[] };
     },
   });
 
@@ -55,14 +57,14 @@ export default function PostPageClient({
         title: postData.title,
         body: postData.body,
         author: postData.author.name || "Usuario",
-        authorId: postData.authorId || postData.author.id, // Añadido authorId
+        authorId: postData.authorId || postData.author.id,
         authorImage: postData.author.image,
         labels: postData.labels,
         ratingTotal: postData.ratingTotal,
         ratingCount: postData.ratingCount,
         createdAt: postData.createdAt,
         isTrending: postData.isTrending,
-        answers: postData.answers.map((ans: any) => ({
+        answers: postData.answers.map((ans: RawAnswer) => ({
           id: ans.id,
           content: ans.content,
           author: ans.author.name || "Usuario",
@@ -82,36 +84,77 @@ export default function PostPageClient({
   const createAnswerMutation = useMutation({
     mutationFn: async (content: string) => {
       const res = await createAnswer({ content, postId: id });
-      if ("error" in res) throw new Error(res.error);
-      if (!res.success) throw new Error("Unknown error");
-      return res.answer;
+      if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
+      return res.answer as RawAnswer;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
       toast.success("Respuesta enviada");
     },
-    onError: (err: any) => {
-      toast.error(err.message || "Error al enviar la respuesta");
+    onError: (err: Error) => {
+      toast.error(err.message ?? "Error al enviar la respuesta");
     },
   });
 
   const rateItemMutation = useMutation({
     mutationFn: async (data: { itemId: string; rating: number; isQuestion: boolean }) => {
-      const res = await rateItem({ 
-        itemId: data.itemId, 
-        itemType: data.isQuestion ? "post" : "answer", 
-        value: data.rating 
+      const res = await rateItem({
+        itemId: data.itemId,
+        itemType: data.isQuestion ? "post" : "answer",
+        value: data.rating,
       });
-      if ("error" in res) throw new Error(res.error);
-      if (!res.success) throw new Error("Unknown error");
-      return res.rating;
+      if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
+      return res.rating as unknown;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
       toast.success("Calificación guardada");
     },
-    onError: (err: any) => {
-      toast.error(err.message || "Error al calificar");
+    onError: (err: Error) => {
+      toast.error(err.message ?? "Error al calificar");
+    },
+  });
+
+  const editAnswerMutation = useMutation({
+    mutationFn: async (data: { answerId: string; content: string }) => {
+      const res = await editAnswer(data);
+      if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
+      return res.answer as RawAnswer;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
+      toast.success("Respuesta actualizada");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message ?? "Error al editar la respuesta");
+    },
+  });
+
+  const deleteAnswerMutation = useMutation({
+    mutationFn: async (answerId: string) => {
+      const res = await deleteAnswer(answerId);
+      if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
+      toast.success("Respuesta eliminada");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message ?? "Error al eliminar la respuesta");
+    },
+  });
+
+  const deletePostMutation = useMutation({
+    mutationFn: async (postId: string) => {
+      const res = await deletePost(postId);
+      if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
+    },
+    onSuccess: () => {
+      toast.success("Publicación eliminada correctamente");
+      router.push("/comunidad");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message ?? "Error al eliminar la publicación");
     },
   });
 
@@ -131,37 +174,6 @@ export default function PostPageClient({
     rateItemMutation.mutate({ itemId, rating, isQuestion });
   };
 
-  const editAnswerMutation = useMutation({
-    mutationFn: async (data: { answerId: string; content: string }) => {
-      const res = await editAnswer(data);
-      if ("error" in res) throw new Error(res.error);
-      if (!res.success) throw new Error("Unknown error");
-      return res.answer;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
-      toast.success("Respuesta actualizada");
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Error al editar la respuesta");
-    },
-  });
-
-  const deleteAnswerMutation = useMutation({
-    mutationFn: async (answerId: string) => {
-      const res = await deleteAnswer(answerId);
-      if ("error" in res) throw new Error(res.error);
-      if (!res.success) throw new Error("Unknown error");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
-      toast.success("Respuesta eliminada");
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Error al eliminar la respuesta");
-    },
-  });
-
   const handleEditAnswer = (answerId: string, content: string) => {
     editAnswerMutation.mutate({ answerId, content });
   };
@@ -169,21 +181,6 @@ export default function PostPageClient({
   const handleDeleteAnswer = (answerId: string) => {
     deleteAnswerMutation.mutate(answerId);
   };
-
-  const deletePostMutation = useMutation({
-    mutationFn: async (postId: string) => {
-      const res = await deletePost(postId);
-      if ("error" in res) throw new Error(res.error);
-      if (!res.success) throw new Error("Unknown error");
-    },
-    onSuccess: () => {
-      toast.success("Publicación eliminada correctamente");
-      router.push("/comunidad"); // Redirect to forum feed after deleting
-    },
-    onError: (err: any) => {
-      toast.error(err.message || "Error al eliminar la publicación");
-    },
-  });
 
   const handleDeleteQuestion = (questionId: string) => {
     deletePostMutation.mutate(questionId);

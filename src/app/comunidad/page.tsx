@@ -15,9 +15,14 @@ export const metadata: Metadata = {
   description: "Únete a nuestra vibrante comunidad agroecológica. Participa en foros, asiste a eventos y conecta con agricultores y compradores de todo el país.",
 };
 
-export default function ComunidadPage() {
+export default async function ComunidadPage() {
+  const initialRes = await getPostsAction({}, "", 10, undefined, "newest");
+  const initialPosts: unknown[] = initialRes.success ? (initialRes.posts as unknown[]) : [];
+
   return (
     <ComunidadPageClient
+      initialPosts={initialPosts}
+      initialNextCursor={initialRes.success ? (initialRes.nextCursor as unknown) : undefined}
       getPosts={getPostsAction}
       createPost={createPostAction}
       rateItem={rateItemAction}

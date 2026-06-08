@@ -86,6 +86,8 @@ model NotificationRecipient {
   @@unique([notificationId, userId])
   @@index([userId, status])
   @@index([userId, createdAt])
+  @@index([userId, deletedAt, createdAt])
+  @@index([userId, status, deletedAt, createdAt])
   @@index([notificationId])
 }
 

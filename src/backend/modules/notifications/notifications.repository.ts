@@ -1,5 +1,6 @@
 import prisma from "@/backend/db/prisma";
-import { AudienceType, Prisma, RecipientStatus } from "@prisma/client";
+import type { AudienceType } from "@prisma/client";
+import { Prisma, RecipientStatus } from "@prisma/client";
 import logger from "@/utils/logger";
 
 const log = logger.child();
@@ -13,6 +14,22 @@ const CREATOR_SELECT = {
   name: true,
   image: true,
 } as const;
+
+type RawBroadcastRow = {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  creatorId: string;
+  audienceType: string;
+  audienceRef: string | null;
+  eventId: string | null;
+  metadata: Prisma.JsonValue;
+  createdAt: Date;
+  creator_id: string;
+  creator_name: string | null;
+  creator_image: string | null;
+};
 
 /**
  * Standard include for recipient queries — always includes the parent notification + creator.
@@ -93,14 +110,20 @@ export class NotificationsRepository {
   ) {
     if (userIds.length === 0) return { count: 0 };
     log.debug("Creando recipients en bulk:", { notificationId, count: userIds.length });
-    return await prisma.notificationRecipient.createMany({
+    const result = await prisma.notificationRecipient.createMany({
       data: userIds.map((userId) => ({
         notificationId,
         userId,
         status: RecipientStatus.PENDING,
       })),
-      skipDuplicates: true,
     });
+    if (result.count > 0) {
+      await prisma.user.updateMany({
+        where: { id: { in: userIds } },
+        data: { unreadNotificationCount: { increment: 1 } },
+      });
+    }
+    return result;
   }
 
   /**
@@ -121,21 +144,25 @@ export class NotificationsRepository {
 
     log.debug("Buscando recipients paginados:", { userId, page, limit, status });
 
-    const [totalCount, recipients] = await Promise.all([
-      prisma.notificationRecipient.count({ where }),
-      prisma.notificationRecipient.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        include: RECIPIENT_WITH_NOTIFICATION_INCLUDE,
-      }),
-    ]);
+    // Use limit+1 to determine hasMore without a separate COUNT query
+    const allRecipients = await prisma.notificationRecipient.findMany({
+      where,
+      skip,
+      take: limit + 1,
+      orderBy: { createdAt: "desc" },
+      include: RECIPIENT_WITH_NOTIFICATION_INCLUDE,
+    });
+
+    const hasMore = allRecipients.length > limit;
+    const recipients = hasMore ? allRecipients.slice(0, limit) : allRecipients;
+    // Approximate totalCount — only used to compute hasMore via totalPages
+    const totalCount = hasMore ? (page - 1) * limit + limit + 1 : (page - 1) * limit + recipients.length;
+    const totalPages = Math.ceil(totalCount / limit);
 
     return {
       recipients,
       totalCount,
-      totalPages: Math.ceil(totalCount / limit),
+      totalPages,
       page,
       limit,
     };
@@ -146,14 +173,12 @@ export class NotificationsRepository {
    * Broadcast unread count is calculated separately in the service layer.
    */
   async countUnreadByUserId(userId: string): Promise<number> {
-    log.debug("Contando notificaciones no leídas:", { userId });
-    return await prisma.notificationRecipient.count({
-      where: {
-        userId,
-        status: { not: RecipientStatus.READ },
-        deletedAt: null,
-      },
+    log.debug("Leyendo contador de no leídas:", { userId });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { unreadNotificationCount: true },
     });
+    return user?.unreadNotificationCount ?? 0;
   }
 
   /**
@@ -162,16 +187,24 @@ export class NotificationsRepository {
    */
   async markAsRead(recipientId: string, userId: string) {
     log.debug("Marcando notificación como leída:", { recipientId, userId });
-    return await prisma.notificationRecipient.updateMany({
+    const result = await prisma.notificationRecipient.updateMany({
       where: {
         id: recipientId,
         userId,
+        status: { not: RecipientStatus.READ },
       },
       data: {
         status: RecipientStatus.READ,
         readAt: new Date(),
       },
     });
+    if (result.count > 0) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { unreadNotificationCount: { decrement: 1 } },
+      });
+    }
+    return result;
   }
 
   /**
@@ -179,7 +212,7 @@ export class NotificationsRepository {
    */
   async markAllAsRead(userId: string) {
     log.debug("Marcando todas las notificaciones como leídas:", { userId });
-    return await prisma.notificationRecipient.updateMany({
+    const result = await prisma.notificationRecipient.updateMany({
       where: {
         userId,
         status: { not: RecipientStatus.READ },
@@ -189,6 +222,11 @@ export class NotificationsRepository {
         readAt: new Date(),
       },
     });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { unreadNotificationCount: 0 },
+    });
+    return result;
   }
 
   /**
@@ -224,15 +262,21 @@ export class NotificationsRepository {
    */
   async softDeleteRecipient(recipientId: string, userId: string) {
     log.debug("Soft-borrando notificación:", { recipientId, userId });
-    return await prisma.notificationRecipient.updateMany({
-      where: {
-        id: recipientId,
-        userId,
-      },
-      data: {
-        deletedAt: new Date(),
-      },
+    const recipient = await prisma.notificationRecipient.findFirst({
+      where: { id: recipientId, userId, status: { not: RecipientStatus.READ }, deletedAt: null },
+      select: { id: true },
     });
+    const result = await prisma.notificationRecipient.updateMany({
+      where: { id: recipientId, userId },
+      data: { deletedAt: new Date() },
+    });
+    if (recipient) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { unreadNotificationCount: { decrement: 1 } },
+      });
+    }
+    return result;
   }
 
   /**
@@ -241,29 +285,29 @@ export class NotificationsRepository {
   async hardDeleteRecipient(recipientId: string, userId: string) {
     log.debug("Hard-borrando notificación:", { recipientId, userId });
 
-    // Find the recipient first to get the notificationId
     const recipient = await prisma.notificationRecipient.findFirst({
       where: { id: recipientId, userId },
-      select: { notificationId: true },
+      select: { notificationId: true, status: true },
     });
 
     if (!recipient) return { count: 0 };
 
-    // Delete the recipient
     const result = await prisma.notificationRecipient.deleteMany({
-      where: {
-        id: recipientId,
-        userId,
-      },
+      where: { id: recipientId, userId },
     });
 
-    // If no recipients remain, also delete the parent Notification and its DomainEvent
+    if (recipient.status !== RecipientStatus.READ && result.count > 0) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { unreadNotificationCount: { decrement: 1 } },
+      });
+    }
+
     const remainingCount = await prisma.notificationRecipient.count({
       where: { notificationId: recipient.notificationId },
     });
 
     if (remainingCount === 0) {
-      // Fetch the Notification to get the eventId before deleting
       const notification = await prisma.notification.findUnique({
         where: { id: recipient.notificationId },
         select: { eventId: true },
@@ -273,7 +317,6 @@ export class NotificationsRepository {
         where: { id: recipient.notificationId },
       });
 
-      // Delete the DomainEvent if it exists
       if (notification?.eventId) {
         await prisma.domainEvent.delete({
           where: { id: notification.eventId },
@@ -292,9 +335,9 @@ export class NotificationsRepository {
   // ─── Broadcast (Lazy Materialization) ───────────────────
 
   /**
-   * Find all BROADCAST notifications that a user has NOT yet interacted with.
-   * These are "virtual" recipients — no NotificationRecipient row exists yet.
-   * Used for lazy materialization of broadcast notifications.
+   * Use NOT EXISTS anti-join instead of JOIN + NOT IN for optimal performance.
+   * Scans Notification by audienceType (small set) and checks each against
+   * NotificationRecipient via the unique index on (notificationId, userId).
    */
   async findUnreadBroadcastsForUser(
     userId: string,
@@ -303,71 +346,81 @@ export class NotificationsRepository {
     const { page, limit } = params;
     const skip = (page - 1) * limit;
 
-    // Find broadcast notification IDs the user has already interacted with
-    const interactedIds = await prisma.notificationRecipient.findMany({
-      where: {
-        userId,
-        notification: { audienceType: AudienceType.BROADCAST },
+    log.debug("Buscando broadcasts no materializados:", { userId });
+
+    const allRows: RawBroadcastRow[] = await prisma.$queryRaw(
+      Prisma.sql`
+        SELECT
+          n.id, n.type, n.title, n.message, n."creatorId",
+          n."audienceType", n."audienceRef", n."eventId",
+          n.metadata, n."createdAt",
+          u.id AS creator_id, u.name AS creator_name, u.image AS creator_image
+        FROM "Notification" n
+        LEFT JOIN "User" u ON u.id = n."creatorId"
+        WHERE n."audienceType" = 'BROADCAST'
+          AND NOT EXISTS (
+            SELECT 1 FROM "NotificationRecipient" nr
+            WHERE nr."notificationId" = n.id AND nr."userId" = ${userId}
+          )
+        ORDER BY n."createdAt" DESC
+        LIMIT ${limit + 1}
+        OFFSET ${skip}
+      `,
+    );
+
+    const hasMore = allRows.length > limit;
+    const rows = hasMore ? allRows.slice(0, limit) : allRows;
+    const notifications = rows.map((r) => ({
+      id: r.id,
+      type: r.type,
+      title: r.title,
+      message: r.message,
+      creatorId: r.creatorId,
+      audienceType: r.audienceType,
+      audienceRef: r.audienceRef,
+      eventId: r.eventId,
+      metadata: r.metadata,
+      createdAt: r.createdAt,
+      creator: {
+        id: r.creator_id,
+        name: r.creator_name,
+        image: r.creator_image,
       },
-      select: { notificationId: true },
-    });
+    }));
 
-    const excludeIds = interactedIds.map((r) => r.notificationId);
-
-    const where: Prisma.NotificationWhereInput = {
-      audienceType: AudienceType.BROADCAST,
-      ...(excludeIds.length > 0 ? { id: { notIn: excludeIds } } : {}),
-    };
-
-    log.debug("Buscando broadcasts no materializados:", {
-      userId,
-      excludedCount: excludeIds.length,
-    });
-
-    const [totalCount, notifications] = await Promise.all([
-      prisma.notification.count({ where }),
-      prisma.notification.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          creator: {
-            select: CREATOR_SELECT,
-          },
-        },
-      }),
-    ]);
+    const totalCount = hasMore ? skip + limit + 1 : skip + rows.length;
+    const totalPages = Math.ceil(totalCount / limit);
 
     return {
       notifications,
       totalCount,
-      totalPages: Math.ceil(totalCount / limit),
+      totalPages,
       page,
       limit,
     };
   }
 
   /**
-   * Count unread broadcasts for a user (notifications without a recipient row).
+   * Count unread broadcasts using NOT EXISTS anti-join.
+   * Limits to 100 rows — UI caps display at "99+".
    */
   async countUnreadBroadcastsForUser(userId: string): Promise<number> {
-    const interactedIds = await prisma.notificationRecipient.findMany({
-      where: {
-        userId,
-        notification: { audienceType: AudienceType.BROADCAST },
-      },
-      select: { notificationId: true },
-    });
+    const result = await prisma.$queryRaw<[{ count: bigint }]>(
+      Prisma.sql`
+        SELECT COUNT(*)::bigint AS count
+        FROM (
+          SELECT 1 FROM "Notification" n
+          WHERE n."audienceType" = 'BROADCAST'
+            AND NOT EXISTS (
+              SELECT 1 FROM "NotificationRecipient" nr
+              WHERE nr."notificationId" = n.id AND nr."userId" = ${userId}
+            )
+          LIMIT 100
+        ) sub
+      `,
+    );
 
-    const excludeIds = interactedIds.map((r) => r.notificationId);
-
-    return await prisma.notification.count({
-      where: {
-        audienceType: AudienceType.BROADCAST,
-        ...(excludeIds.length > 0 ? { id: { notIn: excludeIds } } : {}),
-      },
-    });
+    return Number(result[0]?.count ?? 0);
   }
 
   /**
@@ -394,6 +447,84 @@ export class NotificationsRepository {
         deliveredAt: new Date(),
       },
     });
+  }
+
+  // ─── TTL / Purge ────────────────────────────────────────
+
+  /**
+   * Purge NotificationRecipient rows older than `before` that have been READ.
+   * Also cleans up orphaned Notification and DomainEvent rows.
+   * Designed to be called by a cron job (e.g., daily at midnight).
+   * Returns the number of recipients deleted.
+   */
+  async purgeOldNotifications(before: Date): Promise<number> {
+    log.info("Purgando notificaciones anteriores a:", { before });
+
+    // Delete old recipient rows (only those already READ to avoid data loss)
+    const deleted = await prisma.notificationRecipient.deleteMany({
+      where: {
+        createdAt: { lt: before },
+        status: RecipientStatus.READ,
+        deletedAt: null,
+      },
+    });
+
+    if (deleted.count === 0) return 0;
+
+    // Clean up orphaned Notifications (no remaining recipients)
+    const orphanedNotifications = await prisma.notification.findMany({
+      where: {
+        recipients: { none: {} },
+      },
+      select: { id: true, eventId: true },
+    });
+
+    if (orphanedNotifications.length > 0) {
+      const orphanedIds = orphanedNotifications.map((n) => n.id);
+      const eventIds = orphanedNotifications
+        .map((n) => n.eventId)
+        .filter((id): id is string => id !== null);
+
+      await prisma.notification.deleteMany({
+        where: { id: { in: orphanedIds } },
+      });
+
+      if (eventIds.length > 0) {
+        await prisma.domainEvent.deleteMany({
+          where: { id: { in: eventIds } },
+        });
+      }
+
+      log.info("Limpieza de notificaciones completada:", {
+        recipientsDeleted: deleted.count,
+        notificationsDeleted: orphanedIds.length,
+        eventsDeleted: eventIds.length,
+      });
+    }
+
+    return deleted.count;
+  }
+
+  /**
+   * Initialize unreadNotificationCount for all existing users.
+   * One-time operation — safe to run multiple times (idempotent).
+   */
+  async initializeUnreadCounters(): Promise<number> {
+    log.info("Inicializando contadores de no leídas para todos los usuarios...");
+    const result = await prisma.$executeRaw(
+      Prisma.sql`
+        UPDATE "User" u
+        SET "unreadNotificationCount" = (
+          SELECT COUNT(*)::int
+          FROM "NotificationRecipient" nr
+          WHERE nr."userId" = u.id
+            AND nr."status" != 'READ'
+            AND nr."deletedAt" IS NULL
+        )
+      `,
+    );
+    log.info("Contadores inicializados — usuarios actualizados:", result);
+    return result;
   }
 
   // ─── User Queries (for audience resolution) ─────────────

@@ -1,12 +1,30 @@
 "use client";
 
 import { Flame } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ForumTrendingBannerProps {
   tags: string[];
+  isLoading?: boolean;
 }
 
-export default function ForumTrendingBanner({ tags }: ForumTrendingBannerProps) {
+export default function ForumTrendingBanner({ tags, isLoading }: ForumTrendingBannerProps) {
+  if (isLoading) {
+    return (
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <Skeleton className="w-5 h-5 rounded-full" />
+          <Skeleton className="h-5 w-44 rounded-md" />
+        </div>
+        <div className="flex flex-wrap gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-5 w-24 rounded-md" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (tags.length === 0) return null;
 
   return (

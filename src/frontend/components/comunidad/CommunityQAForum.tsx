@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { Sparkles, Flame, MessageSquare, Plus, SearchX } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -11,13 +12,16 @@ import ForumSidebar from "./forum/ForumSidebar";
 import ForumTrendingBanner from "./forum/ForumTrendingBanner";
 import ForumQuestionCard from "./forum/ForumQuestionCard";
 import ForumStatsPanel from "./forum/ForumStatsPanel";
-import ForumCreatePostModal from "./forum/ForumCreatePostModal";
+const ForumCreatePostModal = dynamic(() => import("./forum/ForumCreatePostModal"), { ssr: false });
 
 type CommunityQAForumProps = {
   questions: Question[];
-  activeCommunityStats: any;
-  topContributors: any[];
-  crearNuevaPublicacion: (data: any) => Promise<void> | void;
+  activeCommunityStats: { totalMembers: string; onlineNow: string };
+  topContributors: { name: string; role: string; points: string; rank: number }[];
+  isStatsLoading?: boolean;
+  isContributorsLoading?: boolean;
+  isTrendingLoading?: boolean;
+  crearNuevaPublicacion: (data: { title: string; body: string; labels: string[] }) => Promise<void> | void;
   handleRate: (itemId: string, rating: number) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
@@ -35,6 +39,9 @@ export default function CommunityQAForum({
   questions,
   activeCommunityStats,
   topContributors,
+  isStatsLoading,
+  isContributorsLoading,
+  isTrendingLoading,
   crearNuevaPublicacion,
   handleRate,
   searchQuery,
@@ -80,7 +87,7 @@ export default function CommunityQAForum({
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              <ForumTrendingBanner tags={trendingTags} />
+              <ForumTrendingBanner tags={trendingTags} isLoading={isTrendingLoading} />
 
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-4">
@@ -167,7 +174,9 @@ export default function CommunityQAForum({
           {/* RIGHT COLUMN: Context & Stats */}
           <ForumStatsPanel 
             activeCommunityStats={activeCommunityStats} 
-            topContributors={topContributors} 
+            topContributors={topContributors}
+            isStatsLoading={isStatsLoading}
+            isContributorsLoading={isContributorsLoading}
           />
 
         </div>
