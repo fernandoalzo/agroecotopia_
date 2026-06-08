@@ -35,7 +35,7 @@ export const es: Translations = {
   about: {
     badge: "Nuestra Esencia",
     title: `${config.app.name}: Un Sueño Cultivado con Amor`,
-    description1: `${config.app.name} nació bajo la sombra de un viejo roble, como un sueño compartido de devolverle a la tierra lo que con tanto amor nos ha dado. No somos solo una tienda, somos un refugio para quienes creen que la alimentación es el acto más revolucionario de cuidado.`,
+    description1: `${config.app.name} Nació bajo la idea de unir dos mundos que parecen distantes, con el propósito de crear una gran comunidad de intercambio de conocimiento y de acceso a todo tipo de productos y servicios del sector agropecuario. A través de un medio universal como Internet, busca fomentar una cultura de acceso a la información, los servicios y los productos que contribuyan al mejoramiento de la agronomía y al desarrollo de las regiones.`,
     description2: "Nuestra historia comenzó en los pequeños surcos de un huerto familiar, donde entendimos que el respeto por los ciclos naturales no es una opción, sino un legado. Hoy, unimos manos con agricultores locales para llevar a tu mesa la esencia pura de la vida, cultivada sin prisa y con la convicción de que un mundo más verde es posible, un bocado a la vez.",
     tagline: "Cosechando Futuro",
     pillars: {

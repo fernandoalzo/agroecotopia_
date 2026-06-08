@@ -35,7 +35,7 @@ export const en: Translations = {
   about: {
     badge: "Our Essence",
     title: `${config.app.name}: A Dream Cultivated with Love`,
-    description1: `${config.app.name} was born under the shade of an old oak tree, as a shared dream of giving back to the earth what it has given us with so much love. We are not just a store, we are a refuge for those who believe that food is the most revolutionary act of care.`,
+    description1: `${config.app.name} was born from the idea of bringing together two worlds that seem far apart, with the purpose of creating a large community for knowledge exchange and access to all kinds of agricultural products and services. Through a universal medium such as the Internet, it seeks to promote a culture of access to information, services, and products that contribute to the improvement of agronomy and the development of regional communities.`,
     description2: "Our story began in the small furrows of a family garden, where we understood that respect for natural cycles is not an option, but a legacy. Today, we join hands with local farmers to bring the pure essence of life to your table, cultivated without haste and with the conviction that a greener world is possible, one bite at a time.",
     tagline: "Harvesting the Future",
     pillars: {
