@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Users, Globe, MessageCircle, ShoppingBag, TreePine, Bird } from "lucide-react";
 
@@ -79,20 +79,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const mouseX = useMotionValue(0.5);
-  const mouseY = useMotionValue(0.5);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    if (isMobile) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    mouseX.set((e.clientX - rect.left) / rect.width);
-    mouseY.set((e.clientY - rect.top) / rect.height);
-  };
-
-  const bgX = useTransform(mouseX, [0, 1], [0, 30]);
-  const bgY = useTransform(mouseY, [0, 1], [0, 20]);
-  const springBgX = useSpring(bgX, { stiffness: 50, damping: 30 });
-  const springBgY = useSpring(bgY, { stiffness: 50, damping: 30 });
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [echoingIndex, setEchoingIndex] = useState<number | null>(null);
@@ -176,32 +163,8 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
 
   return (
     <div
-      onMouseMove={handleMouseMove}
       className="relative w-full h-full flex items-center justify-center overflow-hidden"
     >
-      {/* Cinematic gradient background layer */}
-      <motion.div
-        className="absolute inset-0 pointer-events-none"
-        style={{ x: springBgX, y: springBgY }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.03] via-transparent to-primary/[0.03]" />
-        <div
-          className="absolute top-1/3 -left-32 w-96 h-96 rounded-full"
-          style={{
-            willChange: "transform",
-            animation: "community-orb-a 22s ease-in-out infinite",
-            background: "radial-gradient(circle, oklch(0.65 0.2 120 / 0.08), transparent 70%)",
-          }}
-        />
-        <div
-          className="absolute bottom-1/3 -right-32 w-80 h-80 rounded-full"
-          style={{
-            willChange: "transform",
-            animation: "community-orb-b 20s ease-in-out infinite",
-            background: "radial-gradient(circle, oklch(0.55 0.18 80 / 0.08), transparent 70%)",
-          }}
-        />
-      </motion.div>
 
       {/* Floating icons */}
       <div className="absolute inset-0 pointer-events-none">
@@ -556,18 +519,6 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
           50% { opacity: 0.1; transform: translate(var(--dx2), var(--dy2)) scale(0.85) rotate(10deg); }
           75% { opacity: 0.2; transform: translate(var(--dx3), var(--dy3)) scale(1) rotate(-5deg); }
           100% { opacity: 0; transform: translate(0, 0) scale(0) rotate(0deg); }
-        }
-        @keyframes community-orb-a {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          25% { transform: translate(70px, -50px) scale(1.15); }
-          50% { transform: translate(0, 0) scale(0.9); }
-          75% { transform: translate(-50px, 40px) scale(1.1); }
-        }
-        @keyframes community-orb-b {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          25% { transform: translate(-60px, 60px) scale(0.9); }
-          50% { transform: translate(0, 0) scale(1.15); }
-          75% { transform: translate(50px, -40px) scale(1); }
         }
         @keyframes community-line {
           0%, 100% { opacity: 0.2; }

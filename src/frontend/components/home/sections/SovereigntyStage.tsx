@@ -129,27 +129,6 @@ const SovereigntyStage = ({ t }: SovereigntyStageProps) => {
 
   return (
     <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-      {/* Cinematic gradient background layer */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-accent/[0.03]" />
-        <div
-          className="absolute top-1/4 -left-32 w-96 h-96 rounded-full"
-          style={{
-            willChange: "transform",
-            animation: "sovereignty-orb-a 20s ease-in-out infinite",
-            background: "radial-gradient(circle, oklch(0.7 0.25 150 / 0.08), transparent 70%)",
-          }}
-        />
-        <div
-          className="absolute bottom-1/4 -right-32 w-80 h-80 rounded-full"
-          style={{
-            willChange: "transform",
-            animation: "sovereignty-orb-b 18s ease-in-out infinite",
-            background: "radial-gradient(circle, oklch(0.6 0.2 100 / 0.08), transparent 70%)",
-          }}
-        />
-      </div>
-
       {/* Floating nature icons */}
       <div className="absolute inset-0 pointer-events-none">
         {FLOATING_ICONS.map((item, i) => (
@@ -271,18 +250,6 @@ const SovereigntyStage = ({ t }: SovereigntyStageProps) => {
           50% { opacity: 0.15; transform: translate(var(--dx2), var(--dy2)) scale(0.9) rotate(-10deg); }
           75% { opacity: 0.25; transform: translate(var(--dx3), var(--dy3)) scale(1) rotate(5deg); }
           100% { opacity: 0; transform: translate(0, 0) scale(0) rotate(0deg); }
-        }
-        @keyframes sovereignty-orb-a {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          25% { transform: translate(60px, -40px) scale(1.2); }
-          50% { transform: translate(0, 0) scale(0.9); }
-          75% { transform: translate(-40px, 50px) scale(1.1); }
-        }
-        @keyframes sovereignty-orb-b {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          25% { transform: translate(-50px, 50px) scale(0.9); }
-          50% { transform: translate(0, 0) scale(1.2); }
-          75% { transform: translate(40px, -40px) scale(1); }
         }
         @keyframes sovereignty-line {
           0%, 100% { opacity: 0.3; }

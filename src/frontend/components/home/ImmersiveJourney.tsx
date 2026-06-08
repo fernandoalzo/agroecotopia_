@@ -376,7 +376,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
       </div>
 
       {/* STICKY VIEWPORT CONTAINER (The Camera) */}
-      <div className="sticky top-0 h-screen w-full overflow-hidden flex items-center justify-center">
+      <div className="sticky top-0 h-screen w-full overflow-hidden flex items-center justify-center isolate backface-hidden" style={{ clipPath: "inset(0)" }}>
 
         {/* ATMOSPHERIC BACKGROUND EFFECTS */}
         <div className="absolute inset-0 bg-radial-[circle_at_center,_var(--color-primary)_0%,_transparent_75%] opacity-5 mix-blend-screen pointer-events-none" />
@@ -419,6 +419,25 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
               />
             </svg>
           </div>
+
+          {/* Background gradient + animated orbs (shared across all stages for seamless transitions) */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-accent/[0.03] pointer-events-none" />
+          <div
+            className="absolute top-1/4 -left-32 w-96 h-96 rounded-full pointer-events-none"
+            style={{
+              willChange: "transform",
+              animation: "sovereignty-orb-a 20s ease-in-out infinite",
+              background: "radial-gradient(circle, oklch(0.7 0.25 150 / 0.08), transparent 70%)",
+            }}
+          />
+          <div
+            className="absolute bottom-1/4 -right-32 w-80 h-80 rounded-full pointer-events-none"
+            style={{
+              willChange: "transform",
+              animation: "sovereignty-orb-b 18s ease-in-out infinite",
+              background: "radial-gradient(circle, oklch(0.6 0.2 100 / 0.08), transparent 70%)",
+            }}
+          />
         </div>
 
         {/* 3D SCENE PERSPECTIVE WRAPPER */}
@@ -442,7 +461,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
                 scale: introScale,
                 zIndex: activeStage === 0 ? 30 : 0
               }}
-              className={`absolute inset-0 flex items-center justify-center p-4 ${activeStage === 0 ? "pointer-events-auto" : "pointer-events-none"}`}
+              className={`absolute inset-0 flex items-center justify-center p-4 overflow-hidden backface-hidden ${activeStage === 0 ? "pointer-events-auto" : "pointer-events-none"}`}
             >
               <WelcomeStage t={t} language={language} onStartJourney={startJourney} />
             </motion.div>
@@ -459,7 +478,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
                 scale: stage2Scale,
                 zIndex: activeStage === 1 ? 30 : 0
               }}
-              className={`absolute inset-0 flex items-center justify-center ${activeStage === 1 ? "pointer-events-auto" : "pointer-events-none"}`}
+              className={`absolute inset-0 flex items-center justify-center overflow-hidden backface-hidden ${activeStage === 1 ? "pointer-events-auto" : "pointer-events-none"}`}
             >
               <SovereigntyStage t={t} />
             </motion.div>
@@ -476,7 +495,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
                 scale: stage3Scale,
                 zIndex: activeStage === 2 ? 30 : 0
               }}
-              className={`absolute inset-0 flex items-center justify-center p-4 sm:p-8 ${activeStage === 2 ? "pointer-events-auto" : "pointer-events-none"}`}
+              className={`absolute inset-0 flex items-center justify-center p-4 sm:p-8 overflow-hidden backface-hidden ${activeStage === 2 ? "pointer-events-auto" : "pointer-events-none"}`}
             >
               <ProductsStage t={t} language={language} featuredProducts={featuredProducts} />
             </motion.div>
@@ -493,7 +512,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
                 scale: stage4Scale,
                 zIndex: activeStage === 3 ? 30 : 0
               }}
-              className={`absolute inset-0 flex items-center justify-center ${activeStage === 3 ? "pointer-events-auto" : "pointer-events-none"}`}
+              className={`absolute inset-0 flex items-center justify-center overflow-hidden backface-hidden ${activeStage === 3 ? "pointer-events-auto" : "pointer-events-none"}`}
             >
               <CommunityStage t={t} language={language} initialForumTopics={initialForumTopics} realStats={realStats} />
             </motion.div>
@@ -526,6 +545,18 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
         @keyframes wave-scroll {
           from { transform: translateX(0); }
           to { transform: translateX(-50%); }
+        }
+        @keyframes sovereignty-orb-a {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          25% { transform: translate(60px, -40px) scale(1.2); }
+          50% { transform: translate(0, 0) scale(0.9); }
+          75% { transform: translate(-40px, 50px) scale(1.1); }
+        }
+        @keyframes sovereignty-orb-b {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          25% { transform: translate(-50px, 50px) scale(0.9); }
+          50% { transform: translate(0, 0) scale(1.2); }
+          75% { transform: translate(40px, -40px) scale(1); }
         }
       `}</style>
     </div>
