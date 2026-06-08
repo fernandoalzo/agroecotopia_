@@ -471,7 +471,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
                 scale: stage2Scale,
                 zIndex: activeStage === 1 ? 30 : 0
               }}
-              className={`absolute inset-0 flex items-center justify-center p-4 sm:p-8 ${activeStage === 1 ? "pointer-events-auto" : "pointer-events-none"}`}
+              className={`absolute inset-0 flex items-center justify-center ${activeStage === 1 ? "pointer-events-auto" : "pointer-events-none"}`}
             >
               <SovereigntyStage t={t} />
             </motion.div>
@@ -505,7 +505,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
                 scale: stage4Scale,
                 zIndex: activeStage === 3 ? 30 : 0
               }}
-              className={`absolute inset-0 flex items-center justify-center p-4 sm:p-8 ${activeStage === 3 ? "pointer-events-auto" : "pointer-events-none"}`}
+              className={`absolute inset-0 flex items-center justify-center ${activeStage === 3 ? "pointer-events-auto" : "pointer-events-none"}`}
             >
               <CommunityStage t={t} language={language} initialForumTopics={initialForumTopics} realStats={realStats} />
             </motion.div>

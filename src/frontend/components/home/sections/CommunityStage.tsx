@@ -1,53 +1,111 @@
 "use client";
 
-import React, { useState } from "react";
-import { motion, useMotionValue, useTransform } from "framer-motion";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { motion, useMotionValue, useTransform, useSpring, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { Users, Globe, MessageCircle, ShoppingBag } from "lucide-react";
+import { Users, Globe, MessageCircle, ShoppingBag, TreePine, Bird } from "lucide-react";
 
-// Custom hook to create a 3D tilt effect on elements based on mouse position
-const useTiltEffect = () => {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
+const slugify = (text: string) =>
+  text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left - width / 2;
-    const mouseY = e.clientY - rect.top - height / 2;
+const FLOATING_ICONS = [
+  { Icon: Users, x: 3, y: 12, size: 26, delay: 0, driftX: 50, driftY: -40, duration: 9 },
+  { Icon: Globe, x: 94, y: 18, size: 22, delay: 1.8, driftX: -35, driftY: -30, duration: 11 },
+  { Icon: MessageCircle, x: 8, y: 78, size: 20, delay: 0.7, driftX: 40, driftY: 30, duration: 8 },
+  { Icon: TreePine, x: 90, y: 72, size: 28, delay: 2.5, driftX: -40, driftY: 25, duration: 10 },
+  { Icon: Bird, x: 50, y: 6, size: 18, delay: 3.2, driftX: 60, driftY: 15, duration: 12 },
+];
 
-    // Normalize coordinates (-0.5 to 0.5)
-    x.set(mouseX / width);
-    y.set(mouseY / height);
-  };
-
-  const handleMouseLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
-
-  // Map normalized coordinates to rotation angles (degrees)
-  const rotateX = useTransform(y, [-0.5, 0.5], [10, -10]);
-  const rotateY = useTransform(x, [-0.5, 0.5], [-10, 10]);
-
-  return { rotateX, rotateY, handleMouseMove, handleMouseLeave };
-};
+function FloatingIcon({
+  Icon,
+  x,
+  y,
+  size,
+  delay,
+  driftX,
+  driftY,
+  duration,
+}: {
+  Icon: React.ElementType;
+  x: number;
+  y: number;
+  size: number;
+  delay: number;
+  driftX: number;
+  driftY: number;
+  duration: number;
+}) {
+  return (
+    <motion.div
+      className="absolute pointer-events-none"
+      style={{ left: `${x}%`, top: `${y}%` }}
+      initial={{ opacity: 0, scale: 0 }}
+      animate={{
+        opacity: [0, 0.2, 0.1, 0.2, 0],
+        scale: [0, 1, 0.85, 1, 0],
+        x: [0, driftX * 0.3, driftX * 0.7, driftX, 0],
+        y: [0, driftY * 0.3, driftY * 0.7, driftY, 0],
+        rotate: [0, -15, 10, -5, 0],
+      }}
+      transition={{
+        duration,
+        delay,
+        repeat: Infinity,
+        ease: "easeInOut",
+        times: [0, 0.25, 0.5, 0.75, 1],
+      }}
+    >
+      <div className="relative">
+        <div className="absolute inset-0 bg-accent/20 rounded-full blur-xl scale-150" />
+        <Icon className="text-accent/30" style={{ width: size, height: size }} />
+      </div>
+    </motion.div>
+  );
+}
 
 interface CommunityStageProps {
-  t: any;
   language: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   initialForumTopics?: any[];
   realStats?: { users: number; posts: number; products: number };
 }
 
 const CommunityStage = ({ t, language, initialForumTopics, realStats }: CommunityStageProps) => {
-  const tilt4 = useTiltEffect();
   const router = useRouter();
-  const [activeCardIndex, setActiveCardIndex] = useState(0);
-  const [isNavigating, setIsNavigating] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  const defaultTopics = [
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  const mouseX = useMotionValue(0.5);
+  const mouseY = useMotionValue(0.5);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    if (isMobile) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    mouseX.set((e.clientX - rect.left) / rect.width);
+    mouseY.set((e.clientY - rect.top) / rect.height);
+  };
+
+  const bgX = useTransform(mouseX, [0, 1], [0, 30]);
+  const bgY = useTransform(mouseY, [0, 1], [0, 20]);
+  const springBgX = useSpring(bgX, { stiffness: 50, damping: 30 });
+  const springBgY = useSpring(bgY, { stiffness: 50, damping: 30 });
+
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [echoingIndex, setEchoingIndex] = useState<number | null>(null);
+  const autoRotateRef = useRef<ReturnType<typeof setInterval>>(undefined);
+
+  const defaultTopics: Array<{
+    title: string; author: string; avatar: string; participants: number;
+    posts: number; time: string; color: string; href: string;
+  }> = [
     {
       title: language === "es" ? "Nuevas técnicas de compostaje para el verano" : "New composting techniques for summer",
       author: "María G.",
@@ -55,7 +113,8 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
       participants: 24,
       posts: 156,
       time: "2h",
-      color: "bg-emerald-500"
+      color: "bg-emerald-500",
+      href: "/comunidad?post=" + slugify(language === "es" ? "compostaje-verano" : "composting-summer")
     },
     {
       title: language === "es" ? "Intercambio de semillas nativas y ancestrales" : "Native and ancestral seeds exchange",
@@ -64,7 +123,8 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
       participants: 12,
       posts: 89,
       time: "5h",
-      color: "bg-amber-500"
+      color: "bg-amber-500",
+      href: "/comunidad?post=" + slugify(language === "es" ? "intercambio-semillas" : "seed-exchange")
     },
     {
       title: language === "es" ? "Control orgánico de plagas en invernaderos" : "Organic pest control in greenhouses",
@@ -73,153 +133,430 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
       participants: 45,
       posts: 312,
       time: "1d",
-      color: "bg-blue-500"
+      color: "bg-blue-500",
+      href: "/comunidad?post=" + slugify(language === "es" ? "control-plagas" : "pest-control")
     }
   ];
 
-  const topicsToRender = initialForumTopics && initialForumTopics.length > 0 ? initialForumTopics : defaultTopics;
+  const topicsToRender = initialForumTopics && initialForumTopics.length > 0
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ? initialForumTopics.map((t: any) => ({ ...t, href: t.href || `/comunidad?post=${t.id || slugify(t.title)}` }))
+    : defaultTopics;
+
+  // Auto-rotation carousel
+  useEffect(() => {
+    if (echoingIndex !== null) return;
+    autoRotateRef.current = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % 3);
+    }, 3500);
+    return () => clearInterval(autoRotateRef.current);
+  }, [echoingIndex]);
+
+  const handleCardClick = useCallback(
+    (index: number, href: string) => {
+      if (echoingIndex !== null) return;
+      setEchoingIndex(index);
+      setTimeout(() => {
+        router.push(href);
+      }, 700);
+    },
+    [echoingIndex, router]
+  );
+
+  const getCardPosition = useCallback(
+    (index: number) => {
+      const diff = (index - activeIndex + 3) % 3;
+      const offset = isMobile ? 44 : 72;
+      if (diff === 0)
+        return { y: 0, scale: 1, opacity: 1, rotateX: 0, rotateY: 0, zIndex: 30, shadow: true };
+      if (diff === 1)
+        return { y: offset, scale: isMobile ? 0.82 : 0.78, opacity: isMobile ? 0.35 : 0.45, rotateX: -3, rotateY: isMobile ? 0 : 6, zIndex: 28, shadow: false };
+      return { y: -offset, scale: isMobile ? 0.9 : 0.88, opacity: isMobile ? 0.55 : 0.65, rotateX: 3, rotateY: isMobile ? 0 : -6, zIndex: 29, shadow: false };
+    },
+    [activeIndex, isMobile]
+  );
 
   return (
-    <div className="container max-w-5xl mx-auto flex items-center justify-center p-4">
+    <div
+      onMouseMove={handleMouseMove}
+      className="relative w-full h-full flex items-center justify-center overflow-hidden"
+    >
+      {/* Cinematic gradient background layer */}
       <motion.div
-        animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : {}}
-        transition={isNavigating ? { duration: 0.8, ease: "easeInOut" } : {}}
-        style={{
-          rotateX: tilt4.rotateX,
-          rotateY: tilt4.rotateY,
-          transformStyle: "preserve-3d"
-        }}
-        onMouseMove={tilt4.handleMouseMove}
-        onMouseLeave={tilt4.handleMouseLeave}
-        className="w-full max-h-[85vh] overflow-y-auto sm:max-h-none sm:overflow-visible p-5 sm:p-8 lg:p-10 rounded-3xl bg-card/90 border border-primary/20 shadow-2xl hover:shadow-3xl transition-all duration-300 backdrop-blur-md grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-12 items-center scrollbar-hide"
+        className="absolute inset-0 pointer-events-none"
+        style={{ x: springBgX, y: springBgY }}
       >
+        <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.03] via-transparent to-primary/[0.03]" />
+        <motion.div
+          className="absolute top-1/3 -left-32 w-96 h-96 rounded-full"
+          style={{
+            background: "radial-gradient(circle, oklch(0.65 0.2 120 / 0.08), transparent 70%)",
+          }}
+          animate={{
+            x: [0, 70, 0, -50, 0],
+            y: [0, -50, 0, 40, 0],
+            scale: [1, 1.15, 0.9, 1.1, 1],
+          }}
+          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-1/3 -right-32 w-80 h-80 rounded-full"
+          style={{
+            background: "radial-gradient(circle, oklch(0.55 0.18 80 / 0.08), transparent 70%)",
+          }}
+          animate={{
+            x: [0, -60, 0, 50, 0],
+            y: [0, 60, 0, -40, 0],
+            scale: [1, 0.9, 1.15, 1, 1],
+          }}
+          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </motion.div>
+
+      {/* Floating icons */}
+      <div className="absolute inset-0 pointer-events-none">
+        {FLOATING_ICONS.map((item, i) => (
+          <FloatingIcon key={i} {...item} />
+        ))}
+      </div>
+
+      {/* Horizontal rule decorations */}
+      <motion.div
+        className="absolute top-[12%] left-0 w-full h-px pointer-events-none"
+        style={{
+          background: "linear-gradient(90deg, transparent, oklch(0.65 0.2 120 / 0.15), transparent)",
+        }}
+        animate={{ opacity: [0.2, 0.5, 0.2] }}
+        transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute bottom-[12%] left-0 w-full h-px pointer-events-none"
+        style={{
+          background: "linear-gradient(90deg, transparent, oklch(0.55 0.18 80 / 0.15), transparent)",
+        }}
+        animate={{ opacity: [0.15, 0.4, 0.15] }}
+        transition={{ duration: 5.5, delay: 1, repeat: Infinity, ease: "easeInOut" }}
+      />
+
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-16 items-center">
+        {/* Left column: text + stats */}
         <div className="flex flex-col">
-          <span className="text-[10px] sm:text-xs font-bold text-primary tracking-widest uppercase mb-2 block">
-          {t.comunidadPage.hero.badge}
-        </span>
-        <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-foreground mb-2 sm:mb-4 leading-tight">
-          {t.comunidadPage.hero.title} <span className="text-primary italic">{t.comunidadPage.hero.titleAccent}</span>
-        </h2>
-        <p className="text-muted-foreground text-xs sm:text-sm lg:text-base leading-relaxed mb-4 sm:mb-6">
-          {t.comunidadPage.hero.description}
-        </p>
+          {/* Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="mb-3 sm:mb-5"
+          >
+            <motion.span
+              className="inline-flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-xs font-bold text-accent/70 tracking-[0.25em] uppercase"
+              animate={{ letterSpacing: ["0.25em", "0.35em", "0.25em"] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <motion.span
+                className="inline-block w-1.5 h-1.5 rounded-full bg-accent"
+                animate={{ scale: [1, 1.5, 1], opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              />
+              {t.comunidadPage.hero.badge}
+            </motion.span>
+          </motion.div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-4 border-t border-border/50 pt-6 text-center">
-          <div className="p-2.5 bg-primary/5 rounded-2xl border border-primary/5">
-            <Users className="w-4.5 h-4.5 text-primary mx-auto mb-1" />
-            <h4 className="text-base sm:text-xl font-black text-foreground">{realStats?.users || 500}+</h4>
-            <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wide">
-              {language === "es" ? "Familias" : "Families"}
-            </p>
-          </div>
-          <div className="p-2.5 bg-primary/5 rounded-2xl border border-primary/5">
-            <MessageCircle className="w-4.5 h-4.5 text-primary mx-auto mb-1" />
-            <h4 className="text-base sm:text-xl font-black text-foreground">{realStats?.posts || 100}+</h4>
-            <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wide">
-              {language === "es" ? "Discusiones" : "Discussions"}
-            </p>
-          </div>
-          <div className="p-2.5 bg-primary/5 rounded-2xl border border-primary/5">
-            <ShoppingBag className="w-4.5 h-4.5 text-primary mx-auto mb-1" />
-            <h4 className="text-base sm:text-xl font-black text-foreground">{realStats?.products || 15}+</h4>
-            <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wide">
-              {language === "es" ? "Productos" : "Products"}
-            </p>
-          </div>
-        </div>
+          {/* Title */}
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="text-2xl sm:text-4xl lg:text-5xl font-black leading-tight mb-2 sm:mb-3"
+          >
+            {t.comunidadPage.hero.title}{" "}
+            <motion.span
+              className="inline-block bg-gradient-to-r from-accent via-primary to-accent bg-[length:200%_200%] bg-clip-text text-transparent"
+              style={{ animation: "gradient-community 4s ease-in-out infinite" }}
+            >
+              {t.comunidadPage.hero.titleAccent}
+            </motion.span>
+          </motion.h2>
 
-          <div className="mt-8 flex gap-4">
+          {/* Decorative line */}
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="h-0.5 w-16 sm:w-24 bg-gradient-to-r from-accent/60 via-primary/40 to-transparent rounded-full mb-4 sm:mb-5 origin-left"
+          />
+
+          {/* Description - word reveal */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.35, duration: 0.6 }}
+            className="text-muted-foreground/90 text-xs sm:text-base leading-relaxed mb-4 sm:mb-6 max-w-lg"
+          >
+            {t.comunidadPage.hero.description.split(" ").map((word: string, i: number) => (
+              <motion.span
+                key={i}
+                className="inline-block mr-[0.25em]"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  delay: 0.45 + i * 0.025,
+                  duration: 0.4,
+                  ease: [0.16, 1, 0.3, 1],
+                }}
+              >
+                {word}
+              </motion.span>
+            ))}
+          </motion.p>
+
+          {/* Stats Grid */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.6 }}
+            className="grid grid-cols-3 gap-2 sm:gap-4"
+          >
+            {[
+              { icon: Users, value: realStats?.users || 500, label: language === "es" ? "Familias" : "Families" },
+              { icon: MessageCircle, value: realStats?.posts || 100, label: language === "es" ? "Discusiones" : "Discussions" },
+              { icon: ShoppingBag, value: realStats?.products || 15, label: language === "es" ? "Productos" : "Products" },
+            ].map((stat, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 + i * 0.1, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                whileTap={{ scale: 0.97 }}
+                className="relative p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-accent/[0.04] border border-accent/10 overflow-hidden group cursor-default"
+              >
+                <div className="relative text-center">
+                  <motion.div
+                    animate={{ y: [0, -2, 0] }}
+                    transition={{ duration: 3, delay: i * 0.3, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <stat.icon className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-accent mx-auto mb-0.5 sm:mb-1" />
+                  </motion.div>
+                  <h4 className="text-sm sm:text-xl font-black text-foreground">{stat.value}+</h4>
+                  <p className="text-[8px] sm:text-[9px] text-muted-foreground uppercase font-bold tracking-wide mt-0.5">
+                    {stat.label}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* CTA */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.9, duration: 0.5 }}
+            className="mt-4 sm:mt-6"
+          >
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
-                setIsNavigating(true);
-                setTimeout(() => {
-                  router.push("/comunidad");
-                }, 800);
+                router.push("/comunidad");
               }}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary/10 border border-primary/20 text-primary px-6 py-3 text-sm font-bold hover:bg-primary hover:text-white transition-all w-full sm:w-auto cursor-pointer relative z-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent/10 border border-accent/20 text-accent px-5 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-bold hover:bg-accent hover:text-white transition-all duration-300 w-full sm:w-auto cursor-pointer relative z-50 active:scale-95 hover:shadow-lg hover:shadow-accent/20"
             >
-              <span>{t.comunidadPage.hero.ctaPrimary}</span>
+              <motion.span
+                animate={{ x: [0, 3, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                {t.comunidadPage.hero.ctaPrimary}
+              </motion.span>
             </button>
-          </div>
+          </motion.div>
         </div>
 
-        {/* Forum Simulation Right Column */}
-        <div className="relative w-full h-[260px] sm:h-[320px] lg:h-[400px] flex items-center justify-center perspective-[1000px] mt-4 lg:mt-0">
-          {topicsToRender.slice(0, 3).map((topic, i) => {
-            let visualIndex = i;
-            if (i === activeCardIndex) {
-              visualIndex = 0;
-            } else if (i < activeCardIndex) {
-              visualIndex = i + 1;
-            } else {
-              visualIndex = i;
-            }
+        {/* Right column: forum carousel */}
+        <motion.div
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="relative w-full h-[280px] sm:h-[340px] lg:h-[420px] flex items-center justify-center perspective-[1200px] mt-6 lg:mt-0"
+        >
+          {/* Carousel stage glow */}
+          <motion.div
+            className="absolute w-64 h-64 rounded-full blur-3xl pointer-events-none"
+            style={{
+              background: "radial-gradient(circle, oklch(0.65 0.2 120 / 0.1), transparent 70%)",
+            }}
+            animate={{
+              scale: [1, 1.3, 1],
+              opacity: [0.3, 0.6, 0.3],
+            }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          />
+
+          {topicsToRender.slice(0, 3).map((topic: {
+            title: string; author: string; avatar: string; participants: number;
+            posts: number; time: string; color: string; href: string;
+          }, i: number) => {
+            const pos = getCardPosition(i);
+            const isActive = pos.zIndex === 30;
+            const isEchoing = echoingIndex === i;
 
             return (
-            <motion.div
-              key={i}
-              layout
-              onClick={() => setActiveCardIndex(i)}
-              initial={{ opacity: 0, y: 50, scale: 0.9 }}
-              whileInView={{ opacity: 1 }}
-              animate={{ y: visualIndex * 60 - 60, scale: 1 - visualIndex * 0.06 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              style={{ zIndex: 30 - visualIndex }}
-              className={`absolute w-full max-w-[300px] sm:max-w-[340px] bg-background/95 border ${visualIndex === 0 ? "border-primary/40 shadow-primary/10" : "border-primary/20 shadow-primary/5"} p-4 sm:p-5 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col gap-3 sm:gap-4 cursor-pointer hover:!scale-105 hover:border-primary/50 transition-colors duration-300 group`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-muted border border-border">
-                    <img src={topic.avatar} alt={topic.author} className="w-full h-full object-cover" />
-                  </div>
-                  <div>
-                    <p className="text-xs sm:text-sm font-semibold text-foreground leading-none">{topic.author}</p>
-                    <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-1 font-medium">{topic.time} {language === "es" ? "atrás" : "ago"}</p>
-                  </div>
-                </div>
-                <div className="flex -space-x-2">
-                  <div className="w-6 h-6 rounded-full bg-primary/20 border-2 border-background z-20 flex items-center justify-center overflow-hidden">
-                    <img src="https://api.dicebear.com/7.x/notionists/svg?seed=User1" className="w-full h-full opacity-70" />
-                  </div>
-                  <div className="w-6 h-6 rounded-full bg-accent/20 border-2 border-background z-10 flex items-center justify-center overflow-hidden">
-                    <img src="https://api.dicebear.com/7.x/notionists/svg?seed=User2" className="w-full h-full opacity-70" />
-                  </div>
-                  <div className="w-6 h-6 rounded-full bg-muted border-2 border-background z-0 flex items-center justify-center text-[9px] font-bold text-foreground">
-                    +{topic.participants}
-                  </div>
-                </div>
-              </div>
+              <motion.div
+                key={i}
+                layout
+                initial={{ opacity: 0, y: 80, scale: 0.8, rotateX: 15 }}
+                animate={{
+                  y: pos.y,
+                  scale: pos.scale,
+                  opacity: isEchoing ? 0 : pos.opacity,
+                  rotateX: pos.rotateX,
+                  rotateY: pos.rotateY,
+                }}
+                exit={{ opacity: 0, scale: 0.8, y: 40 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 350,
+                  damping: 26,
+                  mass: isActive ? 0.7 : 0.9,
+                }}
+                whileHover={
+                  !isMobile && isActive && echoingIndex === null
+                    ? {
+                        y: -6,
+                        scale: 1.04,
+                        rotateX: 0,
+                        rotateY: 0,
+                        transition: { type: "spring", stiffness: 400, damping: 20 },
+                      }
+                    : {}
+                }
+                whileTap={isActive && echoingIndex === null ? { scale: 0.96 } : {}}
+                onClick={() => handleCardClick(i, topic.href)}
+                style={{
+                  zIndex: pos.zIndex,
+                  transformStyle: "preserve-3d",
+                }}
+                className={`absolute w-full max-w-none sm:max-w-[340px] select-none ${
+                  isActive
+                    ? "bg-background/85 sm:bg-background/90 border-accent/40 shadow-accent/10 shadow-2xl cursor-pointer"
+                    : "bg-background/60 sm:bg-background/70 border-accent/10 shadow-lg cursor-pointer"
+                } border p-3.5 sm:p-5 rounded-2xl sm:backdrop-blur-xl backdrop-blur-md flex flex-col gap-2.5 sm:gap-4 group overflow-hidden`}
+              >
+                {/* Echo ripple overlay */}
+                <AnimatePresence>
+                  {isEchoing && (
+                    <motion.div
+                      key="echo"
+                      className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
+                      initial={{ scale: 0, opacity: 0.9 }}
+                      animate={{ scale: 3, opacity: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    >
+                      <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-r from-accent/30 via-primary/30 to-accent/30 blur-2xl" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-              <h4 className="text-sm sm:text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug">
-                {topic.title}
-              </h4>
+                {/* Card content — shrink on echo */}
+                <motion.div
+                  className="relative flex flex-col gap-2.5 sm:gap-4"
+                  animate={isEchoing ? { scale: 0.9, opacity: 0, filter: "blur(4px)" } : {}}
+                  transition={{ duration: 0.5 }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-muted border border-border shrink-0">
+                        <img src={topic.avatar} alt={topic.author} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] sm:text-sm font-semibold text-foreground leading-none truncate">{topic.author}</p>
+                        <p className="text-[9px] sm:text-[11px] text-muted-foreground mt-0.5 sm:mt-1 font-medium">{topic.time} {language === "es" ? "atrás" : "ago"}</p>
+                      </div>
+                    </div>
+                    <div className="flex -space-x-1.5 sm:-space-x-2 shrink-0">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/20 border-2 border-background z-20 flex items-center justify-center overflow-hidden">
+                        <img src="https://api.dicebear.com/7.x/notionists/svg?seed=User1" alt="" className="w-full h-full opacity-70" />
+                      </div>
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-accent/20 border-2 border-background z-10 flex items-center justify-center overflow-hidden">
+                        <img src="https://api.dicebear.com/7.x/notionists/svg?seed=User2" alt="" className="w-full h-full opacity-70" />
+                      </div>
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-muted border-2 border-background z-0 flex items-center justify-center text-[8px] sm:text-[9px] font-bold text-foreground">
+                        +{topic.participants}
+                      </div>
+                    </div>
+                  </div>
 
-              <div className="flex items-center justify-between mt-1 pt-3 border-t border-border/50">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                    <MessageCircle className="w-4 h-4 text-primary/70" />
-                    <span>{topic.posts} {language === "es" ? "respuestas" : "replies"}</span>
+                  <h4 className="text-xs sm:text-base font-bold text-foreground group-hover:text-accent transition-colors line-clamp-2 leading-snug">
+                    {topic.title}
+                  </h4>
+
+                  <div className="flex items-center justify-between pt-2 sm:pt-3 border-t border-border/50">
+                    <div className="flex items-center gap-2 sm:gap-4">
+                      <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-semibold text-muted-foreground">
+                        <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 text-accent/70" />
+                        <span>{topic.posts}</span>
+                      </div>
+                      <div className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-semibold text-muted-foreground">
+                        <Users className="w-3 h-3 sm:w-4 sm:h-4 text-accent/70" />
+                        <span>{topic.participants}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      <span className="text-[8px] sm:text-[10px] font-bold uppercase text-muted-foreground/70 tracking-wider">
+                        {isActive ? (language === "es" ? "Activo" : "Active") : (language === "es" ? "Explorar" : "Explore")}
+                      </span>
+                      <motion.div
+                        className={`w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full ${topic.color} ${isActive ? "shadow-[0_0_8px_rgba(16,185,129,0.6)]" : "opacity-50"}`}
+                        animate={isActive ? { scale: [1, 1.3, 1] } : {}}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                    <Users className="w-4 h-4 text-primary/70" />
-                    <span>{topic.participants}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">
-                    {visualIndex === 0 ? (language === "es" ? "Activo" : "Active") : (language === "es" ? "Visto" : "Viewed")}
-                  </span>
-                  <div className={`w-2.5 h-2.5 rounded-full ${topic.color} ${visualIndex === 0 ? "animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]" : "opacity-50"}`} />
-                </div>
-              </div>
-            </motion.div>
-          )})}
-        </div>
-      </motion.div>
+                </motion.div>
+              </motion.div>
+            );
+          })}
+
+          {/* Carousel nav dots */}
+          {!isMobile && (
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex items-center gap-2 z-40">
+            {[0, 1, 2].map((i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  if (echoingIndex === null) {
+                    setActiveIndex(i);
+                  }
+                }}
+                className="group relative w-8 h-8 flex items-center justify-center"
+              >
+                <motion.span
+                  className={`block rounded-full transition-all duration-300 ${
+                    i === activeIndex
+                      ? "bg-accent"
+                      : "bg-accent/30 group-hover:bg-accent/60"
+                  }`}
+                  animate={
+                    i === activeIndex
+                      ? { width: 20, height: 6, borderRadius: 3 }
+                      : { width: 6, height: 6, borderRadius: 9999 }
+                  }
+                  style={{ borderRadius: i === activeIndex ? 3 : 9999 }}
+                />
+              </button>
+            ))}
+          </div>
+          )}
+        </motion.div>
+      </div>
+
+      <style>{`
+        @keyframes gradient-community {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+      `}</style>
     </div>
   );
 };
