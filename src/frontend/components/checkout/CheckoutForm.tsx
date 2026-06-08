@@ -17,17 +17,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/context/LanguageContext";
 import { User, Mail, Phone, MapPin, Building2, FileText } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectLabel,
-  SelectGroup,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { PAYMENT_METHODS } from "@/utils/PaymentsMethods";
+import { CitySelect } from "./CitySelect";
 
 interface CheckoutFormProps {
   onSubmit: (data: CheckoutValues) => void;
@@ -138,36 +130,12 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
                   <Building2 className="w-4 h-4 text-primary" />
                   {t.checkout.city}
                 </FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger className="bg-background/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 rounded-xl h-12 transition-all">
-                      <SelectValue placeholder="Selecciona una ciudad" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent
-                    position="popper"
-                    className="bg-background/90 backdrop-blur-xl border-border/50 rounded-xl shadow-2xl shadow-black/10 max-h-72"
-                  >
-                    {cityZones.map((zone) => (
-                      <React.Fragment key={zone.name}>
-                        <SelectGroup>
-                          <SelectLabel className="text-[10px] font-black uppercase tracking-widest text-primary/70 px-3 py-1.5">
-                            {zone.name}
-                          </SelectLabel>
-                          {zone.cities.map((city) => (
-                            <SelectItem
-                              key={city}
-                              value={city}
-                              className="rounded-lg focus:bg-primary/10 focus:text-foreground py-2.5 pl-8"
-                            >
-                              {city}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </React.Fragment>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CitySelect
+                  zones={cityZones}
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="Selecciona una ciudad"
+                />
                 <FormMessage />
               </FormItem>
             )}
