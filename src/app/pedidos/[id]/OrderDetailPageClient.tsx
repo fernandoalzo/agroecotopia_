@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useLanguage } from "@/context/LanguageContext";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw, Copy, Check, ChevronRight, MessageSquare, Tag } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
@@ -741,40 +741,7 @@ export default function OrderDetailPageClient({
                   Tu pedido está siendo procesado bajo nuestros estándares de calidad agroecológica. Si tienes dudas, contáctanos.
                 </p>
               </div>
-              {orderStoreIds.length > 0 && (
-                <div className="rounded-3xl border border-border/60 bg-card p-6 space-y-4">
-                  <div className="flex items-center gap-3 text-primary">
-                    <MessageSquare className="h-5 w-5" />
-                    <span className="font-bold text-sm">Chat con vendedor</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Escríbele al vendedor asociado a este pedido mientras siga abierto.
-                  </p>
-                  <div className="space-y-2">
-                    {orderStoreIds.map((storeId, index) => (
-                      <Button
-                        key={storeId}
-                        variant="outline"
-                        className="relative w-full rounded-2xl justify-start"
-                        onClick={() => handleOpenSellerChat(storeId)}
-                        disabled={isOrderChatDisabled || isOpeningChat}
-                      >
-                        {isOpeningChat ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <MessageSquare className="mr-2 h-4 w-4" />
-                        )}
-                        {orderStoreIds.length > 1 ? `Vendedor ${index + 1}` : "Abrir chat"}
-                        {getUnreadChatCount(storeId) > 0 ? (
-                          <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white animate-pulse shadow-md shadow-red-500/30 border-2 border-background">
-                            {getUnreadChatCount(storeId)}
-                          </span>
-                        ) : null}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
+
             </div>
           </div>
         </div>
@@ -800,6 +767,41 @@ export default function OrderDetailPageClient({
           onClose={() => setOrderChat(null)}
           onMarkAsRead={handleMarkOrderChatAsRead}
         />
+      )}
+
+      {/* Floating Chat Button */}
+      {orderStoreIds.length > 0 && !orderChat && (
+        <div className="fixed bottom-6 right-6 z-[998]">
+          <AnimatePresence>
+            <motion.button
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.9 }}
+              onClick={() => handleOpenSellerChat(orderStoreIds[0])}
+              disabled={isOrderChatDisabled || isOpeningChat}
+              className="flex items-center gap-3 rounded-full bg-primary px-5 py-3.5 text-primary-foreground shadow-lg transition-all hover:scale-105 hover:shadow-xl active:scale-95 disabled:opacity-70"
+            >
+              {isOpeningChat ? (
+                <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+              ) : (
+                <MessageSquare className="h-5 w-5 shrink-0" />
+              )}
+              <span className="text-sm font-semibold whitespace-nowrap">
+                {session?.user?.id === order.usuarioId
+                  ? "Habla con el vendedor"
+                  : `Habla con ${order.usuario?.name || "el cliente"}`}
+              </span>
+              {(() => {
+                const totalUnread = orderStoreIds.reduce((sum, sid) => sum + getUnreadChatCount(sid), 0);
+                return totalUnread > 0 ? (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-primary">
+                    {totalUnread > 9 ? "9+" : totalUnread}
+                  </span>
+                ) : null;
+              })()}
+            </motion.button>
+          </AnimatePresence>
+        </div>
       )}
     </div>
   );

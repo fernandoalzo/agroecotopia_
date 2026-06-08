@@ -64,9 +64,21 @@ export class OrdersRepository {
     return await client.pedido.findUnique({
       where: { id },
       include: {
+        usuario: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         detalles: {
           include: {
             producto: true,
+            store: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
