@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { motion, useMotionValue, useTransform, useSpring, AnimatePresence } from "framer-motion";
+import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Users, Globe, MessageCircle, ShoppingBag, TreePine, Bird } from "lucide-react";
 
@@ -36,30 +36,26 @@ function FloatingIcon({
   duration: number;
 }) {
   return (
-    <motion.div
+    <div
       className="absolute pointer-events-none"
-      style={{ left: `${x}%`, top: `${y}%` }}
-      initial={{ opacity: 0, scale: 0 }}
-      animate={{
-        opacity: [0, 0.2, 0.1, 0.2, 0],
-        scale: [0, 1, 0.85, 1, 0],
-        x: [0, driftX * 0.3, driftX * 0.7, driftX, 0],
-        y: [0, driftY * 0.3, driftY * 0.7, driftY, 0],
-        rotate: [0, -15, 10, -5, 0],
-      }}
-      transition={{
-        duration,
-        delay,
-        repeat: Infinity,
-        ease: "easeInOut",
-        times: [0, 0.25, 0.5, 0.75, 1],
-      }}
+      style={{
+        left: `${x}%`,
+        top: `${y}%`,
+        willChange: "transform",
+        animation: `community-float ${duration}s ease-in-out ${delay}s infinite`,
+        "--dx1": `${driftX * 0.3}px`,
+        "--dy1": `${driftY * 0.3}px`,
+        "--dx2": `${driftX * 0.7}px`,
+        "--dy2": `${driftY * 0.7}px`,
+        "--dx3": `${driftX}px`,
+        "--dy3": `${driftY}px`,
+      } as React.CSSProperties}
     >
       <div className="relative">
         <div className="absolute inset-0 bg-accent/20 rounded-full blur-xl scale-150" />
         <Icon className="text-accent/30" style={{ width: size, height: size }} />
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -176,6 +172,8 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
     [activeIndex, isMobile]
   );
 
+  const words = t.comunidadPage.hero.description.split(" ");
+
   return (
     <div
       onMouseMove={handleMouseMove}
@@ -187,29 +185,21 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
         style={{ x: springBgX, y: springBgY }}
       >
         <div className="absolute inset-0 bg-gradient-to-br from-accent/[0.03] via-transparent to-primary/[0.03]" />
-        <motion.div
+        <div
           className="absolute top-1/3 -left-32 w-96 h-96 rounded-full"
           style={{
+            willChange: "transform",
+            animation: "community-orb-a 22s ease-in-out infinite",
             background: "radial-gradient(circle, oklch(0.65 0.2 120 / 0.08), transparent 70%)",
           }}
-          animate={{
-            x: [0, 70, 0, -50, 0],
-            y: [0, -50, 0, 40, 0],
-            scale: [1, 1.15, 0.9, 1.1, 1],
-          }}
-          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
         />
-        <motion.div
+        <div
           className="absolute bottom-1/3 -right-32 w-80 h-80 rounded-full"
           style={{
+            willChange: "transform",
+            animation: "community-orb-b 20s ease-in-out infinite",
             background: "radial-gradient(circle, oklch(0.55 0.18 80 / 0.08), transparent 70%)",
           }}
-          animate={{
-            x: [0, -60, 0, 50, 0],
-            y: [0, 60, 0, -40, 0],
-            scale: [1, 0.9, 1.15, 1, 1],
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
         />
       </motion.div>
 
@@ -221,21 +211,19 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
       </div>
 
       {/* Horizontal rule decorations */}
-      <motion.div
+      <div
         className="absolute top-[12%] left-0 w-full h-px pointer-events-none"
         style={{
           background: "linear-gradient(90deg, transparent, oklch(0.65 0.2 120 / 0.15), transparent)",
+          animation: "community-line 4.5s ease-in-out infinite",
         }}
-        animate={{ opacity: [0.2, 0.5, 0.2] }}
-        transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
       />
-      <motion.div
+      <div
         className="absolute bottom-[12%] left-0 w-full h-px pointer-events-none"
         style={{
           background: "linear-gradient(90deg, transparent, oklch(0.55 0.18 80 / 0.15), transparent)",
+          animation: "community-line 5.5s ease-in-out 1s infinite",
         }}
-        animate={{ opacity: [0.15, 0.4, 0.15] }}
-        transition={{ duration: 5.5, delay: 1, repeat: Infinity, ease: "easeInOut" }}
       />
 
       {/* Content */}
@@ -249,18 +237,19 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             className="mb-3 sm:mb-5"
           >
-            <motion.span
+            <span
               className="inline-flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-xs font-bold text-accent/70 tracking-[0.25em] uppercase"
-              animate={{ letterSpacing: ["0.25em", "0.35em", "0.25em"] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              style={{ animation: "badge-letter-space 3s ease-in-out infinite" }}
             >
-              <motion.span
+              <span
                 className="inline-block w-1.5 h-1.5 rounded-full bg-accent"
-                animate={{ scale: [1, 1.5, 1], opacity: [0.7, 1, 0.7] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                style={{
+                  willChange: "transform",
+                  animation: "dot-pulse 2s ease-in-out infinite",
+                }}
               />
               {t.comunidadPage.hero.badge}
-            </motion.span>
+            </span>
           </motion.div>
 
           {/* Title */}
@@ -271,12 +260,12 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
             className="text-2xl sm:text-4xl lg:text-5xl font-black leading-tight mb-2 sm:mb-3"
           >
             {t.comunidadPage.hero.title}{" "}
-            <motion.span
+            <span
               className="inline-block bg-gradient-to-r from-accent via-primary to-accent bg-[length:200%_200%] bg-clip-text text-transparent"
               style={{ animation: "gradient-community 4s ease-in-out infinite" }}
             >
               {t.comunidadPage.hero.titleAccent}
-            </motion.span>
+            </span>
           </motion.h2>
 
           {/* Decorative line */}
@@ -287,29 +276,20 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
             className="h-0.5 w-16 sm:w-24 bg-gradient-to-r from-accent/60 via-primary/40 to-transparent rounded-full mb-4 sm:mb-5 origin-left"
           />
 
-          {/* Description - word reveal */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.35, duration: 0.6 }}
-            className="text-muted-foreground/90 text-xs sm:text-base leading-relaxed mb-4 sm:mb-6 max-w-lg"
-          >
-            {t.comunidadPage.hero.description.split(" ").map((word: string, i: number) => (
-              <motion.span
+          {/* Description - CSS word reveal */}
+          <p className="text-muted-foreground/90 text-xs sm:text-base leading-relaxed mb-4 sm:mb-6 max-w-lg">
+            {words.map((word: string, i: number) => (
+              <span
                 key={i}
                 className="inline-block mr-[0.25em]"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  delay: 0.45 + i * 0.025,
-                  duration: 0.4,
-                  ease: [0.16, 1, 0.3, 1],
+                style={{
+                  animation: `word-fade 0.4s ease-out ${0.45 + i * 0.025}s both`,
                 }}
               >
                 {word}
-              </motion.span>
+              </span>
             ))}
-          </motion.p>
+          </p>
 
           {/* Stats Grid */}
           <motion.div
@@ -332,12 +312,13 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
                 className="relative p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-accent/[0.04] border border-accent/10 overflow-hidden group cursor-default"
               >
                 <div className="relative text-center">
-                  <motion.div
-                    animate={{ y: [0, -2, 0] }}
-                    transition={{ duration: 3, delay: i * 0.3, repeat: Infinity, ease: "easeInOut" }}
+                  <div
+                    style={{
+                      animation: `stat-float 3s ease-in-out ${i * 0.3}s infinite`,
+                    }}
                   >
                     <stat.icon className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-accent mx-auto mb-0.5 sm:mb-1" />
-                  </motion.div>
+                  </div>
                   <h4 className="text-sm sm:text-xl font-black text-foreground">{stat.value}+</h4>
                   <p className="text-[8px] sm:text-[9px] text-muted-foreground uppercase font-bold tracking-wide mt-0.5">
                     {stat.label}
@@ -362,12 +343,9 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
               }}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent/10 border border-accent/20 text-accent px-5 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-bold hover:bg-accent hover:text-white transition-all duration-300 w-full sm:w-auto cursor-pointer relative z-50 active:scale-95 hover:shadow-lg hover:shadow-accent/20"
             >
-              <motion.span
-                animate={{ x: [0, 3, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              >
+              <span style={{ animation: "cta-shift 2s ease-in-out infinite" }}>
                 {t.comunidadPage.hero.ctaPrimary}
-              </motion.span>
+              </span>
             </button>
           </motion.div>
         </div>
@@ -380,16 +358,13 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
           className="relative w-full h-[280px] sm:h-[340px] lg:h-[420px] flex items-center justify-center perspective-[1200px] mt-6 lg:mt-0"
         >
           {/* Carousel stage glow */}
-          <motion.div
+          <div
             className="absolute w-64 h-64 rounded-full blur-3xl pointer-events-none"
             style={{
+              willChange: "transform",
+              animation: "carousel-glow 4s ease-in-out infinite",
               background: "radial-gradient(circle, oklch(0.65 0.2 120 / 0.1), transparent 70%)",
             }}
-            animate={{
-              scale: [1, 1.3, 1],
-              opacity: [0.3, 0.6, 0.3],
-            }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           />
 
           {topicsToRender.slice(0, 3).map((topic: {
@@ -403,7 +378,6 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
             return (
               <motion.div
                 key={i}
-                layout
                 initial={{ opacity: 0, y: 80, scale: 0.8, rotateX: 15 }}
                 animate={{
                   y: pos.y,
@@ -412,7 +386,6 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
                   rotateX: pos.rotateX,
                   rotateY: pos.rotateY,
                 }}
-                exit={{ opacity: 0, scale: 0.8, y: 40 }}
                 transition={{
                   type: "spring",
                   stiffness: 350,
@@ -435,6 +408,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
                 style={{
                   zIndex: pos.zIndex,
                   transformStyle: "preserve-3d",
+                  willChange: "transform",
                 }}
                 className={`absolute w-full max-w-none sm:max-w-[340px] select-none ${
                   isActive
@@ -443,20 +417,22 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
                 } border p-3.5 sm:p-5 rounded-2xl sm:backdrop-blur-xl backdrop-blur-md flex flex-col gap-2.5 sm:gap-4 group overflow-hidden`}
               >
                 {/* Echo ripple overlay */}
-                <AnimatePresence>
-                  {isEchoing && (
-                    <motion.div
-                      key="echo"
-                      className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
-                      initial={{ scale: 0, opacity: 0.9 }}
-                      animate={{ scale: 3, opacity: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-                    >
-                      <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-r from-accent/30 via-primary/30 to-accent/30 blur-2xl" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {isEchoing && (
+                  <div
+                    className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
+                    style={{
+                      animation: "echo-ripple 0.6s ease-out forwards",
+                    }}
+                  >
+                    <div
+                      className="w-24 h-24 sm:w-32 sm:h-32 rounded-full"
+                      style={{
+                        background: "radial-gradient(circle, oklch(0.65 0.2 120 / 0.3), oklch(0.55 0.18 80 / 0.3), transparent)",
+                        animation: "echo-expand 0.6s ease-out forwards",
+                      }}
+                    />
+                  </div>
+                )}
 
                 {/* Card content — shrink on echo */}
                 <motion.div
@@ -506,10 +482,12 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
                       <span className="text-[8px] sm:text-[10px] font-bold uppercase text-muted-foreground/70 tracking-wider">
                         {isActive ? (language === "es" ? "Activo" : "Active") : (language === "es" ? "Explorar" : "Explore")}
                       </span>
-                      <motion.div
+                      <div
                         className={`w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full ${topic.color} ${isActive ? "shadow-[0_0_8px_rgba(16,185,129,0.6)]" : "opacity-50"}`}
-                        animate={isActive ? { scale: [1, 1.3, 1] } : {}}
-                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        style={isActive ? {
+                          willChange: "transform",
+                          animation: "dot-pulse 2s ease-in-out infinite",
+                        } : {}}
                       />
                     </div>
                   </div>
@@ -531,18 +509,14 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
                 }}
                 className="group relative w-8 h-8 flex items-center justify-center"
               >
-                <motion.span
-                  className={`block rounded-full transition-all duration-300 ${
-                    i === activeIndex
-                      ? "bg-accent"
-                      : "bg-accent/30 group-hover:bg-accent/60"
-                  }`}
-                  animate={
-                    i === activeIndex
-                      ? { width: 20, height: 6, borderRadius: 3 }
-                      : { width: 6, height: 6, borderRadius: 9999 }
-                  }
-                  style={{ borderRadius: i === activeIndex ? 3 : 9999 }}
+                <span
+                  className={`block ${i === activeIndex ? "bg-accent" : "bg-accent/30 group-hover:bg-accent/60"}`}
+                  style={{
+                    transition: "all 0.3s",
+                    width: i === activeIndex ? 20 : 6,
+                    height: 6,
+                    borderRadius: i === activeIndex ? 3 : 9999,
+                  }}
                 />
               </button>
             ))}
@@ -555,6 +529,61 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
         @keyframes gradient-community {
           0%, 100% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }
+        }
+        @keyframes dot-pulse {
+          0%, 100% { transform: scale(1); opacity: 0.7; }
+          50% { transform: scale(1.3); opacity: 1; }
+        }
+        @keyframes badge-letter-space {
+          0%, 100% { letter-spacing: 0.25em; }
+          50% { letter-spacing: 0.35em; }
+        }
+        @keyframes word-fade {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes stat-float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-2px); }
+        }
+        @keyframes cta-shift {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(3px); }
+        }
+        @keyframes community-float {
+          0% { opacity: 0; transform: translate(0, 0) scale(0) rotate(0deg); }
+          25% { opacity: 0.2; transform: translate(var(--dx1), var(--dy1)) scale(1) rotate(-15deg); }
+          50% { opacity: 0.1; transform: translate(var(--dx2), var(--dy2)) scale(0.85) rotate(10deg); }
+          75% { opacity: 0.2; transform: translate(var(--dx3), var(--dy3)) scale(1) rotate(-5deg); }
+          100% { opacity: 0; transform: translate(0, 0) scale(0) rotate(0deg); }
+        }
+        @keyframes community-orb-a {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          25% { transform: translate(70px, -50px) scale(1.15); }
+          50% { transform: translate(0, 0) scale(0.9); }
+          75% { transform: translate(-50px, 40px) scale(1.1); }
+        }
+        @keyframes community-orb-b {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          25% { transform: translate(-60px, 60px) scale(0.9); }
+          50% { transform: translate(0, 0) scale(1.15); }
+          75% { transform: translate(50px, -40px) scale(1); }
+        }
+        @keyframes community-line {
+          0%, 100% { opacity: 0.2; }
+          50% { opacity: 0.5; }
+        }
+        @keyframes carousel-glow {
+          0%, 100% { transform: scale(1); opacity: 0.3; }
+          50% { transform: scale(1.3); opacity: 0.6; }
+        }
+        @keyframes echo-ripple {
+          0% { transform: scale(0.3); opacity: 0.5; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
+        @keyframes echo-expand {
+          0% { transform: scale(0); opacity: 0.8; }
+          100% { transform: scale(1); opacity: 0; }
         }
       `}</style>
     </div>
