@@ -338,7 +338,8 @@ export class OrdersService {
       subtotal: Number(detalle.subtotal),
       producto: detalle.producto ? {
         ...detalle.producto,
-        stock: Number(detalle.producto.stock)
+        stock: Number(detalle.producto.stock),
+        peso: detalle.producto.peso ? Number(detalle.producto.peso) : null,
       } : undefined
     };
   }
