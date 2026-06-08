@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useLanguage } from "@/context/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw, Copy, Check, ChevronRight, MessageSquare, Tag } from "lucide-react";
+import { ArrowLeft, ArrowRightCircle, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw, Copy, Check, ChevronRight, ChevronDown, MessageSquare, Tag } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
@@ -29,35 +29,56 @@ import { Loader2 } from "lucide-react";
 
 const log = logger.child("src/app/pedidos/[id]/page.tsx");
 
+const getNextStatuses = (current: PedidoEstado): PedidoEstado[] => {
+  switch (current) {
+    case PedidoEstado.PENDIENTE:
+      return [PedidoEstado.CONFIRMADO, PedidoEstado.CANCELADO];
+    case PedidoEstado.CONFIRMADO:
+      return [PedidoEstado.EN_PREPARACION, PedidoEstado.CANCELADO];
+    case PedidoEstado.EN_PREPARACION:
+      return [PedidoEstado.EN_CAMINO, PedidoEstado.CANCELADO];
+    case PedidoEstado.EN_CAMINO:
+      return [PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO];
+    default:
+      return [];
+  }
+};
+
 const statusConfig = {
   [PedidoEstado.PENDIENTE]: {
     label: "Pendiente",
     color: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+    btnClass: "bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white dark:hover:bg-amber-500 dark:hover:text-black hover:border-amber-500/50 hover:shadow-[0_4px_12px_rgba(245,158,11,0.2)]",
     icon: Clock,
   },
   [PedidoEstado.CONFIRMADO]: {
     label: "Confirmado",
     color: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    btnClass: "bg-blue-500/10 dark:bg-blue-500/5 border border-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white dark:hover:bg-blue-500 dark:hover:text-black hover:border-blue-500/50 hover:shadow-[0_4px_12px_rgba(59,130,246,0.2)]",
     icon: CheckCircle2,
   },
   [PedidoEstado.EN_PREPARACION]: {
     label: "En Preparación",
     color: "bg-indigo-500/10 text-indigo-600 border-indigo-500/20",
+    btnClass: "bg-indigo-500/10 dark:bg-indigo-500/5 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black hover:border-indigo-500/50 hover:shadow-[0_4px_12px_rgba(99,102,241,0.2)]",
     icon: Timer,
   },
   [PedidoEstado.EN_CAMINO]: {
     label: "En Camino",
     color: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+    btnClass: "bg-purple-500/10 dark:bg-purple-500/5 border border-purple-500/20 text-purple-600 dark:text-purple-400 hover:bg-purple-500 hover:text-white dark:hover:bg-purple-500 dark:hover:text-black hover:border-purple-500/50 hover:shadow-[0_4px_12px_rgba(168,85,247,0.2)]",
     icon: Truck,
   },
   [PedidoEstado.ENTREGADO]: {
     label: "Entregado",
     color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
+    btnClass: "bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-500 dark:hover:text-black hover:border-emerald-500/50 hover:shadow-[0_4px_12px_rgba(16,185,129,0.2)]",
     icon: Package,
   },
   [PedidoEstado.CANCELADO]: {
     label: "Cancelado",
     color: "bg-rose-500/10 text-rose-600 border-rose-500/20",
+    btnClass: "bg-rose-500/10 dark:bg-rose-500/5 border border-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-500 hover:text-white dark:hover:bg-rose-500 dark:hover:text-white hover:border-rose-500/50 hover:shadow-[0_4px_12px_rgba(244,63,94,0.2)]",
     icon: XCircle,
   },
 };
@@ -73,6 +94,7 @@ interface OrderDetailPageClientProps {
   getSellerOrderConversations: (storeId: string) => Promise<any>;
   getUserOrderConversations: () => Promise<any>;
   markConversationAsRead: (conversationId: string) => Promise<any>;
+  updateStoreOrderStatus: (storeId: string, pedidoId: string, nuevoEstado: PedidoEstado) => Promise<any>;
 }
 
 export default function OrderDetailPageClient({
@@ -86,6 +108,7 @@ export default function OrderDetailPageClient({
   getSellerOrderConversations,
   getUserOrderConversations,
   markConversationAsRead,
+  updateStoreOrderStatus,
 }: OrderDetailPageClientProps) {
   const { status, data: session } = useSession();
   const router = useRouter();
@@ -108,6 +131,22 @@ export default function OrderDetailPageClient({
     isLoading: boolean;
     unreadCount: number;
   } | null>(null);
+
+  // ─── Seller-specific state ───
+  const [confirmingStatus, setConfirmingStatus] = useState<PedidoEstado | null>(null);
+  const [showStatusOptions, setShowStatusOptions] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  const isBuyer = session?.user?.id === order?.usuarioId;
+  const sellerStore: { id: string; name: string } | null = React.useMemo(() => {
+    if (!order || !session?.user?.id || isBuyer) return null;
+    for (const detalle of order.detalles || []) {
+      if (detalle.store?.ownerId === session.user.id) {
+        return { id: detalle.store.id, name: detalle.store.name };
+      }
+    }
+    return null;
+  }, [order, session?.user?.id, isBuyer]);
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -420,6 +459,25 @@ export default function OrderDetailPageClient({
     setOrderChat((current) => (current ? { ...current, unreadCount: 0 } : current));
   };
 
+  const handleUpdateStatus = async (nuevoEstado: PedidoEstado) => {
+    if (!sellerStore) return;
+    setIsUpdatingStatus(true);
+    try {
+      const result = await updateStoreOrderStatus(sellerStore.id, order.id, nuevoEstado);
+      if (result && "error" in result) {
+        toast.error("Error", { description: result.error });
+      } else {
+        toast.success("Estado actualizado", { description: `Pedido cambiado a ${statusConfig[nuevoEstado].label}` });
+        setOrder((prev: any) => prev ? { ...prev, estado: nuevoEstado } : prev);
+        setConfirmingStatus(null);
+      }
+    } catch {
+      toast.error("Error", { description: "No se pudo actualizar el estado del pedido." });
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   if (loading || (status === "loading" && !session)) {
     return <Loading fullScreen />;
   }
@@ -495,19 +553,21 @@ export default function OrderDetailPageClient({
             <div className="flex flex-col items-end gap-4">
               <StatusIcon className={cn("h-16 w-16 opacity-20", statusConfig[order.estado as PedidoEstado].color.split(" ")[1])} />
 
-              <Button
-                variant="outline"
-                className="rounded-2xl border-primary/20 text-primary hover:bg-primary/5 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
-                onClick={handleRepeatOrder}
-                disabled={isRepeating}
-              >
-                {isRepeating ? (
-                  <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : (
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                )}
-                {isRepeating ? "Repitiendo..." : "Repetir pedido"}
-              </Button>
+              {isBuyer && (
+                <Button
+                  variant="outline"
+                  className="rounded-2xl border-primary/20 text-primary hover:bg-primary/5 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
+                  onClick={handleRepeatOrder}
+                  disabled={isRepeating}
+                >
+                  {isRepeating ? (
+                    <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  {isRepeating ? "Repitiendo..." : "Repetir pedido"}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -661,7 +721,106 @@ export default function OrderDetailPageClient({
                     );
                   })()}
 
-                  {order.estado === PedidoEstado.PENDIENTE && (
+                  {/* ─── Progress Timeline (buyer view) ─── */}
+                  {isBuyer && (
+                    <div className="mt-8 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                          <RefreshCw className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold">Progreso del pedido</h4>
+                          <p className="text-[11px] text-muted-foreground">
+                            Estado actual: <span className="font-semibold text-foreground">{statusConfig[order.estado as PedidoEstado].label}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {(() => {
+                        const allStatuses: PedidoEstado[] = [
+                          PedidoEstado.PENDIENTE,
+                          PedidoEstado.CONFIRMADO,
+                          PedidoEstado.EN_PREPARACION,
+                          PedidoEstado.EN_CAMINO,
+                          PedidoEstado.ENTREGADO,
+                        ];
+                        const currentIdx = allStatuses.indexOf(order.estado as PedidoEstado);
+                        const isCancelled = order.estado === PedidoEstado.CANCELADO;
+
+                        return (
+                          <div className="relative px-1">
+                            <div className="absolute left-6 top-0 bottom-0 w-px bg-border/60" />
+
+                            <div className="relative space-y-0">
+                              {allStatuses.map((status, idx) => {
+                                const StatusIcon = statusConfig[status].icon;
+                                const isCompleted = idx <= currentIdx && !isCancelled;
+                                const isCurrent = idx === currentIdx && !isCancelled;
+
+                                return (
+                                  <div key={status} className="relative flex items-start gap-4 pb-6 last:pb-0">
+                                    <div
+                                      className={cn(
+                                        "relative z-10 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300",
+                                        isCurrent
+                                          ? "border-primary bg-primary shadow-[0_0_0_4px_rgba(34,197,94,0.15)]"
+                                          : isCompleted
+                                            ? "border-emerald-500 bg-emerald-500"
+                                            : "border-border/40 bg-background"
+                                      )}
+                                    >
+                                      {isCompleted && !isCurrent ? (
+                                        <Check className="h-3 w-3 text-white" />
+                                      ) : isCurrent ? (
+                                        <div className="h-2 w-2 rounded-full bg-white" />
+                                      ) : null}
+                                    </div>
+
+                                    <div className={cn(
+                                      "min-w-0 pt-0.5",
+                                      isCurrent ? "font-bold text-foreground" : isCompleted ? "text-muted-foreground/80" : "text-muted-foreground/40"
+                                    )}>
+                                      <div className="flex items-center gap-2">
+                                        <StatusIcon className={cn(
+                                          "h-3.5 w-3.5",
+                                          isCurrent ? "text-primary" : isCompleted ? "text-emerald-500" : "text-muted-foreground/30"
+                                        )} />
+                                        <span className={cn(
+                                          "text-xs font-semibold",
+                                          isCurrent && "text-primary"
+                                        )}>
+                                          {statusConfig[status].label}
+                                        </span>
+                                        {isCurrent && (
+                                          <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+
+                              {isCancelled && (
+                                <div className="relative flex items-start gap-4 pb-0">
+                                  <div className="relative z-10 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-rose-500 bg-rose-500 shadow-[0_0_0_4px_rgba(244,63,94,0.15)]">
+                                    <XCircle className="h-3 w-3 text-white" />
+                                  </div>
+                                  <div className="min-w-0 pt-0.5 font-bold text-rose-500">
+                                    <div className="flex items-center gap-2">
+                                      <XCircle className="h-3.5 w-3.5" />
+                                      <span className="text-xs font-bold">Cancelado</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {isBuyer && order.estado === PedidoEstado.PENDIENTE && (
                     isConfirmingCancel ? (
                       <div className="mt-6 flex gap-2 w-full">
                         <Button
@@ -696,7 +855,7 @@ export default function OrderDetailPageClient({
                     )
                   )}
 
-                  {order.estado === PedidoEstado.CANCELADO && (
+                  {isBuyer && order.estado === PedidoEstado.CANCELADO && (
                     isConfirmingDelete ? (
                       <div className="mt-6 flex gap-2 w-full">
                         <Button
@@ -729,6 +888,218 @@ export default function OrderDetailPageClient({
                         Eliminar pedido
                       </Button>
                     )
+                  )}
+
+                  {sellerStore && !isBuyer && (
+                    <div className="mt-8 space-y-6">
+                      {/* ─── Progress Timeline ─── */}
+                      <div className="relative">
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <RefreshCw className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold">Progreso del pedido</h4>
+                            <p className="text-[11px] text-muted-foreground">
+                              Estado actual: <span className="font-semibold text-foreground">{statusConfig[order.estado as PedidoEstado].label}</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        {(() => {
+                          const allStatuses: PedidoEstado[] = [
+                            PedidoEstado.PENDIENTE,
+                            PedidoEstado.CONFIRMADO,
+                            PedidoEstado.EN_PREPARACION,
+                            PedidoEstado.EN_CAMINO,
+                            PedidoEstado.ENTREGADO,
+                          ];
+                          const currentIdx = allStatuses.indexOf(order.estado as PedidoEstado);
+                          const isCancelled = order.estado === PedidoEstado.CANCELADO;
+
+                          return (
+                            <div className="relative px-1">
+                              {/* Barra de progreso de fondo */}
+                              <div className="absolute left-6 top-0 bottom-0 w-px bg-border/60" />
+
+                              <div className="relative space-y-0">
+                                {allStatuses.map((status, idx) => {
+                                  const StatusIcon = statusConfig[status].icon;
+                                  const isCompleted = idx <= currentIdx && !isCancelled;
+                                  const isCurrent = idx === currentIdx && !isCancelled;
+
+                                  return (
+                                    <div key={status} className="relative flex items-start gap-4 pb-6 last:pb-0">
+                                      {/* Círculo indicador */}
+                                      <div
+                                        className={cn(
+                                          "relative z-10 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300",
+                                          isCurrent
+                                            ? "border-primary bg-primary shadow-[0_0_0_4px_rgba(34,197,94,0.15)]"
+                                            : isCompleted
+                                              ? "border-emerald-500 bg-emerald-500"
+                                              : "border-border/40 bg-background"
+                                        )}
+                                      >
+                                        {isCompleted && !isCurrent ? (
+                                          <Check className="h-3 w-3 text-white" />
+                                        ) : isCurrent ? (
+                                          <div className="h-2 w-2 rounded-full bg-white" />
+                                        ) : null}
+                                      </div>
+
+                                      {/* Label */}
+                                      <div className={cn(
+                                        "min-w-0 pt-0.5",
+                                        isCurrent ? "font-bold text-foreground" : isCompleted ? "text-muted-foreground/80" : "text-muted-foreground/40"
+                                      )}>
+                                        <div className="flex items-center gap-2">
+                                          <StatusIcon className={cn(
+                                            "h-3.5 w-3.5",
+                                            isCurrent ? "text-primary" : isCompleted ? "text-emerald-500" : "text-muted-foreground/30"
+                                          )} />
+                                          <span className={cn(
+                                            "text-xs font-semibold",
+                                            isCurrent && "text-primary"
+                                          )}>
+                                            {statusConfig[status].label}
+                                          </span>
+                                          {isCurrent && (
+                                            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+
+                                {/* Estado cancelado */}
+                                {isCancelled && (
+                                  <div className="relative flex items-start gap-4 pb-0">
+                                    <div className="relative z-10 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-rose-500 bg-rose-500 shadow-[0_0_0_4px_rgba(244,63,94,0.15)]">
+                                      <XCircle className="h-3 w-3 text-white" />
+                                    </div>
+                                    <div className="min-w-0 pt-0.5 font-bold text-rose-500">
+                                      <div className="flex items-center gap-2">
+                                        <XCircle className="h-3.5 w-3.5" />
+                                        <span className="text-xs font-bold">Cancelado</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+
+                      {/* ─── Status Update ─── */}
+                      {(() => {
+                        const nextStatuses = getNextStatuses(order.estado);
+                        if (nextStatuses.length === 0) return null;
+                        return (
+                          <div className="overflow-hidden rounded-xl border border-border/30 bg-card/30">
+                            <button
+                              type="button"
+                              onClick={() => setShowStatusOptions(s => !s)}
+                              className={cn(
+                                "flex items-center justify-between w-full px-4 py-3 text-xs font-semibold transition-colors",
+                                showStatusOptions || confirmingStatus
+                                  ? "text-foreground"
+                                  : "text-muted-foreground hover:text-foreground"
+                              )}
+                            >
+                              <span className="flex items-center gap-2.5">
+                                <ArrowRightCircle className="h-3.5 w-3.5 text-primary/70" />
+                                Avanzar pedido
+                              </span>
+                              <ChevronDown className={cn(
+                                "h-3.5 w-3.5 transition-transform duration-200",
+                                (showStatusOptions || confirmingStatus) && "rotate-180"
+                              )} />
+                            </button>
+
+                            <AnimatePresence>
+                              {(showStatusOptions || confirmingStatus) && (
+                                <motion.div
+                                  key="content"
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="border-t border-border/20 overflow-hidden"
+                                >
+                                  {confirmingStatus ? (
+                                    <div className="p-3">
+                                      <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-2 mb-3">
+                                        <Timer className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                                        <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                                          ¿{statusConfig[confirmingStatus].label}?
+                                        </p>
+                                      </div>
+                                      <div className="flex gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => setConfirmingStatus(null)}
+                                          disabled={isUpdatingStatus}
+                                          className="flex-1 rounded-lg border border-border/40 px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-accent transition-colors disabled:opacity-50"
+                                        >
+                                          Cancelar
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateStatus(confirmingStatus)}
+                                          disabled={isUpdatingStatus}
+                                          className={cn(
+                                            "flex-1 rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all disabled:opacity-50 flex items-center justify-center gap-1.5",
+                                            confirmingStatus === PedidoEstado.CANCELADO
+                                              ? "bg-rose-600 hover:bg-rose-700"
+                                              : "bg-primary hover:bg-primary/90"
+                                          )}
+                                        >
+                                          {isUpdatingStatus ? (
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                          ) : (
+                                            <Check className="h-3.5 w-3.5" />
+                                          )}
+                                          Confirmar
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="p-1.5">
+                                      {nextStatuses.map((ns) => {
+                                        const Icon = statusConfig[ns].icon;
+                                        const isCancel = ns === PedidoEstado.CANCELADO;
+                                        return (
+                                          <button
+                                            key={ns}
+                                            type="button"
+                                            onClick={() => setConfirmingStatus(ns)}
+                                            className={cn(
+                                              "flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                                              isCancel
+                                                ? "text-rose-600 hover:bg-rose-500/10"
+                                                : "text-foreground/70 hover:bg-accent hover:text-foreground"
+                                            )}
+                                          >
+                                            <Icon className={cn(
+                                              "h-4 w-4",
+                                              isCancel && "text-rose-500"
+                                            )} />
+                                            <span className="flex-1 text-left">{statusConfig[ns].label}</span>
+                                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30" />
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        );
+                      })()}
+                    </div>
                   )}
                 </div>
               </div>

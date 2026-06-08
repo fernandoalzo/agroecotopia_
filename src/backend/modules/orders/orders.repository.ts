@@ -77,6 +77,7 @@ export class OrdersRepository {
               select: {
                 id: true,
                 name: true,
+                ownerId: true,
               },
             },
           },
@@ -233,6 +234,7 @@ export class OrdersRepository {
                 select: {
                   id: true,
                   name: true,
+                  ownerId: true,
                 },
               },
             },

@@ -1,4 +1,4 @@
-import { getOrderDetailAction, cancelUserOrderAction, deleteUserOrderAction } from "@/backend/modules/orders/orders.actions";
+import { getOrderDetailAction, cancelUserOrderAction, deleteUserOrderAction, updateStoreOrderStatusAction } from "@/backend/modules/orders/orders.actions";
 import { processMercadoPagoPaymentAction } from "@/backend/modules/payments/payments.actions";
 import {
   getConversationMessages,
@@ -24,6 +24,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       getSellerOrderConversations={getSellerOrderConversationsAction}
       getUserOrderConversations={getUserOrderConversationsAction}
       markConversationAsRead={markAsRead}
+      updateStoreOrderStatus={updateStoreOrderStatusAction}
     />
   );
 }
