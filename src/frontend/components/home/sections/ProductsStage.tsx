@@ -2,8 +2,8 @@
 
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { ShoppingCart, ChevronLeft, ChevronRight, Package, Star, Tag, Leaf } from "lucide-react";
-import { useRef } from "react";
+import { ShoppingCart, ChevronLeft, ChevronRight, Package, Star, Tag, Leaf, ArrowRight } from "lucide-react";
+import { useRef, useState } from "react";
 import { Product } from "@/types";
 import ProductCard from "@/components/ProductCard";
 
@@ -67,6 +67,7 @@ interface ProductsStageProps {
 const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) => {
   const router = useRouter();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
   const words = (t.products.catalogDescription || t.products.description || "").split(" ");
 
   const scrollLeft = (e: React.MouseEvent) => {
@@ -119,7 +120,11 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
       />
 
       {/* Content */}
-      <div className="relative z-10 w-full flex flex-col h-full pt-8 sm:pt-14 pb-6 sm:pb-8 gap-3 sm:gap-4">
+      <motion.div
+        animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : {}}
+        transition={{ duration: 0.8, ease: "easeInOut" }}
+        className="relative z-10 w-full flex flex-col h-full pt-8 sm:pt-14 pb-6 sm:pb-8 gap-3 sm:gap-4"
+      >
 
         {/* Header Title */}
         <div className="shrink-0 container max-w-7xl mx-auto text-center px-4">
@@ -242,19 +247,21 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
         {/* View all products button */}
         <div className="shrink-0 container max-w-7xl mx-auto text-center px-4">
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-              window.location.href = "/products";
+            onClick={() => {
+              setIsNavigating(true);
+              setTimeout(() => {
+                router.push('/products');
+              }, 800);
             }}
-            className="inline-flex items-center gap-2 rounded-2xl bg-primary px-8 py-3.5 font-display text-base font-bold text-white shadow-xl hover:bg-primary/95 transition-all hover:scale-105 active:scale-95 group cursor-pointer relative z-50"
+            disabled={isNavigating}
+            className="inline-flex items-center gap-2 rounded-2xl bg-primary px-8 py-3.5 font-display text-base font-bold text-white shadow-xl hover:bg-primary/95 transition-all hover:scale-105 active:scale-95 group cursor-pointer relative z-50 disabled:opacity-70"
           >
             <span>{t.products.viewAll}</span>
-            <ShoppingCart className="w-4 h-4 transition-transform group-hover:rotate-6" />
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </button>
         </div>
 
-      </div>
+      </motion.div>
 
       <style>{`
         @keyframes gradient-shift {

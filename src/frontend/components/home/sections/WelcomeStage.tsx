@@ -93,7 +93,11 @@ const WelcomeStage = ({ t, language, onStartJourney }: WelcomeStageProps) => {
       />
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-3xl mx-auto px-4 py-4 text-center">
+      <motion.div
+        animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : {}}
+        transition={{ duration: 0.8, ease: "easeInOut" }}
+        className="relative z-10 w-full max-w-3xl mx-auto px-4 py-4 text-center"
+      >
         {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: -8 }}
@@ -172,7 +176,7 @@ const WelcomeStage = ({ t, language, onStartJourney }: WelcomeStageProps) => {
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </button>
         </motion.div>
-      </div>
+      </motion.div>
 
       <style>{`
         @keyframes gradient-shift {
