@@ -9,6 +9,9 @@ export type Answer = {
   ratingCount: number;
   isAccepted: boolean;
   createdAt: Date;
+  parentId?: string | null;
+  parentAuthor?: string;
+  replies?: Answer[];
 };
 
 export type Question = {
@@ -44,6 +47,7 @@ export type RawAnswer = {
   authorId: string;
   author: PostAuthor;
   createdAt: Date;
+  parentId?: string | null;
 };
 
 export type RawPost = {

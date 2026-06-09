@@ -77,15 +77,19 @@ export class ForumService {
   }
 
   async createAnswer(
-    data: { content: string; postId: string },
+    data: { content: string; postId: string; parentId?: string | null },
     authorId: string
   ) {
     if (!data.content || data.content.length < 10) {
       throw new Error("Answer must be at least 10 characters long.");
     }
 
-    // Verify post exists
-    await this.getPostById(data.postId);
+    // Verify post exists and check business rules
+    const post = await this.getPostById(data.postId);
+
+    if (post.authorId === authorId) {
+      throw new Error("No puedes responder tu propia publicación.");
+    }
 
     return await this.forumRepository.createAnswer(data, authorId);
   }
@@ -104,7 +108,61 @@ export class ForumService {
       throw new Error("UNAUTHORIZED");
     }
 
+    const replyCount = await this.forumRepository.countAnswerReplies(answerId);
+    if (replyCount > 0 && role !== "admin") {
+      throw new Error("No se puede editar una respuesta que ya tiene respuestas de otros usuarios.");
+    }
+
     return await this.forumRepository.updateAnswer(answerId, content);
+  }
+
+  async acceptAnswer(answerId: string, postId: string, userId: string, role: string) {
+    const post = await this.getPostById(postId);
+    if (!post) {
+      throw new Error("Post not found.");
+    }
+
+    if (post.authorId !== userId && role !== "admin") {
+      throw new Error("UNAUTHORIZED");
+    }
+
+    const answer = await this.forumRepository.getAnswerById(answerId);
+    if (!answer) {
+      throw new Error("Answer not found.");
+    }
+
+    if (answer.postId !== postId) {
+      throw new Error("Answer does not belong to this post.");
+    }
+
+    // Toggle acceptance — if already accepted, unaccept
+    const newAccepted = !answer.isAccepted;
+    return await this.forumRepository.updateAnswerAccepted(answerId, newAccepted);
+  }
+
+  async editPost(postId: string, userId: string, role: string, data: { title?: string; body?: string; labels?: string[] }) {
+    const post = await this.forumRepository.getPostById(postId);
+    if (!post) {
+      throw new Error("Post not found.");
+    }
+
+    if (post.authorId !== userId && role !== "admin") {
+      throw new Error("UNAUTHORIZED");
+    }
+
+    if (data.title !== undefined && data.title.length < 5) {
+      throw new Error("Title must be at least 5 characters long.");
+    }
+
+    if (data.body !== undefined && data.body.length < 10) {
+      throw new Error("Body must be at least 10 characters long.");
+    }
+
+    if (data.labels !== undefined && data.labels.length === 0) {
+      throw new Error("You must select at least one label.");
+    }
+
+    return await this.forumRepository.updatePost(postId, data);
   }
 
   async deleteAnswer(answerId: string, userId: string, role: string) {
@@ -126,8 +184,8 @@ export class ForumService {
     itemType: "post" | "answer",
     value: number
   ) {
-    if (value < 1 || value > 5) {
-      throw new Error("Rating must be between 1 and 5.");
+    if (![-1, 0, 1].includes(value)) {
+      throw new Error("Rating must be 1 (upvote), -1 (downvote), or 0 (remove vote).");
     }
 
     return await this.forumRepository.rateItem(userId, itemId, itemType, value);

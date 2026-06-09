@@ -56,7 +56,7 @@ export async function deletePostAction(postId: string) {
   });
 }
 
-export async function createAnswerAction(formData: { content: string; postId: string }) {
+export async function createAnswerAction(formData: { content: string; postId: string; parentId?: string | null }) {
   return withAuth(async (session) => {
     try {
       const userId = session.user.id;
@@ -81,6 +81,36 @@ export async function editAnswerAction(formData: { answerId: string; content: st
       return { success: true, answer };
     } catch (error: any) {
       log.error("Failed to edit answer:", error);
+      return { success: false, error: error.message };
+    }
+  });
+}
+
+export async function acceptAnswerAction(formData: { answerId: string; postId: string }) {
+  return withAuth(async (session) => {
+    try {
+      const userId = session.user.id;
+
+      log.info(`User ${userId} accepting answer ${formData.answerId}`);
+      const answer = await forumService.acceptAnswer(formData.answerId, formData.postId, userId, session.user.role ?? "user");
+      return { success: true, answer };
+    } catch (error: any) {
+      log.error("Failed to accept answer:", error);
+      return { success: false, error: error.message };
+    }
+  });
+}
+
+export async function editPostAction(formData: { postId: string; title?: string; body?: string; labels?: string[] }) {
+  return withAuth(async (session) => {
+    try {
+      const userId = session.user.id;
+
+      log.info(`User ${userId} editing post ${formData.postId}`);
+      const post = await forumService.editPost(formData.postId, userId, session.user.role ?? "user", formData);
+      return { success: true, post };
+    } catch (error: any) {
+      log.error("Failed to edit post:", error);
       return { success: false, error: error.message };
     }
   });

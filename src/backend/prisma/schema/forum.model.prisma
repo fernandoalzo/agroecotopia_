@@ -3,7 +3,7 @@ model ForumPost {
   title       String
   body        String
   labels      String[]
-  ratingTotal Float         @default(0)
+  ratingTotal Int           @default(0)
   ratingCount Int           @default(0)
   isTrending  Boolean       @default(false)
   authorId    String
@@ -23,12 +23,15 @@ model ForumAnswer {
   id          String        @id @default(cuid())
   content     String
   isAccepted  Boolean       @default(false)
-  ratingTotal Float         @default(0)
+  ratingTotal Int           @default(0)
   ratingCount Int           @default(0)
   authorId    String
   author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   postId      String
   post        ForumPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parentId    String?
+  parent      ForumAnswer?  @relation("AnswerReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     ForumAnswer[] @relation("AnswerReplies")
   ratings     ForumRating[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -45,7 +48,6 @@ model ForumRating {
   answer    ForumAnswer? @relation(fields: [answerId], references: [id], onDelete: Cascade)
   createdAt DateTime     @default(now())
 
-  // Ensure a user can only rate a specific post or answer once
   @@unique([userId, postId])
   @@unique([userId, answerId])
 }

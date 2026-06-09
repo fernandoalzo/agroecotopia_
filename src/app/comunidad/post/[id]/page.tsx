@@ -7,6 +7,8 @@ import {
   editAnswerAction,
   deleteAnswerAction,
   deletePostAction,
+  acceptAnswerAction,
+  editPostAction,
 } from "@/backend/modules/forum/forum.actions";
 
 export const metadata: Metadata = {
@@ -24,6 +26,8 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
       editAnswer={editAnswerAction}
       deleteAnswer={deleteAnswerAction}
       deletePost={deletePostAction}
+      acceptAnswer={acceptAnswerAction}
+      editPost={editPostAction}
     />
   );
 }

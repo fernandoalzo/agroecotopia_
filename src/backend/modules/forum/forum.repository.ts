@@ -40,7 +40,7 @@ export class ForumRepository {
   async getPosts(activeFilters?: Record<string, string[]>, searchQuery?: string, limit: number = 10, cursor?: string, sortBy?: "newest" | "popular") {
     try {
       // Build the where clause
-      let where: Prisma.ForumPostWhereInput = {};
+      const where: Prisma.ForumPostWhereInput = {};
 
       if (searchQuery && searchQuery.trim() !== "") {
         const formattedQuery = searchQuery.trim().split(/\s+/).join(" | ");
@@ -141,7 +141,7 @@ export class ForumRepository {
   }
 
   async createAnswer(
-    data: { content: string; postId: string },
+    data: { content: string; postId: string; parentId?: string | null },
     authorId: string
   ) {
     try {
@@ -149,6 +149,7 @@ export class ForumRepository {
         data: {
           content: data.content,
           postId: data.postId,
+          parentId: data.parentId ?? null,
           authorId,
         },
         include: {
@@ -191,6 +192,40 @@ export class ForumRepository {
     }
   }
 
+  async updateAnswerAccepted(id: string, accepted: boolean) {
+    try {
+      return await prisma.forumAnswer.update({
+        where: { id },
+        data: { isAccepted: accepted },
+        include: {
+          author: {
+            select: { id: true, name: true, image: true, role: true },
+          },
+        },
+      });
+    } catch (error) {
+      log.error(`Error updating answer accepted in repository:`, error);
+      throw new Error("Failed to update answer acceptance.");
+    }
+  }
+
+  async updatePost(id: string, data: { title?: string; body?: string; labels?: string[] }) {
+    try {
+      return await prisma.forumPost.update({
+        where: { id },
+        data,
+        include: {
+          author: {
+            select: { id: true, name: true, image: true, role: true },
+          },
+        },
+      });
+    } catch (error) {
+      log.error(`Error updating post in repository:`, error);
+      throw new Error("Failed to update post.");
+    }
+  }
+
   async deleteAnswer(id: string) {
     try {
       return await prisma.forumAnswer.delete({
@@ -202,6 +237,18 @@ export class ForumRepository {
     }
   }
 
+  async countAnswerReplies(id: string): Promise<number> {
+    try {
+      const count = await prisma.forumAnswer.count({
+        where: { parentId: id },
+      });
+      return count;
+    } catch (error) {
+      log.error(`Error counting replies for answer ${id}:`, error);
+      throw new Error("Failed to count answer replies.");
+    }
+  }
+
   async rateItem(
     userId: string,
     itemId: string,
@@ -209,54 +256,66 @@ export class ForumRepository {
     value: number
   ) {
     try {
-      // Upsert the rating
-      const rating = await prisma.forumRating.upsert({
-        where: itemType === "post"
+      // Handle vote removal (value === 0)
+      if (value === 0) {
+        const where = itemType === "post"
           ? { userId_postId: { userId, postId: itemId } }
-          : { userId_answerId: { userId, answerId: itemId } },
-        create: {
-          userId,
-          value,
-          postId: itemType === "post" ? itemId : null,
-          answerId: itemType === "answer" ? itemId : null,
-        },
-        update: {
-          value,
-        },
-      });
+          : { userId_answerId: { userId, answerId: itemId } };
+        try {
+          await prisma.forumRating.delete({ where });
+        } catch {
+          // Rating doesn't exist — ignore
+        }
+      } else {
+        // Upsert the rating
+        await prisma.forumRating.upsert({
+          where: itemType === "post"
+            ? { userId_postId: { userId, postId: itemId } }
+            : { userId_answerId: { userId, answerId: itemId } },
+          create: {
+            userId,
+            value,
+            postId: itemType === "post" ? itemId : null,
+            answerId: itemType === "answer" ? itemId : null,
+          },
+          update: {
+            value,
+          },
+        });
+      }
 
-      // Recalculate aggregates
+      // Recalculate aggregates (sum for net score)
       if (itemType === "post") {
         const aggr = await prisma.forumRating.aggregate({
           where: { postId: itemId },
-          _avg: { value: true },
+          _sum: { value: true },
           _count: { id: true },
         });
 
         await prisma.forumPost.update({
           where: { id: itemId },
           data: {
-            ratingTotal: aggr._avg.value || 0,
+            ratingTotal: aggr._sum.value || 0,
             ratingCount: aggr._count.id || 0,
           },
         });
       } else {
         const aggr = await prisma.forumRating.aggregate({
           where: { answerId: itemId },
-          _avg: { value: true },
+          _sum: { value: true },
           _count: { id: true },
         });
 
         await prisma.forumAnswer.update({
           where: { id: itemId },
           data: {
-            ratingTotal: aggr._avg.value || 0,
+            ratingTotal: aggr._sum.value || 0,
             ratingCount: aggr._count.id || 0,
           },
         });
       }
 
-      return rating;
+      return { success: true };
     } catch (error) {
       log.error("Error rating item in repository:", error);
       throw new Error("Failed to rate item.");
@@ -374,4 +433,5 @@ export class ForumRepository {
       throw new Error("Failed to get trending labels.");
     }
   }
+
 }
