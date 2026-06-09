@@ -2,7 +2,6 @@
 
 import { withAuth, withAdmin } from "@/lib/auth-guards";
 import { chatService } from "./index";
-import { authService } from "@/backend/modules/auth";
 import logger from "@/utils/logger";
 import { Role } from "@prisma/client";
 import eventBus from "@/utils/eventBus";
@@ -24,22 +23,17 @@ function getChatActionErrorMessage(error: unknown) {
 }
 
 export async function getOrCreateMyConversation() {
-  return withAuth(async () => {
-    const session = await authService.ensureAuthenticated();
-    const userId = session.user?.id;
-    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
-
+  return withAuth(async (session) => {
+    const userId = session.user.id;
     log.info("Obteniendo o creando conversación para el usuario:", { userId });
     return chatService.getOrCreateConversationForUser(userId);
   });
 }
 
 export async function getConversationMessages(conversationId: string) {
-  return withAuth(async () => {
-    const session = await authService.ensureAuthenticated();
-    const userId = session.user?.id;
-    const userRole = session.user?.role as Role;
-    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
+  return withAuth(async (session) => {
+    const userId = session.user.id;
+    const userRole = session.user.role as Role;
 
     try {
       log.debug("Obteniendo mensajes de la conversación:", { conversationId, userId });
@@ -52,21 +46,16 @@ export async function getConversationMessages(conversationId: string) {
 }
 
 export async function getAdminConversations() {
-  return withAdmin(async () => {
-    const session = await authService.ensureAuthenticated();
-    const adminUserId = session.user?.id;
-    if (!adminUserId) throw new Error("ID de usuario no encontrado en la sesión");
+  return withAdmin(async (session) => {
+    const adminUserId = session.user.id;
     log.debug("Admin obteniendo lista de todas las conversaciones.");
     return chatService.getAdminConversations(adminUserId);
   });
 }
 
 export async function markAsRead(conversationId: string) {
-  return withAuth(async () => {
-    const session = await authService.ensureAuthenticated();
-    const userId = session.user?.id;
-    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
-
+  return withAuth(async (session) => {
+    const userId = session.user.id;
     log.debug("Marcando mensajes como leídos:", { conversationId, userId });
     const result = await chatService.markAsRead(conversationId, userId);
     eventBus.emit("unread_count_updated", { conversationId });
@@ -75,12 +64,9 @@ export async function markAsRead(conversationId: string) {
 }
 
 export async function deleteConversationAction(conversationId: string) {
-  return withAuth(async () => {
-    const session = await authService.ensureAuthenticated();
-    const userId = session.user?.id;
-    const userRole = session.user?.role as Role;
-    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
-
+  return withAuth(async (session) => {
+    const userId = session.user.id;
+    const userRole = session.user.role as Role;
     log.info("Eliminando conversación:", { conversationId, userId, userRole });
     return chatService.deleteConversation(conversationId, userId, userRole);
   });
@@ -101,11 +87,9 @@ export async function getOrCreateConversationForAdmin(targetUserId: string) {
 }
 
 export async function getOrCreateOrderConversationAction(pedidoId: string, storeId: string) {
-  return withAuth(async () => {
-    const session = await authService.ensureAuthenticated();
-    const userId = session.user?.id;
-    const userRole = session.user?.role as Role;
-    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
+  return withAuth(async (session) => {
+    const userId = session.user.id;
+    const userRole = session.user.role as Role;
 
     try {
       log.info("Obteniendo o creando conversación de pedido:", { pedidoId, storeId, userId });
@@ -118,11 +102,9 @@ export async function getOrCreateOrderConversationAction(pedidoId: string, store
 }
 
 export async function getSellerOrderConversationsAction(storeId: string) {
-  return withAuth(async () => {
-    const session = await authService.ensureAuthenticated();
-    const userId = session.user?.id;
-    const userRole = session.user?.role as Role;
-    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
+  return withAuth(async (session) => {
+    const userId = session.user.id;
+    const userRole = session.user.role as Role;
 
     try {
       log.debug("Obteniendo conversaciones de pedidos para vendedor:", { storeId, userId });
@@ -135,11 +117,9 @@ export async function getSellerOrderConversationsAction(storeId: string) {
 }
 
 export async function getUserOrderConversationsAction() {
-  return withAuth(async () => {
-    const session = await authService.ensureAuthenticated();
-    const userId = session.user?.id;
-    const userRole = session.user?.role as Role;
-    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
+  return withAuth(async (session) => {
+    const userId = session.user.id;
+    const userRole = session.user.role as Role;
 
     try {
       log.debug("Obteniendo conversaciones de pedidos para comprador:", { userId });
@@ -158,11 +138,9 @@ export async function sendAdvisorOrderMessagesAction(params: {
     content: string;
   }>;
 }) {
-  return withAuth(async () => {
-    const session = await authService.ensureAuthenticated();
-    const userId = session.user?.id;
-    const userRole = session.user?.role as Role;
-    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
+  return withAuth(async (session) => {
+    const userId = session.user.id;
+    const userRole = session.user.role as Role;
 
     try {
       const createdMessages = [];

@@ -38,4 +38,8 @@ model Message {
   encryptionType Int          @default(0) // 0: plain, 1: prekey signal, 3: signal message
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @default(now()) @updatedAt
+
+  @@index([conversationId])
+  @@index([conversationId, isRead])
+  @@index([conversationId, createdAt])
 }

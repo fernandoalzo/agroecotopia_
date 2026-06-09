@@ -66,44 +66,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * Attach the DB user ID to the JWT so it's available everywhere.
      */
     async jwt({ token, user }) {
-      // First sign-in: populate token basics from the user object
+      // Only query DB on actual sign-in (when user object is present)
       if (user) {
         log.debug("Auth callback jwt: poblando token con información del usuario:", { userId: user.id, email: user.email });
         token.id = user.id as string;
         token.email = user.email;
         token.name = user.name;
-      }
 
-      // Always sync from DB using email to ensure we get the real DB ID and Role
-      if (token.email) {
         try {
           const dbUser = await prisma.user.findUnique({
-            where: { email: token.email },
-            select: { id: true, role: true },
-          });
-          if (dbUser) {
-            token.id = dbUser.id; // Override potentially incorrect OAuth ID with DB CUID
-            token.role = dbUser.role;
-          } else {
-            token.role = "user";
-          }
-        } catch (error) {
-          if (!token.role) {
-            token.role = "user";
-          }
-        }
-      } else if (token.id) {
-        // Fallback
-        try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: token.id as string },
+            where: { id: user.id as string },
             select: { role: true },
           });
           token.role = dbUser?.role || "user";
         } catch (error) {
-          if (!token.role) {
-            token.role = "user";
-          }
+          token.role = "user";
+        }
+
+        return token;
+      }
+
+      // Backfill role for existing tokens that may lack it (one-time migration)
+      if (!token.role && token.email) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: token.email as string },
+            select: { role: true },
+          });
+          token.role = dbUser?.role || "user";
+        } catch (error) {
+          if (!token.role) token.role = "user";
         }
       }
 

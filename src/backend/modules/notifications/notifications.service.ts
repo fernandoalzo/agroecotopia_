@@ -147,11 +147,16 @@ export class NotificationsService {
   ): Promise<PaginatedNotifications> {
     log.debug("Obteniendo notificaciones del usuario:", { userId, ...params });
 
-    // Fetch explicit recipients
-    const explicitResult = await this.repo.findRecipientsByUserId(userId, params);
+    // Parallel: fetch explicit recipients and (if no status filter) broadcasts simultaneously
+    const [explicitResult, broadcastResult] = await Promise.all([
+      this.repo.findRecipientsByUserId(userId, params),
+      params.status
+        ? Promise.resolve(null)
+        : this.repo.findUnreadBroadcastsForUser(userId, params),
+    ]);
 
     // If filtering by status, only return explicit recipients (broadcasts are virtual)
-    if (params.status) {
+    if (params.status || !broadcastResult) {
       return {
         recipients: explicitResult.recipients.map((r) => this.mapRecipientToDTO(r)),
         totalCount: explicitResult.totalCount,
@@ -160,9 +165,6 @@ export class NotificationsService {
         limit: explicitResult.limit,
       };
     }
-
-    // Fetch unread broadcasts (lazy materialization — no recipient row exists yet)
-    const broadcastResult = await this.repo.findUnreadBroadcastsForUser(userId, params);
 
     // Merge and sort by createdAt DESC
     const merged: NotificationRecipientWithDetails[] = [

@@ -2,17 +2,14 @@
 
 import { forumService } from "./index";
 import { withAuth } from "@/lib/auth-guards";
-import { authService } from "@/backend/modules/auth";
 import logger from "@/utils/logger";
 
 const log = logger.child();
 
 export async function createPostAction(formData: { title: string; body: string; labels: string[] }) {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
     try {
-      const session = await authService.ensureAuthenticated();
-      const userId = session.user?.id;
-      if (!userId) throw new Error("User ID not found");
+      const userId = session.user.id;
 
       log.info(`User ${userId} creating a new post: ${formData.title}`);
       const post = await forumService.createPost(formData, userId);
@@ -45,14 +42,11 @@ export async function getPostByIdAction(id: string) {
 }
 
 export async function deletePostAction(postId: string) {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
     try {
-      const session = await authService.ensureAuthenticated();
-      const userId = session.user?.id;
-      if (!userId) throw new Error("User ID not found");
+      const userId = session.user.id;
 
       log.info(`User ${userId} deleting post ${postId}`);
-      // Asumiendo que forumService tiene deletePost implementado
       await forumService.deletePost(postId, userId, session.user.role ?? "user");
       return { success: true };
     } catch (error: any) {
@@ -63,11 +57,9 @@ export async function deletePostAction(postId: string) {
 }
 
 export async function createAnswerAction(formData: { content: string; postId: string }) {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
     try {
-      const session = await authService.ensureAuthenticated();
-      const userId = session.user?.id;
-      if (!userId) throw new Error("User ID not found");
+      const userId = session.user.id;
 
       log.info(`User ${userId} creating an answer for post ${formData.postId}`);
       const answer = await forumService.createAnswer(formData, userId);
@@ -80,11 +72,9 @@ export async function createAnswerAction(formData: { content: string; postId: st
 }
 
 export async function editAnswerAction(formData: { answerId: string; content: string }) {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
     try {
-      const session = await authService.ensureAuthenticated();
-      const userId = session.user?.id;
-      if (!userId) throw new Error("User ID not found");
+      const userId = session.user.id;
 
       log.info(`User ${userId} editing answer ${formData.answerId}`);
       const answer = await forumService.editAnswer(formData.answerId, formData.content, userId, session.user.role ?? "user");
@@ -97,11 +87,9 @@ export async function editAnswerAction(formData: { answerId: string; content: st
 }
 
 export async function deleteAnswerAction(answerId: string) {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
     try {
-      const session = await authService.ensureAuthenticated();
-      const userId = session.user?.id;
-      if (!userId) throw new Error("User ID not found");
+      const userId = session.user.id;
 
       log.info(`User ${userId} deleting answer ${answerId}`);
       await forumService.deleteAnswer(answerId, userId, session.user.role ?? "user");
@@ -114,11 +102,9 @@ export async function deleteAnswerAction(answerId: string) {
 }
 
 export async function rateItemAction(data: { itemId: string; itemType: "post" | "answer"; value: number }) {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
     try {
-      const session = await authService.ensureAuthenticated();
-      const userId = session.user?.id;
-      if (!userId) throw new Error("User ID not found");
+      const userId = session.user.id;
 
       log.info(`User ${userId} rating ${data.itemType} ${data.itemId} with ${data.value}`);
       const rating = await forumService.rateItem(userId, data.itemId, data.itemType, data.value);

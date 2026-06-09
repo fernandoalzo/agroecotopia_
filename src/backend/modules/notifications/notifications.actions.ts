@@ -2,7 +2,6 @@
 
 import { withAuth, withAdmin } from "@/lib/auth-guards";
 import { notificationsService } from "./index";
-import { authService } from "@/backend/modules/auth";
 import logger from "@/utils/logger";
 import { RecipientStatus } from "@prisma/client";
 import eventBus from "@/utils/eventBus";
@@ -29,16 +28,13 @@ function getNotificationActionErrorMessage(error: unknown) {
 // ═══════════════════════════════════════════════════════════
 
 export async function getMyNotificationsAction(page = 1, limit = 20, status?: RecipientStatus) {
-  return withAuth(async () => {
-    const session = await authService.ensureAuthenticated();
-    const userId = session.user?.id;
-    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
+  return withAuth(async (session) => {
+    const userId = session.user.id;
 
     log.debug("Obteniendo notificaciones para usuario:", { userId, page, limit, status });
     try {
       return await notificationsService.getMyNotifications(userId, { page, limit, status });
     } catch (error) {
-      console.error("DEBUG ERROR IN getMyNotificationsAction:", error);
       log.error("Error obteniendo notificaciones:", error);
       return { error: getNotificationActionErrorMessage(error) };
     }
@@ -46,10 +42,8 @@ export async function getMyNotificationsAction(page = 1, limit = 20, status?: Re
 }
 
 export async function getMyUnreadCountAction() {
-  return withAuth(async () => {
-    const session = await authService.ensureAuthenticated();
-    const userId = session.user?.id;
-    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
+  return withAuth(async (session) => {
+    const userId = session.user.id;
 
     try {
       return await notificationsService.getUnreadCount(userId);
@@ -61,10 +55,8 @@ export async function getMyUnreadCountAction() {
 }
 
 export async function getNotificationInitialDataAction() {
-  return withAuth(async () => {
-    const session = await authService.ensureAuthenticated();
-    const userId = session.user?.id;
-    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
+  return withAuth(async (session) => {
+    const userId = session.user.id;
 
     try {
       return await notificationsService.getNotificationInitialData(userId);
@@ -76,14 +68,11 @@ export async function getNotificationInitialDataAction() {
 }
 
 export async function markNotificationAsReadAction(recipientId: string) {
-  return withAuth(async () => {
-    const session = await authService.ensureAuthenticated();
-    const userId = session.user?.id;
-    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
+  return withAuth(async (session) => {
+    const userId = session.user.id;
 
     try {
       await notificationsService.markAsRead(recipientId, userId);
-      // Notificar cliente vía WS (por si hay múltiples ventanas abiertas)
       eventBus.emit("notification_read_state_changed", { userId });
       return { success: true };
     } catch (error) {
@@ -94,17 +83,14 @@ export async function markNotificationAsReadAction(recipientId: string) {
 }
 
 export async function deleteNotificationAction(recipientId: string) {
-  return withAuth(async () => {
-    const session = await authService.ensureAuthenticated();
-    const userId = session.user?.id;
-    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
+  return withAuth(async (session) => {
+    const userId = session.user.id;
 
     try {
       await notificationsService.deleteNotification(recipientId, userId);
       eventBus.emit("notification_read_state_changed", { userId });
       return { success: true };
     } catch (error) {
-      console.error("DEBUG ERROR IN deleteNotificationAction:", error);
       log.warn("No se pudo borrar notificación:", { recipientId, userId, error });
       return { error: getNotificationActionErrorMessage(error) };
     }
@@ -112,10 +98,8 @@ export async function deleteNotificationAction(recipientId: string) {
 }
 
 export async function markAllNotificationsAsReadAction() {
-  return withAuth(async () => {
-    const session = await authService.ensureAuthenticated();
-    const userId = session.user?.id;
-    if (!userId) throw new Error("ID de usuario no encontrado en la sesión");
+  return withAuth(async (session) => {
+    const userId = session.user.id;
 
     try {
       await notificationsService.markAllAsRead(userId);
@@ -138,10 +122,8 @@ export async function markAllNotificationsAsReadAction() {
  * other services (like orders/forum) will call `notificationsService.dispatchNotification()` directly.
  */
 export async function dispatchNotificationAction(params: Omit<DispatchNotificationParams, "actorId">) {
-  return withAdmin(async () => {
-    const session = await authService.ensureAuthenticated();
-    const actorId = session.user?.id;
-    if (!actorId) throw new Error("ID de usuario no encontrado en la sesión");
+  return withAdmin(async (session) => {
+    const actorId = session.user.id;
 
     try {
       return await notificationsService.dispatchNotification({
@@ -159,10 +141,8 @@ export async function dispatchNotificationAction(params: Omit<DispatchNotificati
  * Convenience action for admins to send a global broadcast announcement.
  */
 export async function sendGlobalAnnouncementAction(title: string, message: string) {
-  return withAdmin(async () => {
-    const session = await authService.ensureAuthenticated();
-    const actorId = session.user?.id;
-    if (!actorId) throw new Error("ID de usuario no encontrado en la sesión");
+  return withAdmin(async (session) => {
+    const actorId = session.user.id;
 
     try {
       return await notificationsService.dispatchNotification({

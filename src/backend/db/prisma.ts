@@ -28,13 +28,12 @@ declare global {
 const isReused = !!globalThis.prismaGlobal;
 const prisma = globalThis.prismaGlobal ?? prismaClientSingleton();
 
+globalThis.prismaGlobal = prisma;
+
 if (isReused) {
   log.debug("Reutilizando instancia existente de PrismaClient desde globalThis.");
+} else if (config.isDevelopment) {
+  log.debug("Instancia de PrismaClient almacenada en globalThis (modo desarrollo).");
 }
 
 export default prisma;
-
-if (config.isDevelopment) {
-  globalThis.prismaGlobal = prisma;
-  log.debug("Instancia de PrismaClient almacenada en globalThis (modo desarrollo).");
-}

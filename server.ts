@@ -1,7 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "http";
 import { parse } from "url";
 import next from "next";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/backend/db/prisma";
 import { initSocketServer } from "./src/backend/modules/chat/socketHandler";
 import { ensureAdminExists } from "./src/lib/admin-init";
 import logger from "./src/utils/logger";
@@ -15,8 +15,6 @@ log.info(`Starting server in ${dev ? "development" : "production"} mode...`);
 
 const app = next({ dev });
 const handle = app.getRequestHandler();
-
-const prisma = new PrismaClient();
 
 app.prepare()
   .then(() => {

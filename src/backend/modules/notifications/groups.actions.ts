@@ -2,7 +2,6 @@
 
 import { withAdmin } from "@/lib/auth-guards";
 import { groupsService } from "./index";
-import { authService } from "@/backend/modules/auth";
 import logger from "@/utils/logger";
 
 const log = logger.child();
@@ -20,10 +19,8 @@ function getGroupActionErrorMessage(error: unknown) {
 }
 
 export async function createGroupAction(name: string, description?: string) {
-  return withAdmin(async () => {
-    const session = await authService.ensureAuthenticated();
-    const createdBy = session.user?.id;
-    if (!createdBy) throw new Error("Usuario no encontrado en sesión");
+  return withAdmin(async (session) => {
+    const createdBy = session.user.id;
 
     try {
       return await groupsService.createGroup({ name, description, createdBy });

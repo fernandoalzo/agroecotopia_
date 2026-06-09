@@ -3,21 +3,26 @@ import logger from "@/utils/logger";
 
 const log = logger.child("src/lib/auth-guards.ts");
 
+type GuardSession = {
+  user: {
+    id: string;
+    role?: string;
+    name?: string | null;
+    email?: string | null;
+  };
+};
+
 /**
  * High-Order Function (Guard) to protect Server Actions.
  * Ensures the user is authenticated before executing the logic.
- * 
- * Usage:
- * export const myAction = (formData: FormData) => withAuth(async () => {
- *   // Secure logic here
- * });
+ * Passes the verified session to the callback to avoid redundant auth calls.
  */
-export async function withAuth<T>(action: () => Promise<T>): Promise<T | { error: string }> {
+export async function withAuth<T>(action: (session: GuardSession) => Promise<T>): Promise<T | { error: string }> {
   log.debug("Auth Guard: Verificando sesión de usuario.");
   try {
     const session = await authService.ensureAuthenticated();
     log.debug("Auth Guard: Usuario autenticado exitosamente.", { userId: session.user?.id });
-    return await action();
+    return await action(session);
   } catch (error: any) {
     if (error.message === "UNAUTHORIZED") {
       log.warn("Auth Guard: Intento de acceso no autorizado (sesión expirada o ausente).");
@@ -31,18 +36,14 @@ export async function withAuth<T>(action: () => Promise<T>): Promise<T | { error
 /**
  * High-Order Function (Guard) to protect Administrative Actions.
  * Ensures the user is an administrator before executing the logic.
- * 
- * Usage:
- * export const adminOnlyAction = (id: string) => withAdmin(async () => {
- *   // Admin logic here
- * });
+ * Passes the verified session to the callback.
  */
-export async function withAdmin<T>(action: () => Promise<T>): Promise<T | { error: string }> {
+export async function withAdmin<T>(action: (session: GuardSession) => Promise<T>): Promise<T | { error: string }> {
   log.debug("Admin Guard: Verificando permisos de administrador.");
   try {
     const session = await authService.ensureRole("admin");
     log.debug("Admin Guard: Acceso autorizado como administrador.", { userId: session.user?.id });
-    return await action();
+    return await action(session);
   } catch (error: any) {
     if (error.message === "UNAUTHORIZED") {
       log.warn("Admin Guard: Intento de acceso administrativo sin sesión.");
@@ -60,13 +61,14 @@ export async function withAdmin<T>(action: () => Promise<T>): Promise<T | { erro
 /**
  * High-Order Function (Guard) to protect Seller Actions.
  * Ensures the user has the 'seller' role before executing the logic.
+ * Passes the verified session to the callback.
  */
-export async function withSeller<T>(action: () => Promise<T>): Promise<T | { error: string }> {
+export async function withSeller<T>(action: (session: GuardSession) => Promise<T>): Promise<T | { error: string }> {
   log.debug("Seller Guard: Verificando permisos de vendedor.");
   try {
     const session = await authService.ensureRole("seller");
     log.debug("Seller Guard: Acceso autorizado como vendedor.", { userId: session.user?.id });
-    return await action();
+    return await action(session);
   } catch (error: any) {
     if (error.message === "UNAUTHORIZED") {
       log.warn("Seller Guard: Intento de acceso sin sesión.");
@@ -83,13 +85,14 @@ export async function withSeller<T>(action: () => Promise<T>): Promise<T | { err
 
 /**
  * High-Order Function (Guard) to protect Admin or Seller Actions.
+ * Passes the verified session to the callback.
  */
-export async function withAdminOrSeller<T>(action: () => Promise<T>): Promise<T | { error: string }> {
+export async function withAdminOrSeller<T>(action: (session: GuardSession) => Promise<T>): Promise<T | { error: string }> {
   log.debug("Admin/Seller Guard: Verificando permisos de admin o vendedor.");
   try {
     const session = await authService.ensureAnyRole(["admin", "seller"]);
     log.debug("Admin/Seller Guard: Acceso autorizado.", { userId: session.user?.id });
-    return await action();
+    return await action(session);
   } catch (error: any) {
     if (error.message === "UNAUTHORIZED") {
       log.warn("Admin/Seller Guard: Intento de acceso sin sesión.");
@@ -107,15 +110,16 @@ export async function withAdminOrSeller<T>(action: () => Promise<T>): Promise<T 
 /**
  * High-Order Function (Guard) to protect Store-specific Actions.
  * Ensures the user is the owner of the store or an admin.
+ * Passes the verified session to the callback.
  */
-export async function withStoreOwner<T>(storeId: string, action: () => Promise<T>): Promise<T | { error: string }> {
+export async function withStoreOwner<T>(storeId: string, action: (session: GuardSession) => Promise<T>): Promise<T | { error: string }> {
   log.debug("StoreOwner Guard: Verificando propiedad de la tienda.", { storeId });
   try {
     const session = await authService.ensureAnyRole(["admin", "seller"]);
     
     // If admin, they can manage any store
     if (session.user.role === "admin") {
-      return await action();
+      return await action(session);
     }
 
     // Dynamic import to avoid circular dependencies if any
@@ -128,7 +132,7 @@ export async function withStoreOwner<T>(storeId: string, action: () => Promise<T
     }
 
     log.debug("StoreOwner Guard: Acceso autorizado a tienda.", { storeId, userId: session.user.id });
-    return await action();
+    return await action(session);
   } catch (error: any) {
     if (error.message === "UNAUTHORIZED") {
       return { error: "Debes iniciar sesión para realizar esta acción." };
