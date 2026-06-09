@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Leaf, Sprout, Wheat, Sun, Wind } from "lucide-react";
+import { MessageCircle, Globe, Leaf, Sprout, Wheat, Sun, Wind } from "lucide-react";
 
 const FLOATING_ICONS = [
   { Icon: Leaf, x: 5, y: 15, size: 28, delay: 0, driftX: 40, driftY: -30, duration: 8 },
@@ -221,15 +221,15 @@ const SovereigntyStage = ({ t }: SovereigntyStageProps) => {
           className="grid grid-cols-1 sm:grid-cols-2 gap-1"
         >
           <AnimatedPillar
-            icon={Leaf}
-            title={t.about.pillars.organic.title}
-            desc={t.about.pillars.organic.desc}
+            icon={MessageCircle}
+            title={t.about.pillars.foro.title}
+            desc={t.about.pillars.foro.desc}
             index={0}
           />
           <AnimatedPillar
-            icon={Sprout}
-            title={t.about.pillars.sustainable.title}
-            desc={t.about.pillars.sustainable.desc}
+            icon={Globe}
+            title={t.about.pillars.conexion.title}
+            desc={t.about.pillars.conexion.desc}
             index={1}
           />
         </motion.div>

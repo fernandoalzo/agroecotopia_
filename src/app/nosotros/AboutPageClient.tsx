@@ -33,7 +33,7 @@ export default function AboutPageClient() {
               Nuestros <span className="text-primary italic">Pilares</span>
             </h2>
             <p className="mx-auto mt-4 max-w-2xl font-body text-muted-foreground md:text-lg">
-              Los valores fundamentales que guían cada cosecha y cada entrega en nuestra red agroecológica.
+              Los pilares sobre los que construimos un ecosistema digital que conecta, educa y empodera al campo colombiano.
             </p>
           </div>
           <AboutPillars t={t} />

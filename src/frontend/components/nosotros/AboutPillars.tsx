@@ -1,20 +1,17 @@
 "use client";
-
 import { motion } from "framer-motion";
-import { Heart, Leaf, Recycle, Sprout, Sun, Truck } from "lucide-react";
+import { MessageCircle, Store, Briefcase, BookOpen, Globe, Users } from "lucide-react";
 
-interface AboutPillarsProps {
-  t: any;
-}
+interface AboutPillarsProps { t: any; }
 
 export function AboutPillars({ t }: AboutPillarsProps) {
   const pillars = [
-    { icon: Leaf, title: t.about.pillars.organic.title, desc: t.about.pillars.organic.desc },
-    { icon: Recycle, title: t.about.pillars.sustainable.title, desc: t.about.pillars.sustainable.desc },
-    { icon: Heart, title: t.about.pillars.healthy.title, desc: t.about.pillars.healthy.desc },
-    { icon: Truck, title: t.about.pillars.direct.title, desc: t.about.pillars.direct.desc },
-    { icon: Sprout, title: t.about.pillars.biodiversity.title, desc: t.about.pillars.biodiversity.desc },
-    { icon: Sun, title: t.about.pillars.fairTrade.title, desc: t.about.pillars.fairTrade.desc },
+    { icon: MessageCircle, title: t.about.pillars.foro.title, desc: t.about.pillars.foro.desc },
+    { icon: Store, title: t.about.pillars.tiendas.title, desc: t.about.pillars.tiendas.desc },
+    { icon: Briefcase, title: t.about.pillars.consultorias.title, desc: t.about.pillars.consultorias.desc },
+    { icon: BookOpen, title: t.about.pillars.conocimiento.title, desc: t.about.pillars.conocimiento.desc },
+    { icon: Globe, title: t.about.pillars.conexion.title, desc: t.about.pillars.conexion.desc },
+    { icon: Users, title: t.about.pillars.comunidad.title, desc: t.about.pillars.comunidad.desc },
   ];
 
   return (

@@ -38,12 +38,12 @@ export interface Translations {
     description2: string;
     tagline: string;
     pillars: {
-      organic: { title: string; desc: string };
-      sustainable: { title: string; desc: string };
-      healthy: { title: string; desc: string };
-      direct: { title: string; desc: string };
-      biodiversity: { title: string; desc: string };
-      fairTrade: { title: string; desc: string };
+      foro: { title: string; desc: string };
+      tiendas: { title: string; desc: string };
+      consultorias: { title: string; desc: string };
+      conocimiento: { title: string; desc: string };
+      conexion: { title: string; desc: string };
+      comunidad: { title: string; desc: string };
     };
   };
   contact: {
