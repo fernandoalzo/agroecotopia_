@@ -249,6 +249,18 @@ export class ForumRepository {
     }
   }
 
+  async getDirectReplies(answerId: string): Promise<{ id: string; authorId: string }[]> {
+    try {
+      return await prisma.forumAnswer.findMany({
+        where: { parentId: answerId },
+        select: { id: true, authorId: true },
+      });
+    } catch (error) {
+      log.error(`Error fetching direct replies for answer ${answerId}:`, error);
+      throw new Error("Failed to fetch direct replies.");
+    }
+  }
+
   async rateItem(
     userId: string,
     itemId: string,

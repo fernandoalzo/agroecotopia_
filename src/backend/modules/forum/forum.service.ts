@@ -87,11 +87,38 @@ export class ForumService {
     // Verify post exists and check business rules
     const post = await this.getPostById(data.postId);
 
-    if (post.authorId === authorId) {
-      throw new Error("No puedes responder tu propia publicación.");
+    const answer = await this.forumRepository.createAnswer(data, authorId);
+
+    // Notify the relevant owner
+    let recipientId: string;
+    if (data.parentId) {
+      const parentAnswer = await this.forumRepository.getAnswerById(data.parentId);
+      recipientId = parentAnswer ? parentAnswer.authorId : post.authorId;
+    } else {
+      recipientId = post.authorId;
     }
 
-    return await this.forumRepository.createAnswer(data, authorId);
+    const actorName = answer.author?.name || "Alguien";
+    const isReply = !!data.parentId;
+
+    notificationsService.dispatchNotification({
+      eventType: "answer_created",
+      actorId: authorId,
+      entityType: "Answer",
+      entityId: answer.id,
+      notification: {
+        type: "new_forum_answer",
+        title: isReply ? "Nueva respuesta a tu comentario" : "Nueva respuesta en tu publicación",
+        message: `${actorName} respondió${isReply ? " a tu comentario" : ""} en: "${post.title}"`,
+        audienceType: "INDIVIDUAL",
+        audienceRef: recipientId,
+        metadata: { actionUrl: `/comunidad/post/${data.postId}` },
+      },
+    }).catch(err => {
+      log.error("Error al despachar notificación de respuesta:", err);
+    });
+
+    return answer;
   }
 
   async editAnswer(answerId: string, content: string, userId: string, role: string) {
@@ -108,12 +135,35 @@ export class ForumService {
       throw new Error("UNAUTHORIZED");
     }
 
-    const replyCount = await this.forumRepository.countAnswerReplies(answerId);
-    if (replyCount > 0 && role !== "admin") {
-      throw new Error("No se puede editar una respuesta que ya tiene respuestas de otros usuarios.");
+    const updated = await this.forumRepository.updateAnswer(answerId, content);
+
+    // Notify all direct repliers about the edit
+    const replies = await this.forumRepository.getDirectReplies(answerId);
+    if (replies.length > 0) {
+      const post = await this.getPostById(answer.postId);
+      const actorName = updated.author?.name || "Alguien";
+
+      for (const reply of replies) {
+        notificationsService.dispatchNotification({
+          eventType: "answer_edited",
+          actorId: userId,
+          entityType: "Answer",
+          entityId: answerId,
+          notification: {
+            type: "answer_edited",
+            title: "Comentario editado",
+            message: `${actorName} editó su comentario en: "${post.title}"`,
+            audienceType: "INDIVIDUAL",
+            audienceRef: reply.authorId,
+            metadata: { actionUrl: `/comunidad/post/${answer.postId}` },
+          },
+        }).catch(err => {
+          log.error("Error al despachar notificación de edición:", err);
+        });
+      }
     }
 
-    return await this.forumRepository.updateAnswer(answerId, content);
+    return updated;
   }
 
   async acceptAnswer(answerId: string, postId: string, userId: string, role: string) {
