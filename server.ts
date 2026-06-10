@@ -16,37 +16,38 @@ log.info(`Starting server in ${dev ? "development" : "production"} mode...`);
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
+// Create HTTP server and initialize Socket.IO BEFORE app.prepare()
+// to eliminate the race window where Server Actions could run without Socket.IO.
+const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+  const parsedUrl = parse(req.url!, true);
+
+  // Skip logging for static assets and Next.js internals (noisy, no observability value)
+  const url = req.url || "";
+  const isStaticAsset =
+    url.startsWith("/_next/static/") ||
+    url.startsWith("/_next/image") ||
+    url.startsWith("/__nextjs") ||
+    url.includes("favicon.ico") ||
+    url.includes(".hot-update.");
+
+  if (!isStaticAsset) {
+    log.debug(`${req.method} ${url}`);
+  }
+
+  const isRateLimited = await applyRateLimitMiddleware(req, res, url, isStaticAsset);
+  if (isRateLimited) {
+    return;
+  }
+
+  handle(req, res, parsedUrl);
+});
+
+log.info("Initializing Socket.IO server...");
+initSocketServer(httpServer, prisma);
+
 app.prepare()
   .then(() => {
     log.info("Next.js application prepared successfully.");
-
-    const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-      const parsedUrl = parse(req.url!, true);
-
-      // Skip logging for static assets and Next.js internals (noisy, no observability value)
-      const url = req.url || "";
-      const isStaticAsset =
-        url.startsWith("/_next/static/") ||
-        url.startsWith("/_next/image") ||
-        url.startsWith("/__nextjs") ||
-        url.includes("favicon.ico") ||
-        url.includes(".hot-update.");
-
-      if (!isStaticAsset) {
-        log.debug(`${req.method} ${url}`);
-      }
-
-      const isRateLimited = await applyRateLimitMiddleware(req, res, url, isStaticAsset);
-      if (isRateLimited) {
-        return;
-      }
-
-      handle(req, res, parsedUrl);
-    });
-
-    // Initialize the Socket.IO server via the dedicated handler module
-    log.info("Initializing Socket.IO server...");
-    initSocketServer(httpServer, prisma);
 
     // Verify default admin user exists on boot
     ensureAdminExists(prisma).catch((err) => {
