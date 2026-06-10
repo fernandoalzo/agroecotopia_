@@ -1,39 +1,43 @@
 import { PrismaClient } from "@prisma/client";
 import logger from "@/utils/logger";
 import { ensureDefaultAdminStore } from "./init";
-import { config } from "@/config/config";
 
 const log = logger.child("src/backend/db/prisma.ts");
 
-const prismaClientSingleton = () => {
-  log.info("Creando nueva instancia de PrismaClient (Singleton)...");
-  const client = new PrismaClient();
-  
-  // Connect PrismaClient lazily on the server side only.
-  if (typeof window === "undefined") {
-    client.$connect().then(() => {
-      ensureDefaultAdminStore(client).catch(err => log.error("Error en init db:", err));
-    });
+const PRISMA_GLOBAL_KEY = "__prismaClient";
+
+// Usamos process como respaldo + globalThis porque Turbopack evalúa los módulos
+// del servidor en chunks separados con su propio alcance de módulo, pero process
+// es siempre el mismo singleton de Node.js en todos los contextos.
+const getGlobalStorage = () => {
+  if (typeof process !== "undefined" && (process as any)[PRISMA_GLOBAL_KEY]) {
+    return process as any;
   }
-
-
-  return client;
+  if (typeof globalThis !== "undefined" && (globalThis as any)[PRISMA_GLOBAL_KEY]) {
+    return globalThis as any;
+  }
+  return null;
 };
 
-declare global {
-   
-  var prismaGlobal: undefined | ReturnType<typeof prismaClientSingleton>;
-}
+let prisma: PrismaClient;
 
-const isReused = !!globalThis.prismaGlobal;
-const prisma = globalThis.prismaGlobal ?? prismaClientSingleton();
+const existing = getGlobalStorage();
+if (existing) {
+  prisma = existing[PRISMA_GLOBAL_KEY];
+  log.debug("Reutilizando instancia existente de PrismaClient.");
+} else {
+  log.info("Creando nueva instancia de PrismaClient...");
+  prisma = new PrismaClient();
 
-globalThis.prismaGlobal = prisma;
+  // Almacenar en ambos para cubrir cualquier contexto de evaluación
+  if (typeof process !== "undefined") (process as any)[PRISMA_GLOBAL_KEY] = prisma;
+  (globalThis as any)[PRISMA_GLOBAL_KEY] = prisma;
 
-if (isReused) {
-  log.debug("Reutilizando instancia existente de PrismaClient desde globalThis.");
-} else if (config.isDevelopment) {
-  log.debug("Instancia de PrismaClient almacenada en globalThis (modo desarrollo).");
+  if (typeof window === "undefined") {
+    prisma.$connect().then(() => {
+      ensureDefaultAdminStore(prisma).catch(err => log.error("Error en init db:", err));
+    });
+  }
 }
 
 export default prisma;

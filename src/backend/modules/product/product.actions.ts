@@ -211,3 +211,33 @@ export async function getStoreProductsAction(storeId: string, page: number = 1, 
     }
   });
 }
+
+/**
+ * Datos combinados de la página de productos: categorías + conteos + catálogo
+ * en UNA sola Server Action. Reemplaza 3 llamadas secuenciales del cliente.
+ */
+export async function getProductsPageDataAction(
+  page: number = 1,
+  limit: number = 20,
+  category?: string,
+  storeId?: string
+) {
+  try {
+    log.info(`Action: getProductsPageDataAction`, { page, limit, category, storeId });
+
+    const [productsResult, availableCategories, categoryCounts] = await Promise.all([
+      productService.getCatalog(page, limit, category, storeId),
+      productService.getCategories(),
+      productService.getCategoryCounts(storeId),
+    ]);
+
+    return { productsResult, availableCategories, categoryCounts };
+  } catch (error) {
+    log.error("Error getting products page data:", error);
+    return {
+      productsResult: { products: [], total: 0, totalPages: 0 },
+      availableCategories: [],
+      categoryCounts: {},
+    };
+  }
+}

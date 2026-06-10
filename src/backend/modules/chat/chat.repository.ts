@@ -214,20 +214,24 @@ export class ChatRepository {
       },
     });
 
-    return Promise.all(
-      conversations.map(async (conv) => ({
-        ...conv,
-        unreadCount: await prisma.message.count({
-          where: {
-            conversationId: conv.id,
-            isRead: false,
-            senderId: {
-              not: userId,
-            },
-          },
-        }),
-      }))
-    );
+    if (conversations.length === 0) return [];
+
+    const conversationIds = conversations.map(c => c.id);
+    const unreadCounts = await prisma.message.groupBy({
+      by: ['conversationId'],
+      where: {
+        conversationId: { in: conversationIds },
+        isRead: false,
+        senderId: { not: userId },
+      },
+      _count: { _all: true },
+    });
+
+    const unreadMap = new Map(unreadCounts.map(u => [u.conversationId, u._count._all]));
+    return conversations.map(conv => ({
+      ...conv,
+      unreadCount: unreadMap.get(conv.id) ?? 0,
+    }));
   }
 
   async createOrderConversation(data: {
@@ -366,20 +370,24 @@ export class ChatRepository {
       },
     });
 
-    return Promise.all(
-      conversations.map(async (conv) => ({
-        ...conv,
-        unreadCount: await prisma.message.count({
-          where: {
-            conversationId: conv.id,
-            isRead: false,
-            senderId: {
-              not: sellerId,
-            },
-          },
-        }),
-      }))
-    );
+    if (conversations.length === 0) return [];
+
+    const conversationIds = conversations.map(c => c.id);
+    const unreadCounts = await prisma.message.groupBy({
+      by: ['conversationId'],
+      where: {
+        conversationId: { in: conversationIds },
+        isRead: false,
+        senderId: { not: sellerId },
+      },
+      _count: { _all: true },
+    });
+
+    const unreadMap = new Map(unreadCounts.map(u => [u.conversationId, u._count._all]));
+    return conversations.map(conv => ({
+      ...conv,
+      unreadCount: unreadMap.get(conv.id) ?? 0,
+    }));
   }
 
   async findMessagesByConversationId(conversationId: string) {

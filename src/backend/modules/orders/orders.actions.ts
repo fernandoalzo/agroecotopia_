@@ -3,8 +3,9 @@
 import { ordersService } from "./index";
 import { authService } from "@/backend/modules/auth";
 import { withAuth, withAdmin } from "@/lib/auth-guards";
-import { PedidoEstado } from "@prisma/client";
+import { PedidoEstado, Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { chatService } from "@/backend/modules/chat";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/orders/orders.actions.ts");
@@ -301,6 +302,38 @@ export async function updateStoreOrderStatusAction(
       const message = error instanceof Error ? error.message : "Error al actualizar el estado del pedido";
       log.error("Error al actualizar estado del pedido de tienda:", { storeId, pedidoId, nuevoEstado, error: message });
       return { error: message };
+    }
+  });
+}
+
+/**
+ * Datos combinados del dashboard del vendedor: conversaciones + pedidos + conteos
+ * en UNA sola Server Action. Reemplaza 3 llamadas secuenciales del cliente.
+ */
+export async function getSellerDashboardDataAction(
+  storeId: string,
+  params: { page: number; limit: number; estado?: PedidoEstado; search?: string }
+) {
+  return await withStoreOwner(storeId, async (session) => {
+    log.info(`Action: getSellerDashboardDataAction`, { storeId, params });
+    try {
+      const userId = session.user.id;
+      const userRole = session.user.role as Role;
+
+      const [ordersResult, statusCounts, conversations] = await Promise.all([
+        ordersService.getPaginatedPedidos({ ...params, storeId }),
+        ordersService.getOrderStatusCounts(storeId),
+        chatService.getSellerOrderConversations(storeId, userId, userRole),
+      ]);
+
+      return { ordersResult, statusCounts, conversations };
+    } catch (error: any) {
+      log.error("Error getting seller dashboard data:", error);
+      return {
+        ordersResult: { orders: [], totalCount: 0, totalPages: 0, page: params.page, limit: params.limit },
+        statusCounts: {},
+        conversations: [],
+      };
     }
   });
 }

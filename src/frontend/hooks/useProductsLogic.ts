@@ -5,12 +5,19 @@ import logger from "@/utils/logger";
 
 const log = logger.child();
 
+type ProductsPageData = {
+  productsResult: { products: any[]; total: number; totalPages: number };
+  availableCategories: string[];
+  categoryCounts: Record<string, number>;
+};
+
 type ProductLogicDependencies = {
   getCategoriesAction: () => Promise<string[]>;
   getAllActiveStoresListAction: () => Promise<{ id: string; name: string }[] | { error: string }>;
   getCategoryCountsAction: (storeId?: string) => Promise<Record<string, number>>;
   getPaginatedProductsAction: (page: number, limit: number, category?: string, storeId?: string) => Promise<any>;
   searchProductsAction: (query: string, page: number, limit: number, category?: string, storeId?: string) => Promise<any>;
+  getProductsPageDataAction: (page: number, limit: number, category?: string, storeId?: string) => Promise<ProductsPageData>;
   createProductAction: (payload: any) => Promise<any>;
   createStoreProductAction: (storeId: string, payload: any) => Promise<any>;
   updateProductAction: (productId: string, payload: any) => Promise<any>;
@@ -30,6 +37,7 @@ export function useProductsLogic(
     getCategoryCountsAction,
     getPaginatedProductsAction,
     searchProductsAction,
+    getProductsPageDataAction,
     createProductAction,
     createStoreProductAction,
     updateProductAction,
@@ -72,54 +80,69 @@ export function useProductsLogic(
     setCurrentPage(1);
   }, [categoryFilter, debouncedSearch, limit]);
 
-  // Fetch basic data (Categories and Stores)
+  // Combined initial data + products (usado cuando getProductsPageDataAction está disponible)
   useEffect(() => {
     if (!enabled) return;
-    if (getCategoriesAction) {
-      getCategoriesAction().then(setAvailableCategories).catch(log.error);
-    }
-    if (!storeId) {
-      if (getAllActiveStoresListAction) {
-        getAllActiveStoresListAction().then(res => {
-          if (Array.isArray(res)) {
-            setStoresList(res);
-          } else {
-            log.error("Failed to load stores list", res);
-          }
-        }).catch(log.error);
+
+    // Categorías y stores (bootstrap, solo cuando NO tenemos la acción combinada)
+    if (!getProductsPageDataAction) {
+      if (getCategoriesAction) {
+        getCategoriesAction().then(setAvailableCategories).catch(log.error);
+      }
+      if (!storeId) {
+        if (getAllActiveStoresListAction) {
+          getAllActiveStoresListAction().then(res => {
+            if (Array.isArray(res)) setStoresList(res);
+            else log.error("Failed to load stores list", res);
+          }).catch(log.error);
+        }
       }
     }
   }, [storeId, enabled]);
 
-  // Fetch category counts
+  // Category counts (fallback cuando NO tenemos getProductsPageDataAction)
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || getProductsPageDataAction) return;
     if (getCategoryCountsAction) {
-      getCategoryCountsAction(storeId).then((counts) => {
-        setCategoryCounts(counts);
-      });
+      getCategoryCountsAction(storeId).then(setCategoryCounts).catch(log.error);
     }
   }, [refreshTrigger, storeId, enabled]);
 
-  // Fetch paginated & filtered products
+  // Fetch paginated products (y datos combinados si está disponible)
   useEffect(() => {
     if (!enabled) return;
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
         const catFilter = categoryFilter === "ALL" ? undefined : categoryFilter;
-        let result;
 
-        if (debouncedSearch.trim() !== "") {
-          result = await searchProductsAction?.(debouncedSearch, currentPage, limit, catFilter, storeId);
+        if (getProductsPageDataAction && !debouncedSearch.trim()) {
+          // Acción combinada: categorías + conteos + productos en paralelo
+          const result = await getProductsPageDataAction(currentPage, limit, catFilter, storeId);
+          if (result) {
+            const { productsResult, availableCategories: cats, categoryCounts: counts } = result;
+            if (productsResult && "products" in productsResult) {
+              setProducts(productsResult.products as Product[]);
+              setTotalPages(productsResult.totalPages);
+              setTotalCount(productsResult.total);
+            }
+            if (Array.isArray(cats)) setAvailableCategories(cats);
+            if (counts) setCategoryCounts(counts);
+          }
+        } else if (debouncedSearch.trim() !== "") {
+          const result = await searchProductsAction?.(debouncedSearch, currentPage, limit, catFilter, storeId);
+          if (result && "products" in result) {
+            setProducts(result.products as Product[]);
+            setTotalPages(result.totalPages);
+            setTotalCount(result.total);
+          }
         } else {
-          result = await getPaginatedProductsAction?.(currentPage, limit, catFilter, storeId);
-        }
-
-        if (result && "products" in result) {
-          setProducts(result.products as Product[]);
-          setTotalPages(result.totalPages);
-          setTotalCount(result.total);
+          const result = await getPaginatedProductsAction?.(currentPage, limit, catFilter, storeId);
+          if (result && "products" in result) {
+            setProducts(result.products as Product[]);
+            setTotalPages(result.totalPages);
+            setTotalCount(result.total);
+          }
         }
       } catch (error) {
         log.error("Error fetching paginated products:", error);
@@ -128,7 +151,7 @@ export function useProductsLogic(
       }
     };
 
-    fetchProducts();
+    fetchData();
   }, [currentPage, categoryFilter, debouncedSearch, limit, refreshTrigger, storeId, enabled]);
 
   // Handlers

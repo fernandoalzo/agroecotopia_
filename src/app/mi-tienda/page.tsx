@@ -16,11 +16,13 @@ import {
   deleteProductAction,
   deleteStoreProductAction,
   getCategoriesAction,
+  getProductsPageDataAction,
 } from "@/backend/modules/product/product.actions";
 import {
   getStoreOrdersAction,
   getStoreOrderStatusCountsAction,
   getStoreOrdersWithCountsAction,
+  getSellerDashboardDataAction,
   updateStoreOrderStatusAction,
 } from "@/backend/modules/orders/orders.actions";
 import {
@@ -66,9 +68,11 @@ export default function Page() {
         deleteProduct: deleteProductAction,
         deleteStoreProduct: deleteStoreProductAction,
         getCategories: getCategoriesAction,
+        getProductsPageData: getProductsPageDataAction,
         getStoreOrders: getStoreOrdersAction,
         getStoreOrderStatusCounts: getStoreOrderStatusCountsAction,
         getStoreOrdersWithCounts: getStoreOrdersWithCountsAction,
+        getSellerDashboardData: getSellerDashboardDataAction,
         updateStoreOrderStatus: updateStoreOrderStatusAction,
         getAllActiveStoresList: getAllActiveStoresListAction,
         // Promotions

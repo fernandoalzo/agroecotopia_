@@ -59,6 +59,8 @@ interface MiTiendaActions {
   getStoreOrders: (...args: any[]) => Promise<any>;
   getStoreOrderStatusCounts: (storeId: string) => Promise<any>;
   getStoreOrdersWithCounts: (storeId: string, params: { page: number; limit: number; estado?: any; search?: string }) => Promise<any>;
+  getSellerDashboardData: (storeId: string, params: { page: number; limit: number; estado?: any; search?: string }) => Promise<any>;
+  getProductsPageData: (page: number, limit: number, category?: string, storeId?: string) => Promise<any>;
   updateStoreOrderStatus: (...args: any[]) => Promise<any>;
   getAllActiveStoresList: () => Promise<any>;
   
@@ -132,6 +134,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     getCategoryCountsAction: actions.getCategoryCounts,
     getPaginatedProductsAction: actions.getPaginatedProducts,
     searchProductsAction: actions.searchProducts,
+    getProductsPageDataAction: actions.getProductsPageData,
     createProductAction: actions.createProduct,
     createStoreProductAction: actions.createStoreProduct,
     updateProductAction: actions.updateProduct,
@@ -265,33 +268,44 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
   });
 
   useEffect(() => {
-    loadUnreadCounts();
-  }, [loadUnreadCounts]);
-
-  useEffect(() => {
     if (!activeStore?.id || !isSeller || activeTab !== "orders") return;
     let cancelled = false;
     const load = async () => {
       setStoreOrdersLoading(true);
-      // Single server action that runs both queries in parallel on the server
-      const response = await actions.getStoreOrdersWithCounts(activeStore.id, {
+      const response = await actions.getSellerDashboardData(activeStore.id, {
         page: storeOrderCurrentPage,
         limit: 10,
         estado: storeOrderStatusFilter === "ALL" ? undefined : storeOrderStatusFilter,
         search: storeOrderSearchQuery || undefined,
       });
       if (cancelled) return;
-      const { ordersResult, statusCounts } = response || {};
+      const { ordersResult, statusCounts, conversations } = response || {};
+
+      // Orders
       if (ordersResult && "orders" in ordersResult) {
         setStoreOrders(ordersResult.orders as AdminOrder[]);
         setStoreOrderTotalPages(ordersResult.totalPages);
         setStoreOrderTotalCount(ordersResult.totalCount);
       }
+
+      // Status counts
       if (statusCounts && typeof statusCounts === "object") {
         const typed = statusCounts as Record<string, number>;
         const total = Object.values(typed).reduce((a, b) => a + (Number(b) || 0), 0);
         setStoreOrderStatusCounts({ ALL: total, ...typed });
       }
+
+      // Conversation unread counts (para badges en la tabla de pedidos)
+      if (Array.isArray(conversations)) {
+        const counts = conversations.reduce((acc: Record<string, number>, conv: any) => {
+          if (conv?.pedido?.id) {
+            acc[conv.pedido.id] = Number(conv.unreadCount) || 0;
+          }
+          return acc;
+        }, {});
+        setOrderChatUnreadCounts(counts);
+      }
+
       setStoreOrdersLoading(false);
     };
     load();
