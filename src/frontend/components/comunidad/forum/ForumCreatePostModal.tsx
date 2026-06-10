@@ -6,6 +6,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { postSchema } from "../schemas/post.schema";
 import { config } from "@/config/config";
+import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
 function MultiLabelSelect({
   value,
@@ -18,6 +19,7 @@ function MultiLabelSelect({
   groupedOptions: Record<string, readonly string[]>,
   label: string
 }) {
+  const { t } = useLanguage();
   const toggleOption = (opt: string) => {
     if (value.includes(opt)) {
       onChange(value.filter(v => v !== opt));
@@ -35,7 +37,7 @@ function MultiLabelSelect({
           "text-xs font-bold",
           value.length === 5 ? "text-amber-500" : "text-muted-foreground"
         )}>
-          {value.length} / 5 seleccionadas
+          {t.forum.post.labelCount.replace("{count}", String(value.length))}
         </span>
       </div>
 
@@ -89,11 +91,6 @@ type FormField = {
   colSpan: string;
 };
 
-const formFieldsConfig: FormField[] = [
-  { id: "title", label: "Título", type: "text", placeholder: "Ej. ¿Cómo tratar la roya en plantas de café?", colSpan: "md:col-span-3" },
-  { id: "body", label: "Descripción detallada", type: "textarea", placeholder: "Describe tu situación, el clima, riegos y todo lo que pueda ayudar a la comunidad a responderte...", colSpan: "md:col-span-3" },
-];
-
 export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: ForumCreatePostModalProps) {
   const [formData, setFormData] = useState({
     title: "",
@@ -102,6 +99,12 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { t } = useLanguage();
+
+  const formFieldsConfig: FormField[] = [
+    { id: "title", label: t.forum.createPost.titleLabel, type: "text", placeholder: t.forum.createPost.titlePlaceholder, colSpan: "md:col-span-3" },
+    { id: "body", label: t.forum.createPost.descriptionLabel, type: "textarea", placeholder: t.forum.createPost.descriptionPlaceholder, colSpan: "md:col-span-3" },
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,7 +156,7 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
               className="bg-card w-full max-w-2xl rounded-3xl shadow-2xl border border-border pointer-events-auto flex flex-col"
             >
               <div className="flex items-center justify-between p-6 border-b border-border/50 bg-secondary/30 rounded-t-3xl">
-                <h2 className="text-xl font-bold text-foreground">Crear Nueva Publicación</h2>
+                <h2 className="text-xl font-bold text-foreground">{t.forum.createPost.title}</h2>
                 <button
                   onClick={onClose}
                   className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
@@ -206,7 +209,7 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
                   {/* Labels Section */}
                   <div className="md:col-span-3">
                     <MultiLabelSelect
-                      label="Etiquetas (Clasificadas)"
+                      label={t.forum.createPost.tagsLabel}
                       value={formData.labels}
                       onChange={(labels) => {
                         setFormData(prev => ({ ...prev, labels }));
@@ -224,7 +227,7 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
                     onClick={onClose}
                     className="px-6 py-2.5 rounded-full font-bold text-muted-foreground hover:bg-secondary transition-colors"
                   >
-                    Cancelar
+                    {t.forum.cancel}
                   </button>
                   <button
                     type="submit"
@@ -232,7 +235,7 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
                     className={`flex items-center gap-2 px-8 py-2.5 rounded-full bg-primary text-primary-foreground font-bold shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all ${isSubmitting ? 'opacity-60 cursor-not-allowed hover:scale-100' : ''}`}
                   >
                     <Send className="w-4 h-4" />
-                    {isSubmitting ? 'Publicando...' : 'Publicar'}
+                    {isSubmitting ? t.forum.createPost.publishing : t.forum.createPost.publish}
                   </button>
                 </div>
               </form>

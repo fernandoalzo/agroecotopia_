@@ -2,6 +2,7 @@
 
 import { useMemo, useCallback, Component, ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/context/LanguageContext";
 
 import { useSession } from "next-auth/react";
 
@@ -170,6 +171,7 @@ export default function PostPageClient({
 }: PostPageClientProps) {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useLanguage();
 
   const queryClient = useQueryClient();
 
@@ -189,7 +191,7 @@ export default function PostPageClient({
     const authorMap = new Map<string, string>();
     const parentMap = new Map<string, string>();
     postData.answers.forEach(a => {
-      authorMap.set(a.id, a.author.name || "Usuario");
+      authorMap.set(a.id, a.author.name || t.forum.fallbackAuthorName);
       if (a.parentId) parentMap.set(a.id, a.parentId);
     });
 
@@ -215,7 +217,7 @@ export default function PostPageClient({
       const mapped: Answer = {
         id: ans.id,
         content: ans.content,
-        author: ans.author.name || "Usuario",
+        author: ans.author.name || t.forum.fallbackAuthorName,
         authorId: ans.authorId,
         authorImage: ans.author.image,
         authorRole: ans.author.role,
@@ -256,7 +258,7 @@ export default function PostPageClient({
       id: postData.id,
       title: postData.title,
       body: postData.body,
-      author: postData.author.name || "Usuario",
+      author: postData.author.name || t.forum.fallbackAuthorName,
       authorId: postData.authorId || postData.author.id,
       authorImage: postData.author.image,
       labels: postData.labels,
@@ -266,7 +268,7 @@ export default function PostPageClient({
       isTrending: postData.isTrending,
       answers: roots,
     };
-  }, [postData]);
+  }, [postData, t]);
 
   const createAnswerMutation = useMutation({
     mutationFn: async (data: { content: string; parentId?: string | null }) => {
@@ -276,10 +278,10 @@ export default function PostPageClient({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
-      toast.success("Respuesta enviada");
+      toast.success(t.forum.toasts.answerSent);
     },
     onError: (err: Error) => {
-      toast.error(err.message ?? "Error al enviar la respuesta");
+      toast.error(err.message ?? t.forum.toasts.answerSendError);
     },
   });
 
@@ -295,10 +297,10 @@ export default function PostPageClient({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
-      toast.success("Calificación guardada");
+      toast.success(t.forum.toasts.ratingSaved);
     },
     onError: (err: Error) => {
-      toast.error(err.message ?? "Error al calificar");
+      toast.error(err.message ?? t.forum.toasts.ratingError);
     },
   });
 
@@ -310,10 +312,10 @@ export default function PostPageClient({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
-      toast.success("Respuesta actualizada");
+      toast.success(t.forum.toasts.answerUpdated);
     },
     onError: (err: Error) => {
-      toast.error(err.message ?? "Error al editar la respuesta");
+      toast.error(err.message ?? t.forum.toasts.answerUpdateError);
     },
   });
 
@@ -324,10 +326,10 @@ export default function PostPageClient({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
-      toast.success("Respuesta eliminada");
+      toast.success(t.forum.toasts.answerDeleted);
     },
     onError: (err: Error) => {
-      toast.error(err.message ?? "Error al eliminar la respuesta");
+      toast.error(err.message ?? t.forum.toasts.answerDeleteError);
     },
   });
 
@@ -337,11 +339,11 @@ export default function PostPageClient({
       if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
     },
     onSuccess: () => {
-      toast.success("Publicación eliminada correctamente");
+      toast.success(t.forum.toasts.postDeleted);
       router.push("/comunidad");
     },
     onError: (err: Error) => {
-      toast.error(err.message ?? "Error al eliminar la publicación");
+      toast.error(err.message ?? t.forum.toasts.postDeleteError);
     },
   });
 
@@ -353,10 +355,10 @@ export default function PostPageClient({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
-      toast.success("Respuesta aceptada");
+      toast.success(t.forum.toasts.answerAccepted);
     },
     onError: (err: Error) => {
-      toast.error(err.message ?? "Error al aceptar la respuesta");
+      toast.error(err.message ?? t.forum.toasts.answerAcceptError);
     },
   });
 
@@ -368,24 +370,24 @@ export default function PostPageClient({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
-      toast.success("Publicación actualizada");
+      toast.success(t.forum.toasts.postUpdated);
     },
     onError: (err: Error) => {
-      toast.error(err.message ?? "Error al editar la publicación");
+      toast.error(err.message ?? t.forum.toasts.postUpdateError);
     },
   });
 
   const añadirNuevaRespuesta = useCallback(async (content: string, parentId?: string | null) => {
     if (status !== "authenticated") {
-      toast.error("Debes iniciar sesión para responder");
+      toast.error(t.forum.toasts.loginRequired);
       return;
     }
     await createAnswerMutation.mutateAsync({ content, parentId });
-  }, [status, createAnswerMutation]);
+  }, [status, createAnswerMutation, t]);
 
   const handleRate = async (itemId: string, rating: number, isQuestion: boolean = false) => {
     if (status !== "authenticated") {
-      toast.error("Debes iniciar sesión para calificar");
+      toast.error(t.forum.toasts.loginRequiredVote);
       return;
     }
     await rateItemMutation.mutateAsync({ itemId, rating, isQuestion });
@@ -448,7 +450,7 @@ export default function PostPageClient({
                 <div>
                   <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-6 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    Contribuidores del Post
+                    {t.forum.sidebar.contributors}
                   </h3>
                   
                   <div className="space-y-5">
@@ -458,7 +460,7 @@ export default function PostPageClient({
                       </div>
                       <div>
                         <span className="font-bold text-sm block text-foreground">{question.author}</span>
-                        <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Autor</span>
+                        <span className="text-xs text-muted-foreground uppercase tracking-wider font-bold">{t.forum.sidebar.author}</span>
                       </div>
                     </div>
 
@@ -472,7 +474,7 @@ export default function PostPageClient({
                           </div>
                           <div>
                             <span className="font-bold text-sm block text-foreground">{authorName}</span>
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{answer?.authorRole || "Miembro"}</span>
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{answer?.authorRole || t.forum.fallbackRole}</span>
                           </div>
                         </div>
                       );

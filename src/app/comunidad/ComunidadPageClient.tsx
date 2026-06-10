@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 import CommunityQAForum from "@/frontend/components/comunidad/CommunityQAForum";
 import { Question, type RawPost } from "@/frontend/components/comunidad/forum/forum.types";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -39,13 +40,15 @@ export default function ComunidadPageClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "popular">("newest");
 
+  const { t } = useLanguage();
+
   const queryClient = useQueryClient();
 
   const mapRawPost = (p: RawPost) => ({
     id: p.id,
     title: p.title,
     body: p.body,
-    author: p.author.name || "Usuario",
+    author: p.author.name || t.forum.fallbackAuthorName,
     authorImage: p.author.image,
     labels: p.labels,
     ratingTotal: p.ratingTotal,
@@ -155,10 +158,10 @@ export default function ComunidadPageClient({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
-      toast.success("Publicación creada con éxito");
+      toast.success(t.forum.toasts.postCreated);
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Error al crear la publicación");
+      toast.error(err.message || t.forum.toasts.postCreateError);
     },
   });
 
@@ -170,10 +173,10 @@ export default function ComunidadPageClient({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
-      toast.success("Calificación guardada");
+      toast.success(t.forum.toasts.ratingSaved);
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Error al calificar");
+      toast.error(err.message || t.forum.toasts.ratingError);
     },
   });
 

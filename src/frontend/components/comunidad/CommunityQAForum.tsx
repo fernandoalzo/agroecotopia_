@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Sparkles, Flame, MessageSquare, Plus, SearchX } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/context/LanguageContext";
 
 import { Question } from "./forum/forum.types";
 import ForumSidebar from "./forum/ForumSidebar";
@@ -56,6 +57,7 @@ export default function CommunityQAForum({
   setSortBy
 }: CommunityQAForumProps) {
   const { status } = useSession();
+  const { t } = useLanguage();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   return (
@@ -100,7 +102,7 @@ export default function CommunityQAForum({
                         : "text-muted-foreground hover:text-foreground font-medium"
                     )}
                   >
-                    <Sparkles className={cn("w-4 h-4", sortBy === "newest" ? "text-primary animate-pulse" : "text-muted-foreground")} /> Nuevos
+                    <Sparkles className={cn("w-4 h-4", sortBy === "newest" ? "text-primary animate-pulse" : "text-muted-foreground")} /> {t.forum.sort.newest}
                   </button>
                   <button 
                     onClick={() => setSortBy("popular")}
@@ -111,11 +113,11 @@ export default function CommunityQAForum({
                         : "text-muted-foreground hover:text-foreground font-medium"
                     )}
                   >
-                    <Flame className={cn("w-4 h-4", sortBy === "popular" ? "text-primary animate-pulse" : "text-muted-foreground")} /> Populares
+                    <Flame className={cn("w-4 h-4", sortBy === "popular" ? "text-primary animate-pulse" : "text-muted-foreground")} /> {t.forum.sort.popular}
                   </button>
                 </div>
                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                  {questions.length} resultados
+                  {t.forum.qaList.results.replace("{count}", String(questions.length))}
                 </span>
               </div>
 
@@ -135,9 +137,9 @@ export default function CommunityQAForum({
                     >
                       <SearchX className="w-9 h-9 text-muted-foreground/50" />
                     </motion.div>
-                    <h3 className="text-lg font-semibold text-foreground/70 mb-1.5">No se encontraron resultados</h3>
+                    <h3 className="text-lg font-semibold text-foreground/70 mb-1.5">{t.forum.qaList.noResults}</h3>
                     <p className="text-sm text-muted-foreground/60 max-w-xs leading-relaxed">
-                      Intenta probar con otros términos o ajustar los filtros.
+                      {t.forum.qaList.noResultsDesc}
                     </p>
                   </motion.div>
                 ) : (
@@ -159,10 +161,10 @@ export default function CommunityQAForum({
                       {isFetchingNextPage ? (
                         <>
                           <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                          Cargando...
+                          {t.forum.loading}
                         </>
                       ) : (
-                        "Cargar más publicaciones"
+                        t.forum.qaList.loadMore
                       )}
                     </button>
                   </div>
@@ -186,12 +188,12 @@ export default function CommunityQAForum({
       {status === "authenticated" && (
         <div className="fixed bottom-5 right-5 z-[100] md:bottom-8 md:right-8">
           <button
-            aria-label="Crear nueva publicación"
+            aria-label={t.forum.qaList.createPostAria}
             onClick={() => setIsCreateModalOpen(true)}
             className="flex items-center justify-center gap-2 px-4 md:px-6 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-transform hover:scale-105"
           >
             <Plus className="h-6 w-6 md:h-5 md:w-5" />
-            <span className="font-bold hidden md:block">Nueva Publicación</span>
+            <span className="font-bold hidden md:block">{t.forum.qaList.newPost}</span>
           </button>
         </div>
       )}

@@ -7,12 +7,14 @@ import { Star, MessageCircle } from "lucide-react";
 import { Question } from "./forum.types";
 import { cn } from "@/lib/utils";
 import { calculateBayesianAverage } from "@/utils/ratingSystem";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface ForumQuestionCardProps {
   question: Question;
 }
 
 function ForumQuestionCard({ question }: ForumQuestionCardProps) {
+  const { t } = useLanguage();
   const router = useRouter();
 
   const displayRating = question.ratingDistribution
@@ -56,7 +58,7 @@ function ForumQuestionCard({ question }: ForumQuestionCardProps) {
           answersCount > 0 ? "text-primary border border-primary/30 bg-primary/5 font-medium" : "text-muted-foreground"
         )}>
           <MessageCircle className="w-3.5 h-3.5" />
-          <span className="text-xs">{answersCount} res</span>
+          <span className="text-xs">{t.forum.qaList.answersCount.replace("{count}", String(answersCount))}</span>
         </div>
       </div>
 

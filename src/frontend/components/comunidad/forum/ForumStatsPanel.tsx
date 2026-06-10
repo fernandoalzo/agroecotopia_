@@ -3,6 +3,7 @@
 import { Users, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { config } from "@/config/config";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function ForumStatsPanel({
   activeCommunityStats,
@@ -15,6 +16,7 @@ export default function ForumStatsPanel({
   isStatsLoading?: boolean;
   isContributorsLoading?: boolean;
 }) {
+  const { t } = useLanguage();
   return (
     <div className="hidden xl:block xl:col-span-3 sticky top-28 space-y-10 px-2">
 
@@ -22,7 +24,7 @@ export default function ForumStatsPanel({
       <div>
         <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/70 mb-4 flex items-center gap-2">
           <Users className="w-3 h-3 text-primary" />
-          Comunidad Activa
+          {t.forum.sidebar.activeCommunity}
         </h3>
 
         <div className="flex">
@@ -34,7 +36,7 @@ export default function ForumStatsPanel({
           ) : (
             <div>
               <span className="block font-black text-3xl text-foreground tracking-tight">{activeCommunityStats.totalMembers}</span>
-              <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mt-1 block">Participantes</span>
+              <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mt-1 block">{t.forum.sidebar.members}</span>
             </div>
           )}
         </div>
@@ -44,7 +46,7 @@ export default function ForumStatsPanel({
       <div>
         <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/70 mb-4 flex items-center gap-2">
           <TrendingUp className="w-3 h-3 text-accent" />
-          Top Contribuidores
+          {t.forum.sidebar.topContributors}
         </h3>
 
         <div className="space-y-5">
@@ -83,7 +85,7 @@ export default function ForumStatsPanel({
 
       {/* Rules / Guidelines */}
       <div>
-        <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/70 mb-4">Normas del Foro</h3>
+        <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/70 mb-4">{t.forum.sidebar.forumRules}</h3>
         <ul className="space-y-3 text-xs text-muted-foreground leading-relaxed">
           {config.forum.rules.map((rule, idx) => (
             <li key={idx} className="flex gap-2 items-start"><span className="text-primary mt-0.5">•</span> {rule}</li>

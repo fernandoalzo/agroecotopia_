@@ -2,6 +2,7 @@
 
 import { Flame } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface ForumTrendingBannerProps {
   tags: string[];
@@ -9,6 +10,7 @@ interface ForumTrendingBannerProps {
 }
 
 export default function ForumTrendingBanner({ tags, isLoading }: ForumTrendingBannerProps) {
+  const { t } = useLanguage();
   if (isLoading) {
     return (
       <div className="mb-8">
@@ -31,7 +33,7 @@ export default function ForumTrendingBanner({ tags, isLoading }: ForumTrendingBa
     <div className="mb-8">
       <div className="flex items-center gap-2 text-primary font-bold mb-4">
         <Flame className="w-5 h-5 animate-pulse" />
-        <h2 className="text-lg">Tendencias esta semana</h2>
+        <h2 className="text-lg">{t.forum.sidebar.trending}</h2>
       </div>
       <div className="flex flex-wrap gap-4">
         {tags.map(tag => (

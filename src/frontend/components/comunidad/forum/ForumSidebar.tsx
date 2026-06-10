@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, ChevronDown, Hash, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { config } from "@/config/config";
+import { useLanguage } from "@/context/LanguageContext";
 
 interface ForumSidebarProps {
   searchQuery: string;
@@ -24,6 +25,7 @@ function FilterCategory({
   activeFilters: Record<string, string[]>;
   setActiveFilter: (category: string, value: string) => void;
 }) {
+  const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const selectedLabels = activeFilters[category] || [];
   const hasActiveFilter = selectedLabels.length > 0;
@@ -63,7 +65,7 @@ function FilterCategory({
                   !hasActiveFilter ? "text-primary bg-primary/5" : "text-foreground/70 hover:text-foreground hover:bg-secondary/50"
                 )}
               >
-                Todos
+                {t.forum.sidebar.all}
                 {!hasActiveFilter && <Check className="w-4 h-4" />}
               </button>
 
@@ -126,6 +128,7 @@ export default function ForumSidebar({
   activeFilters,
   setActiveFilter
 }: ForumSidebarProps) {
+  const { t } = useLanguage();
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const totalActiveFilters = Object.values(activeFilters).reduce((acc, curr) => acc + curr.length, 0);
 
@@ -135,7 +138,7 @@ export default function ForumSidebar({
         <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
         <input
           type="text"
-          placeholder="Buscar discusiones..."
+          placeholder={t.forum.sidebar.searchPlaceholder}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-8 pr-8 py-2 bg-transparent border-b border-border/50 focus:border-primary focus:outline-none text-sm text-foreground placeholder:text-muted-foreground transition-all rounded-none"
@@ -150,7 +153,7 @@ export default function ForumSidebar({
               type="button"
               onClick={() => setSearchQuery("")}
               className="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-              aria-label="Limpiar búsqueda"
+              aria-label={t.forum.sidebar.clearSearch}
             >
               <X className="w-4 h-4" />
             </motion.button>
@@ -165,7 +168,7 @@ export default function ForumSidebar({
           className="w-full flex items-center justify-between group outline-none"
         >
           <h4 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2 group-hover:text-primary transition-colors">
-            <Hash className="w-3 h-3" /> Filtrar por etiquetas
+            <Hash className="w-3 h-3" /> {t.forum.sidebar.filterByTags}
             {totalActiveFilters > 0 && (
               <span className="min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1">
                 {totalActiveFilters}

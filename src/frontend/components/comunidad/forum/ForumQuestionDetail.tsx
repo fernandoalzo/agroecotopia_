@@ -29,9 +29,7 @@ interface ForumQuestionDetailProps {
 }
 
 import { answerSchema } from "../schemas/answer.schema";
-import logger from "@/utils/logger";
-
-const log = logger.child("src/frontend/components/comunidad/forum/ForumQuestionDetail.tsx");
+import { useLanguage } from "@/context/LanguageContext";
 
 type SortMode = "votes" | "newest" | "oldest";
 
@@ -47,6 +45,7 @@ function MarkdownRenderer({ content }: { content: string }) {
 
 export default function ForumQuestionDetail({ question, onBack, onRate, onAddAnswer, onEditAnswer, onDeleteAnswer, onDeleteQuestion, onAcceptAnswer, onEditPost, currentUserId, currentUserRole }: ForumQuestionDetailProps) {
   const { status } = useSession();
+  const { t } = useLanguage();
   const [replyContent, setReplyContent] = useState("");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -77,7 +76,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      log.error("Error al copiar", err);
+      // Silently fail
     } finally {
       setIsSharing(false);
     }
@@ -155,9 +154,9 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
   const relativeDate = formatDistanceToNow(new Date(question.createdAt), { addSuffix: true, locale: es });
 
   const sortOptions: { key: SortMode; label: string; icon: typeof ArrowUpDown }[] = [
-    { key: "votes", label: "Votos", icon: TrendingUp },
-    { key: "newest", label: "Más nuevas", icon: Clock },
-    { key: "oldest", label: "Más antiguas", icon: ArrowUpDown },
+    { key: "votes", label: t.forum.sort.votes, icon: TrendingUp },
+    { key: "newest", label: t.forum.sort.newest, icon: Clock },
+    { key: "oldest", label: t.forum.sort.oldest, icon: ArrowUpDown },
   ];
 
   return (
@@ -171,7 +170,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
         onClick={onBack}
         className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6 font-bold text-sm bg-secondary px-4 py-2 rounded-full w-fit"
       >
-        <ArrowLeft className="w-4 h-4" /> Volver al Feed
+        <ArrowLeft className="w-4 h-4" />{t.forum.post.backToFeed}
       </button>
 
       <div className="mb-12 relative">
@@ -196,7 +195,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
                 className="w-full text-3xl md:text-5xl font-black font-display tracking-tight text-foreground leading-[1.1] bg-transparent border-b border-border/30 focus:outline-none focus:border-primary/50 pb-2"
-                placeholder="Título de la publicación"
+                placeholder={t.forum.post.titlePlaceholder}
               />
               <textarea
                 rows={8}
@@ -209,7 +208,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
                 value={editLabels}
                 onChange={(e) => setEditLabels(e.target.value)}
                 className="w-full bg-transparent border-b border-border/30 focus:outline-none focus:border-primary/50 pb-1 text-sm text-muted-foreground"
-                placeholder="Labels (separados por coma)"
+                placeholder={t.forum.post.labelsPlaceholder}
               />
               <div className="flex items-center gap-2">
                 <button
@@ -217,13 +216,13 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
                   disabled={isEditPostSubmitting}
                   className={`px-4 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  {isEditPostSubmitting ? 'Guardando...' : 'Guardar cambios'}
+                  {isEditPostSubmitting ? t.forum.saving : t.forum.post.saveChanges}
                 </button>
                 <button
                   onClick={() => setIsEditingPost(false)}
                   className="px-4 py-1.5 rounded-md text-xs font-bold text-muted-foreground hover:bg-secondary transition-colors"
                 >
-                  Cancelar
+                  {t.forum.cancel}
                 </button>
               </div>
             </div>
@@ -246,11 +245,11 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
                   className="flex items-center gap-1.5 ml-auto md:ml-4 px-3 py-1.5 rounded-full text-xs font-bold transition-all border bg-secondary/50 hover:bg-secondary text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSharing ? (
-                    <span className="animate-pulse">Compartiendo...</span>
+                    <span className="animate-pulse">{t.forum.post.sharing}</span>
                   ) : copied ? (
-                    <><Check className="w-3.5 h-3.5 text-green-500" /> ¡Copiado!</>
+                    <><Check className="w-3.5 h-3.5 text-green-500" /> {t.forum.post.copied}</>
                   ) : (
-                    <><Share2 className="w-3.5 h-3.5" /> Compartir</>
+                    <><Share2 className="w-3.5 h-3.5" /> {t.forum.share}</>
                   )}
                 </button>
 
@@ -258,7 +257,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
                   <button
                     onClick={() => { setIsEditingPost(true); setEditTitle(question.title); setEditBody(question.body); setEditLabels(question.labels.join(", ")); }}
                     className="flex items-center justify-center w-8 h-8 rounded-full transition-all hover:bg-primary/10 hover:text-primary text-muted-foreground"
-                    title="Editar publicación"
+                    title={t.forum.post.editPost}
                   >
                     <Pencil className="w-4 h-4" />
                   </button>
@@ -270,16 +269,16 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
                       <button 
                         onClick={() => setShowDeleteConfirm(true)}
                         className="flex items-center justify-center w-8 h-8 rounded-full transition-all hover:bg-red-500/10 hover:text-red-500 text-muted-foreground"
-                        title="Eliminar post"
+                        title={t.forum.post.deletePost}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     ) : (
                       <div className="flex items-center gap-1 bg-red-500/10 rounded-full border border-red-500/20 px-2 py-1">
-                        <button onClick={handleDeleteQuestion} disabled={isDeletingQuestion} className="min-w-[36px] min-h-[36px] sm:w-6 sm:h-6 rounded-md bg-red-500/20 text-red-500 hover:bg-red-500/30 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" title="Confirmar eliminación">
+                        <button onClick={handleDeleteQuestion} disabled={isDeletingQuestion} className="min-w-[36px] min-h-[36px] sm:w-6 sm:h-6 rounded-md bg-red-500/20 text-red-500 hover:bg-red-500/30 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" title={t.forum.post.confirmDelete}>
                           {isDeletingQuestion ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                         </button>
-                        <button onClick={() => setShowDeleteConfirm(false)} className="min-w-[36px] min-h-[36px] sm:w-6 sm:h-6 rounded-md bg-secondary/50 text-muted-foreground hover:text-foreground transition-all flex items-center justify-center" title="Cancelar eliminación">
+                        <button onClick={() => setShowDeleteConfirm(false)} className="min-w-[36px] min-h-[36px] sm:w-6 sm:h-6 rounded-md bg-secondary/50 text-muted-foreground hover:text-foreground transition-all flex items-center justify-center" title={t.forum.post.cancelDelete}>
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -292,7 +291,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
                     onClick={() => handleVoteQuestion(1)}
                     disabled={isVotingQuestion}
                     className={`transition-all hover:scale-110 p-1 focus:outline-none min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center ${isVotingQuestion ? 'opacity-50 cursor-not-allowed' : 'text-muted-foreground/40 hover:text-primary/60'}`}
-                    title="Me gusta"
+                    title={t.forum.like}
                   >
                     <ThumbsUp className="w-4 h-4" />
                   </button>
@@ -303,7 +302,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
                     onClick={() => handleVoteQuestion(-1)}
                     disabled={isVotingQuestion}
                     className={`transition-all hover:scale-110 p-1 focus:outline-none min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center ${isVotingQuestion ? 'opacity-50 cursor-not-allowed' : 'text-muted-foreground/40 hover:text-red-500/60'}`}
-                    title="No me gusta"
+                    title={t.forum.dislike}
                   >
                     <ThumbsDown className="w-4 h-4" />
                   </button>
@@ -321,7 +320,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
       {/* Answers header with sort tabs */}
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-border/30">
           <h2 className="text-lg font-bold text-foreground">
-            {question.answers.length} {question.answers.length === 1 ? 'Respuesta' : 'Respuestas'}
+            {question.answers.length} {question.answers.length === 1 ? t.forum.post.answer : t.forum.post.answers}
           </h2>
           {question.answers.length > 1 && (
             <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5">
@@ -347,7 +346,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
         {/* Main answer textarea */}
         {status === "authenticated" ? (
           <div className="mb-8 pb-6 border-b border-border/30">
-            <h3 className="font-bold text-foreground mb-3 text-sm">Tu respuesta</h3>
+            <h3 className="font-bold text-foreground mb-3 text-sm">{t.forum.post.yourAnswer}</h3>
             <div className={`border rounded-md focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-primary/50 transition-all ${error ? 'border-red-500' : 'border-border'}`}>
               <textarea
                 ref={textareaRef}
@@ -355,7 +354,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
                 value={replyContent}
                 onChange={(e) => { setReplyContent(e.target.value); setError(""); autoResize(e.target); }}
                 onKeyDown={handleKeyDown}
-                placeholder="Escribe tu respuesta aquí para ayudar a la comunidad..."
+                placeholder={t.forum.post.answerPlaceholder}
                 className="w-full bg-transparent border-none focus:ring-0 resize-none outline-none text-foreground placeholder:text-muted-foreground text-sm px-3 py-2"
               />
             </div>
@@ -363,20 +362,20 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
             <div className="flex items-center justify-between mt-3">
               <span className="text-[10px] text-muted-foreground/60">{replyContent.length}/{ANSWER_MAX}</span>
               <div className="flex items-center gap-3">
-                <span className="text-[10px] text-muted-foreground/60 hidden sm:block">⌘Enter para enviar</span>
+                <span className="text-[10px] text-muted-foreground/60 hidden sm:block">{t.forum.post.keyboardHint}</span>
                 <button
                   onClick={handleAddAnswer}
                   disabled={isSubmitting}
                   className={`px-5 py-2 bg-primary text-primary-foreground rounded-md font-bold hover:bg-primary/90 transition-all text-xs ${isSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >
-                  {isSubmitting ? 'Enviando...' : 'Publicar respuesta'}
+                  {isSubmitting ? t.forum.sending : t.forum.post.publishAnswer}
                 </button>
               </div>
             </div>
           </div>
         ) : (
           <div className="mb-8 pb-6 border-b border-border/30 text-center">
-            <p className="text-muted-foreground font-medium mb-3 text-sm">Inicia sesión para participar en la conversación.</p>
+            <p className="text-muted-foreground font-medium mb-3 text-sm">{t.forum.post.loginToParticipate}</p>
             <button
               onClick={() => {
                 if (typeof window !== "undefined") {
@@ -386,7 +385,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
               }}
               className="inline-block px-5 py-2 border border-primary text-primary rounded-md font-bold hover:bg-primary/10 transition-all text-xs"
             >
-              Iniciar Sesión
+              {t.forum.post.login}
             </button>
           </div>
         )}
@@ -404,8 +403,8 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
               <div className="w-16 h-16 rounded-full bg-secondary/50 flex items-center justify-center mx-auto mb-4">
                 <MessageCircle className="w-8 h-8 text-muted-foreground/40" />
               </div>
-              <h3 className="text-lg font-bold text-foreground mb-2">Aún no hay respuestas</h3>
-              <p className="text-muted-foreground text-sm">Sé el primero en responder a esta pregunta.</p>
+              <h3 className="text-lg font-bold text-foreground mb-2">{t.forum.post.noAnswers}</h3>
+              <p className="text-muted-foreground text-sm">{t.forum.post.noAnswersDesc}</p>
             </div>
           ) : (
             <div className="divide-y divide-border/30">
@@ -460,7 +459,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           className="fixed bottom-16 sm:bottom-6 right-6 w-10 h-10 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-all z-50"
-          title="Volver arriba"
+          title={t.forum.post.scrollToTop}
         >
           <ArrowUpDown className="w-4 h-4 rotate-90" />
         </button>
