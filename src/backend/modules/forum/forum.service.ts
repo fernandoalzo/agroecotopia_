@@ -4,6 +4,7 @@ import { userRepository } from "@/backend/modules/user";
 import logger from "@/utils/logger";
 import { getForumNotificationStrings } from "./forum-notification-strings";
 import { config } from "@/config/config";
+import eventBus from "@/utils/eventBus";
 
 const log = logger.child("src/backend/modules/forum/forum.service.ts");
 
@@ -52,6 +53,8 @@ export class ForumService {
       log.error("Error al buscar admins para notificación:", err);
     });
 
+    eventBus.emit("forum:post_created", { postId: post.id, post });
+
     return post;
   }
 
@@ -77,7 +80,11 @@ export class ForumService {
       throw new Error("UNAUTHORIZED");
     }
 
-    return await this.forumRepository.deletePost(postId);
+    await this.forumRepository.deletePost(postId);
+
+    eventBus.emit("forum:post_deleted", { postId });
+
+    return { success: true };
   }
 
   async createAnswer(
@@ -123,6 +130,8 @@ export class ForumService {
     }).catch(err => {
       log.error("Error al despachar notificación de respuesta:", err);
     });
+
+    eventBus.emit("forum:answer_created", { postId: data.postId, answer, answerId: answer.id });
 
     return answer;
   }
@@ -170,6 +179,8 @@ export class ForumService {
       }
     }
 
+    eventBus.emit("forum:answer_edited", { postId: answer.postId, answerId, answer: updated });
+
     return updated;
   }
 
@@ -194,7 +205,11 @@ export class ForumService {
 
     // Toggle acceptance — if already accepted, unaccept
     const newAccepted = !answer.isAccepted;
-    return await this.forumRepository.updateAnswerAccepted(answerId, newAccepted);
+    const updated = await this.forumRepository.updateAnswerAccepted(answerId, newAccepted);
+
+    eventBus.emit("forum:answer_accepted", { postId, answerId, isAccepted: newAccepted });
+
+    return updated;
   }
 
   async editPost(postId: string, userId: string, role: string, data: { title?: string; body?: string; labels?: string[] }) {
@@ -219,7 +234,11 @@ export class ForumService {
       throw new Error("You must select at least one label.");
     }
 
-    return await this.forumRepository.updatePost(postId, data);
+    const updatedPost = await this.forumRepository.updatePost(postId, data);
+
+    eventBus.emit("forum:post_updated", { postId, post: updatedPost });
+
+    return updatedPost;
   }
 
   async deleteAnswer(answerId: string, userId: string, role: string) {
@@ -232,7 +251,13 @@ export class ForumService {
       throw new Error("UNAUTHORIZED");
     }
 
-    return await this.forumRepository.deleteAnswer(answerId);
+    const deletedAnswerPostId = answer.postId;
+    const deletedAnswerId = answer.id;
+    await this.forumRepository.deleteAnswer(answerId);
+
+    eventBus.emit("forum:answer_deleted", { postId: deletedAnswerPostId, answerId: deletedAnswerId });
+
+    return { success: true };
   }
 
   async rateItem(
@@ -245,7 +270,11 @@ export class ForumService {
       throw new Error("Rating must be 1 (upvote), -1 (downvote), or 0 (remove vote).");
     }
 
-    return await this.forumRepository.rateItem(userId, itemId, itemType, value);
+    const result = await this.forumRepository.rateItem(userId, itemId, itemType, value);
+
+    eventBus.emit("forum:item_rated", { itemId, itemType });
+
+    return result;
   }
 
   async getCommunityStats() {

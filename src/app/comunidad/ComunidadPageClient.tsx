@@ -6,6 +6,8 @@ import CommunityQAForum from "@/frontend/components/comunidad/CommunityQAForum";
 import { Question, type RawPost } from "@/frontend/components/comunidad/forum/forum.types";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useSocket } from "@/frontend/context/SocketContext";
+import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 
 type ActionResult = { success?: boolean; [key: string]: unknown };
 
@@ -43,6 +45,15 @@ export default function ComunidadPageClient({
   const { t } = useLanguage();
 
   const queryClient = useQueryClient();
+
+  const { socket } = useSocket();
+
+  useSocketRefresh({
+    socket,
+    enabled: true,
+    refresh: () => queryClient.invalidateQueries({ queryKey: ["forumPosts"] }),
+    events: ["forum:post_created", "forum:post_deleted"],
+  });
 
   const mapRawPost = (p: RawPost) => ({
     id: p.id,

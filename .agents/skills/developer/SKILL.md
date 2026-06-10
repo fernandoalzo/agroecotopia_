@@ -736,3 +736,40 @@ To guarantee scalability, persistence, and real-time delivery, all system notifi
 ### 18.4 Interactive Navigation
 - **Law**: Notifications that require user interaction or routing MUST include an `actionUrl` inside the `metadata` JSON object.
 - The `NotificationBell.tsx` component automatically parses `metadata.actionUrl`. When the user clicks the notification, it marks it as read, closes the panel, and routes the user seamlessly.
+
+### 18.5 Forum Real-Time Updates (WebSocket Pattern)
+- **Goal**: Update all users viewing a forum post when another user creates/edits/deletes a response, rates an item, or edits the post.
+- **No polling**: all real-time updates use Socket.IO rooms.
+- **Architecture**:
+  1. **forum.service.ts** emits `eventBus.emit("forum:{event}", payload)` after each mutation.
+  2. **socketHandler.ts** (file) listens via `eventBus.on()` and broadcasts to `forum:post:{postId}` rooms (or globally for post_created/post_deleted).
+  3. **Frontend** joins the room with `socket.emit("join_post", { postId })` on mount and leaves on unmount.
+  4. **Frontend** uses `useSocketRefresh()` hook to invalidate React Query on socket events.
+- **Available events**:
+  | Event | Room | Payload |
+  |---|---|---|
+  | `forum:post_created` | global | `{ postId, post }` |
+  | `forum:post_updated` | `forum:post:{postId}` | `{ postId, post }` |
+  | `forum:post_deleted` | global | `{ postId }` |
+  | `forum:answer_created` | `forum:post:{postId}` | `{ postId, answer, answerId }` |
+  | `forum:answer_edited` | `forum:post:{postId}` | `{ postId, answerId, answer }` |
+  | `forum:answer_deleted` | `forum:post:{postId}` | `{ postId, answerId }` |
+  | `forum:answer_accepted` | `forum:post:{postId}` | `{ postId, answerId, isAccepted }` |
+  | `forum:item_rated` | global | `{ itemId, itemType }` |
+- **Frontend pattern**:
+  ```typescript
+  const { socket } = useSocket();
+  
+  useEffect(() => {
+    if (!socket) return;
+    socket.emit("join_post", { postId: id });
+    return () => { socket.emit("leave_post", { postId: id }); };
+  }, [socket, id]);
+
+  useSocketRefresh({
+    socket,
+    enabled: true,
+    refresh: () => queryClient.invalidateQueries({ queryKey: ["forumPost", id] }),
+    events: ["forum:answer_created", "forum:answer_edited", /* ... */],
+  });
+  ```

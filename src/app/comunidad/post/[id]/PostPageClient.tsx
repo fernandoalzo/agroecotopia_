@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, Component, ReactNode } from "react";
+import { useMemo, useCallback, useEffect, Component, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 
@@ -11,6 +11,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+import { useSocket } from "@/frontend/context/SocketContext";
+import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import ForumQuestionDetail from "@/frontend/components/comunidad/forum/ForumQuestionDetail";
 
 type ActionResult = { success?: boolean; [key: string]: unknown };
@@ -174,6 +176,30 @@ export default function PostPageClient({
   const { t } = useLanguage();
 
   const queryClient = useQueryClient();
+
+  const { socket } = useSocket();
+
+  useEffect(() => {
+    if (!socket) return;
+    socket.emit("join_post", { postId: id });
+    return () => { socket.emit("leave_post", { postId: id }); };
+  }, [socket, id]);
+
+  const forumEvents = useMemo(() => [
+    "forum:answer_created",
+    "forum:answer_edited",
+    "forum:answer_deleted",
+    "forum:post_updated",
+    "forum:answer_accepted",
+    "forum:item_rated",
+  ], []);
+
+  useSocketRefresh({
+    socket,
+    enabled: true,
+    refresh: () => queryClient.invalidateQueries({ queryKey: ["forumPost", id] }),
+    events: forumEvents,
+  });
 
   const { data: postData, isLoading } = useQuery({
     queryKey: ["forumPost", id],

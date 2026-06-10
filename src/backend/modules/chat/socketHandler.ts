@@ -135,6 +135,20 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
       }
     });
 
+    // ─── Forum post rooms ───
+    socket.on("join_post", ({ postId }: { postId: string }) => {
+      if (postId) {
+        socket.join(`forum:post:${postId}`);
+        log.debug(`Socket ${socket.id} joined forum room: forum:post:${postId}`);
+      }
+    });
+
+    socket.on("leave_post", ({ postId }: { postId: string }) => {
+      if (postId) {
+        socket.leave(`forum:post:${postId}`);
+      }
+    });
+
     // ─── Notification private channels ───
     socket.on("join_notifications", ({ userId }: { userId: string }) => {
       if (userId) {
@@ -182,6 +196,63 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
   eventBus.on("notification_broadcast", (payload: { notification: any }) => {
     log.info("Broadcasting notification_broadcast globally");
     io.emit("new_notification", payload.notification);
+  });
+
+  // ─── Forum Events Bridge ───
+  eventBus.removeAllListeners("forum:post_created");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  eventBus.on("forum:post_created", (payload: { postId: string; post: any }) => {
+    log.info(`Broadcasting forum:post_created globally: ${payload.postId}`);
+    io.emit("forum:post_created", payload);
+  });
+
+  eventBus.removeAllListeners("forum:answer_created");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  eventBus.on("forum:answer_created", (payload: { postId: string; answer: any }) => {
+    log.info(`Broadcasting forum:answer_created to room forum:post:${payload.postId}`);
+    io.to(`forum:post:${payload.postId}`).emit("forum:answer_created", payload);
+  });
+
+  eventBus.removeAllListeners("forum:answer_edited");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  eventBus.on("forum:answer_edited", (payload: { postId: string; answerId: string; answer: any }) => {
+    log.info(`Broadcasting forum:answer_edited to room forum:post:${payload.postId}`);
+    io.to(`forum:post:${payload.postId}`).emit("forum:answer_edited", payload);
+  });
+
+  eventBus.removeAllListeners("forum:answer_deleted");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  eventBus.on("forum:answer_deleted", (payload: { postId: string; answerId: string }) => {
+    log.info(`Broadcasting forum:answer_deleted to room forum:post:${payload.postId}`);
+    io.to(`forum:post:${payload.postId}`).emit("forum:answer_deleted", payload);
+  });
+
+  eventBus.removeAllListeners("forum:post_updated");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  eventBus.on("forum:post_updated", (payload: { postId: string; post: any }) => {
+    log.info(`Broadcasting forum:post_updated to room forum:post:${payload.postId}`);
+    io.to(`forum:post:${payload.postId}`).emit("forum:post_updated", payload);
+  });
+
+  eventBus.removeAllListeners("forum:post_deleted");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  eventBus.on("forum:post_deleted", (payload: { postId: string }) => {
+    log.info(`Broadcasting forum:post_deleted globally`);
+    io.emit("forum:post_deleted", payload);
+  });
+
+  eventBus.removeAllListeners("forum:answer_accepted");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  eventBus.on("forum:answer_accepted", (payload: { postId: string; answerId: string; isAccepted: boolean }) => {
+    log.info(`Broadcasting forum:answer_accepted to room forum:post:${payload.postId}`);
+    io.to(`forum:post:${payload.postId}`).emit("forum:answer_accepted", payload);
+  });
+
+  eventBus.removeAllListeners("forum:item_rated");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  eventBus.on("forum:item_rated", (payload: { itemId: string; itemType: string }) => {
+    log.info("Broadcasting forum:item_rated globally");
+    io.emit("forum:item_rated", payload);
   });
 
   return io;
