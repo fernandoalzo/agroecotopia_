@@ -191,6 +191,19 @@ src/utils/PaymentsMethods/
 - **New Modules**: When creating a new backend domain module, always follow the full pattern: `index.ts` (IoC) → `[domain].repository.ts` → `[domain].service.ts` → `[domain].actions.ts`. Si el módulo tiene operaciones de lectura intensivas, DEBE integrar `CacheService` en el Repository (ver [Sección 14 — Distributed Caching System](#14-distributed-caching-system-redis)).
 - **Server Actions**: All Server Actions must be in files marked with `"use server"` at the top and wrapped with appropriate auth guards.
 - **Centralized Logging (STRICT LAW)**: Never use `console.log`, `console.warn`, or `console.error` directly in the application code. Always import the centralized logger from `@/utils/logger` and instantiate a contextualized child logger at the top of the file simply using `const log = logger.child();`. The logger will automatically detect and extract the calling filename from the stack trace *exactly once* during module initialization (avoiding any performance overhead during log calls). Then, use this child logger (`log.info`, `log.warn`, `log.error`, `log.debug`, or `log.log`) to display all messages in the console. This guarantees maximum performance, absolute context transparency, and clean logging with zero hardcoded file names.
+- **Data Source Tagging Convention (STRICT LAW)**: Todos los logs relacionados con carga de datos DEBEN incluir un tag `[cache]` o `[db]` al inicio del mensaje para identificar inmediatamente el origen de los datos:
+  - `[cache]` → Cuando los datos se sirven desde Redis (cache HIT) o cuando se realiza una operación de caché (invalidation, SET, MISS).
+    ```typescript
+    log.debug("[cache] HIT: cache:product:id:prod_001");
+    log.debug("[cache] invalidated: cache:product:*");
+    log.debug("[cache] MISS: cache:product:id:prod_001 — fetching from [db]");
+    ```
+  - `[db]` → Cuando se ejecuta una consulta real a la base de datos PostgreSQL (cache MISS o método sin caché).
+    ```typescript
+    log.debug("[db] Buscando producto por id:", { id });
+    log.info("[db] Creando nuevo producto:", { name: data.name });
+    ```
+  - Los tags `[cache]` y `[db]` permiten filtrar visualmente los logs y entender rápidamente el flujo de datos. Esta convención aplica a todos los repositorios, servicios de caché y cualquier punto donde se carguen datos desde una fuente externa.
 
 ---
 
@@ -565,7 +578,23 @@ Reglas:
 - [ ] 7. Verificar que `tsc --noEmit` compile sin errores
 - [ ] 8. Verificar en logs que el caché funciona: `Cache HIT: ...` / `Cache invalidated: ...`
 
-### 14.11 Graceful Degradation — Qué Esperar
+### 14.11 Data Source Tagging Convention (STRICT LAW)
+
+Todos los logs de carga de datos DEBEN incluir un tag `[cache]` o `[db]` para identificar el origen de los datos:
+
+```typescript
+// CacheService — usa [cache]
+log.debug("[cache] HIT: cache:product:id:prod_001");
+log.debug("[cache] MISS: cache:product:list:0:20 — fetching from [db]");
+log.debug("[cache] invalidated: cache:product:*");
+
+// Repositorios — usa [db] cuando se ejecuta una consulta real a PostgreSQL
+log.debug("[db] Buscando producto por id:", { id });
+log.debug("[db] Obteniendo productos paginados:", { skip, take });
+log.info("[db] Creando nuevo producto:", { name: data.name });
+```
+
+### 14.12 Graceful Degradation — Qué Esperar
 
 | Escenario | Log | Comportamiento |
 |-----------|-----|----------------|
@@ -573,10 +602,11 @@ Reglas:
 | Redis arranca después de la app | `Redis conectado exitosamente.` | Cache se activa automáticamente |
 | Redis se cae en runtime | `Redis: error de conexión: ...` | App sigue funcionando, caché deshabilitado hasta reconexión |
 | Redis reconecta | `Redis conectado exitosamente.` | Cache se reactiva automáticamente |
-| Cache HIT | `Cache HIT: cache:product:id:prod_001` | Data servida desde Redis (rápido) |
-| Cache invalidado | `Cache invalidated: cache:product:*` | Data fresca en próxima request |
+| Cache HIT | `[cache] HIT: cache:product:id:prod_001` | Data servida desde Redis (rápido) |
+| Cache MISS → DB | `[cache] MISS: cache:product:id:prod_001 — fetching from [db]` + `[db] Buscando producto por id: { id }` | Data desde PostgreSQL + se guarda en Redis |
+| Cache invalidado | `[cache] invalidated: cache:product:*` | Data fresca en próxima request |
 
-### 14.12 Environment Variables
+### 14.13 Environment Variables
 
 ```bash
 # Caching (Redis) — deshabilitado si REDIS_URL está vacío

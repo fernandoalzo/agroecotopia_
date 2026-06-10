@@ -18,10 +18,10 @@ export class CacheService {
     try {
       const value = await this.client!.get(key);
       if (value === null) return null;
-      log.debug(`Cache HIT: ${key}`);
+      log.debug(`[cache] HIT: ${key}`);
       return JSON.parse(value) as T;
     } catch (error) {
-      log.warn(`Cache GET error for key "${key}":`, (error as Error).message);
+      log.warn(`[cache] GET error for key "${key}":`, (error as Error).message);
       return null;
     }
   }
@@ -32,7 +32,7 @@ export class CacheService {
       const ttlValue = ttl ?? config.cache.defaultTTL;
       await this.client!.set(key, JSON.stringify(value), "EX", ttlValue);
     } catch (error) {
-      log.warn(`Cache SET error for key "${key}":`, (error as Error).message);
+      log.warn(`[cache] SET error for key "${key}":`, (error as Error).message);
     }
   }
 
@@ -41,7 +41,7 @@ export class CacheService {
     try {
       await this.client!.del(key);
     } catch (error) {
-      log.warn(`Cache DEL error for key "${key}":`, (error as Error).message);
+      log.warn(`[cache] DEL error for key "${key}":`, (error as Error).message);
     }
   }
 
@@ -62,9 +62,9 @@ export class CacheService {
         }
         cursor = nextCursor;
       } while (cursor !== "0");
-      log.debug(`Cache invalidated: ${pattern}`);
+      log.debug(`[cache] invalidated: ${pattern}`);
     } catch (error) {
-      log.warn(`Cache DEL pattern error for "${pattern}":`, (error as Error).message);
+      log.warn(`[cache] DEL pattern error for "${pattern}":`, (error as Error).message);
     }
   }
 
@@ -74,12 +74,14 @@ export class CacheService {
     ttl?: number,
   ): Promise<T> {
     if (!this.available) {
+      log.debug(`[cache] unavailable — fetching [db] directly for: ${key}`);
       return fetcher();
     }
 
     const cached = await this.get<T>(key);
     if (cached !== null) return cached;
 
+    log.debug(`[cache] MISS: ${key} — fetching from [db]`);
     const fresh = await fetcher();
     await this.set(key, fresh, ttl);
     return fresh;

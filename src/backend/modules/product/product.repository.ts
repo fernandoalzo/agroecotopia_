@@ -16,7 +16,7 @@ export class ProductRepository {
     return this.cacheService?.getOrSet(
       key,
       async () => {
-        log.debug("Obteniendo productos paginados:", { skip, take, categories });
+        log.debug("[db] Obteniendo productos paginados:", { skip, take, categories });
         const where: Prisma.ProductWhereInput = {
           ...(categories && categories.length > 0 ? { categories: { some: { name: { in: categories } } } } : {}),
           ...(storeId ? { storeId } : {
@@ -52,7 +52,7 @@ export class ProductRepository {
     return this.cacheService?.getOrSet(
       key,
       async () => {
-        log.debug("Obteniendo total de productos con filtros:", { categories });
+        log.debug("[db] Obteniendo total de productos con filtros:", { categories });
         const where: Prisma.ProductWhereInput = {
           ...(categories && categories.length > 0 ? { categories: { some: { name: { in: categories } } } } : {}),
           ...(storeId ? { storeId } : {
@@ -73,7 +73,7 @@ export class ProductRepository {
     return this.cacheService?.getOrSet(
       key,
       async () => {
-        log.debug("Buscando producto por id:", { id });
+        log.debug("[db] Buscando producto por id:", { id });
         return prisma.product.findUnique({
           where: { id },
           include: {
@@ -93,7 +93,7 @@ export class ProductRepository {
   }
 
   async getProductByIdAndStore(id: string, storeId: string): Promise<Product | null> {
-    log.debug("Buscando producto por id y tienda:", { id, storeId });
+    log.debug("[db] Buscando producto por id y tienda:", { id, storeId });
     return prisma.product.findFirst({
       where: { id, storeId },
       include: {
@@ -117,7 +117,7 @@ export class ProductRepository {
     return this.cacheService?.getOrSet(
       key,
       async () => {
-        log.debug("Buscando productos:", { query, skip, take, categories });
+        log.debug("[db] Buscando productos:", { query, skip, take, categories });
         const searchConditions: Prisma.ProductWhereInput[] = [
           { id: { contains: query, mode: "insensitive" } },
           { name: { contains: query, mode: "insensitive" } },
@@ -167,7 +167,7 @@ export class ProductRepository {
     return this.cacheService?.getOrSet(
       key,
       async () => {
-        log.debug("Obteniendo conteo de búsqueda de productos:", { query, categories, storeId });
+        log.debug("[db] Obteniendo conteo de búsqueda de productos:", { query, categories, storeId });
         const searchConditions: Prisma.ProductWhereInput[] = [
           { id: { contains: query, mode: "insensitive" } },
           { name: { contains: query, mode: "insensitive" } },
@@ -199,7 +199,7 @@ export class ProductRepository {
    * Crea un nuevo producto (solo para seeding o uso interno)
    */
   async createProduct(data: any): Promise<Product> {
-    log.info("Creando nuevo producto:", { name: data.name });
+    log.info("[db] Creando nuevo producto:", { name: data.name });
 
     const { categories, storeId, ...restData } = data;
 
@@ -234,7 +234,7 @@ export class ProductRepository {
    * Actualiza un producto existente
    */
   async updateProduct(id: string, data: any): Promise<Product> {
-    log.info(`Actualizando producto: ${id}`);
+    log.info(`[db] Actualizando producto: ${id}`);
 
     const { categories, storeId, ...restData } = data;
 
@@ -270,7 +270,7 @@ export class ProductRepository {
   }
 
   async updateStoreProduct(storeId: string, id: string, data: any): Promise<Product> {
-    log.info("Actualizando producto de tienda:", { id, storeId });
+    log.info("[db] Actualizando producto de tienda:", { id, storeId });
 
     const { categories, ...restData } = data;
     delete restData.storeId;
@@ -309,7 +309,7 @@ export class ProductRepository {
    * Elimina un producto por su ID
    */
   async deleteProduct(id: string): Promise<Product> {
-    log.info(`Eliminando producto: ${id}`);
+    log.info(`[db] Eliminando producto: ${id}`);
     const product = await prisma.product.delete({
       where: { id },
       include: {
@@ -329,7 +329,7 @@ export class ProductRepository {
   }
 
   async deleteStoreProduct(storeId: string, id: string): Promise<Product> {
-    log.info("Eliminando producto de tienda:", { id, storeId });
+    log.info("[db] Eliminando producto de tienda:", { id, storeId });
     const product = await prisma.product.delete({
       where: { id, storeId },
       include: {
@@ -356,7 +356,7 @@ export class ProductRepository {
     return this.cacheService?.getOrSet(
       key,
       async () => {
-        log.debug("Obteniendo productos de la tienda:", { storeId, skip, take });
+        log.debug("[db] Obteniendo productos de la tienda:", { storeId, skip, take });
         return prisma.product.findMany({
           where: { storeId },
           skip,
@@ -383,7 +383,7 @@ export class ProductRepository {
     return this.cacheService?.getOrSet(
       key,
       async () => {
-        log.debug("Obteniendo conteo de productos de la tienda:", { storeId });
+        log.debug("[db] Obteniendo conteo de productos de la tienda:", { storeId });
         return prisma.product.count({
           where: { storeId }
         });
@@ -396,7 +396,7 @@ export class ProductRepository {
     return this.cacheService?.getOrSet(
       CacheKeys.product.categories,
       async () => {
-        log.debug("Obteniendo categorías únicas");
+        log.debug("[db] Obteniendo categorías únicas");
         const result = await prisma.categoria.findMany({
           orderBy: { name: "asc" },
         });
@@ -411,7 +411,7 @@ export class ProductRepository {
     return this.cacheService?.getOrSet(
       key,
       async () => {
-        log.debug("Obteniendo conteo de productos por categoría", { storeId });
+        log.debug("[db] Obteniendo conteo de productos por categoría", { storeId });
         const categories = await prisma.categoria.findMany({
           include: {
             _count: {

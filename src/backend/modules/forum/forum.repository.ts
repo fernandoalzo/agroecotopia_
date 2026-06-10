@@ -337,16 +337,16 @@ export class ForumRepository {
   async getCommunityStats() {
     try {
       if (cachedCommunityStats && Date.now() - statsLastFetched < STATS_TTL) {
+        log.debug("[cache] HIT: communityStats");
         return cachedCommunityStats;
       }
 
-      // Get distinct authors from posts
+      log.debug("[db] Obteniendo community stats desde PostgreSQL");
       const activePosters = await prisma.forumPost.findMany({
         select: { authorId: true },
         distinct: ['authorId'],
       });
       
-      // Get distinct authors from answers
       const activeAnswerers = await prisma.forumAnswer.findMany({
         select: { authorId: true },
         distinct: ['authorId'],
@@ -360,10 +360,7 @@ export class ForumRepository {
       const totalMembers = uniqueActiveMembers.size;
       const onlineNow = Math.min(Math.floor(totalMembers * 0.1) + 15, totalMembers);
 
-      cachedCommunityStats = {
-        totalMembers,
-        onlineNow,
-      };
+      cachedCommunityStats = { totalMembers, onlineNow };
       statsLastFetched = Date.now();
 
       return cachedCommunityStats;
@@ -424,10 +421,11 @@ export class ForumRepository {
   async getTrendingLabels(limit: number = 5): Promise<string[]> {
     try {
       if (cachedTrendingLabels && Date.now() - trendingLabelsLastFetched < TRENDING_TTL) {
+        log.debug("[cache] HIT: trendingLabels");
         return cachedTrendingLabels;
       }
 
-      // Unnest the labels array column and count frequency across all posts
+      log.debug("[db] Obteniendo trending labels desde PostgreSQL");
       const result = await prisma.$queryRaw<Array<{ label: string; count: bigint }>>`
         SELECT label, COUNT(*) as count
         FROM "ForumPost", unnest(labels) AS label
