@@ -7,10 +7,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ThumbsUp, ThumbsDown, Check, X, Loader2, Pencil, Trash2, MessageCircle, Award } from "lucide-react";
 import { Answer } from "./forum.types";
 import { cn } from "@/lib/utils";
-import { z } from "zod";
 import { useLanguage } from "@/context/LanguageContext";
+import { createAnswerSchema } from "./schemas/answer.schema";
+import type { AnswerFormData } from "./schemas/answer.schema";
 import { formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -37,20 +38,16 @@ function MarkdownRenderer({ content }: { content: string }) {
 }
 
 export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAddAnswer, onAcceptAnswer, currentUserId, currentUserRole, isPostAuthor }: ForumAnswerCardProps) {
-  const { t } = useLanguage();
-  const replySchema_ = useMemo(() => z.object({
-    content: z
-      .string()
-      .min(10, t.forum.answer.minLengthError)
-      .max(2000, t.forum.answer.maxLengthError),
-  }), [t]);
+  const { t, language } = useLanguage();
+  const dateLocale = useMemo(() => language === "en" ? enUS : es, [language]);
+  const replySchema_ = useMemo(() => createAnswerSchema(t.forum), [t]);
 
-  const replyForm = useForm<z.infer<typeof replySchema_>>({
+  const replyForm = useForm<AnswerFormData>({
     resolver: zodResolver(replySchema_),
     defaultValues: { content: "" },
   });
 
-  const editForm = useForm<z.infer<typeof replySchema_>>({
+  const editForm = useForm<AnswerFormData>({
     resolver: zodResolver(replySchema_),
     defaultValues: { content: answer.content },
   });
@@ -93,7 +90,7 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
     }
   };
 
-  const handleSaveEdit = async (data: z.infer<typeof replySchema_>) => {
+  const handleSaveEdit = async (data: AnswerFormData) => {
     if (editForm.formState.isSubmitting) return;
     await onEdit?.(answer.id, data.content.trim());
     setIsEditing(false);
@@ -125,7 +122,7 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
     }
   };
 
-  const handleReplySubmit = async (data: z.infer<typeof replySchema_>) => {
+  const handleReplySubmit = async (data: AnswerFormData) => {
     if (replyForm.formState.isSubmitting || !onAddAnswer) return;
     await onAddAnswer(data.content, answer.id);
     replyForm.reset();
@@ -151,7 +148,7 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
     }
   };
 
-  const relativeDate = formatDistanceToNow(new Date(answer.createdAt), { addSuffix: true, locale: es });
+  const relativeDate = formatDistanceToNow(new Date(answer.createdAt), { addSuffix: true, locale: dateLocale });
 
   return (
     <div id={`answer-${answer.id}`} className="py-6 border-b border-border/30 last:border-b-0 scroll-mt-24">

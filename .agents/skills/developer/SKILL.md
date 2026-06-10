@@ -126,6 +126,7 @@ The app uses `next-auth` (v5 Beta).
 - Use `shadcn/ui` components from `src/frontend/components/ui/` as building blocks.
 - **Premium Aesthetic Rule**: Do not create generic, simple MVPs. Use smooth gradients, hover effects, and `framer-motion` to maintain a professional, dynamic design.
 - **Form Validation**: Always use `react-hook-form` coupled with `zod` (`@hookform/resolvers`) for robust form state and validation.
+- **Standalone Validation Schemas (STRICT LAW)**: All Zod validation schemas MUST be defined in their own standalone files under `src/frontend/components/[domain]/schemas/` (e.g., `answer.schema.ts`, `post.schema.ts`). Schemas MUST NOT be inlined inside component files. For i18n support, export the schema as a **factory function** that accepts the `t` translations object and returns the schema instance. Also export the inferred TypeScript type for use with `useForm`. This ensures schemas are testable, reusable, auditable, and decoupled from component lifecycle.
 - **Double-Submit Prevention (STRICT LAW)**: All forms and submission buttons MUST implement a loading state (e.g., `isSubmitting`) to prevent multiple rapid submissions (double-submit). You must:
   1. Have an `isSubmitting` state (or `isLoading` from react-query/form).
   2. Abort the submit handler early if `isSubmitting` is true.

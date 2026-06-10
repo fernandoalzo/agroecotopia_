@@ -27,8 +27,8 @@ interface PostPageClientProps {
   editPost: (data: { postId: string; title?: string; body?: string; labels?: string[] }) => Promise<ActionResult>;
 }
 
-class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
-  constructor(props: { children: ReactNode }) {
+class ErrorBoundary extends Component<{ children: ReactNode; title: string; retry: string }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children: ReactNode; title: string; retry: string }) {
     super(props);
     this.state = { hasError: false, error: null };
   }
@@ -40,13 +40,13 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
       return (
         <div className="min-h-screen flex items-center justify-center bg-background">
           <div className="text-center space-y-4 p-8">
-            <h2 className="text-2xl font-black text-foreground">Algo salió mal</h2>
+            <h2 className="text-2xl font-black text-foreground">{this.props.title}</h2>
             <p className="text-muted-foreground text-sm">{this.state.error?.message}</p>
             <button
               onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md font-bold text-xs"
             >
-              Reintentar
+              {this.props.retry}
             </button>
           </div>
         </div>
@@ -418,7 +418,7 @@ export default function PostPageClient({
   }
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary title={t.forum.post.errorTitle} retry={t.forum.post.retry}>
       <div className="min-h-screen bg-background text-foreground relative overflow-hidden pt-16 md:pt-20">
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px]" />

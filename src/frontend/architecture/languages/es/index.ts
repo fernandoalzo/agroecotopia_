@@ -273,6 +273,8 @@ export const es: Translations = {
       scrollToTop: "Volver arriba",
       inReplyTo: "En respuesta a ",
       labelCount: "{count} / 5 seleccionadas",
+      errorTitle: "Algo salió mal",
+      retry: "Reintentar",
     },
     answer: {
       minLengthError: "La respuesta debe tener al menos 10 caracteres.",
@@ -293,6 +295,11 @@ export const es: Translations = {
       tagsLabel: "Etiquetas (Clasificadas)",
       publishing: "Publicando...",
       publish: "Publicar",
+      titleMinError: "El título debe tener al menos 5 caracteres",
+      titleMaxError: "El título es demasiado largo",
+      bodyMinError: "La descripción debe tener al menos 10 caracteres para ser útil",
+      labelsMinError: "Selecciona al menos una etiqueta",
+      labelsMaxError: "No puedes seleccionar más de 5 etiquetas",
     },
     sidebar: {
       all: "Todos",

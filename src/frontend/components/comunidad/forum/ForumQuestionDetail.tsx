@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -9,12 +8,14 @@ import { motion } from "framer-motion";
 import { ArrowLeft, ThumbsUp, ThumbsDown, Share2, Check, X, Loader2, Trash2, Pencil, ArrowUpDown, Clock, TrendingUp, MessageCircle } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
+import { es, enUS } from "date-fns/locale";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { Question } from "./forum.types";
 import ForumAnswerCard from "./ForumAnswerCard";
+import { createAnswerSchema } from "./schemas/answer.schema";
+import type { AnswerFormData } from "./schemas/answer.schema";
 
 interface ForumQuestionDetailProps {
   question: Question;
@@ -46,12 +47,11 @@ function MarkdownRenderer({ content }: { content: string }) {
 
 export default function ForumQuestionDetail({ question, onBack, onRate, onAddAnswer, onEditAnswer, onDeleteAnswer, onDeleteQuestion, onAcceptAnswer, onEditPost, currentUserId, currentUserRole }: ForumQuestionDetailProps) {
   const { status } = useSession();
-  const { t } = useLanguage();
-  const answerSchema_ = useMemo(() => z.object({
-    content: z.string().min(10, t.forum.answer.minLengthError).max(2000, t.forum.answer.maxLengthError),
-  }), [t]);
+  const { t, language } = useLanguage();
+  const dateLocale = useMemo(() => language === "en" ? enUS : es, [language]);
+  const answerSchema_ = useMemo(() => createAnswerSchema(t.forum), [t]);
 
-  const answerForm = useForm<z.infer<typeof answerSchema_>>({
+  const answerForm = useForm<AnswerFormData>({
     resolver: zodResolver(answerSchema_),
     defaultValues: { content: "" },
   });
@@ -91,7 +91,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
     }
   };
 
-  const handleAddAnswer = async (data: z.infer<typeof answerSchema_>) => {
+  const handleAddAnswer = async (data: AnswerFormData) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
@@ -154,7 +154,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
     }
   };
 
-  const relativeDate = formatDistanceToNow(new Date(question.createdAt), { addSuffix: true, locale: es });
+  const relativeDate = formatDistanceToNow(new Date(question.createdAt), { addSuffix: true, locale: dateLocale });
 
   const sortOptions: { key: SortMode; label: string; icon: typeof ArrowUpDown }[] = [
     { key: "votes", label: t.forum.sort.votes, icon: TrendingUp },

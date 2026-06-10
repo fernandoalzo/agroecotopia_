@@ -244,9 +244,11 @@ export interface Translations {
       login: string;
       noAnswers: string;
       noAnswersDesc: string;
-      scrollToTop: string;
-      inReplyTo: string;
-      labelCount: string;
+    scrollToTop: string;
+    inReplyTo: string;
+    labelCount: string;
+    errorTitle: string;
+    retry: string;
     };
     answer: {
       minLengthError: string;
@@ -267,6 +269,11 @@ export interface Translations {
       tagsLabel: string;
       publishing: string;
       publish: string;
+      titleMinError: string;
+      titleMaxError: string;
+      bodyMinError: string;
+      labelsMinError: string;
+      labelsMaxError: string;
     };
     sidebar: {
       all: string;

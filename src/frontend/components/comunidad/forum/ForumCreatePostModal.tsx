@@ -1,15 +1,15 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, ChevronDown, Check } from "lucide-react";
-import { useState } from "react";
+import { X, Send } from "lucide-react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { postSchema } from "../schemas/post.schema";
 import { config } from "@/config/config";
 import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
+import { createPostSchema } from "./schemas/post.schema";
+import type { PostFormData } from "./schemas/post.schema";
 function MultiLabelSelect({
   value,
   onChange,
@@ -97,8 +97,10 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
   const { t } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<z.infer<typeof postSchema>>({
-    resolver: zodResolver(postSchema),
+  const forumPostSchema = useMemo(() => createPostSchema(t.forum), [t]);
+
+  const form = useForm<PostFormData>({
+    resolver: zodResolver(forumPostSchema),
     defaultValues: {
       title: "",
       body: "",
@@ -111,7 +113,7 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
     { id: "body", label: t.forum.createPost.descriptionLabel, type: "textarea", placeholder: t.forum.createPost.descriptionPlaceholder, colSpan: "md:col-span-3" },
   ];
 
-  const handleSubmit = async (data: z.infer<typeof postSchema>) => {
+  const handleSubmit = async (data: PostFormData) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {

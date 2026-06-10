@@ -273,6 +273,8 @@ export const en: Translations = {
       scrollToTop: "Scroll to top",
       inReplyTo: "In reply to ",
       labelCount: "{count} / 5 selected",
+      errorTitle: "Something went wrong",
+      retry: "Try again",
     },
     answer: {
       minLengthError: "The answer must be at least 10 characters long.",
@@ -293,6 +295,11 @@ export const en: Translations = {
       tagsLabel: "Tags (Categories)",
       publishing: "Publishing...",
       publish: "Publish",
+      titleMinError: "Title must be at least 5 characters",
+      titleMaxError: "Title is too long",
+      bodyMinError: "Description must be at least 10 characters to be helpful",
+      labelsMinError: "Select at least one tag",
+      labelsMaxError: "You can't select more than 5 tags",
     },
     sidebar: {
       all: "All",
