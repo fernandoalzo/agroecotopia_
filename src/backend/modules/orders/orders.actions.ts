@@ -25,9 +25,8 @@ export async function placeOrderAction(data: {
     unidadMedida: string;
   }[];
 }) {
-  return await withAuth(async () => {
-    const userId = await authService.getCurrentUserId();
-    if (!userId) throw new Error("UNAUTHORIZED");
+  return await withAuth(async (session) => {
+    const userId = session.user.id;
 
     log.info("Creando nuevo pedido para el usuario:", { userId, metodoPago: data.metodoPago, cantidadItems: data.detalles.length });
     const pedidos = await ordersService.createPedido({
@@ -51,11 +50,9 @@ export async function updateOrderStatusAction(
   nuevoEstado: PedidoEstado,
   motivoCancelacion?: string
 ) {
-  return await withAdmin(async () => {
+  return await withAdmin(async (session) => {
     try {
-      const session = await authService.getSession();
-      const userId = session?.user?.id;
-      if (!userId) throw new Error("UNAUTHORIZED");
+      const userId = session.user.id;
 
       log.info("Admin actualizando estado del pedido:", { pedidoId, nuevoEstado, motivoCancelacion });
       const pedido = await ordersService.updateEstado(pedidoId, nuevoEstado, userId, motivoCancelacion);
@@ -74,9 +71,8 @@ export async function updateOrderStatusAction(
  * Obtiene los pedidos del usuario autenticado.
  */
 export async function getUserOrdersAction() {
-  return await withAuth(async () => {
-    const userId = await authService.getCurrentUserId();
-    if (!userId) throw new Error("UNAUTHORIZED");
+  return await withAuth(async (session) => {
+    const userId = session.user.id;
 
     log.debug("Obteniendo pedidos del usuario:", { userId });
     return await ordersService.getPedidosPorUsuario(userId);
@@ -112,9 +108,8 @@ export async function getOrderStatusCountsAction() {
  * Obtiene el detalle de un pedido específico.
  */
 export async function getOrderDetailAction(pedidoId: string) {
-  return await withAuth(async () => {
-    const session = await authService.getSession();
-    const userId = session?.user?.id ?? null;
+  return await withAuth(async (session) => {
+    const userId = session.user.id;
     const isAdmin = authService.isAdmin(session);
     
     log.debug("Obteniendo detalle del pedido:", { pedidoId, userId, isAdmin });
@@ -143,9 +138,8 @@ export async function getOrderDetailAction(pedidoId: string) {
  * Cancela un pedido del usuario autenticado (Solo si está en estado PENDIENTE).
  */
 export async function cancelUserOrderAction(pedidoId: string) {
-  return await withAuth(async () => {
-    const userId = await authService.getCurrentUserId();
-    if (!userId) throw new Error("UNAUTHORIZED");
+  return await withAuth(async (session) => {
+    const userId = session.user.id;
 
     const pedido = await ordersService.getPedidoDetallado(pedidoId);
     if (!pedido) {
@@ -189,9 +183,8 @@ export async function cancelUserOrderAction(pedidoId: string) {
  * Elimina un pedido del usuario autenticado (Solo si está en estado CANCELADO).
  */
 export async function deleteUserOrderAction(pedidoId: string) {
-  return await withAuth(async () => {
-    const userId = await authService.getCurrentUserId();
-    if (!userId) throw new Error("UNAUTHORIZED");
+  return await withAuth(async (session) => {
+    const userId = session.user.id;
 
     const pedido = await ordersService.getPedidoDetallado(pedidoId);
     if (!pedido) {
@@ -285,11 +278,9 @@ export async function updateStoreOrderStatusAction(
   nuevoEstado: PedidoEstado,
   motivoCancelacion?: string
 ) {
-  return await withStoreOwner(storeId, async () => {
+  return await withStoreOwner(storeId, async (session) => {
     try {
-      const session = await authService.getSession();
-      const userId = session?.user?.id;
-      if (!userId) throw new Error("UNAUTHORIZED");
+      const userId = session.user.id;
 
       log.info("Seller actualizando estado de pedido de tienda:", { storeId, pedidoId, nuevoEstado });
       const pedido = await ordersService.updateEstadoForStore(storeId, pedidoId, nuevoEstado, userId, motivoCancelacion);

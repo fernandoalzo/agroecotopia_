@@ -20,6 +20,7 @@ model Conversation {
 
   @@index([type, userId])
   @@index([type, sellerId])
+  @@index([type, storeId, sellerId])
   @@index([pedidoId, storeId])
 }
 

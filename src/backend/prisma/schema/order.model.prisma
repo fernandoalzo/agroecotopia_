@@ -58,4 +58,5 @@ model DetallePedido {
   @@index([pedidoId])
   @@index([productoId])
   @@index([storeId])
+  @@index([storeId, pedidoId])
 }

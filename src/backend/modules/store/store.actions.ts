@@ -5,7 +5,6 @@ import { withAuth, withAdmin, withSeller } from "@/lib/auth-guards";
 import { StoreCreateInput } from "@/types/store";
 import { revalidatePath } from "next/cache";
 import logger from "@/utils/logger";
-import { authService } from "../auth";
 import eventBus from "@/utils/eventBus";
 import { notificationsService } from "../notifications";
 import { userRepository } from "../user";
@@ -17,10 +16,9 @@ type StoreListItem = { id: string; name: string };
 // --- User Actions ---
 
 export const submitStoreRequestAction = async (data: StoreCreateInput) => {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
     log.info("Action: submitStoreRequestAction");
-    const userId = await authService.getCurrentUserId();
-    if (!userId) throw new Error("No estás autenticado.");
+    const userId = session.user.id;
     
     const request = await storeService.submitStoreRequest(userId, data);
     revalidatePath("/mi-tienda");
@@ -57,20 +55,18 @@ export const submitStoreRequestAction = async (data: StoreCreateInput) => {
 };
 
 export const getMyRequestsAction = async () => {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
     log.info("Action: getMyRequestsAction");
-    const userId = await authService.getCurrentUserId();
-    if (!userId) throw new Error("No estás autenticado.");
+    const userId = session.user.id;
     
     return await storeService.getMyRequests(userId);
   });
 };
 
 export const getMyStoresAction = async () => {
-  return withAuth(async () => {
+  return withAuth(async (session) => {
     log.info("Action: getMyStoresAction");
-    const userId = await authService.getCurrentUserId();
-    if (!userId) throw new Error("No estás autenticado.");
+    const userId = session.user.id;
     
     return await storeService.getMyStores(userId);
   });
@@ -79,10 +75,9 @@ export const getMyStoresAction = async () => {
 // --- Seller Actions ---
 
 export const updateMyStoreAction = async (storeId: string, data: Partial<StoreCreateInput>) => {
-  return withSeller(async () => {
+  return withSeller(async (session) => {
     log.info("Action: updateMyStoreAction", { storeId });
-    const userId = await authService.getCurrentUserId();
-    if (!userId) throw new Error("No estás autenticado.");
+    const userId = session.user.id;
     
     const store = await storeService.updateMyStore(userId, storeId, data);
     revalidatePath(`/mi-tienda/${storeId}`);
@@ -134,9 +129,9 @@ export const getAllStoresAction = async (page: number = 1, status?: 'ACTIVE' | '
 };
 
 export const approveRequestAction = async (requestId: string, adminNote?: string) => {
-  return withAdmin(async () => {
+  return withAdmin(async (session) => {
     log.info("Action: approveRequestAction", { requestId });
-    const adminId = await authService.getCurrentUserId();
+    const adminId = session.user.id;
 
     // Fetch request before approval to get requester info
     const requestData = await storeService.getRequestById(requestId);
@@ -174,9 +169,9 @@ export const approveRequestAction = async (requestId: string, adminNote?: string
 };
 
 export const rejectRequestAction = async (requestId: string, adminNote: string) => {
-  return withAdmin(async () => {
+  return withAdmin(async (session) => {
     log.info("Action: rejectRequestAction", { requestId });
-    const adminId = await authService.getCurrentUserId();
+    const adminId = session.user.id;
 
     // Fetch request before rejection to get requester info
     const requestData = await storeService.getRequestById(requestId);
@@ -247,7 +242,7 @@ export const getActiveStoresCatalogAction = async (page: number = 1) => {
 };
 
 export const getAllActiveStoresListAction = async () => {
-  return withAuth(async () => {
+  return withAuth(async (_session) => {
     log.info("Action: getAllActiveStoresListAction");
     // Get up to 1000 active stores for select dropdowns
     const result = await storeService.getAllStores(1, 1000, 'ACTIVE');

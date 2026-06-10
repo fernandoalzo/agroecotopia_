@@ -2,20 +2,16 @@
 
 import { paymentsService } from "./payments.service";
 import { ordersService } from "@/backend/modules/orders";
-import { authService } from "@/backend/modules/auth";
 import { withAuth } from "@/lib/auth-guards";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/payments/payments.actions.ts");
 
 export async function createMercadoPagoPreferenceAction(pedidoId: string) {
-  return await withAuth(async () => {
-    const userId = await authService.getCurrentUserId();
-    if (!userId) throw new Error("UNAUTHORIZED");
-
-    const session = await authService.getSession();
-    const userName = session?.user?.name || "Usuario";
-    const userEmail = session?.user?.email || "correo@ejemplo.com";
+  return await withAuth(async (session) => {
+    const userId = session.user.id;
+    const userName = session.user.name || "Usuario";
+    const userEmail = session.user.email || "correo@ejemplo.com";
 
     // 1. Obtener pedido
     const pedido = await ordersService.getPedidoDetallado(pedidoId);
@@ -69,9 +65,6 @@ export async function createMercadoPagoPreferenceAction(pedidoId: string) {
 
 export async function processMercadoPagoPaymentAction(paymentId: string) {
   return await withAuth(async () => {
-    const userId = await authService.getCurrentUserId();
-    if (!userId) throw new Error("UNAUTHORIZED");
-
     try {
       const result = await paymentsService.processNotification(paymentId);
       return result;
