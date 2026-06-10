@@ -1,14 +1,13 @@
 import { EventEmitter } from 'events';
 
-// Create a singleton instance of EventEmitter that survives HMR and multiple module imports
+// Singleton EventEmitter stored on globalThis to survive:
+// 1. HMR (hot module replacement) in development
+// 2. Next.js production bundling (Server Actions and server code in separate chunks)
+// Without this, different chunks create independent EventEmitter instances
+// and eventBus.emit() never reaches listeners registered in another chunk.
 const globalEventBus = (globalThis as any).eventBus || new EventEmitter();
+(globalThis as any).eventBus = globalEventBus;
 
-// In development, store it on the global object to prevent it from being recreated
-if (process.env.NODE_ENV !== 'production') {
-  (globalThis as any).eventBus = globalEventBus;
-}
-
-// Increase max listeners since we might have multiple Socket.IO handlers or listeners
 globalEventBus.setMaxListeners(50);
 
 export default globalEventBus as EventEmitter;
