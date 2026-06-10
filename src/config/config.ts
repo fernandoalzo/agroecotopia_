@@ -84,7 +84,20 @@ export const config = {
     maxProductsPerStore: 50,
     maxStoresPerUser: 5,
     adminDefaultStoreName: "Agroecotopia Oficial",
-  }
+  },
+
+  cache: {
+    redisUrl: process.env.REDIS_URL,
+    enabled: process.env.CACHE_ENABLED !== 'false',
+    defaultTTL: 60, // 60 segundos por defecto
+    ttl: {
+      productList: 60,
+      productDetail: 120,
+      categories: 300,
+      categoryCounts: 120,
+      searchResults: 60,
+    },
+  },
 } as const;
 
 // Helper to assert that a configuration value is defined

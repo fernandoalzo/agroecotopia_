@@ -1,0 +1,43 @@
+const NAMESPACE = "cache";
+
+function hash(value: string): string {
+  let h = 0;
+  for (let i = 0; i < value.length; i++) {
+    const c = value.charCodeAt(i);
+    h = ((h << 5) - h) + c;
+    h |= 0;
+  }
+  return Math.abs(h).toString(36);
+}
+
+export const CacheKeys = {
+  product: {
+    list: (skip: number, take: number, categories?: string[], storeId?: string) =>
+      `${NAMESPACE}:product:list:${skip}:${take}:${categories ? hash(categories.join(",")) : ""}:${storeId || ""}`,
+
+    total: (categories?: string[], storeId?: string) =>
+      `${NAMESPACE}:product:total:${categories ? hash(categories.join(",")) : ""}:${storeId || ""}`,
+
+    byId: (id: string) =>
+      `${NAMESPACE}:product:id:${id}`,
+
+    search: (query: string, skip: number, take: number, categories?: string[], storeId?: string) =>
+      `${NAMESPACE}:product:search:${hash(query.toLowerCase())}:${skip}:${take}:${categories ? hash(categories.join(",")) : ""}:${storeId || ""}`,
+
+    searchCount: (query: string, categories?: string[], storeId?: string) =>
+      `${NAMESPACE}:product:search-count:${hash(query.toLowerCase())}:${categories ? hash(categories.join(",")) : ""}:${storeId || ""}`,
+
+    byStore: (storeId: string, skip: number, take: number) =>
+      `${NAMESPACE}:product:store:${storeId}:list:${skip}:${take}`,
+
+    byStoreCount: (storeId: string) =>
+      `${NAMESPACE}:product:store:${storeId}:total`,
+
+    categories: `${NAMESPACE}:product:categories`,
+
+    categoryCounts: (storeId?: string) =>
+      `${NAMESPACE}:product:category-counts:${storeId || ""}`,
+
+    allPattern: `${NAMESPACE}:product:*`,
+  },
+};

@@ -18,6 +18,7 @@ This skill defines the technical standards and architectural patterns for the **
 - **Database**: PostgreSQL + Prisma ORM (`@prisma/client`, `prismaSchemaFolder` preview feature).
 - **Real-time**: [Socket.IO](https://socket.io/) v4.8 (`socket.io` + `socket.io-client`).
 - **Server**: Custom `server.ts` — Monolithic HTTP server unifying Next.js + Socket.IO on a single port (runs via `tsx`).
+- **Cache Distribuido**: Redis via `ioredis` (Singleton con `globalThis` + health check + graceful fallback). Capa de caché desacoplada en `src/backend/cache/`.
 
 ---
 
@@ -37,6 +38,8 @@ The project follows a strict **modular layered architecture**. The backend is en
 ├───────┼─────────────────────────────────────────────┤
 │  REPO │  Data Access (`.repository.ts`)             │
 ├───────┼─────────────────────────────────────────────┤
+│ CACHE │  Redis Cache Layer (`CacheService`)         │
+├───────┼─────────────────────────────────────────────┤
 │  DB   │  Infrastructure (Prisma DB)                 │
 └───────┴─────────────────────────────────────────────┘
 ```
@@ -48,7 +51,8 @@ The project follows a strict **modular layered architecture**. The backend is en
 | **UI** | `src/app/`, `src/frontend/components/` | `page.tsx`, `PascalCase.tsx` | Pages, layouts, and React components. |
 | **Controller** | `src/backend/modules/[domain]/` | `[domain].actions.ts` | Server Actions (Transport layer). Exposed to UI. |
 | **Service** | `src/backend/modules/[domain]/` | `[domain].service.ts` | Pure business logic. Agnostic of Next.js HTTP/Actions. |
-| **Repository** | `src/backend/modules/[domain]/` | `[domain].repository.ts` | Data access only (Prisma queries). |
+| **Repository** | `src/backend/modules/[domain]/` | `[domain].repository.ts` | Data access (Prisma queries + caching via `CacheService`). |
+| **Cache** | `src/backend/cache/` | `cache.service.ts`, `client.ts` | Redis caching layer. Used exclusively by Repository layer. Graceful fallback si Redis no está disponible. |
 | **Database** | `src/backend/prisma/`, `src/backend/db/` | `schema.prisma` | DB schemas and client instances. |
 
 ### 2.3 Dependency Rules (STRICT LAW)
@@ -58,9 +62,11 @@ The project follows a strict **modular layered architecture**. The backend is en
 > - `UI` (Client/Server Components) → `CTRL` (Server Actions)
 > - `CTRL` (Server Actions) → `SVC` (Business Logic)
 > - `SVC` → `REPO` (Data Access)
-> - `REPO` → `DB` (Prisma)
+> - `REPO` → `CACHE` (Redis Cache Layer)
+> - `CACHE` → `DB` (Prisma)
+> - `REPO` → `DB` (Prisma, cache miss o Redis no disponible)
 >
-> **BOUNDARY RESTRICTION RULE**: Cross-layer imports (e.g., `UI` → `REPO`, `CTRL` → `REPO`) are **strictly forbidden**. UI components MUST NOT import Prisma clients or perform DB queries directly. 
+> **BOUNDARY RESTRICTION RULE**: Cross-layer imports (e.g., `UI` → `REPO`, `CTRL` → `REPO`, `SVC` → `CACHE`) are **strictly forbidden**. UI components MUST NOT import Prisma clients or perform DB queries directly. El `CacheService` solo se inyecta en los Repositorios, nunca en Services o Controllers. 
 > 
 > **PAGE PARENT DATA FETCHING RULE (DUMB COMPONENTS)**: Nunca, pero nunca, se accede a recursos del backend (Server Actions para fetching de datos o mutaciones) directamente desde componentes hijos (`src/frontend/components/`). Los componentes UI siempre deben ser **Dumb Components** (Componentes Tontos / Presentacionales). El acceso al backend y la lógica de estado DEBE realizarse siempre a través del componente Page Padre (`page.tsx`), quien se encarga de realizar las llamadas y pasar la información (data) y las acciones (callbacks) como `props` a estos componentes hijos.
 
@@ -75,12 +81,19 @@ src/
 │   ├── (routes)/                 ← (login, products, checkout, etc.)
 │
 ├── backend/                      ← Encapsulated Backend Architecture
+│   ├── cache/                    ← Redis Cache Layer (Distributed Cache System)
+│   │   ├── index.ts              ← Barrel exports (CacheService, CacheKeys, isRedisAvailable)
+│   │   ├── client.ts             ← Redis singleton con health check + graceful fallback
+│   │   ├── cache.service.ts      ← CacheService (get, set, del, delPattern, getOrSet)
+│   │   ├── key-builder.ts        ← CacheKeys con naming convention y hashing de filtros
+│   │   └── types.ts              ← Tipos compartidos (CacheOptions, CacheValue)
 │   ├── db/                       ← DB Clients (e.g., Prisma singleton)
 │   ├── modules/                  ← Domain Modules (auth, product, user, etc.)
 │   │   └── [domain]/             
+│   │       ├── index.ts          ← IoC: instancia Repository + Service + CacheService
 │   │       ├── [domain].actions.ts      ← CTRL layer
 │   │       ├── [domain].service.ts      ← SVC layer
-│   │       └── [domain].repository.ts   ← REPO layer
+│   │       └── [domain].repository.ts   ← REPO layer (usa CacheService inyectado)
 │   └── prisma/                   ← Prisma schema and migrations
 │
 ├── frontend/                     ← Encapsulated Frontend Architecture
@@ -175,7 +188,7 @@ src/utils/PaymentsMethods/
 
 - **Browser Interaction**: Never interact directly with the browser to test or verify changes. Focus exclusively on the code implementation.
 - **Verification**: Wait for the user to perform manual tests and provide feedback on the changes before proceeding with further adjustments.
-- **New Modules**: When creating a new backend domain module, always follow the full pattern: `index.ts` (IoC) → `[domain].repository.ts` → `[domain].service.ts` → `[domain].actions.ts`.
+- **New Modules**: When creating a new backend domain module, always follow the full pattern: `index.ts` (IoC) → `[domain].repository.ts` → `[domain].service.ts` → `[domain].actions.ts`. Si el módulo tiene operaciones de lectura intensivas, DEBE integrar `CacheService` en el Repository (ver [Sección 14 — Distributed Caching System](#14-distributed-caching-system-redis)).
 - **Server Actions**: All Server Actions must be in files marked with `"use server"` at the top and wrapped with appropriate auth guards.
 - **Centralized Logging (STRICT LAW)**: Never use `console.log`, `console.warn`, or `console.error` directly in the application code. Always import the centralized logger from `@/utils/logger` and instantiate a contextualized child logger at the top of the file simply using `const log = logger.child();`. The logger will automatically detect and extract the calling filename from the stack trace *exactly once* during module initialization (avoiding any performance overhead during log calls). Then, use this child logger (`log.info`, `log.warn`, `log.error`, `log.debug`, or `log.log`) to display all messages in the console. This guarantees maximum performance, absolute context transparency, and clean logging with zero hardcoded file names.
 
@@ -347,31 +360,233 @@ src/backend/prisma/schema/
 
 ## 13. IoC Container Pattern (Dependency Injection)
 
-Every domain module has an `index.ts` that instantiates the layers with manual DI:
+Every domain module has an `index.ts` that instantiates the layers with manual DI. Cuando el módulo requiere caché, se inyecta `CacheService` en el Repository:
 
 ```typescript
 // src/backend/modules/[domain]/index.ts
 import { DomainRepository } from "./domain.repository";
 import { DomainService } from "./domain.service";
+import { CacheService } from "@/backend/cache";
 
-export const domainRepository = new DomainRepository();
+const cacheService = new CacheService();
+
+export const domainRepository = new DomainRepository(cacheService);
 export const domainService = new DomainService(domainRepository);
 ```
 
+**Reglas de inyección del CacheService**:
+- **Siempre** instanciar `CacheService` como singleton local en el `index.ts` del módulo.
+- **Solo** inyectar en el constructor del Repository.
+- **Nunca** inyectar en Services, Actions, o componentes UI.
+- El constructor del Repository debe declarar `cacheService` como opcional:
+  ```typescript
+  constructor(private cacheService?: CacheService) {}
+  ```
+  Esto permite que el módulo funcione sin caché si es necesario, y habilita el uso de optional chaining (`this.cacheService?.getOrSet(...)`).
+
 **Active domain modules and their layers:**
 
-| Module | Repository | Service | Actions | Socket Handler | IoC (`index.ts`) |
-|---|---|---|---|---|---|
-| `auth` | ✗ (uses `user.repository`) | `auth.service.ts` | `auth.actions.ts` | ✗ | ✓ |
-| `user` | `user.repository.ts` | ✗ | ✗ | ✗ | ✓ |
-| `product` | `product.repository.ts` | `product.service.ts` | `product.actions.ts` | ✗ | ✓ |
-| `orders` | `orders.repository.ts` | `orders.service.ts` | `orders.actions.ts` | ✗ | ✓ |
-| `payments` | ✗ | `payments.service.ts` | `payments.actions.ts` | ✗ | ✓ |
-| `chat` | `chat.repository.ts` | `chat.service.ts` | `chat.actions.ts` | `socketHandler.ts` | ✓ |
+| Module | Repository | Service | Actions | Socket Handler | IoC (`index.ts`) | Cache |
+|---|---|---|---|---|---|---|
+| `auth` | ✗ (uses `user.repository`) | `auth.service.ts` | `auth.actions.ts` | ✗ | ✓ | ✗ |
+| `user` | `user.repository.ts` | ✗ | ✗ | ✗ | ✓ | ✗ |
+| `product` | `product.repository.ts` | `product.service.ts` | `product.actions.ts` | ✗ | ✓ | ✅ |
+| `orders` | `orders.repository.ts` | `orders.service.ts` | `orders.actions.ts` | ✗ | ✓ | ✗ |
+| `payments` | ✗ | `payments.service.ts` | `payments.actions.ts` | ✗ | ✓ | ✗ |
+| `chat` | `chat.repository.ts` | `chat.service.ts` | `chat.actions.ts` | `socketHandler.ts` | ✓ | ✗ |
 
 ---
 
-## 14. Centralized Configuration
+## 14. Distributed Caching System (Redis)
+
+> [!CAUTION]
+> The caching system is a **core architectural layer** that sits between the Repository and Database layers. All read-heavy data access MUST go through `CacheService` to reduce database load and improve response times. Este sistema está diseñado con **Graceful Degradation**: si Redis no está disponible, la aplicación sigue funcionando sin caché.
+
+### 14.1 Architecture Overview
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  Service Layer (SVC)                                      │
+│  → No sabe que existe caché. Solo llama al Repository.    │
+└──────────────────────┬───────────────────────────────────┘
+                       │
+┌──────────────────────▼───────────────────────────────────┐
+│  Repository Layer (REPO)                                  │
+│  → Inyecta CacheService vía constructor                   │
+│  → READ methods: usa cacheService.getOrSet(key, fetcher)  │
+│  → WRITE methods: invalida con cacheService.delPattern()  │
+└──────────┬───────────────────────────────┬────────────────┘
+           │                               │
+           ▼                               ▼
+┌──────────────────────┐    ┌──────────────────────────────┐
+│  Redis (Cache)       │    │  Prisma/PostgreSQL (DB)      │
+│  → Si disponible     │    │  → Siempre Source of Truth   │
+│  → TTL configurables │    │  → Consultado en cache miss  │
+│  → Autoinvalida      │    │  → Consultado si Redis caído │
+└──────────────────────┘    └──────────────────────────────┘
+```
+
+### 14.2 File Structure
+
+```
+src/backend/cache/
+├── index.ts              ← Barrel exports
+├── client.ts             ← Redis singleton + health check
+├── cache.service.ts      ← CacheService class
+├── key-builder.ts        ← CacheKeys builder con naming convention
+└── types.ts              ← Types compartidos
+```
+
+### 14.3 Redis Client (`client.ts`) — Singleton Pattern
+
+Sigue el mismo patrón que `prisma.ts` usando `globalThis` + `process` para survival de HMR:
+
+```typescript
+// Comportamiento esperado:
+// 1. REDIS_URL configurada + conexión exitosa → isRedisAvailable = true
+// 2. REDIS_URL configurada + conexión fallida  → isRedisAvailable = false (log warning)
+// 3. REDIS_URL vacía                           → isRedisAvailable = false (log info)
+// 4. Redis se cae en runtime                   → isRedisAvailable = false (auto-recuperación)
+// 5. Redis se reconecta                        → isRedisAvailable = true
+```
+
+**Event listeners que gobiernan la disponibilidad:**
+- `connect` / `ready` → `isRedisAvailable = true`
+- `error` / `close` / `reconnecting` → `isRedisAvailable = false`
+- **Máximo 5 reintentos** con backoff progresivo (200ms → 2s)
+
+### 14.4 CacheService — API Reference
+
+El `CacheService` se inyecta en los Repositorios y nunca debe usarse desde Services o Controllers.
+
+| Método | Firma | Descripción | Si Redis no disponible |
+|--------|-------|-------------|----------------------|
+| `get` | `get<T>(key: string): Promise<T \| null>` | Obtener valor del caché | Retorna `null` |
+| `set` | `set<T>(key: string, value: T, ttl?: number): Promise<void>` | Guardar valor con TTL | No-op |
+| `del` | `del(key: string): Promise<void>` | Eliminar clave específica | No-op |
+| `delPattern` | `delPattern(pattern: string): Promise<void>` | SCAN + DEL por patrón (ej: `cache:product:*`) | No-op |
+| `getOrSet` | `getOrSet<T>(key: string, fetcher: () => Promise<T>, ttl?: number): Promise<T>` | **Cache-Aside**: get → si miss → fetcher → set → return | Ejecuta fetcher directamente |
+
+### 14.5 Cache-Aside Pattern (STRICT LAW)
+
+**Todos los métodos READ** en los Repositorios DEBEN usar este patrón:
+
+```typescript
+async getProductById(id: string): Promise<Product | null> {
+  const key = CacheKeys.product.byId(id);
+  return this.cacheService?.getOrSet(
+    key,
+    async () => {
+      log.debug("Buscando producto por id:", { id });
+      return prisma.product.findUnique({ where: { id }, include: { ... } });
+    },
+    config.cache.ttl.productDetail,  // TTL específico
+  ) ?? null;
+}
+```
+
+**Todos los métodos WRITE** (create, update, delete) DEBEN invalidar el caché:
+
+```typescript
+async updateProduct(id: string, data: any): Promise<Product> {
+  const product = await prisma.product.update({ where: { id }, data });
+  await this.cacheService?.delPattern(CacheKeys.product.allPattern);
+  return product;
+}
+```
+
+### 14.6 Key Naming Convention (`key-builder.ts`)
+
+```
+cache:{dominio}:{entidad}:{identificador}
+```
+
+| Key Pattern | Ejemplo | Uso |
+|-------------|---------|-----|
+| `cache:product:list:{skip}:{take}:{cats}:{store}` | `cache:product:list:0:20:a1b2:store_01` | Listas paginadas |
+| `cache:product:id:{id}` | `cache:product:id:prod_001` | Producto individual |
+| `cache:product:search:{query}:{skip}:{take}:{cats}:{store}` | `cache:product:search:hello:0:20:a1b2:` | Búsquedas |
+| `cache:product:categories` | `cache:product:categories` | Catálogo de categorías |
+| `cache:product:*` | — | Patrón de invalidación global |
+
+Los filtros largos (arrays de categorías) se pasan por un **hash determinístico** (32-bit → base36) para evitar keys excesivamente largas.
+
+### 14.7 TTL Strategy (Configurable)
+
+Los TTLs se definen en `src/config/config.ts` y deben ajustarse según la volatilidad de los datos:
+
+| Tipo de dato | TTL recomendado | Frecuencia de cambio |
+|-------------|----------------|---------------------|
+| Listados paginados | 60s | Alta (cambian con cada mutación) |
+| Detalle individual | 120s | Media |
+| Categorías | 300s (5 min) | Muy baja |
+| Conteos | 120s | Media |
+| Búsquedas | 60s | Alta |
+
+### 14.8 Invalidación por Mutación (STRICT LAW)
+
+Siempre que un método WRITE modifique datos, DEBE invalidar el caché usando `delPattern` con el patrón del dominio completo:
+
+```typescript
+await this.cacheService?.delPattern("cache:product:*");
+```
+
+Esto es intencionalmente amplio (invalida todo el dominio) porque:
+1. **Seguridad**: garantiza que no queden datos obsoletos
+2. **Simplicidad**: evita errores de keys olvidadas
+3. **Rendimiento**: con TTLs de 60-120s, el impacto es mínimo
+
+**Caso especial**: métodos auxiliares de solo lectura interna (ej: `getProductByIdAndStore`) que se usan para validaciones dentro del Service, NO necesitan cache — su frecuencia de uso es baja y no justifica la sobrecarga.
+
+### 14.9 IoC Injection Pattern (STRICT LAW)
+
+```typescript
+// src/backend/modules/[domain]/index.ts
+import { CacheService } from "@/backend/cache";
+
+const cacheService = new CacheService();
+export const domainRepository = new DomainRepository(cacheService);
+export const domainService = new DomainService(domainRepository);
+```
+
+Reglas:
+- **Siempre** instanciar `CacheService` en el `index.ts` del módulo (no compartir entre módulos a menos que se justifique)
+- **Solo** aceptar `CacheService` como parámetro opcional en el constructor del Repository: `constructor(private cacheService?: CacheService)`
+- **Nunca** inyectar `CacheService` en Services, Actions, o componentes
+
+### 14.10 Adding Cache to a New Module — Checklist
+
+- [ ] 1. Agregar keys en `src/backend/cache/key-builder.ts`
+- [ ] 2. Agregar TTLs en `src/config/config.ts` (si son diferentes a los default)
+- [ ] 3. Inyectar `CacheService` via constructor en el Repository
+- [ ] 4. Envolver métodos READ con `this.cacheService?.getOrSet(key, fetcher, ttl)`
+- [ ] 5. Invalidar métodos WRITE con `this.cacheService?.delPattern(pattern)`
+- [ ] 6. Actualizar el `index.ts` del módulo para instanciar e inyectar `CacheService`
+- [ ] 7. Verificar que `tsc --noEmit` compile sin errores
+- [ ] 8. Verificar en logs que el caché funciona: `Cache HIT: ...` / `Cache invalidated: ...`
+
+### 14.11 Graceful Degradation — Qué Esperar
+
+| Escenario | Log | Comportamiento |
+|-----------|-----|----------------|
+| Redis no configurado | `REDIS_URL no configurada. Caché deshabilitado.` | App funciona 100%, sin caché |
+| Redis arranca después de la app | `Redis conectado exitosamente.` | Cache se activa automáticamente |
+| Redis se cae en runtime | `Redis: error de conexión: ...` | App sigue funcionando, caché deshabilitado hasta reconexión |
+| Redis reconecta | `Redis conectado exitosamente.` | Cache se reactiva automáticamente |
+| Cache HIT | `Cache HIT: cache:product:id:prod_001` | Data servida desde Redis (rápido) |
+| Cache invalidado | `Cache invalidated: cache:product:*` | Data fresca en próxima request |
+
+### 14.12 Environment Variables
+
+```bash
+# Caching (Redis) — deshabilitado si REDIS_URL está vacío
+REDIS_URL="redis://default:password@host:6379"
+CACHE_ENABLED="true"
+```
+
+---
+
+## 15. Centralized Configuration
 
 All environment variables are accessed through `src/config/config.ts`:
 
@@ -382,14 +597,24 @@ export const config = {
   auth: { secret, trustHost, google: { clientId, clientSecret }, admin: { email, password } },
   database: { url, directUrl },
   mercadopago: { accessToken, webhookSecret },
+  cache: {
+    redisUrl, enabled, defaultTTL,
+    ttl: { productList, productDetail, categories, categoryCounts, searchResults },
+  },
 };
 ```
 
 **Rule**: Never use `process.env.VARIABLE` directly in application code. Always access through `config.*` or use `getRequiredConfig()` for mandatory values.
 
+**Cache configuration variables** (`src/config/config.ts`):
+- `config.cache.redisUrl` — `REDIS_URL` env var
+- `config.cache.enabled` — `CACHE_ENABLED` env var (default `true`)
+- `config.cache.defaultTTL` — TTL global por defecto (60s)
+- `config.cache.ttl.*` — TTLs específicos por tipo de dato (productList, productDetail, categories, etc.)
+
 ---
 
-## 15. Internationalization (i18n)
+## 16. Internationalization (i18n)
 
 - The app supports **Spanish (es)** and **English (en)** via `LanguageContext`.
 - Translation files live in `src/frontend/architecture/languages/`.
@@ -398,7 +623,7 @@ export const config = {
 
 ---
 
-## 16. Event-Driven Data Refresh Architecture (Zero-Polling Rule)
+## 17. Event-Driven Data Refresh Architecture (Zero-Polling Rule)
 
 To maintain a professional, high-performance architecture, **polling via `setInterval` is STRICTLY FORBIDDEN**. All automatic data refreshing must be push-based using the global `eventBus` and WebSockets.
 
@@ -438,11 +663,11 @@ useSocketRefresh({
 
 ---
 
-## 17. Event-Driven Notifications System (Production-Grade)
+## 18. Event-Driven Notifications System (Production-Grade)
 
 To guarantee scalability, persistence, and real-time delivery, all system notifications MUST use the dedicated Event-Driven Notifications System. **Never implement ad-hoc or polling-based notification mechanisms.**
 
-### 17.1 Architecture & Components
+### 18.1 Architecture & Components
 - **Domain Event Log**: Every notification starts as an immutable `DomainEvent` representing the business action (e.g., `order_created`, `post_liked`).
 - **Logical Notification**: A single `Notification` record is created linking back to the `DomainEvent`.
 - **Audience Resolver**: Uses the Strategy Pattern to determine recipients dynamically (`INDIVIDUAL`, `BROADCAST`, `GROUP`).
@@ -450,7 +675,7 @@ To guarantee scalability, persistence, and real-time delivery, all system notifi
   - `INDIVIDUAL` and `GROUP` notifications generate physical `NotificationRecipient` records immediately in the database.
   - `BROADCAST` notifications use **Lazy Materialization** ($O(1)$ dispatch) and are merged virtually during query time to save database space.
 
-### 17.2 Dispatching Rule (STRICT LAW)
+### 18.2 Dispatching Rule (STRICT LAW)
 - **Law**: Whenever a business event occurs that requires notifying users, developers MUST use `notificationsService.dispatchNotification()`.
 - **Never** write directly to the `Notification` table from other domains or controllers. Always use the encapsulated service.
 - **Example Usage** (e.g., inside `orders.service.ts`):
@@ -473,11 +698,11 @@ To guarantee scalability, persistence, and real-time delivery, all system notifi
   });
   ```
 
-### 17.3 Real-Time Delivery (Socket Bridge)
+### 18.3 Real-Time Delivery (Socket Bridge)
 - The `notificationsService` automatically emits internal node events via the global `eventBus`.
 - `socketHandler.ts` listens to these events and bridges them to the private Socket.IO channels of the affected users (e.g., `user:{userId}:notifications`).
 - The frontend consumes this via the `NotificationContext` (`useNotifications` hook) which optimistically updates the UI Bell icon and manages read states.
 
-### 17.4 Interactive Navigation
+### 18.4 Interactive Navigation
 - **Law**: Notifications that require user interaction or routing MUST include an `actionUrl` inside the `metadata` JSON object.
 - The `NotificationBell.tsx` component automatically parses `metadata.actionUrl`. When the user clicks the notification, it marks it as read, closes the panel, and routes the user seamlessly.
