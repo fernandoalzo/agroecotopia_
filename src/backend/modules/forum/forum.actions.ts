@@ -7,7 +7,7 @@ import logger from "@/utils/logger";
 const log = logger.child();
 
 function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? getErrorMessage(error) : "Error desconocido";
+  return error instanceof Error ? error.message : "Error desconocido";
 }
 
 export async function createPostAction(formData: { title: string; body: string; labels: string[] }) {

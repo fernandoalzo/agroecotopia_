@@ -16,6 +16,8 @@ import { Question } from "./forum.types";
 import ForumAnswerCard from "./ForumAnswerCard";
 import { createAnswerSchema } from "./schemas/answer.schema";
 import type { AnswerFormData } from "./schemas/answer.schema";
+import { createPostSchema } from "./schemas/post.schema";
+import type { PostFormData } from "./schemas/post.schema";
 
 interface ForumQuestionDetailProps {
   question: Question;
@@ -65,12 +67,14 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
   const [isVotingQuestion, setIsVotingQuestion] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("votes");
   const [isEditingPost, setIsEditingPost] = useState(false);
-  const [editTitle, setEditTitle] = useState(question.title);
-  const [editBody, setEditBody] = useState(question.body);
-  const [editLabels, setEditLabels] = useState(question.labels.join(", "));
   const [isEditPostSubmitting, setIsEditPostSubmitting] = useState(false);
+  const [labelsDraft, setLabelsDraft] = useState(question.labels.join(", "));
 
-
+  const editPostSchema = useMemo(() => createPostSchema(t.forum), [t]);
+  const editPostForm = useForm<PostFormData>({
+    resolver: zodResolver(editPostSchema),
+    defaultValues: { title: question.title, body: question.body, labels: question.labels },
+  });
 
   const ANSWER_MAX = 2000;
   const canDeleteQuestion = currentUserId && (currentUserId === question.authorId || currentUserRole === "admin");
@@ -122,12 +126,11 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
     }
   };
 
-  const handleEditPostSubmit = async () => {
+  const handleEditPostSubmit = async (data: PostFormData) => {
     if (isEditPostSubmitting || !onEditPost) return;
     setIsEditPostSubmitting(true);
     try {
-      const labels = editLabels.split(",").map(l => l.trim()).filter(Boolean);
-      await onEditPost({ title: editTitle, body: editBody, labels });
+      await onEditPost(data);
       setIsEditingPost(false);
     } catch {
       // Error handled by parent toast
@@ -193,42 +196,60 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
           </div>
 
           {isEditingPost ? (
-            <div className="space-y-4 mb-6">
+            <form onSubmit={editPostForm.handleSubmit(handleEditPostSubmit)} className="space-y-4 mb-6">
               <input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                className="w-full text-3xl md:text-5xl font-black font-display tracking-tight text-foreground leading-[1.1] bg-transparent border-b border-border/30 focus:outline-none focus:border-primary/50 pb-2"
+                {...editPostForm.register("title")}
+                className={`w-full text-3xl md:text-5xl font-black font-display tracking-tight text-foreground leading-[1.1] bg-transparent border-b focus:outline-none focus:border-primary/50 pb-2 ${editPostForm.formState.errors.title ? "border-red-500" : "border-border/30"}`}
                 placeholder={t.forum.post.titlePlaceholder}
               />
+              {editPostForm.formState.errors.title && (
+                <p className="text-red-500 text-xs font-bold">{editPostForm.formState.errors.title.message}</p>
+              )}
               <textarea
                 rows={8}
-                value={editBody}
-                onChange={(e) => { setEditBody(e.target.value); autoResize(e.target); }}
-                className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 text-foreground resize-none transition-all text-sm"
-                ref={(el) => { if (el) autoResize(el); }}
+                {...editPostForm.register("body", {
+                  onChange: (e) => autoResize(e.target),
+                })}
+                ref={(e) => {
+                  editPostForm.register("body").ref(e);
+                  if (e) autoResize(e);
+                }}
+                className={`w-full bg-background border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 text-foreground resize-none transition-all text-sm ${editPostForm.formState.errors.body ? "border-red-500" : "border-border"}`}
               />
+              {editPostForm.formState.errors.body && (
+                <p className="text-red-500 text-xs font-bold">{editPostForm.formState.errors.body.message}</p>
+              )}
               <input
-                value={editLabels}
-                onChange={(e) => setEditLabels(e.target.value)}
-                className="w-full bg-transparent border-b border-border/30 focus:outline-none focus:border-primary/50 pb-1 text-sm text-muted-foreground"
+                value={labelsDraft}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  setLabelsDraft(raw);
+                  const arr = raw.split(",").map(l => l.trim()).filter(Boolean);
+                  editPostForm.setValue("labels", arr, { shouldValidate: true });
+                }}
+                className={`w-full bg-transparent border-b focus:outline-none focus:border-primary/50 pb-1 text-sm text-muted-foreground ${editPostForm.formState.errors.labels ? "border-red-500" : "border-border/30"}`}
                 placeholder={t.forum.post.labelsPlaceholder}
               />
+              {editPostForm.formState.errors.labels && (
+                <p className="text-red-500 text-xs font-bold">{editPostForm.formState.errors.labels.message}</p>
+              )}
               <div className="flex items-center gap-2">
                 <button
-                  onClick={handleEditPostSubmit}
+                  type="submit"
                   disabled={isEditPostSubmitting}
                   className={`px-4 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {isEditPostSubmitting ? t.forum.saving : t.forum.post.saveChanges}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setIsEditingPost(false)}
                   className="px-4 py-1.5 rounded-md text-xs font-bold text-muted-foreground hover:bg-secondary transition-colors"
                 >
                   {t.forum.cancel}
                 </button>
               </div>
-            </div>
+            </form>
           ) : (
             <>
               <h1 className="text-3xl md:text-5xl font-black font-display tracking-tight text-foreground leading-[1.1] mb-6">
@@ -258,7 +279,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
 
                 {canEditPost && (
                   <button
-                    onClick={() => { setIsEditingPost(true); setEditTitle(question.title); setEditBody(question.body); setEditLabels(question.labels.join(", ")); }}
+                    onClick={() => { setIsEditingPost(true); setLabelsDraft(question.labels.join(", ")); editPostForm.reset({ title: question.title, body: question.body, labels: question.labels }); }}
                     className="flex items-center justify-center w-8 h-8 rounded-full transition-all hover:bg-primary/10 hover:text-primary text-muted-foreground"
                     title={t.forum.post.editPost}
                   >
