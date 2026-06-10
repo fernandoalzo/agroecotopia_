@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useMemo } from "react";
 import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import { motion } from "framer-motion";
 import { ArrowLeft, ThumbsUp, ThumbsDown, Share2, Check, X, Loader2, Trash2, Pencil, ArrowUpDown, Clock, TrendingUp, MessageCircle } from "lucide-react";
@@ -28,7 +30,6 @@ interface ForumQuestionDetailProps {
   currentUserRole?: string;
 }
 
-import { answerSchema } from "../schemas/answer.schema";
 import { useLanguage } from "@/context/LanguageContext";
 
 type SortMode = "votes" | "newest" | "oldest";
@@ -46,8 +47,16 @@ function MarkdownRenderer({ content }: { content: string }) {
 export default function ForumQuestionDetail({ question, onBack, onRate, onAddAnswer, onEditAnswer, onDeleteAnswer, onDeleteQuestion, onAcceptAnswer, onEditPost, currentUserId, currentUserRole }: ForumQuestionDetailProps) {
   const { status } = useSession();
   const { t } = useLanguage();
-  const [replyContent, setReplyContent] = useState("");
-  const [error, setError] = useState("");
+  const answerSchema_ = useMemo(() => z.object({
+    content: z.string().min(10, t.forum.answer.minLengthError).max(2000, t.forum.answer.maxLengthError),
+  }), [t]);
+
+  const answerForm = useForm<z.infer<typeof answerSchema_>>({
+    resolver: zodResolver(answerSchema_),
+    defaultValues: { content: "" },
+  });
+
+  const replyContent = answerForm.watch("content");
   const [copied, setCopied] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,7 +70,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
   const [editLabels, setEditLabels] = useState(question.labels.join(", "));
   const [isEditPostSubmitting, setIsEditPostSubmitting] = useState(false);
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
 
   const ANSWER_MAX = 2000;
   const canDeleteQuestion = currentUserId && (currentUserId === question.authorId || currentUserRole === "admin");
@@ -82,18 +91,12 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
     }
   };
 
-  const handleAddAnswer = async () => {
+  const handleAddAnswer = async (data: z.infer<typeof answerSchema_>) => {
     if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
-      const validatedData = answerSchema.parse({ content: replyContent });
-      setIsSubmitting(true);
-      await onAddAnswer(validatedData.content);
-      setReplyContent("");
-      setError("");
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        setError(err.issues[0].message);
-      }
+      await onAddAnswer(data.content);
+      answerForm.reset();
     } finally {
       setIsSubmitting(false);
     }
@@ -147,7 +150,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      handleAddAnswer();
+      answerForm.handleSubmit(handleAddAnswer)();
     }
   };
 
@@ -345,26 +348,28 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
 
         {/* Main answer textarea */}
         {status === "authenticated" ? (
-          <div className="mb-8 pb-6 border-b border-border/30">
+          <form onSubmit={answerForm.handleSubmit(handleAddAnswer)} className="mb-8 pb-6 border-b border-border/30">
             <h3 className="font-bold text-foreground mb-3 text-sm">{t.forum.post.yourAnswer}</h3>
-            <div className={`border rounded-md focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-primary/50 transition-all ${error ? 'border-red-500' : 'border-border'}`}>
+            <div className={`border rounded-md focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-primary/50 transition-all ${answerForm.formState.errors.content?.message ? 'border-red-500' : 'border-border'}`}>
               <textarea
-                ref={textareaRef}
                 rows={5}
-                value={replyContent}
-                onChange={(e) => { setReplyContent(e.target.value); setError(""); autoResize(e.target); }}
+                {...answerForm.register("content", {
+                  onChange: (e) => { autoResize(e.target); }
+                })}
                 onKeyDown={handleKeyDown}
                 placeholder={t.forum.post.answerPlaceholder}
                 className="w-full bg-transparent border-none focus:ring-0 resize-none outline-none text-foreground placeholder:text-muted-foreground text-sm px-3 py-2"
               />
             </div>
-            {error && <p className="text-red-500 text-xs font-bold mt-2">{error}</p>}
+            {answerForm.formState.errors.content?.message && (
+              <p className="text-red-500 text-xs font-bold mt-2">{answerForm.formState.errors.content?.message}</p>
+            )}
             <div className="flex items-center justify-between mt-3">
               <span className="text-[10px] text-muted-foreground/60">{replyContent.length}/{ANSWER_MAX}</span>
               <div className="flex items-center gap-3">
                 <span className="text-[10px] text-muted-foreground/60 hidden sm:block">{t.forum.post.keyboardHint}</span>
                 <button
-                  onClick={handleAddAnswer}
+                  type="submit"
                   disabled={isSubmitting}
                   className={`px-5 py-2 bg-primary text-primary-foreground rounded-md font-bold hover:bg-primary/90 transition-all text-xs ${isSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >
@@ -372,7 +377,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
                 </button>
               </div>
             </div>
-          </div>
+          </form>
         ) : (
           <div className="mb-8 pb-6 border-b border-border/30 text-center">
             <p className="text-muted-foreground font-medium mb-3 text-sm">{t.forum.post.loginToParticipate}</p>

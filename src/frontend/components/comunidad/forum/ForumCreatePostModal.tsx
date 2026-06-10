@@ -3,6 +3,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, ChevronDown, Check } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { postSchema } from "../schemas/post.schema";
 import { config } from "@/config/config";
@@ -92,46 +94,30 @@ type FormField = {
 };
 
 export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: ForumCreatePostModalProps) {
-  const [formData, setFormData] = useState({
-    title: "",
-    body: "",
-    labels: [] as string[]
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { t } = useLanguage();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const form = useForm<z.infer<typeof postSchema>>({
+    resolver: zodResolver(postSchema),
+    defaultValues: {
+      title: "",
+      body: "",
+      labels: [],
+    },
+  });
 
   const formFieldsConfig: FormField[] = [
     { id: "title", label: t.forum.createPost.titleLabel, type: "text", placeholder: t.forum.createPost.titlePlaceholder, colSpan: "md:col-span-3" },
     { id: "body", label: t.forum.createPost.descriptionLabel, type: "textarea", placeholder: t.forum.createPost.descriptionPlaceholder, colSpan: "md:col-span-3" },
   ];
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (data: z.infer<typeof postSchema>) => {
     if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
-      const validatedData = postSchema.parse(formData);
-      setErrors({});
-      setIsSubmitting(true);
-      await onSubmit(validatedData);
-
-      // Reset
-      setFormData({
-        title: "",
-        body: "",
-        labels: []
-      });
+      await onSubmit(data);
+      form.reset();
       onClose();
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        const fieldErrors: Record<string, string> = {};
-        err.issues.forEach(issue => {
-          if (issue.path[0]) {
-            fieldErrors[issue.path[0].toString()] = issue.message;
-          }
-        });
-        setErrors(fieldErrors);
-      }
     } finally {
       setIsSubmitting(false);
     }
@@ -165,7 +151,7 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[70vh]">
+              <form onSubmit={form.handleSubmit(handleSubmit)} className="p-6 overflow-y-auto max-h-[70vh]">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {formFieldsConfig.map((field) => (
                     <div key={field.id} className={cn("space-y-2", field.colSpan)}>
@@ -173,15 +159,11 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
 
                       {field.type === "text" && (
                         <input
-                          value={formData[field.id as keyof typeof formData] as string}
-                          onChange={(e) => {
-                            setFormData(prev => ({ ...prev, [field.id]: e.target.value }));
-                            setErrors(prev => ({ ...prev, [field.id]: "" }));
-                          }}
+                          {...form.register(field.id)}
                           placeholder={field.placeholder}
                           className={cn(
                             "w-full bg-secondary/50 border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground transition-all",
-                            errors[field.id] ? "border-red-500" : "border-border/50"
+                            form.formState.errors[field.id] ? "border-red-500" : "border-border/50"
                           )}
                         />
                       )}
@@ -189,20 +171,16 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
                       {field.type === "textarea" && (
                         <textarea
                           rows={5}
-                          value={formData[field.id as keyof typeof formData] as string}
-                          onChange={(e) => {
-                            setFormData(prev => ({ ...prev, [field.id]: e.target.value }));
-                            setErrors(prev => ({ ...prev, [field.id]: "" }));
-                          }}
+                          {...form.register(field.id)}
                           placeholder={field.placeholder}
                           className={cn(
                             "w-full bg-secondary/50 border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground resize-none transition-all",
-                            errors[field.id] ? "border-red-500" : "border-border/50"
+                            form.formState.errors[field.id] ? "border-red-500" : "border-border/50"
                           )}
                         />
                       )}
 
-                      {errors[field.id] && <span className="text-red-500 text-xs font-bold block">{errors[field.id]}</span>}
+                      {form.formState.errors[field.id] && <span className="text-red-500 text-xs font-bold block">{form.formState.errors[field.id]?.message}</span>}
                     </div>
                   ))}
 
@@ -210,14 +188,11 @@ export default function ForumCreatePostModal({ isOpen, onClose, onSubmit }: Foru
                   <div className="md:col-span-3">
                     <MultiLabelSelect
                       label={t.forum.createPost.tagsLabel}
-                      value={formData.labels}
-                      onChange={(labels) => {
-                        setFormData(prev => ({ ...prev, labels }));
-                        setErrors(prev => ({ ...prev, labels: "" }));
-                      }}
+                      value={form.watch("labels")}
+                      onChange={(labels) => form.setValue("labels", labels, { shouldValidate: true })}
                       groupedOptions={config.forum.labels}
                     />
-                    {errors.labels && <span className="text-red-500 text-xs font-bold block mt-1">{errors.labels}</span>}
+                    {form.formState.errors.labels && <span className="text-red-500 text-xs font-bold block mt-1">{form.formState.errors.labels.message}</span>}
                   </div>
                 </div>
 

@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThumbsUp, ThumbsDown, Check, X, Loader2, Pencil, Trash2, MessageCircle, Award } from "lucide-react";
 import { Answer } from "./forum.types";
@@ -36,27 +38,33 @@ function MarkdownRenderer({ content }: { content: string }) {
 
 export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAddAnswer, onAcceptAnswer, currentUserId, currentUserRole, isPostAuthor }: ForumAnswerCardProps) {
   const { t } = useLanguage();
-  const replySchema = z.object({
+  const replySchema_ = useMemo(() => z.object({
     content: z
       .string()
       .min(10, t.forum.answer.minLengthError)
       .max(2000, t.forum.answer.maxLengthError),
+  }), [t]);
+
+  const replyForm = useForm<z.infer<typeof replySchema_>>({
+    resolver: zodResolver(replySchema_),
+    defaultValues: { content: "" },
   });
+
+  const editForm = useForm<z.infer<typeof replySchema_>>({
+    resolver: zodResolver(replySchema_),
+    defaultValues: { content: answer.content },
+  });
+
   const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState(answer.content);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [userVote, setUserVote] = useState(0);
   const [localScore, setLocalScore] = useState(answer.ratingTotal);
 
   const [isReplying, setIsReplying] = useState(false);
-  const [replyContent, setReplyContent] = useState("");
-  const [replyError, setReplyError] = useState("");
-  const [isReplySubmitting, setIsReplySubmitting] = useState(false);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [isVoting, setIsVoting] = useState(false);
-  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
 
@@ -85,20 +93,15 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
     }
   };
 
-  const handleSaveEdit = async () => {
-    if (isEditSubmitting || editContent.trim().length < 10) return;
-    setIsEditSubmitting(true);
-    try {
-      await onEdit?.(answer.id, editContent.trim());
-      setIsEditing(false);
-    } finally {
-      setIsEditSubmitting(false);
-    }
+  const handleSaveEdit = async (data: z.infer<typeof replySchema_>) => {
+    if (editForm.formState.isSubmitting) return;
+    await onEdit?.(answer.id, data.content.trim());
+    setIsEditing(false);
   };
 
   const handleCancelEdit = () => {
-    setEditContent(answer.content);
     setIsEditing(false);
+    editForm.reset({ content: answer.content });
   };
 
   const handleConfirmDelete = async () => {
@@ -122,22 +125,11 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
     }
   };
 
-  const handleReplySubmit = async () => {
-    if (isReplySubmitting || !onAddAnswer) return;
-    try {
-      replySchema.parse({ content: replyContent });
-      setIsReplySubmitting(true);
-      await onAddAnswer(replyContent, answer.id);
-      setReplyContent("");
-      setReplyError("");
-      setIsReplying(false);
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        setReplyError(err.issues[0].message);
-      }
-    } finally {
-      setIsReplySubmitting(false);
-    }
+  const handleReplySubmit = async (data: z.infer<typeof replySchema_>) => {
+    if (replyForm.formState.isSubmitting || !onAddAnswer) return;
+    await onAddAnswer(data.content, answer.id);
+    replyForm.reset();
+    setIsReplying(false);
   };
 
   const autoResize = (el: HTMLTextAreaElement) => {
@@ -148,14 +140,14 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
   const handleReplyKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      handleReplySubmit();
+      replyForm.handleSubmit(handleReplySubmit)();
     }
   };
 
   const handleEditKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      handleSaveEdit();
+      editForm.handleSubmit(handleSaveEdit)();
     }
   };
 
@@ -219,20 +211,24 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
             <div className="space-y-3">
               <textarea
                 rows={4}
-                value={editContent}
-                onChange={(e) => { setEditContent(e.target.value); autoResize(e.target); }}
+                {...editForm.register("content", {
+                  onChange: (e) => autoResize(e.target),
+                })}
+                ref={(e) => {
+                  editForm.register("content").ref(e);
+                  if (e) autoResize(e);
+                }}
                 onKeyDown={handleEditKeyDown}
                 className="w-full bg-background border border-border rounded-md px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 text-foreground resize-none transition-all text-sm"
-                ref={(el) => { if (el) autoResize(el); }}
               />
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={handleSaveEdit}
-                    disabled={isEditSubmitting || editContent.trim().length < 10}
-                    className={`px-4 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${isEditSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    onClick={editForm.handleSubmit(handleSaveEdit)}
+                    disabled={editForm.formState.isSubmitting || (editForm.watch("content")?.trim()?.length || 0) < 10}
+                    className={`px-4 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${editForm.formState.isSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
                   >
-                    {isEditSubmitting ? t.forum.saving : t.forum.post.saveChanges}
+                    {editForm.formState.isSubmitting ? t.forum.saving : t.forum.post.saveChanges}
                   </button>
                   <button
                     onClick={handleCancelEdit}
@@ -322,7 +318,7 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
               {/* Footer: Reply + Edit/Delete */}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-4 pt-1 text-xs text-muted-foreground">
                 <button
-                  onClick={() => { setIsReplying(true); setReplyError(""); setTimeout(() => replyTextareaRef.current?.focus(), 0); }}
+                  onClick={() => { setIsReplying(true); setTimeout(() => replyTextareaRef.current?.focus(), 0); }}
                   className="hover:text-primary transition-colors font-medium flex items-center gap-1"
                 >
                   <MessageCircle className="w-3.5 h-3.5" />
@@ -400,33 +396,37 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
                   className="mt-4 border border-border rounded-md bg-secondary/10 overflow-hidden"
                 >
                   <textarea
-                    ref={replyTextareaRef}
                     rows={3}
-                    value={replyContent}
-                    onChange={(e) => { setReplyContent(e.target.value); setReplyError(""); autoResize(e.target); }}
+                    {...replyForm.register("content", {
+                      onChange: (e) => autoResize(e.target),
+                    })}
+                    ref={(e) => {
+                      replyForm.register("content").ref(e);
+                      replyTextareaRef.current = e;
+                    }}
                     onKeyDown={handleReplyKeyDown}
                     placeholder={t.forum.answer.replyPlaceholder}
                     className="w-full bg-transparent border-none focus:ring-0 resize-none outline-none text-foreground placeholder:text-muted-foreground text-sm px-3 py-2"
                     autoFocus
                   />
-                  {replyError && (
-                    <p className="text-red-500 text-xs font-bold px-3 pb-1">{replyError}</p>
+                  {replyForm.formState.errors.content?.message && (
+                    <p className="text-red-500 text-xs font-bold px-3 pb-1">{replyForm.formState.errors.content?.message}</p>
                   )}
                   <div className="flex items-center justify-between gap-2 px-3 pb-3">
-                    <span className="text-[10px] text-muted-foreground/60">{replyContent.length}/{REPLY_MAX}</span>
+                    <span className="text-[10px] text-muted-foreground/60">{replyForm.watch("content")?.length || 0}/{REPLY_MAX}</span>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => { setIsReplying(false); setReplyContent(""); setReplyError(""); }}
+                        onClick={() => { setIsReplying(false); replyForm.reset(); }}
                         className="px-3 py-1.5 rounded-md text-xs font-bold text-muted-foreground hover:bg-secondary transition-colors"
                       >
                         {t.forum.answer.cancelReply}
                       </button>
                       <button
-                        onClick={handleReplySubmit}
-                        disabled={isReplySubmitting}
-                        className={`px-4 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-bold hover:bg-primary/90 transition-all ${isReplySubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
+                        onClick={replyForm.handleSubmit(handleReplySubmit)}
+                        disabled={replyForm.formState.isSubmitting}
+                        className={`px-4 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-bold hover:bg-primary/90 transition-all ${replyForm.formState.isSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
                       >
-                        {isReplySubmitting ? t.forum.sending : t.forum.answer.replySubmit}
+                        {replyForm.formState.isSubmitting ? t.forum.sending : t.forum.answer.replySubmit}
                       </button>
                     </div>
                   </div>
