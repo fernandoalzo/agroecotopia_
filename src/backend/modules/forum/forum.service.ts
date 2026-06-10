@@ -2,6 +2,7 @@ import { ForumRepository } from "./forum.repository";
 import { notificationsService } from "@/backend/modules/notifications";
 import { userRepository } from "@/backend/modules/user";
 import logger from "@/utils/logger";
+import { getForumNotificationStrings } from "./forum-notification-strings";
 
 const log = logger.child("src/backend/modules/forum/forum.service.ts");
 
@@ -10,7 +11,8 @@ export class ForumService {
 
   async createPost(
     data: { title: string; body: string; labels: string[] },
-    authorId: string
+    authorId: string,
+    locale: string = "es",
   ) {
     if (!data.title || data.title.length < 5) {
       throw new Error("Title must be at least 5 characters long.");
@@ -23,6 +25,7 @@ export class ForumService {
     }
 
     const post = await this.forumRepository.createPost(data, authorId);
+    const nls = getForumNotificationStrings(locale);
 
     // Notify all admins about the new post
     userRepository.findAdmins().then(admins => {
@@ -34,8 +37,8 @@ export class ForumService {
           entityId: post.id,
           notification: {
             type: "new_forum_post",
-            title: "Nueva Publicación en la Comunidad",
-            message: `Se ha creado una nueva publicación: "${post.title}".`,
+            title: nls.postCreated.title,
+            message: nls.postCreated.message(post.title),
             audienceType: "INDIVIDUAL",
             audienceRef: admin.id,
             metadata: { actionUrl: `/comunidad/post/${post.id}` },
@@ -78,7 +81,8 @@ export class ForumService {
 
   async createAnswer(
     data: { content: string; postId: string; parentId?: string | null },
-    authorId: string
+    authorId: string,
+    locale: string = "es",
   ) {
     if (!data.content || data.content.length < 10) {
       throw new Error("Answer must be at least 10 characters long.");
@@ -88,6 +92,7 @@ export class ForumService {
     const post = await this.getPostById(data.postId);
 
     const answer = await this.forumRepository.createAnswer(data, authorId);
+    const nls = getForumNotificationStrings(locale);
 
     // Notify the relevant owner
     let recipientId: string;
@@ -108,8 +113,8 @@ export class ForumService {
       entityId: answer.id,
       notification: {
         type: "new_forum_answer",
-        title: isReply ? "Nueva respuesta a tu comentario" : "Nueva respuesta en tu publicación",
-        message: `${actorName} respondió${isReply ? " a tu comentario" : ""} en: "${post.title}"`,
+        title: nls.answerCreated.title(isReply),
+        message: nls.answerCreated.message(actorName, isReply, post.title),
         audienceType: "INDIVIDUAL",
         audienceRef: recipientId,
         metadata: { actionUrl: `/comunidad/post/${data.postId}` },
@@ -121,7 +126,7 @@ export class ForumService {
     return answer;
   }
 
-  async editAnswer(answerId: string, content: string, userId: string, role: string) {
+  async editAnswer(answerId: string, content: string, userId: string, role: string, locale: string = "es") {
     if (!content || content.length < 10) {
       throw new Error("Answer must be at least 10 characters long.");
     }
@@ -136,6 +141,7 @@ export class ForumService {
     }
 
     const updated = await this.forumRepository.updateAnswer(answerId, content);
+    const nls = getForumNotificationStrings(locale);
 
     // Notify all direct repliers about the edit
     const replies = await this.forumRepository.getDirectReplies(answerId);
@@ -151,8 +157,8 @@ export class ForumService {
           entityId: answerId,
           notification: {
             type: "answer_edited",
-            title: "Comentario editado",
-            message: `${actorName} editó su comentario en: "${post.title}"`,
+            title: nls.answerEdited.title,
+            message: nls.answerEdited.message(actorName, post.title),
             audienceType: "INDIVIDUAL",
             audienceRef: reply.authorId,
             metadata: { actionUrl: `/comunidad/post/${answer.postId}` },

@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { forumService } from "./index";
 import { withAuth } from "@/lib/auth-guards";
 import logger from "@/utils/logger";
@@ -10,13 +11,20 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Error desconocido";
 }
 
+async function getLocaleFromHeaders(): Promise<string> {
+  const headersList = await headers();
+  const acceptLanguage = headersList.get("accept-language") || "";
+  return acceptLanguage.startsWith("en") ? "en" : "es";
+}
+
 export async function createPostAction(formData: { title: string; body: string; labels: string[] }) {
   return withAuth(async (session) => {
     try {
       const userId = session.user.id;
+      const locale = await getLocaleFromHeaders();
 
       log.info(`User ${userId} creating a new post: ${formData.title}`);
-      const post = await forumService.createPost(formData, userId);
+      const post = await forumService.createPost(formData, userId, locale);
       return { success: true, post };
     } catch (error: unknown) {
       log.error("Failed to create post:", error);
@@ -64,9 +72,10 @@ export async function createAnswerAction(formData: { content: string; postId: st
   return withAuth(async (session) => {
     try {
       const userId = session.user.id;
+      const locale = await getLocaleFromHeaders();
 
       log.info(`User ${userId} creating an answer for post ${formData.postId}`);
-      const answer = await forumService.createAnswer(formData, userId);
+      const answer = await forumService.createAnswer(formData, userId, locale);
       return { success: true, answer };
     } catch (error: unknown) {
       log.error("Failed to create answer:", error);
@@ -79,9 +88,10 @@ export async function editAnswerAction(formData: { answerId: string; content: st
   return withAuth(async (session) => {
     try {
       const userId = session.user.id;
+      const locale = await getLocaleFromHeaders();
 
       log.info(`User ${userId} editing answer ${formData.answerId}`);
-      const answer = await forumService.editAnswer(formData.answerId, formData.content, userId, session.user.role ?? "user");
+      const answer = await forumService.editAnswer(formData.answerId, formData.content, userId, session.user.role ?? "user", locale);
       return { success: true, answer };
     } catch (error: unknown) {
       log.error("Failed to edit answer:", error);
