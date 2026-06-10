@@ -54,12 +54,14 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
   });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [userVote, setUserVote] = useState(0);
   const [localScore, setLocalScore] = useState(answer.ratingTotal);
 
   const [isReplying, setIsReplying] = useState(false);
+  const [isReplySubmitting, setIsReplySubmitting] = useState(false);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [isVoting, setIsVoting] = useState(false);
@@ -92,9 +94,14 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
   };
 
   const handleSaveEdit = async (data: AnswerFormData) => {
-    if (editForm.formState.isSubmitting) return;
-    await onEdit?.(answer.id, data.content.trim());
-    setIsEditing(false);
+    if (isEditSubmitting) return;
+    setIsEditSubmitting(true);
+    try {
+      await onEdit?.(answer.id, data.content.trim());
+      setIsEditing(false);
+    } finally {
+      setIsEditSubmitting(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -124,10 +131,15 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
   };
 
   const handleReplySubmit = async (data: AnswerFormData) => {
-    if (replyForm.formState.isSubmitting || !onAddAnswer) return;
-    await onAddAnswer(data.content, answer.id);
-    replyForm.reset();
-    setIsReplying(false);
+    if (isReplySubmitting || !onAddAnswer) return;
+    setIsReplySubmitting(true);
+    try {
+      await onAddAnswer(data.content, answer.id);
+      replyForm.reset();
+      setIsReplying(false);
+    } finally {
+      setIsReplySubmitting(false);
+    }
   };
 
   const autoResize = (el: HTMLTextAreaElement) => {
@@ -223,10 +235,10 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
                 <div className="flex items-center gap-2">
                   <button
                     onClick={editForm.handleSubmit(handleSaveEdit)}
-                    disabled={editForm.formState.isSubmitting || (editForm.watch("content")?.trim()?.length || 0) < 10}
-                    className={`px-4 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${editForm.formState.isSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    disabled={isEditSubmitting || (editForm.watch("content")?.trim()?.length || 0) < 10}
+                    className={`px-4 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${isEditSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
                   >
-                    {editForm.formState.isSubmitting ? t.forum.saving : t.forum.post.saveChanges}
+                    {isEditSubmitting ? t.forum.saving : t.forum.post.saveChanges}
                   </button>
                   <button
                     onClick={handleCancelEdit}
@@ -315,18 +327,22 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
 
               {/* Footer: Reply + Edit/Delete */}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-4 pt-1 text-xs text-muted-foreground">
-                <button
-                  onClick={() => { setIsReplying(true); setTimeout(() => replyTextareaRef.current?.focus(), 0); }}
-                  className="hover:text-primary transition-colors font-medium flex items-center gap-1"
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onPointerDown={() => { setIsReplying(true); setTimeout(() => replyTextareaRef.current?.focus(), 0); }}
+                  className="hover:text-primary transition-colors font-medium flex items-center gap-1 cursor-pointer select-none"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsReplying(true); setTimeout(() => replyTextareaRef.current?.focus(), 0); } }}
                 >
                   <MessageCircle className="w-3.5 h-3.5" />
                   {t.forum.reply}
-                </button>
+                </div>
 
                 {canAccept && (
                   <>
                     <span className="text-border/60">·</span>
                     <button
+                      type="button"
                       onClick={handleAcceptToggle}
                       disabled={isAccepting}
                       className={`hover:text-green-600 transition-colors font-medium flex items-center gap-1 ${isAccepting ? 'opacity-60 cursor-not-allowed' : ''} ${answer.isAccepted ? 'text-green-600' : ''}`}
@@ -342,6 +358,7 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
                   <>
                     <span className="text-border/60">·</span>
                     <button
+                      type="button"
                       onClick={() => setIsEditing(true)}
                       className="hover:text-primary transition-colors font-medium"
                     >
@@ -351,6 +368,7 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
                     <span className="text-border/60">·</span>
                     {!showDeleteConfirm ? (
                       <button
+                        type="button"
                         onClick={() => setShowDeleteConfirm(true)}
                         className="hover:text-red-500 transition-colors font-medium"
                       >
@@ -360,6 +378,7 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
                     ) : (
                       <span className="flex items-center gap-1">
                         <button
+                          type="button"
                           onClick={handleConfirmDelete}
                           disabled={isDeleteSubmitting}
                           className="min-w-[36px] min-h-[36px] sm:w-6 sm:h-6 rounded-md bg-green-500/10 border border-green-500/30 text-green-500 hover:bg-green-500/20 hover:border-green-500/50 shadow-sm active:translate-y-[1px] active:shadow-none transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
@@ -372,6 +391,7 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
                           )}
                         </button>
                         <button
+                          type="button"
                           onClick={() => setShowDeleteConfirm(false)}
                           className="min-w-[36px] min-h-[36px] sm:w-6 sm:h-6 rounded-md bg-secondary border border-border/40 text-muted-foreground hover:text-foreground hover:border-border/60 shadow-sm active:translate-y-[1px] active:shadow-none transition-all flex items-center justify-center"
                           title={t.forum.post.cancelDelete}
@@ -386,13 +406,7 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
 
               {/* Inline reply textarea (GitHub style) */}
               {isReplying && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="mt-4 border border-border rounded-md bg-secondary/10 overflow-hidden"
-                >
+                <div className="mt-4 border border-border rounded-md bg-secondary/10 overflow-hidden">
                   <textarea
                     rows={3}
                     {...replyForm.register("content", {
@@ -414,21 +428,23 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
                     <span className="text-[10px] text-muted-foreground/60">{replyForm.watch("content")?.length || 0}/{REPLY_MAX}</span>
                     <div className="flex items-center gap-2">
                       <button
+                        type="button"
                         onClick={() => { setIsReplying(false); replyForm.reset(); }}
                         className="px-3 py-1.5 rounded-md text-xs font-bold text-muted-foreground hover:bg-secondary transition-colors"
                       >
                         {t.forum.answer.cancelReply}
                       </button>
                       <button
+                        type="button"
                         onClick={replyForm.handleSubmit(handleReplySubmit)}
-                        disabled={replyForm.formState.isSubmitting}
-                        className={`px-4 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-bold hover:bg-primary/90 transition-all ${replyForm.formState.isSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
+                        disabled={isReplySubmitting}
+                        className={`px-4 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-bold hover:bg-primary/90 transition-all ${isReplySubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
                       >
-                        {replyForm.formState.isSubmitting ? t.forum.sending : t.forum.answer.replySubmit}
+                        {isReplySubmitting ? t.forum.sending : t.forum.answer.replySubmit}
                       </button>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               )}
 
               {/* 1-level tree: children of top-level answers (premium connector) */}

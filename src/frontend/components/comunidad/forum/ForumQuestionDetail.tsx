@@ -438,11 +438,8 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
               {sortedAnswers.map((ans, idx) => {
                 const delay = 0.1 * (idx + 1);
                 return (
-                  <motion.div
+                  <div
                     key={ans.id}
-                    initial={{ opacity: 0, x: -4 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay, ease: "easeOut" }}
                     className="relative flex"
                   >
                     {/* Connector gutter — dot + branch */}
@@ -474,7 +471,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
                         isPostAuthor={currentUserId === question.authorId}
                       />
                     </div>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
