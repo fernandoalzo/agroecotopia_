@@ -40,4 +40,23 @@ export const CacheKeys = {
 
     allPattern: `${NAMESPACE}:product:*`,
   },
+
+  forum: {
+    posts: (filters: string, search: string, limit: number, cursor: string | undefined, sortBy: string) =>
+      `${NAMESPACE}:forum:posts:${hash(filters)}:${hash(search)}:${limit}:${cursor ? hash(cursor) : "first"}:${sortBy}`,
+
+    byId: (id: string) =>
+      `${NAMESPACE}:forum:post:${id}`,
+
+    answerById: (id: string) =>
+      `${NAMESPACE}:forum:answer:${id}`,
+
+    communityStats: `${NAMESPACE}:forum:community-stats`,
+
+    topContributors: `${NAMESPACE}:forum:top-contributors`,
+
+    trendingLabels: `${NAMESPACE}:forum:trending-labels`,
+
+    allPattern: `${NAMESPACE}:forum:*`,
+  },
 };

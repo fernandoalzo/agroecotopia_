@@ -96,6 +96,12 @@ export const config = {
       categories: 300,
       categoryCounts: 120,
       searchResults: 60,
+      forumPosts: 60,
+      forumPostDetail: 30,
+      forumAnswerDetail: 30,
+      forumCommunityStats: 300,
+      forumTopContributors: 300,
+      forumTrendingLabels: 300,
     },
   },
 } as const;
