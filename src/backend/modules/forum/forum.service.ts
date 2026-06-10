@@ -3,6 +3,7 @@ import { notificationsService } from "@/backend/modules/notifications";
 import { userRepository } from "@/backend/modules/user";
 import logger from "@/utils/logger";
 import { getForumNotificationStrings } from "./forum-notification-strings";
+import { config } from "@/config/config";
 
 const log = logger.child("src/backend/modules/forum/forum.service.ts");
 
@@ -14,13 +15,13 @@ export class ForumService {
     authorId: string,
     locale: string = "es",
   ) {
-    if (!data.title || data.title.length < 5) {
-      throw new Error("Title must be at least 5 characters long.");
+    if (!data.title || data.title.length < config.forum.validation.post.titleMin) {
+      throw new Error(`Title must be at least ${config.forum.validation.post.titleMin} characters long.`);
     }
-    if (!data.body || data.body.length < 10) {
-      throw new Error("Body must be at least 10 characters long.");
+    if (!data.body || data.body.length < config.forum.validation.post.bodyMin) {
+      throw new Error(`Body must be at least ${config.forum.validation.post.bodyMin} characters long.`);
     }
-    if (!data.labels || data.labels.length === 0) {
+    if (!data.labels || data.labels.length < config.forum.validation.post.labelsMin) {
       throw new Error("You must select at least one label.");
     }
 
@@ -84,8 +85,8 @@ export class ForumService {
     authorId: string,
     locale: string = "es",
   ) {
-    if (!data.content || data.content.length < 10) {
-      throw new Error("Answer must be at least 10 characters long.");
+    if (!data.content || data.content.length < config.forum.validation.answer.contentMin) {
+      throw new Error(`Answer must be at least ${config.forum.validation.answer.contentMin} characters long.`);
     }
 
     // Verify post exists and check business rules
@@ -127,8 +128,8 @@ export class ForumService {
   }
 
   async editAnswer(answerId: string, content: string, userId: string, role: string, locale: string = "es") {
-    if (!content || content.length < 10) {
-      throw new Error("Answer must be at least 10 characters long.");
+    if (!content || content.length < config.forum.validation.answer.contentMin) {
+      throw new Error(`Answer must be at least ${config.forum.validation.answer.contentMin} characters long.`);
     }
 
     const answer = await this.forumRepository.getAnswerById(answerId);
@@ -206,15 +207,15 @@ export class ForumService {
       throw new Error("UNAUTHORIZED");
     }
 
-    if (data.title !== undefined && data.title.length < 5) {
-      throw new Error("Title must be at least 5 characters long.");
+    if (data.title !== undefined && data.title.length < config.forum.validation.post.titleMin) {
+      throw new Error(`Title must be at least ${config.forum.validation.post.titleMin} characters long.`);
     }
 
-    if (data.body !== undefined && data.body.length < 10) {
-      throw new Error("Body must be at least 10 characters long.");
+    if (data.body !== undefined && data.body.length < config.forum.validation.post.bodyMin) {
+      throw new Error(`Body must be at least ${config.forum.validation.post.bodyMin} characters long.`);
     }
 
-    if (data.labels !== undefined && data.labels.length === 0) {
+    if (data.labels !== undefined && data.labels.length < config.forum.validation.post.labelsMin) {
       throw new Error("You must select at least one label.");
     }
 

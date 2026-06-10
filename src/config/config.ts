@@ -58,7 +58,26 @@ export const config = {
       suelos: ["arcilloso", "arenoso", "franco", "limoso", "sustrato"],
       clima: ["tropical", "seco", "templado", "húmedo", "frío"],
       temas: ["plagas", "riego", "nutrición", "poda", "cosecha"]
-    }
+    },
+    /** @desc Forum validation constraints shared by Zod schemas (client) and service layer (server) */
+    validation: {
+      /** @desc Constraints for creating/editing forum posts */
+      post: {
+        titleMin: 5,
+        titleMax: 200,
+        bodyMin: 10,
+        labelsMin: 1,
+        labelsMax: 5,
+      },
+      /** @desc Constraints for creating/editing answers and replies */
+      answer: {
+        contentMin: 10,
+        contentMax: 2000,
+      },
+    } satisfies {
+      post: { titleMin: number; titleMax: number; bodyMin: number; labelsMin: number; labelsMax: number };
+      answer: { contentMin: number; contentMax: number };
+    },
   },
 
   marketplace: {

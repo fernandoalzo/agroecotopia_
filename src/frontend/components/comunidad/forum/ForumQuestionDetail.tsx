@@ -18,6 +18,7 @@ import { createAnswerSchema } from "./schemas/answer.schema";
 import type { AnswerFormData } from "./schemas/answer.schema";
 import { createPostSchema } from "./schemas/post.schema";
 import type { PostFormData } from "./schemas/post.schema";
+import { config } from "@/config/config";
 
 interface ForumQuestionDetailProps {
   question: Question;
@@ -76,7 +77,7 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
     defaultValues: { title: question.title, body: question.body, labels: question.labels },
   });
 
-  const ANSWER_MAX = 2000;
+  const ANSWER_MAX = config.forum.validation.answer.contentMax;
   const canDeleteQuestion = currentUserId && (currentUserId === question.authorId || currentUserRole === "admin");
   const canEditPost = currentUserId && (currentUserId === question.authorId || currentUserRole === "admin");
 

@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
 import { createAnswerSchema } from "./schemas/answer.schema";
 import type { AnswerFormData } from "./schemas/answer.schema";
+import { config } from "@/config/config";
 import { formatDistanceToNow } from "date-fns";
 import { es, enUS } from "date-fns/locale";
 import ReactMarkdown from "react-markdown";
@@ -66,7 +67,7 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
   const [isAccepting, setIsAccepting] = useState(false);
 
   const CHAR_LIMIT = 350;
-  const REPLY_MAX = 2000;
+  const REPLY_MAX = config.forum.validation.answer.contentMax;
   const isLongContent = answer.content.length > CHAR_LIMIT;
 
   const canModify = currentUserId && (currentUserId === answer.authorId || currentUserRole === "admin");
