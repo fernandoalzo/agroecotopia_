@@ -313,6 +313,13 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     events: ["order:created"],
   });
 
+  useSocketRefresh({
+    socket,
+    enabled: !!activeStore?.id && !!isSeller && activeTab === "products",
+    refresh: () => productActions.reload(),
+    events: ["product:stock_updated"],
+  });
+
   useEffect(() => {
     if (!activeStore?.id || !isSeller || activeTab !== "orders") return;
     let cancelled = false;

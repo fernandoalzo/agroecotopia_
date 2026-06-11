@@ -342,6 +342,13 @@ export class OrdersService {
         }
       }).catch(err => log.error("Error despachando notificación de cambio de estado:", err));
 
+      // 7. Emitir evento en tiempo real para actualizar stock en sección productos
+      const stockChanged = isConfirm || (isCancel && estadosConStockDescontado.includes(estadoAnterior));
+      if (stockChanged) {
+        log.info("Emitting product:stock_updated for products:", { productIds });
+        eventBus.emit("product:stock_updated", { productIds });
+      }
+
       return this.serializePedido(pedidoActualizado);
     });
   }

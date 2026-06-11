@@ -191,6 +191,13 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
     events: ["store_request_updated"],
   });
 
+  useSocketRefresh({
+    socket,
+    enabled: isAdmin && activeTab === "products",
+    refresh: () => productActions.reload(),
+    events: ["product:stock_updated"],
+  });
+
   const refreshOrdersList = useCallback(async () => {
     const result = await actions.getPaginatedOrders({
       page: orderCurrentPage,

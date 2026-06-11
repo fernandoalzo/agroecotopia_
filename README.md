@@ -519,9 +519,9 @@ Ventaja: sin CORS, sin puerto extra, sin procesos separados, sin proxy.
 | `store_request_updated` | Servidor → Global | Refresco de solicitudes |
 | `notification_dispatched` | Servidor → Usuario | Notificación en tiempo real |
 
-### Bridge EventBus → Socket.IO
+### Bridge EventBus → Socket.IO (Auto-Bridge Genérico)
 
-Los Server Actions emiten eventos via `EventEmitter` (eventBus). El `socketHandler.ts` escucha y reenvía a los clientes vía Socket.IO. Esto mantiene desacoplados los dominios del transporte real-time.
+Los Server Actions y Services emiten eventos via `EventEmitter` (eventBus). El `socketHandler.ts` usa un **Auto-Bridge Genérico**: un array `BRIDGE_EVENTS` + loop que enlaza automáticamente cada evento a Socket.IO sin código repetitivo. Si el payload incluye `_room`, se emite solo a esa sala; si no, globalmente. Esto mantiene desacoplados los dominios del transporte real-time y permite agregar nuevos eventos con solo 1 línea en el array + 1 `eventBus.emit()`.
 
 ---
 

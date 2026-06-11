@@ -300,6 +300,12 @@ Defined in `src/backend/prisma/schema/chat.model.prisma`:
 | `conversation_deleted` | Room `conversation_{id}` | Conversation was deleted |
 | `error` | Sender socket only | Error sending message |
 
+**Domain Events → Socket.IO (Auto-Bridge Genérico):**
+- Los eventos de dominio (forum, orders, store, etc.) no se declaran manualmente uno por uno.
+- En lugar de eso, `socketHandler.ts` usa un array `BRIDGE_EVENTS` + un loop que enlaza automáticamente cada evento del `eventBus` a Socket.IO.
+- Si el payload contiene `_room`, se emite solo a esa sala (`io.to(room).emit()`); si no, se emite globalmente (`io.emit()`).
+- Ver [sección 17.3](#173-auto-bridge-genérico-sockethandler) para la documentación completa del patrón.
+
 **Critical Design Decisions:**
 - **Persistence in socket handler**: Messages are created inside the socket handler using the injected Prisma client, NOT through Server Actions. Server Actions handle only reads and conversation management (create, delete, mark as read).
 - **Dual Emission on `send_message`**: Emits `receive_message` to the room AND `new_message_notification` globally, so the admin panel tracks all conversations without joining every room.
@@ -659,18 +665,20 @@ export const config = {
 
 To maintain a professional, high-performance architecture, **polling via `setInterval` is STRICTLY FORBIDDEN**. All automatic data refreshing must be push-based using the global `eventBus` and WebSockets.
 
-### 16.1 Server-Side Event Emission (`eventBus`)
+### 17.1 Server-Side Event Emission (`eventBus`)
 - The backend utilizes a global singleton `eventBus` (`src/utils/eventBus.ts`) to decouple domain logic from WebSockets.
-- **Law**: Server Actions MUST NOT interact with Socket.IO directly. Instead, when a mutation occurs that requires clients to refresh data (e.g., approving an order, receiving a new store request), the Server Action must emit a specific event via the event bus:
+- **Law**: Server Actions and Services MUST NOT interact with Socket.IO directly. Instead, when a mutation occurs that requires clients to refresh data, they must emit a specific event via the event bus:
   ```typescript
-  eventBus.emit("store_request_updated")
+  import eventBus from "@/utils/eventBus";
+  eventBus.emit("order:created", { pedidoId, storeId, ownerId });
   ```
-- The `socketHandler.ts` listens to the `eventBus` and bridges these events to connected clients via `io.emit()`.
+- The `socketHandler.ts` listens to the `eventBus` via an **Auto-Bridge Genérico** and forwards these events to connected clients (see 17.3).
 
-### 16.2 Client-Side Refresh (`useSocketRefresh`)
+### 17.2 Client-Side Refresh (`useSocketRefresh`)
 - Frontend components must listen for these socket events using the custom `useSocketRefresh` hook to trigger their data re-fetches.
 - **Law**: `useSocketRefresh` is purely event-driven. It does NOT execute the refresh function on mount. Consumers MUST handle their own initial data fetching using a standard `useEffect`.
 - Always wrap the `refresh` function passed to `useSocketRefresh` in a `useCallback` to prevent infinite re-render loops.
+- Para evitar spinners en actualizaciones silenciosas, la función `refresh` debe hacer el fetch directamente sin tocar estados de loading.
 
 **Example implementation:**
 ```tsx
@@ -679,19 +687,58 @@ const loadData = useCallback(async () => {
   setData(data);
 }, []);
 
-// 1. Initial Load (Manual)
+// 1. Initial Load (Manual con spinner)
 useEffect(() => {
   loadData();
 }, [loadData]);
 
-// 2. Event-driven real-time updates (NO setInterval)
+// 2. Event-driven real-time updates (NO setInterval, NO spinner)
 useSocketRefresh({
   socket,
   enabled: true,
   refresh: loadData,
-  events: ["dashboard_data_updated"],
+  events: ["order:created"],
 });
 ```
+
+### 17.3 Auto-Bridge Genérico (socketHandler)
+En lugar de registrar manualmente cada evento en `socketHandler.ts` con `eventBus.on()` + `io.emit()`, el proyecto usa un **Auto-Bridge Genérico** que automaticamente enlaza cualquier evento listado en `BRIDGE_EVENTS`:
+
+```typescript
+// socketHandler.ts — Auto-Bridge Genérico
+const BRIDGE_EVENTS = [
+  "store_request_updated",
+  "forum:post_created",
+  "forum:answer_created",
+  "order:created",
+  "notification_read_state_changed",
+  // ... agregar nuevos aquí
+] as const;
+
+for (const eventName of BRIDGE_EVENTS) {
+  eventBus.removeAllListeners(eventName);
+  eventBus.on(eventName, (payload) => {
+    const room = payload?._room;
+    if (room) {
+      io.to(room).emit(eventName, payload);  // room-scoped
+    } else {
+      io.emit(eventName, payload);            // global
+    }
+  });
+}
+```
+
+**Convención `_room`**: Si el payload incluye una propiedad `_room`, el evento se emite solo a esa sala (`io.to(room).emit()`). Si no, se emite globalmente (`io.emit()`).
+
+**Para agregar un nuevo evento en tiempo real, solo necesitas:**
+1. Agregar el nombre al array `BRIDGE_EVENTS` en `socketHandler.ts`
+2. Emitirlo desde el service/action: `eventBus.emit("entity:action", payload)`
+3. (Opcional) Si es room-scoped, incluir `_room` en el payload
+4. En el cliente, escucharlo con `useSocketRefresh({ events: ["entity:action"] })`
+
+**Eventos con routing especial** (no pasan por el auto-bridge):
+- `notification_dispatched` → emite a per-user rooms con nombre de evento distinto (`new_notification`)
+- `notification_broadcast` → emite global con nombre de evento distinto (`new_notification`)
 
 ---
 
@@ -743,20 +790,20 @@ To guarantee scalability, persistence, and real-time delivery, all system notifi
 - **Goal**: Update all users viewing a forum post when another user creates/edits/deletes a response, rates an item, or edits the post.
 - **No polling**: all real-time updates use Socket.IO rooms.
 - **Architecture**:
-  1. **forum.service.ts** emits `eventBus.emit("forum:{event}", payload)` after each mutation.
-  2. **socketHandler.ts** (file) listens via `eventBus.on()` and broadcasts to `forum:post:{postId}` rooms (or globally for post_created/post_deleted).
+  1. **forum.service.ts** emits `eventBus.emit("forum:{event}", payload)` after each mutation. Para eventos room-scoped, incluye `_room: \`forum:post:${postId}\`` en el payload.
+  2. **socketHandler.ts** usa el **Auto-Bridge Genérico** (ver 17.3): detecta `payload._room` y emite a la sala correspondiente automáticamente.
   3. **Frontend** joins the room with `socket.emit("join_post", { postId })` on mount and leaves on unmount.
   4. **Frontend** uses `useSocketRefresh()` hook to invalidate React Query on socket events.
 - **Available events**:
-  | Event | Room | Payload |
+  | Event | Scope | Payload |
   |---|---|---|
   | `forum:post_created` | global | `{ postId, post }` |
-  | `forum:post_updated` | `forum:post:{postId}` | `{ postId, post }` |
+  | `forum:post_updated` | room (`_room: forum:post:{postId}`) | `{ postId, post }` |
   | `forum:post_deleted` | global | `{ postId }` |
-  | `forum:answer_created` | `forum:post:{postId}` | `{ postId, answer, answerId }` |
-  | `forum:answer_edited` | `forum:post:{postId}` | `{ postId, answerId, answer }` |
-  | `forum:answer_deleted` | `forum:post:{postId}` | `{ postId, answerId }` |
-  | `forum:answer_accepted` | `forum:post:{postId}` | `{ postId, answerId, isAccepted }` |
+  | `forum:answer_created` | room (`_room: forum:post:{postId}`) | `{ postId, answer, answerId }` |
+  | `forum:answer_edited` | room (`_room: forum:post:{postId}`) | `{ postId, answerId, answer }` |
+  | `forum:answer_deleted` | room (`_room: forum:post:{postId}`) | `{ postId, answerId }` |
+  | `forum:answer_accepted` | room (`_room: forum:post:{postId}`) | `{ postId, answerId, isAccepted }` |
   | `forum:item_rated` | global | `{ itemId, itemType }` |
 - **Frontend pattern**:
   ```typescript

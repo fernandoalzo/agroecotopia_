@@ -131,7 +131,7 @@ export class ForumService {
       log.error("Error al despachar notificación de respuesta:", err);
     });
 
-    eventBus.emit("forum:answer_created", { postId: data.postId, answer, answerId: answer.id });
+    eventBus.emit("forum:answer_created", { postId: data.postId, answer, answerId: answer.id, _room: `forum:post:${data.postId}` });
 
     return answer;
   }
@@ -179,7 +179,7 @@ export class ForumService {
       }
     }
 
-    eventBus.emit("forum:answer_edited", { postId: answer.postId, answerId, answer: updated });
+    eventBus.emit("forum:answer_edited", { postId: answer.postId, answerId, answer: updated, _room: `forum:post:${answer.postId}` });
 
     return updated;
   }
@@ -207,7 +207,7 @@ export class ForumService {
     const newAccepted = !answer.isAccepted;
     const updated = await this.forumRepository.updateAnswerAccepted(answerId, newAccepted);
 
-    eventBus.emit("forum:answer_accepted", { postId, answerId, isAccepted: newAccepted });
+    eventBus.emit("forum:answer_accepted", { postId, answerId, isAccepted: newAccepted, _room: `forum:post:${postId}` });
 
     return updated;
   }
@@ -236,7 +236,7 @@ export class ForumService {
 
     const updatedPost = await this.forumRepository.updatePost(postId, data);
 
-    eventBus.emit("forum:post_updated", { postId, post: updatedPost });
+    eventBus.emit("forum:post_updated", { postId, post: updatedPost, _room: `forum:post:${postId}` });
 
     return updatedPost;
   }
@@ -255,7 +255,7 @@ export class ForumService {
     const deletedAnswerId = answer.id;
     await this.forumRepository.deleteAnswer(answerId);
 
-    eventBus.emit("forum:answer_deleted", { postId: deletedAnswerPostId, answerId: deletedAnswerId });
+    eventBus.emit("forum:answer_deleted", { postId: deletedAnswerPostId, answerId: deletedAnswerId, _room: `forum:post:${deletedAnswerPostId}` });
 
     return { success: true };
   }

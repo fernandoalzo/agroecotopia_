@@ -168,20 +168,9 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
     });
   });
 
-  // Attach eventBus listeners to bridge Server Actions and Socket.IO
-  eventBus.removeAllListeners("store_request_updated");
-  eventBus.on("store_request_updated", () => {
-    log.info("Broadcasting store_request_updated via Socket.IO");
-    io.emit("store_request_updated");
-  });
+  // ─── Custom Bridges (routing complejo, no generalizable) ───
 
-  eventBus.removeAllListeners("unread_count_updated");
-  eventBus.on("unread_count_updated", (payload) => {
-    log.info("Broadcasting unread_count_updated via Socket.IO");
-    io.emit("unread_count_updated", payload);
-  });
-
-  // ─── Notifications Bridge ───
+  // notification_dispatched → emite a per-user rooms con nombre distinto
   eventBus.removeAllListeners("notification_dispatched");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   eventBus.on("notification_dispatched", (payload: { userIds: string[]; notification: any }) => {
@@ -191,6 +180,7 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
     }
   });
 
+  // notification_broadcast → emite global con nombre distinto
   eventBus.removeAllListeners("notification_broadcast");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   eventBus.on("notification_broadcast", (payload: { notification: any }) => {
@@ -198,70 +188,45 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
     io.emit("new_notification", payload.notification);
   });
 
-  // ─── Forum Events Bridge ───
-  eventBus.removeAllListeners("forum:post_created");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  eventBus.on("forum:post_created", (payload: { postId: string; post: any }) => {
-    log.info(`Broadcasting forum:post_created globally: ${payload.postId}`);
-    io.emit("forum:post_created", payload);
-  });
+  // ─── Auto-Bridge Genérico ───
+  // Los eventos listados aquí se enlazan automáticamente:
+  //   - Si el payload contiene _room → se emite solo a esa room (io.to)
+  //   - Si no → se emite globalmente (io.emit)
+  // Para agregar un nuevo evento en tiempo real, solo hay que:
+  //   1. Agregar el nombre al array
+  //   2. Emitirlo desde el service/action con eventBus.emit("nombre", payload)
+  //   3. (opcional) Si es room-scoped, incluir _room en el payload
+  const BRIDGE_EVENTS = [
+    "store_request_updated",
+    "unread_count_updated",
+    "forum:post_created",
+    "forum:answer_created",
+    "forum:answer_edited",
+    "forum:answer_deleted",
+    "forum:post_updated",
+    "forum:post_deleted",
+    "forum:answer_accepted",
+    "forum:item_rated",
+    "order:created",
+    "product:stock_updated",
+    "notification_read_state_changed",
+  ] as const;
 
-  eventBus.removeAllListeners("forum:answer_created");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  eventBus.on("forum:answer_created", (payload: { postId: string; answer: any }) => {
-    log.info(`Broadcasting forum:answer_created to room forum:post:${payload.postId}`);
-    io.to(`forum:post:${payload.postId}`).emit("forum:answer_created", payload);
-  });
-
-  eventBus.removeAllListeners("forum:answer_edited");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  eventBus.on("forum:answer_edited", (payload: { postId: string; answerId: string; answer: any }) => {
-    log.info(`Broadcasting forum:answer_edited to room forum:post:${payload.postId}`);
-    io.to(`forum:post:${payload.postId}`).emit("forum:answer_edited", payload);
-  });
-
-  eventBus.removeAllListeners("forum:answer_deleted");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  eventBus.on("forum:answer_deleted", (payload: { postId: string; answerId: string }) => {
-    log.info(`Broadcasting forum:answer_deleted to room forum:post:${payload.postId}`);
-    io.to(`forum:post:${payload.postId}`).emit("forum:answer_deleted", payload);
-  });
-
-  eventBus.removeAllListeners("forum:post_updated");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  eventBus.on("forum:post_updated", (payload: { postId: string; post: any }) => {
-    log.info(`Broadcasting forum:post_updated to room forum:post:${payload.postId}`);
-    io.to(`forum:post:${payload.postId}`).emit("forum:post_updated", payload);
-  });
-
-  eventBus.removeAllListeners("forum:post_deleted");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  eventBus.on("forum:post_deleted", (payload: { postId: string }) => {
-    log.info(`Broadcasting forum:post_deleted globally`);
-    io.emit("forum:post_deleted", payload);
-  });
-
-  eventBus.removeAllListeners("forum:answer_accepted");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  eventBus.on("forum:answer_accepted", (payload: { postId: string; answerId: string; isAccepted: boolean }) => {
-    log.info(`Broadcasting forum:answer_accepted to room forum:post:${payload.postId}`);
-    io.to(`forum:post:${payload.postId}`).emit("forum:answer_accepted", payload);
-  });
-
-  eventBus.removeAllListeners("forum:item_rated");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  eventBus.on("forum:item_rated", (payload: { itemId: string; itemType: string }) => {
-    log.info("Broadcasting forum:item_rated globally");
-    io.emit("forum:item_rated", payload);
-  });
-
-  // ─── Orders Bridge ───
-  eventBus.removeAllListeners("order:created");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  eventBus.on("order:created", (payload: { pedidoId: string; storeId: string; ownerId: string }) => {
-    log.info(`Broadcasting order:created globally: ${payload.pedidoId}`);
-    io.emit("order:created", payload);
-  });
+  for (const eventName of BRIDGE_EVENTS) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    eventBus.removeAllListeners(eventName as string);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    eventBus.on(eventName as string, (payload: any) => {
+      const room = payload?._room as string | undefined;
+      if (room) {
+        log.info(`Bridging ${eventName} to room ${room}`);
+        io.to(room).emit(eventName, payload);
+      } else {
+        log.info(`Bridging ${eventName} globally`);
+        io.emit(eventName, payload);
+      }
+    });
+  }
 
   return io;
 }
