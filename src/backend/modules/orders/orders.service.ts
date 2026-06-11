@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { OrdersRepository } from "./orders.repository";
 import { PedidoEstado, Prisma } from "@prisma/client";
 import logger from "@/utils/logger";
 import { notificationsService } from "@/backend/modules/notifications";
 import { storeTaxService } from "@/backend/modules/store";
+import { stockGuardianService } from "@/backend/modules/stockGuardian";
 
 const log = logger.child("src/backend/modules/orders/orders.service.ts");
 
@@ -149,6 +151,19 @@ export class OrdersService {
 
   async updateEstado(pedidoId: string, nuevoEstado: PedidoEstado, actorId: string, motivoCancelacion?: string) {
     log.info("Iniciando transición de estado del pedido:", { pedidoId, nuevoEstado });
+
+    const isConfirm = nuevoEstado === PedidoEstado.CONFIRMADO;
+    const isCancel = nuevoEstado === PedidoEstado.CANCELADO;
+
+    const estadosConStockDescontado: PedidoEstado[] = [
+      PedidoEstado.CONFIRMADO,
+      PedidoEstado.EN_PREPARACION,
+      PedidoEstado.EN_CAMINO,
+      PedidoEstado.ENTREGADO,
+    ];
+
+    const lockUUID = randomUUID();
+
     return await this.ordersRepository.executeTransaction(async (tx) => {
       // 1. Leer pedido actual dentro de la transacción
       const pedido = await this.ordersRepository.findById(pedidoId, tx);
@@ -158,6 +173,11 @@ export class OrdersService {
       }
 
       const estadoAnterior = pedido.estado;
+      const items = pedido.detalles.map((d: any) => ({
+        productId: d.productoId,
+        quantity: Number(d.cantidad),
+      }));
+      const productIds = items.map((i: { productId: string }) => i.productId);
 
       // 2. Si ya está en el estado destino → retorno idempotente (sin tocar stock)
       if (estadoAnterior === nuevoEstado) {
@@ -165,73 +185,111 @@ export class OrdersService {
         return this.serializePedido(pedido);
       }
 
-      // 3. Transición atómica con lock optimista (WHERE estado = estadoAnterior)
-      //    Solo el primer proceso concurrente logra count > 0
-      log.debug("Intentando transición atómica con lock optimista:", { pedidoId, de: estadoAnterior, a: nuevoEstado });
-      const transitioned = await this.ordersRepository.tryTransitionEstado(
-        pedidoId,
-        estadoAnterior,
-        nuevoEstado,
-        {
-          motivoCancelacion: nuevoEstado === PedidoEstado.CANCELADO ? motivoCancelacion : undefined,
-          fechaEntregaReal: nuevoEstado === PedidoEstado.ENTREGADO ? new Date() : undefined,
-        },
-        tx
-      );
-
-      // 4. Si no se pudo transicionar, otro proceso ya lo hizo → retorno idempotente
-      if (!transitioned) {
-        log.warn("Transición fallida (race condition detectada). Otro proceso ya transicionó el pedido:", { pedidoId });
-        const current = await this.ordersRepository.findById(pedidoId, tx);
-        return this.serializePedido(current);
-      }
-
-      log.info("Transición de estado exitosa:", { pedidoId, de: estadoAnterior, a: nuevoEstado });
-
-      // 5. Ganamos la race — ejecutar lógica de stock dentro de la misma transacción
-
-      // Regla: Verificar y descontar inventario al confirmar
-      if (nuevoEstado === PedidoEstado.CONFIRMADO) {
-        log.debug("Verificando y descontando stock al confirmar pedido:", { pedidoId });
-        for (const detalle of pedido.detalles) {
-          const stockActual = await this.ordersRepository.getProductStock(detalle.productoId, tx);
-          if (new Prisma.Decimal(stockActual).lessThan(detalle.cantidad)) {
-            log.error("Stock insuficiente para confirmar pedido:", { pedidoId, productoId: detalle.productoId, stockActual: Number(stockActual), cantidadRequerida: Number(detalle.cantidad) });
-            throw new Error(`Stock insuficiente para el producto ${detalle.producto.name}`);
+      // ─── CONFIRMADO: Adquirir locks + verificar en Redis (barrera de carrera) ───
+      let redisLockHeld = false;
+      if (isConfirm) {
+        redisLockHeld = await stockGuardianService.acquireProductLocks(productIds, lockUUID);
+        if (redisLockHeld) {
+          // Redis actúa como guardián: detecta overselling ANTES de la transacción DB
+          const enoughStock = await stockGuardianService.checkAndDeductStock(items);
+          if (!enoughStock) {
+            log.warn("Stock insuficiente detectado por Redis guardian:", { pedidoId });
+            throw new Error(
+              `Stock insuficiente para confirmar el pedido #${pedidoId.slice(-6).toUpperCase()}`
+            );
           }
+          log.debug("Redis stock check superado:", { pedidoId });
+        } else {
+          log.warn("No se pudieron adquirir locks Redis — usando DB como fallback:", { pedidoId });
         }
-        for (const detalle of pedido.detalles) {
-          await this.ordersRepository.updateProductStock(
-            detalle.productoId,
-            detalle.cantidad.negated(),
-            tx
-          );
-        }
-        log.debug("Stock descontado exitosamente para pedido confirmado:", { pedidoId });
       }
 
-      // Regla: Revertir inventario si se cancela desde un estado con stock descontado
-      if (nuevoEstado === PedidoEstado.CANCELADO) {
-        const estadosConStockDescontado: PedidoEstado[] = [
-          PedidoEstado.CONFIRMADO,
-          PedidoEstado.EN_PREPARACION,
-          PedidoEstado.EN_CAMINO,
-          PedidoEstado.ENTREGADO,
-        ];
+      try {
+        // 3. Transición atómica con lock optimista (WHERE estado = estadoAnterior)
+        log.debug("Intentando transición atómica con lock optimista:", { pedidoId, de: estadoAnterior, a: nuevoEstado });
+        const transitioned = await this.ordersRepository.tryTransitionEstado(
+          pedidoId,
+          estadoAnterior,
+          nuevoEstado,
+          {
+            motivoCancelacion: isCancel ? motivoCancelacion : undefined,
+            fechaEntregaReal: nuevoEstado === PedidoEstado.ENTREGADO ? new Date() : undefined,
+          },
+          tx
+        );
 
-        if (estadosConStockDescontado.includes(estadoAnterior)) {
-          log.debug("Revirtiendo stock por cancelación desde estado con stock descontado:", { pedidoId, estadoAnterior });
+        // 4. Si no se pudo transicionar, otro proceso ya lo hizo → retorno idempotente
+        if (!transitioned) {
+          log.warn("Transición fallida (race condition). Otro proceso ya transicionó el pedido:", { pedidoId });
+          const current = await this.ordersRepository.findById(pedidoId, tx);
+          return this.serializePedido(current);
+        }
+
+        log.info("Transición de estado exitosa:", { pedidoId, de: estadoAnterior, a: nuevoEstado });
+
+        // ─── CONFIRMADO: Descontar stock en DB (atómico vía updateMany) ───
+        if (isConfirm) {
+          log.debug("Descontando stock en DB al confirmar pedido:", { pedidoId });
           for (const detalle of pedido.detalles) {
-            await this.ordersRepository.updateProductStock(detalle.productoId, detalle.cantidad, tx);
+            const result = await (tx as any).product.updateMany({
+              where: {
+                id: detalle.productoId,
+                stock: { gte: detalle.cantidad },
+              },
+              data: {
+                stock: { decrement: detalle.cantidad },
+              },
+            });
+            if (result.count === 0) {
+              log.error("Stock insuficiente en DB para confirmar pedido:", {
+                pedidoId,
+                productoId: detalle.productoId,
+                nombre: detalle.producto.name,
+                cantidadRequerida: Number(detalle.cantidad),
+              });
+              throw new Error(
+                `Stock insuficiente para el producto ${detalle.producto.name}`
+              );
+            }
+          }
+          log.debug("Stock descontado en DB exitosamente:", { pedidoId });
+        }
+
+        // ─── CANCELADO: Revertir stock en DB ───
+        if (isCancel && estadosConStockDescontado.includes(estadoAnterior)) {
+          log.debug("Revirtiendo stock por cancelación desde estado con stock descontado:", {
+            pedidoId,
+            estadoAnterior,
+          });
+          for (const detalle of pedido.detalles) {
+            await (tx as any).product.update({
+              where: { id: detalle.productoId },
+              data: { stock: { increment: detalle.cantidad } },
+            });
+          }
+          if (redisLockHeld) {
+            await stockGuardianService.restoreStock(items);
           }
           log.debug("Stock revertido exitosamente:", { pedidoId });
         }
+      } catch (err) {
+        // Si falla la transacción DB, restaurar stock en Redis
+        if (redisLockHeld) {
+          log.warn("Transacción DB falló — restaurando stock en Redis:", { pedidoId });
+          await stockGuardianService.restoreStock(items);
+        }
+        throw err;
+      } finally {
+        // Liberar locks Redis
+        if (redisLockHeld) {
+          await stockGuardianService.releaseProductLocks(productIds, lockUUID);
+        }
       }
 
-      // 6. Refrescar pedido con estado actualizado
+      // 5. Refrescar pedido con estado actualizado
       const pedidoActualizado = await this.ordersRepository.findById(pedidoId, tx);
-      
-      // 7. Notificar al comprador del cambio de estado
+
+      // 6. Notificar al comprador del cambio de estado
       notificationsService.dispatchNotification({
         eventType: "order_status_changed",
         actorId,

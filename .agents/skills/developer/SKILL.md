@@ -89,11 +89,12 @@ src/
 │   │   └── types.ts              ← Tipos compartidos (CacheOptions, CacheValue)
 │   ├── db/                       ← DB Clients (e.g., Prisma singleton)
 │   ├── modules/                  ← Domain Modules (auth, product, user, etc.)
-│   │   └── [domain]/             
-│   │       ├── index.ts          ← IoC: instancia Repository + Service + CacheService
-│   │       ├── [domain].actions.ts      ← CTRL layer
-│   │       ├── [domain].service.ts      ← SVC layer
-│   │       └── [domain].repository.ts   ← REPO layer (usa CacheService inyectado)
+│   │   ├── [domain]/             
+│   │   │   ├── index.ts          ← IoC: instancia Repository + Service + CacheService
+│   │   │   ├── [domain].actions.ts      ← CTRL layer
+│   │   │   ├── [domain].service.ts      ← SVC layer
+│   │   │   └── [domain].repository.ts   ← REPO layer (usa CacheService inyectado)
+│   │   └── stockGuardian/        ← Control de concurrencia de stock (Redis distribuido)
 │   └── prisma/                   ← Prisma schema and migrations
 │
 ├── frontend/                     ← Encapsulated Frontend Architecture
@@ -407,6 +408,7 @@ export const domainService = new DomainService(domainRepository);
 | `orders` | `orders.repository.ts` | `orders.service.ts` | `orders.actions.ts` | ✗ | ✓ | ✗ |
 | `payments` | ✗ | `payments.service.ts` | `payments.actions.ts` | ✗ | ✓ | ✗ |
 | `chat` | `chat.repository.ts` | `chat.service.ts` | `chat.actions.ts` | `socketHandler.ts` | ✓ | ✗ |
+| `stockGuardian` | ✗ | `stockGuardian.service.ts` | `stockGuardian.actions.ts` | ✗ | ✓ | ✗ (usa Redis directo vía ioredis) |
 
 ---
 
@@ -773,3 +775,180 @@ To guarantee scalability, persistence, and real-time delivery, all system notifi
     events: ["forum:answer_created", "forum:answer_edited", /* ... */],
   });
   ```
+
+---
+
+## 19. Stock Guardian — Control de Concurrencia de Stock
+
+> [!CAUTION]
+> El stock **NO se descuenta al crear el pedido**. Solo se descuenta en la transición `PENDIENTE → CONFIRMADO`. Ese es el **único punto donde se decide quién gana la condición de carrera**. Comprar solo crea una solicitud (`PENDIENTE`). Confirmar consume inventario.
+
+### 19.1 Problema que Resuelve
+
+Cuando dos administradores (o procesos) confirman simultáneamente pedidos que contienen los mismos productos, ambos pueden leer stock suficiente y descontar, resultando en **overbooking** (stock negativo). La transición `PENDIENTE → CONFIRMADO` es la ventana de carrera crítica.
+
+### 19.2 Arquitectura
+
+```
+CONFIRMAR PEDIDO
+│
+├─ ¿Redis disponible?
+│  ├─ SÍ → acquireProductLocks (SET lock:stock:{pid} UUID EX 5 NX)
+│  │        ├─ ¿Lock adquirido? → checkAndDeductStock (Lua script atómico)
+│  │        │                      ├─ ¿Stock OK? → Transición DB
+│  │        │                      │              ├─ tryTransitionEstado (optimistic lock)
+│  │        │                      │              ├─ updateMany WHERE stock>=qty (barrera DB)
+│  │        │                      │              └─ Liberar locks
+│  │        │                      └─ Stock insuf → throw + liberar locks
+│  │        └─ Sin lock → DB fallback (updateMany atómico)
+│  └─ NO → DB fallback (updateMany WHERE stock>=qty, misma transacción)
+│
+└─ ¿Transición DB exitosa? → ✅ CONFIRMADO
+   ¿Transición DB falla? → restoreStock Redis + liberar locks + throw
+```
+
+### 19.3 Componentes
+
+```
+src/backend/modules/stockGuardian/
+├── index.ts                       ← IoC: instancia StockGuardianService con redisClient
+├── stockGuardian.service.ts       ← Lógica central (locks, Lua, fallback)
+├── stockGuardian.actions.ts       ← Server Actions (getAvailableStock)
+└── init.ts                        ← Inicialización de stock:master en boot
+```
+
+### 19.4 Redis Keys
+
+| Key | Tipo | TTL | Propósito |
+|-----|------|-----|-----------|
+| `stock:master:{productId}` | String (entero) | ∞ | Stock disponible en tiempo real. Sincronizado desde DB. |
+| `lock:stock:{productId}` | String (UUID) | 5s | Mutex distribuido por producto. Previene concurrencia. |
+| `lock:confirm:{pedidoId}` | String (UUID) | 10s | Previene doble procesamiento del mismo pedido. |
+
+### 19.5 API del Servicio
+
+| Método | Descripción | Fallback (sin Redis) |
+|--------|-------------|---------------------|
+| `acquireProductLocks(ids, uuid)` | Adquiere locks en orden alfabético. 3 reintentos con backoff. | Retorna `true` (procede sin locks) |
+| `checkAndDeductStock(items)` | Lua script atómico: verifica stock ≥ qty → DECRBY. | Retorna `true` (delega a DB) |
+| `restoreStock(items)` | INCRBY para revertir stock en cancelaciones. | No-op |
+| `getAvailableStock(productId)` | Obtiene stock desde Redis master. Lazy-sync desde DB si no existe. | Consulta DB directo |
+| `syncMasterFromDB(productId)` | Sincroniza stock:master desde PostgreSQL. | — |
+
+### 19.6 Lua Script — Deducción Atómica
+
+```lua
+-- checkAndDeductStock
+-- KEYS[1..N] = stock:master:{productId}
+-- ARGV[1..N] = cantidades
+-- Retorna 1 si OK, 0 si stock insuficiente
+
+for i = 1, #KEYS do
+  local stock = redis.call("GET", KEYS[i])
+  if not stock or tonumber(stock) < tonumber(ARGV[i]) then
+    return 0
+  end
+end
+for i = 1, #KEYS do
+  redis.call("DECRBY", KEYS[i], ARGV[i])
+end
+return 1
+```
+
+Redis ejecuta el script completo sin interrupciones (single-threaded). No hay ventana entre verificar y descontar.
+
+### 19.7 Doble Barrera (Defense in Depth)
+
+| Capa | Tecnología | Qué hace | Si falla |
+|------|-----------|----------|----------|
+| 1ª | Redis locks `SET NX EX 5` | Serializa acceso por producto | Cae a capa 2 |
+| 2ª | Redis Lua `checkAndDeductStock` | Check + decrement atómico | Cae a capa 3 |
+| 3ª | PostgreSQL `updateMany WHERE stock>=qty` | Update condicional atómico | Rollback + error |
+
+La tercera capa SIEMPRE se ejecuta dentro de la transacción Prisma. Si `result.count === 0`, la transacción hace rollback completo (incluyendo `tryTransitionEstado`).
+
+### 19.8 Semántica del TTL de 5s
+
+```
+El TTL de 5s en el lock Redis NO tiene relación con el tiempo que el dueño
+tarda en confirmar un pedido (horas/días). El lock se adquiere SOLO durante
+los ~100ms que dura la ejecución de updateEstado().
+
+Propósito del TTL: Si el servidor crashea (OOM, kill -9, DC outage) en medio
+de la transacción, el lock se auto-libera a los 5s en lugar de quedar
+bloqueado para siempre.
+```
+
+| Concepto | Semántica | Duración |
+|----------|-----------|----------|
+| **Lock Redis** (TTL) | "Espera, estoy procesando esta confirmación, no me interrumpas" | 5 segundos |
+| **PENDIENTE → CONFIRMADO** | "El dueño decidió aceptar este pedido y consume inventario" | Horas/días |
+
+### 19.9 Flujo Completo de Confirmación
+
+```
+1. updateEstado(pedidoId, CONFIRMADO)
+   │
+   ├── acquireProductLocks(productIds, lockUUID)
+   │   └── SET lock:stock:prodX UUID EX 5 NX  (por cada producto, ordenado)
+   │
+   ├── checkAndDeductStock([{productId, quantity}])
+   │   └── Lua: GET stock:master → DECRBY → return 1|0
+   │
+   ├── executeTransaction(async (tx) => {
+   │   ├── tryTransitionEstado(id, PENDIENTE, CONFIRMADO)
+   │   │   └── tx.pedido.updateMany({ where: { id, estado: PENDIENTE }, data: { estado: CONFIRMADO } })
+   │   │
+   │   ├── if (!transitioned) → restoreStock() + return idempotent
+   │   │
+   │   ├── tx.product.updateMany({ where: { id, stock: { gte: qty } }, data: { stock: { decrement: qty } } })
+   │   │
+   │   └── if (result.count === 0) → throw (rollback total)
+   │   └── commit
+   │   })
+   │
+   └── releaseProductLocks(productIds, lockUUID)
+       └── Lua: GET → DEL (solo si el valor es nuestro UUID)
+```
+
+### 19.10 Graceful Degradation
+
+| Escenario | Comportamiento | Protección |
+|-----------|---------------|------------|
+| Redis funcionando | Locks + Lua + DB (3 capas) | Máxima |
+| Redis no configurado | Skip locks + skip Lua → solo DB | `updateMany WHERE stock>=qty` |
+| Redis se cae en runtime | `isRedisAvailable=false` → DB fallback automático | `updateMany WHERE stock>=qty` |
+| Redis reconecta | Locks + Lua se reactivan automáticamente | Máxima |
+
+### 19.11 Integración con Orders Module
+
+En `src/backend/modules/orders/orders.service.ts`, el método `updateEstado()`:
+
+```typescript
+// CONFIRMADO:
+// 1. Adquirir locks Redis (serializa por producto)
+// 2. Si Redis disponible → checkAndDeductStock vía Lua (detección temprana)
+// 3. Dentro de transacción Prisma → tryTransitionEstado + updateMany WHERE stock>=qty
+// 4. Si tryTransitionEstado falla (otro proceso ganó) → restoreStock en Redis
+// 5. Si updateMany retorna count=0 → throw → rollback Prisma + restoreStock en Redis
+// 6. Liberar locks en finally
+
+// CANCELADO desde estado con stock descontado:
+// 1. Restaurar stock en DB: tx.product.update({ data: { stock: { increment } } })
+// 2. Si Redis disponible → restoreStock en Redis
+```
+
+### 19.12 Inicialización en Boot
+
+En `server.ts`, después de conectar Redis, se ejecuta:
+
+```typescript
+import { initializeStockMaster } from "@/backend/modules/stockGuardian/init";
+
+initializeStockMaster(prisma);
+// → Pipeline Redis SET stock:master:{pid} stock NX para todos los productos
+// → Solo crea keys que NO existen (no sobrescribe datos actuales)
+// → No bloqueante — si falla, nextSync será lazy
+```
+
+Cada `getAvailableStock(productId)` también sincroniza lazy si la key no existe en Redis.

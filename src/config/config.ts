@@ -102,6 +102,7 @@ export const config = {
       forumCommunityStats: 300,
       forumTopContributors: 300,
       forumTrendingLabels: 300,
+      stockLock: 5,
     },
   },
 } as const;

@@ -41,6 +41,14 @@ export const CacheKeys = {
     allPattern: `${NAMESPACE}:product:*`,
   },
 
+  stock: {
+    master: (productId: string) => `stock:master:${productId}`,
+    lock: (productId: string) => `lock:stock:${productId}`,
+    confirm: (pedidoId: string) => `lock:confirm:${pedidoId}`,
+    allMasterPattern: `stock:master:*`,
+    allLockPattern: `lock:stock:*`,
+  },
+
   forum: {
     posts: (filters: string, search: string, limit: number, cursor: string | undefined, sortBy: string) =>
       `${NAMESPACE}:forum:posts:${hash(filters)}:${hash(search)}:${limit}:${cursor ? hash(cursor) : "first"}:${sortBy}`,

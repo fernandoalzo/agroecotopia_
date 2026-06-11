@@ -7,6 +7,7 @@ import { ensureAdminExists } from "./src/lib/admin-init";
 import logger from "./src/utils/logger";
 import { applyRateLimitMiddleware } from "./src/backend/middlewares/rateLimiter";
 import { config } from "./src/config/config";
+import { initializeStockMaster } from "./src/backend/modules/stockGuardian/init";
 
 const log = logger.child();
 
@@ -52,6 +53,11 @@ app.prepare()
     // Verify default admin user exists on boot
     ensureAdminExists(prisma).catch((err) => {
       log.error("Failed to verify default admin exists on server boot:", err);
+    });
+
+    // Sincronizar stock maestro en Redis desde PostgreSQL (no bloqueante)
+    initializeStockMaster(prisma).catch((err) => {
+      log.warn("Failed to initialize stock master in Redis (non-critical):", err);
     });
 
     const PORT = config.app.port;

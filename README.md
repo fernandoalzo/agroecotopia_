@@ -58,7 +58,12 @@ Plataforma de comercio electrónico B2C y B2B enfocada en productos agroecológi
 │  │ Actions │ │Actns │ │ Actns │ │Actns │ │ Actns  │ │ Actns    │  │
 │  │ Service │ │Svc   │ │ Svc   │ │Svc   │ │ Svc    │ │ Svc      │  │
 │  │         │ │Repo  │ │ Repo  │ │Repo  │ │ Repo   │ │ Repo     │  │
-│  └─────────┘ └──────┘ └───────┘ └──────┘ └───┬────┘ └──────────┘  │
+│  └─────────┘ └──────┘ └───────┘ └──┬───┘ └───┬────┘ └──────────┘  │
+│                                     │         │                    │
+│                           ┌─────────▼─────────▼──────────┐         │
+│                           │   Stock Guardian (Redis)      │         │
+│                           │   Locks + Lua + Fallback DB   │         │
+│                           └─────────┬────────────────────┘         │
 │                                                │                    │
 │                          ┌─────────────────────▼──────────┐         │
 │                          │   Cache Layer (Redis)           │         │
@@ -95,16 +100,19 @@ Plataforma de comercio electrónico B2C y B2B enfocada en productos agroecológi
 ├───────┼──────────────────────────────────────┤
 │ CACHE │  Redis distribuido (CacheService)    │  → Fallback silencioso
 ├───────┼──────────────────────────────────────┤
+│ LOCK  │  Stock Guardian (Locks + Lua Redis)  │  → Concurrencia de stock
+├───────┼──────────────────────────────────────┤
 │  DB   │  Prisma ORM → PostgreSQL             │  → Source of Truth
 └───────┴──────────────────────────────────────┘
 ```
 
 **Reglas de dependencia (estrictas):**
-- `UI → CTRL → SVC → REPO → CACHE → DB`
+- `UI → CTRL → SVC → REPO → CACHE → LOCK → DB`
 - Un componente/página NUNCA importa Prisma, repositorios o servicios directamente.
 - Los Server Actions son la única puerta de entrada al backend desde UI.
 - Los Servicios no saben que existe caché. Solo los Repositorios usan `CacheService`.
 - `CacheService` solo se inyecta en constructores de Repositorios.
+- El Stock Guardian (LOCK layer) solo es invocado directamente por Services (OrdersService) cuando necesita coordinar stock. No pasa por Repository porque opera sobre Redis, no sobre DB.
 
 ---
 
@@ -230,8 +238,8 @@ src/
 ### 5. Orders — Pedidos
 - **Cada tienda recibe su propio pedido** (un checkout puede generar N pedidos, uno por tienda)
 - **Máquina de estados:** `PENDIENTE → CONFIRMADO → EN_PREPARACION → EN_CAMINO → ENTREGADO`. También `→ CANCELADO` desde PENDIENTE o CONFIRMADO.
-- **Optimistic Locking:** las transiciones de estado usan `updateMany` con `WHERE estado = ${estadoActual}` para prevenir race conditions
-- **Stock:** se descuenta al confirmar, se revierte al cancelar (solo si fue descontado)
+- **Optimistic Locking:** las transiciones de estado usan `updateMany` con `WHERE estado = ${estadoActual}` para prevenir race conditions sobre la misma orden
+- **Stock:** se descuenta SOLO al confirmar (`CONFIRMADO`), se revierte al cancelar (solo si fue previamente descontado). Usa el **Stock Guardian** con Redis locks distribuidos + Lua script atómico para prevenir overbooking. Doble barrera: Redis (capa rápida) + PostgreSQL `updateMany WHERE stock>=qty` (capa definitiva). Fallback a DB si Redis no está disponible (graceful degradation).
 - **Notificaciones:** al crear pedido (notifica al vendedor), al cambiar estado (notifica al comprador)
 
 ### 6. Payments — MercadoPago
@@ -272,6 +280,16 @@ src/
 
 ### 12. User — Usuarios (Repositorio Base)
 - Métodos CRUD básicos usados por AuthService
+
+### 13. StockGuardian — Control de Concurrencia de Stock
+- **Propósito:** Prevenir condiciones de carrera en la confirmación de pedidos (`PENDIENTE → CONFIRMADO`). Dos administradores confirmando simultáneamente el mismo producto no pueden producir overbooking.
+- **Arquitectura:** Redis locks distribuidos (`SET lock:stock:{pid} UUID EX 5 NX`) + Lua script atómico para check-and-deduct + `updateMany WHERE stock>=qty` en PostgreSQL como barrera final.
+- **Ubicación:** `src/backend/modules/stockGuardian/`
+- **Redis keys:** `stock:master:{pid}` (stock en tiempo real), `lock:stock:{pid}` (mutex por producto), `lock:confirm:{pedidoId}` (anti-doble-procesamiento)
+- **TTL de 5s:** auto-recuperación si el servidor crashea durante la transacción. No tiene relación con el tiempo que el dueño tarda en confirmar (horas/días).
+- **Fallback DB:** cuando Redis no está disponible, la barrera DB (`updateMany WHERE stock>=qty`) sigue protegiendo contra overbooking. Degradación gradual silenciosa.
+- **Inicialización:** `initializeStockMaster()` en `server.ts` sincroniza `stock:master:{pid}` desde PostgreSQL al arrancar.
+- **Semántica:** Comprar no consume stock. Confirmar sí. El primer proceso que ejecute `CONFIRMADO` se lleva el producto, sin importar quién pidió primero.
 
 ---
 
@@ -351,6 +369,33 @@ const cacheService = new CacheService();
 export const orderRepository = new OrderRepository(cacheService);
 ```
 
+### Stock Guardian (Control de Concurrencia)
+
+El Stock Guardian es un **consumidor de Redis que NO es caché**. Usa Redis para:
+
+- **Distributed Locks:** semáforos por producto (`lock:stock:{pid}`) que serializan confirmaciones concurrentes. Se adquieren en orden alfabético de productIds para prevenir deadlocks.
+- **Lua Scripts:** operaciones atómicas de check-and-deduct sin ventanas de race condition (GET + DECRBY en una sola operación single-threaded).
+- **Stock Master:** `stock:master:{productId}` como fuente de verdad en tiempo real. Sincronizado desde PostgreSQL al arrancar y bajo demanda (lazy sync).
+
+**Flujo de confirmación de un pedido:**
+
+```
+1. Adquirir locks para todos los productos del pedido (orden alfabético)
+2. Ejecutar Lua script: verificar stock ≥ qty → DECRBY si hay
+3. Transición DB: tryTransitionEstado + updateMany WHERE stock≥qty
+4. Liberar locks
+```
+
+**Si Redis falla:** skip locks, skip Lua, solo DB (`updateMany WHERE stock>=qty` es atómico en PostgreSQL).
+
+**Arquitectura de doble barrera:**
+
+| Capa | Tecnología | Rol | Si falla |
+|------|-----------|-----|----------|
+| 1ª | Redis locks | Serializa acceso por producto | DB directo |
+| 2ª | Redis Lua | Check + decrement atómico | DB directo |
+| 3ª | PostgreSQL `updateMany WHERE stock>=qty` | Update condicional atómico | Rollback + error |
+
 ---
 
 ## Sistema de Notificaciones (Event-Driven)
@@ -394,7 +439,10 @@ export const orderRepository = new OrderRepository(cacheService);
 | **Event-Driven Architecture** | Notificaciones + EventBus | Comunicación asíncrona desacoplada |
 | **Observer Pattern** | Socket.IO + EventBridge | Tiempo real push-based |
 | **Lazy Materialization** | Notificaciones BROADCAST | $O(1)$ dispatch para broadcast a N usuarios |
-| **Optimistic Locking** | Orders state machine | Prevención de race conditions en transiciones |
+| **Optimistic Locking** | Orders state machine | Prevención de race conditions en transiciones de estado |
+| **Distributed Lock** | Stock Guardian (`lock:stock:{pid}`) | Mutex distribuido con auto-expiración (TTL 5s) para exclusión mutua |
+| **Lua Scripting (Redis)** | Stock Guardian `checkAndDeductStock` | Operación atómica server-side en Redis sin race window |
+| **Circuit Breaker** | Stock Guardian | Degradación gradual: Redis → DB fallback → error |
 | **Optimistic UI Updates** | NotificationContext | Actualización instantánea + sync con servidor |
 | **Composite Pattern** | Server Actions | Múltiples queries en una sola acción (evita waterfall) |
 | **Strategy Pattern (Auth)** | Auth guards | Roles intercambiables sin modificar lógica |
