@@ -16,9 +16,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuArrow,
 } from "@/components/ui/dropdown-menu";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { NotificationBell } from "@/frontend/components/notifications/NotificationBell";
@@ -249,8 +249,9 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                 <DropdownMenuContent
                   align="end"
                   sideOffset={10}
-                  className="w-64 rounded-2xl bg-card/90 backdrop-blur-3xl border-border/30 shadow-2xl shadow-black/5 dark:shadow-black/30 p-1.5 z-[100] relative overflow-hidden"
+                  className="w-64 rounded-2xl bg-card/90 backdrop-blur-3xl border-border/30 shadow-2xl shadow-black/5 dark:shadow-black/30 p-1.5 z-[100] relative"
                 >
+                  <DropdownMenuArrow className="fill-card" />
                   <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
                   <div className="relative px-3 pt-3 pb-2">
                     <div className="flex items-center gap-3">

@@ -34,7 +34,7 @@ export const UserMenuDesktop = ({
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             className={cn(
-                "hidden md:block absolute right-0 top-full mt-3 w-80 z-[100] overflow-hidden",
+                "hidden md:block absolute right-0 top-full mt-2.5 w-80 z-[100] overflow-hidden",
                 "rounded-2xl",
                 "bg-card/80 dark:bg-card/60 backdrop-blur-2xl backdrop-saturate-150",
                 "ring-1 ring-border/50 dark:ring-white/10",

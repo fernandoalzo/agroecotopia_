@@ -155,6 +155,18 @@ const DropdownMenuSeparator = React.forwardRef<
 ));
 DropdownMenuSeparator.displayName = DropdownMenuPrimitive.Separator.displayName;
 
+const DropdownMenuArrow = React.forwardRef<
+  React.ElementRef<typeof DropdownMenuPrimitive.Arrow>,
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Arrow>
+>(({ className, ...props }, ref) => (
+  <DropdownMenuPrimitive.Arrow
+    ref={ref}
+    className={cn("fill-card -my-px", className)}
+    {...props}
+  />
+));
+DropdownMenuArrow.displayName = DropdownMenuPrimitive.Arrow.displayName;
+
 const DropdownMenuShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) => {
   return <span className={cn("ml-auto text-xs tracking-widest opacity-60", className)} {...props} />;
 };
@@ -170,6 +182,7 @@ export {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
+  DropdownMenuArrow,
   DropdownMenuGroup,
   DropdownMenuPortal,
   DropdownMenuSub,

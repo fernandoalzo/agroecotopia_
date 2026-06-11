@@ -45,13 +45,27 @@ export default function ChatWidget({ forceShow = false, targetUserId, chatDeps }
   const chat = useChatWidget(forceShow, targetUserId, shouldEnableChat, chatDeps);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
+  const [isNotificationsMenuOpen, setIsNotificationsMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleMobileMenu = (e: CustomEvent<boolean>) => {
       setIsMobileMenuOpen(e.detail);
     };
+    const handleSettingsMenu = (e: CustomEvent<boolean>) => {
+      setIsSettingsMenuOpen(e.detail);
+    };
+    const handleNotificationsMenu = (e: CustomEvent<boolean>) => {
+      setIsNotificationsMenuOpen(e.detail);
+    };
     window.addEventListener("mobile-menu-state", handleMobileMenu as EventListener);
-    return () => window.removeEventListener("mobile-menu-state", handleMobileMenu as EventListener);
+    window.addEventListener("settings-menu-state", handleSettingsMenu as EventListener);
+    window.addEventListener("notifications-menu-state", handleNotificationsMenu as EventListener);
+    return () => {
+      window.removeEventListener("mobile-menu-state", handleMobileMenu as EventListener);
+      window.removeEventListener("settings-menu-state", handleSettingsMenu as EventListener);
+      window.removeEventListener("notifications-menu-state", handleNotificationsMenu as EventListener);
+    };
   }, []);
 
   if (!chat.isClient || chat.status !== "authenticated") return null;
@@ -62,7 +76,7 @@ export default function ChatWidget({ forceShow = false, targetUserId, chatDeps }
 
   // Don't render the widget at all on mobile if the menu is open,
   // or just hide it using CSS classes below. We can just hide the container.
-  if (isMobileMenuOpen && window.innerWidth < 1024) return null;
+  if ((isMobileMenuOpen || isSettingsMenuOpen || isNotificationsMenuOpen) && window.innerWidth < 1024) return null;
 
   return (
     <>

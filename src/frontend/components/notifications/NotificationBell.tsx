@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, Check, Loader2, Info, X } from "lucide-react";
 import { useNotifications } from "@/frontend/hooks/useNotifications";
 import { Popover, PopoverContent, PopoverTrigger } from "@/frontend/components/ui/popover";
@@ -16,6 +16,12 @@ export function NotificationBell({ isMobile }: { isMobile?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
   const { unreadCount, notifications, isLoading, hasMore, loadMore, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("notifications-menu-state", { detail: isOpen }));
+    }
+  }, [isOpen]);
 
   const handleNotificationClick = (n: any) => {
     if (n.status !== "READ") markAsRead(n.id);

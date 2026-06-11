@@ -4,7 +4,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import { Settings, Globe } from "lucide-react";
+import { Settings } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { UserMenuDesktop } from "./desktop/UserMenu";
@@ -35,6 +35,9 @@ export default function UserMenu() {
     } else {
       document.body.style.overflow = "";
     }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("settings-menu-state", { detail: open }));
+    }
     return () => {
       document.body.style.overflow = "";
     };
@@ -61,8 +64,8 @@ export default function UserMenu() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         className={cn(
-          "flex items-center justify-center gap-2 rounded-full transition-all duration-300",
-          "h-9 w-9 md:h-auto md:w-auto md:py-2 md:px-3",
+          "flex items-center justify-center rounded-full transition-all duration-300",
+          "h-9 w-9",
           "bg-secondary/40 hover:bg-secondary/70 border border-border/50 hover:border-primary/30",
           "dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:hover:border-primary/30",
           open && "ring-2 ring-primary/30 border-primary/50 bg-secondary/70 dark:bg-white/10"
@@ -77,16 +80,6 @@ export default function UserMenu() {
             "h-4 w-4 transition-colors duration-200",
             open ? "text-primary" : "text-muted-foreground"
           )} />
-        </motion.div>
-        <span className="hidden lg:inline text-xs font-semibold text-foreground/80">
-          Ajustes
-        </span>
-        <motion.div
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-          className="hidden lg:block"
-        >
-          <Globe className={cn("h-3 w-3 text-muted-foreground/50 transition-colors", open && "text-primary/60")} />
         </motion.div>
       </motion.button>
 
