@@ -209,6 +209,7 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
     "forum:item_rated",
     "order:created",
     "product:stock_updated",
+    "order:status_updated",
     "notification_read_state_changed",
   ] as const;
 

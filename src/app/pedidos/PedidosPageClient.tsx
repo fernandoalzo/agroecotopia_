@@ -99,6 +99,21 @@ export default function PedidosPageClient({
     refresh: loadUnreadCounts,
   });
 
+  const refreshUserOrders = useCallback(async () => {
+    if (status !== "authenticated" || isAdmin) return;
+    const result = await getUserOrders();
+    if (Array.isArray(result)) {
+      setOrders(result as any[]);
+    }
+  }, [getUserOrders, status, isAdmin]);
+
+  useSocketRefresh({
+    socket,
+    enabled: status === "authenticated" && !isAdmin,
+    refresh: refreshUserOrders,
+    events: ["order:status_updated"],
+  });
+
   useEffect(() => {
     loadUnreadCounts();
   }, [loadUnreadCounts]);

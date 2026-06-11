@@ -349,6 +349,14 @@ export class OrdersService {
         eventBus.emit("product:stock_updated", { productIds });
       }
 
+      // 8. Emitir evento para que el comprador vea el cambio de estado en tiempo real
+      log.info("Emitting order:status_updated:", { pedidoId, nuevoEstado, usuarioId: pedidoActualizado.usuarioId });
+      eventBus.emit("order:status_updated", {
+        pedidoId,
+        estado: nuevoEstado,
+        usuarioId: pedidoActualizado.usuarioId,
+      });
+
       return this.serializePedido(pedidoActualizado);
     });
   }
