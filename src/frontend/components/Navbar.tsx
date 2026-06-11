@@ -224,7 +224,7 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                   <motion.button
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
-                    className="flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-4 bg-secondary/40 hover:bg-secondary/60 border border-border/50 hover:border-primary/30 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 transition-all duration-300 group/auth outline-none"
+                    className="flex items-center gap-2.5 rounded-full py-1.5 pl-1.5 pr-4 bg-secondary/40 hover:bg-secondary/60 border border-border/50 hover:border-primary/40 dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 transition-all duration-300 group/auth outline-none shadow-sm hover:shadow-md hover:shadow-primary/5 dark:hover:shadow-primary/10"
                   >
                     <div className="relative h-7 w-7">
                       <div className="relative h-full w-full overflow-hidden rounded-full ring-2 ring-primary/20">
@@ -246,64 +246,121 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                     <ChevronDown className="h-3 w-3 text-muted-foreground group-hover/auth:text-primary transition-all" />
                   </motion.button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 rounded-2xl bg-card/95 backdrop-blur-2xl border-border/50 shadow-xl p-2 z-[100]">
-                  <DropdownMenuLabel className="font-normal px-2 py-1.5">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-semibold leading-none">{userName}</p>
-                      <p className="text-xs leading-none text-muted-foreground mt-1">
-                        {session?.user?.email ?? "Usuario registrado"}
-                      </p>
+                <DropdownMenuContent
+                  align="end"
+                  sideOffset={10}
+                  className="w-64 rounded-2xl bg-card/90 backdrop-blur-3xl border-border/30 shadow-2xl shadow-black/5 dark:shadow-black/30 p-1.5 z-[100] relative overflow-hidden"
+                >
+                  <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+                  <div className="relative px-3 pt-3 pb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="relative h-10 w-10 shrink-0">
+                        <div className="relative h-full w-full overflow-hidden rounded-xl ring-2 ring-primary/20 ring-offset-2 ring-offset-background">
+                          {userImage ? (
+                            <Image src={userImage} alt={userName} fill className="object-cover" sizes="40px" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/30 to-primary/10 text-primary font-bold text-sm rounded-xl">
+                              {userInitial}
+                            </div>
+                          )}
+                        </div>
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <p className="text-sm font-semibold truncate">{userName}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {session?.user?.email ?? "Usuario registrado"}
+                        </p>
+                        {session?.user?.role && (
+                          <span className="inline-flex items-center mt-0.5">
+                            <span className={cn(
+                              "text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full",
+                              session.user.role === "admin"
+                                ? "bg-primary/10 text-primary"
+                                : session.user.role === "seller"
+                                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                  : "bg-muted text-muted-foreground"
+                            )}>
+                              {session.user.role === "admin"
+                                ? "Administrador"
+                                : session.user.role === "seller"
+                                  ? "Vendedor"
+                                  : "Comprador"}
+                            </span>
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-border/50 my-1" />
+                  </div>
+                  <DropdownMenuSeparator className="bg-gradient-to-r from-transparent via-border/60 to-transparent" />
                   {session?.user?.role === "admin" && (
-                    <>
-                      <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 transition-colors focus:bg-primary/5 focus:text-primary">
-                        <Link href="/admin/dashboard" className="flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">{t.navbar?.dashboard ?? "Dashboard"}</span>
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-3 py-2.5 my-0.5 transition-all duration-200 focus:bg-primary/5 focus:text-primary group/item">
+                      <Link href="/admin/dashboard" className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary group-hover/item:bg-primary/20 group-hover/item:scale-110 transition-all duration-200">
+                            <LayoutDashboard className="h-4 w-4" />
                           </div>
-                          <LayoutDashboard className="h-4 w-4 text-primary" />
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-border/50 my-1" />
-                    </>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm">{t.navbar?.dashboard ?? "Dashboard"}</span>
+                            <span className="text-[10px] text-muted-foreground leading-none mt-0.5">Panel de administración</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 group-hover/item:text-primary group-hover/item:translate-x-0.5 transition-all duration-200" />
+                      </Link>
+                    </DropdownMenuItem>
                   )}
                   {session?.user?.role === "seller" && (
-                    <>
-                      <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 transition-colors focus:bg-primary/5 focus:text-primary">
-                        <Link href="/mi-tienda" className="flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">Mi Tienda</span>
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-3 py-2.5 my-0.5 transition-all duration-200 focus:bg-primary/5 focus:text-primary group/item">
+                      <Link href="/mi-tienda" className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary group-hover/item:bg-primary/20 group-hover/item:scale-110 transition-all duration-200">
+                            <Store className="h-4 w-4" />
                           </div>
-                          <Store className="h-4 w-4 text-primary" />
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-border/50 my-1" />
-                    </>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm">Mi Tienda</span>
+                            <span className="text-[10px] text-muted-foreground leading-none mt-0.5">Gestiona tu tienda</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 group-hover/item:text-primary group-hover/item:translate-x-0.5 transition-all duration-200" />
+                      </Link>
+                    </DropdownMenuItem>
                   )}
                   {session?.user?.role === "user" && (
-                    <>
-                      <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-2 py-2 transition-colors focus:bg-primary/5 focus:text-primary">
-                        <Link href="/solicitar-tienda" className="flex items-center justify-between w-full">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">Vender con Nosotros</span>
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-xl px-3 py-2.5 my-0.5 transition-all duration-200 focus:bg-primary/5 focus:text-primary group/item">
+                      <Link href="/solicitar-tienda" className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary group-hover/item:bg-primary/20 group-hover/item:scale-110 transition-all duration-200">
+                            <Leaf className="h-4 w-4" />
                           </div>
-                          <Leaf className="h-4 w-4 text-primary" />
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-border/50 my-1" />
-                    </>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-sm">Vender con Nosotros</span>
+                            <span className="text-[10px] text-muted-foreground leading-none mt-0.5">Conviértete en vendedor</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 group-hover/item:text-primary group-hover/item:translate-x-0.5 transition-all duration-200" />
+                      </Link>
+                    </DropdownMenuItem>
                   )}
+                  <DropdownMenuSeparator className="bg-gradient-to-r from-transparent via-border/60 to-transparent" />
                   <DropdownMenuItem
                     onClick={() => {
                       clearCart();
                       signOut({ callbackUrl: "/" });
                     }}
-                    className="text-red-500 focus:bg-red-500/10 focus:text-red-600 cursor-pointer flex items-center justify-between rounded-xl px-2 py-2 transition-colors"
+                    className="cursor-pointer rounded-xl px-3 py-2.5 my-0.5 transition-all duration-200 text-red-500 focus:bg-red-500/10 focus:text-red-600 group/item"
                   >
-                    <span className="font-medium text-sm">{t.navbar?.cerrarSesion ?? "Cerrar Sesión"}</span>
-                    <LogOut className="h-4 w-4" />
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10 text-red-500 group-hover/item:bg-red-500/20 group-hover/item:scale-110 transition-all duration-200">
+                          <LogOut className="h-4 w-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm">{t.navbar?.cerrarSesion ?? "Cerrar Sesión"}</span>
+                          <span className="text-[10px] text-muted-foreground leading-none mt-0.5">Finalizar sesión</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 group-hover/item:text-red-400 group-hover/item:translate-x-0.5 transition-all duration-200" />
+                    </div>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
