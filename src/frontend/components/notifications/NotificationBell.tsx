@@ -4,17 +4,22 @@ import { useState, useEffect } from "react";
 import { Bell, Check, Loader2, Info, X } from "lucide-react";
 import { useNotifications } from "@/frontend/hooks/useNotifications";
 import { Popover, PopoverContent, PopoverTrigger } from "@/frontend/components/ui/popover";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/frontend/components/ui/sheet";
 import { ScrollArea } from "@/frontend/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 
 export function NotificationBell({ isMobile }: { isMobile?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const { unreadCount, notifications, isLoading, hasMore, loadMore, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
 
   useEffect(() => {
@@ -167,6 +172,7 @@ export function NotificationBell({ isMobile }: { isMobile?: boolean }) {
 
   const triggerButton = (
     <button
+      onClick={() => setIsOpen(!isOpen)}
       className={cn(
         "group/bell relative flex items-center justify-center h-10 w-10 rounded-full transition-all duration-300",
         isOpen ? "bg-primary/10" : "hover:bg-primary/5",
@@ -200,15 +206,42 @@ export function NotificationBell({ isMobile }: { isMobile?: boolean }) {
 
   if (isMobile) {
     return (
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger asChild>
-          {triggerButton}
-        </SheetTrigger>
-        <SheetContent side="bottom" className="h-[90vh] p-0 rounded-t-3xl border-border/50 bg-card/95 backdrop-blur-xl z-[100] flex flex-col">
-          <SheetTitle className="sr-only">Notificaciones</SheetTitle>
-          {content}
-        </SheetContent>
-      </Sheet>
+      <>
+        {triggerButton}
+        {mounted && createPortal(
+          <AnimatePresence>
+            {isOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  onClick={() => setIsOpen(false)}
+                  className="fixed inset-0 bg-black/35 backdrop-blur-[3px] z-[998] cursor-pointer"
+                />
+                <motion.div
+                  initial={{ opacity: 0, x: "100%" }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: "100%" }}
+                  transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                  className="fixed inset-0 top-0 z-[999] flex h-full w-full flex-col bg-background overflow-y-auto overscroll-none"
+                >
+                  <button
+                    onClick={() => setIsOpen(false)}
+                    className="absolute top-4 right-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-secondary/50 hover:bg-secondary transition-colors"
+                    aria-label="Cerrar notificaciones"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  {content}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
+      </>
     );
   }
 

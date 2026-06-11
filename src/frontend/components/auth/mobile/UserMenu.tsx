@@ -67,9 +67,9 @@ export const UserMenuMobile = ({
 
                 <button
                     onClick={onClose}
-                    className="absolute top-6 right-6 flex h-11 w-11 items-center justify-center rounded-full bg-secondary text-secondary-foreground backdrop-blur-md border border-border active:scale-90 transition-all"
+                    className="absolute top-4 right-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-secondary/50 hover:bg-secondary transition-colors"
                 >
-                    <X className="h-6 w-6" />
+                    <X className="h-4 w-4" />
                 </button>
 
                 <div className="flex flex-col gap-6 mt-6">
