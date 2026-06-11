@@ -273,6 +273,19 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     refresh: loadUnreadCounts,
   });
 
+  const refreshStoreOrders = useCallback(() => {
+    if (activeTab === "orders") {
+      setStoreOrdersRefresh(prev => prev + 1);
+    }
+  }, [activeTab]);
+
+  useSocketRefresh({
+    socket,
+    enabled: !!activeStore?.id && !!isSeller && activeTab === "orders",
+    refresh: refreshStoreOrders,
+    events: ["order:created"],
+  });
+
   useEffect(() => {
     if (!activeStore?.id || !isSeller || activeTab !== "orders") return;
     let cancelled = false;

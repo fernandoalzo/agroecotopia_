@@ -255,5 +255,13 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
     io.emit("forum:item_rated", payload);
   });
 
+  // ─── Orders Bridge ───
+  eventBus.removeAllListeners("order:created");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  eventBus.on("order:created", (payload: { pedidoId: string; storeId: string; ownerId: string }) => {
+    log.info(`Broadcasting order:created globally: ${payload.pedidoId}`);
+    io.emit("order:created", payload);
+  });
+
   return io;
 }

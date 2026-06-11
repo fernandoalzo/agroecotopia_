@@ -5,6 +5,7 @@ import logger from "@/utils/logger";
 import { notificationsService } from "@/backend/modules/notifications";
 import { storeTaxService } from "@/backend/modules/store";
 import { stockGuardianService } from "@/backend/modules/stockGuardian";
+import eventBus from "@/utils/eventBus";
 
 const log = logger.child("src/backend/modules/orders/orders.service.ts");
 
@@ -112,6 +113,16 @@ export class OrdersService {
           log.error("Error al despachar notificación de nuevo pedido:", err);
         });
       }
+    }
+
+    // Emitir evento en tiempo real para que el dashboard/admin se actualice
+    for (const pedido of pedidos) {
+      const ownerId = storeOwnersMap.get(pedido.detalles[0]?.storeId);
+      eventBus.emit("order:created", {
+        pedidoId: pedido.id,
+        storeId: pedido.detalles[0]?.storeId,
+        ownerId,
+      });
     }
 
     return pedidos.map((pedido) => this.serializePedido(pedido));

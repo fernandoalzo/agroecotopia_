@@ -191,6 +191,17 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
     events: ["store_request_updated"],
   });
 
+  const refreshOrdersList = useCallback(() => {
+    setOrdersRefresh(prev => prev + 1);
+  }, []);
+
+  useSocketRefresh({
+    socket,
+    enabled: isAdmin && activeTab === "orders",
+    refresh: refreshOrdersList,
+    events: ["order:created"],
+  });
+
   useEffect(() => {
     if (!isAdmin) {
       setPendingStoresCount(0);
