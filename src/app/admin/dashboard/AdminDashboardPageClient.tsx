@@ -191,9 +191,25 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
     events: ["store_request_updated"],
   });
 
-  const refreshOrdersList = useCallback(() => {
-    setOrdersRefresh(prev => prev + 1);
-  }, []);
+  const refreshOrdersList = useCallback(async () => {
+    const result = await actions.getPaginatedOrders({
+      page: orderCurrentPage,
+      limit: 10,
+      estado: orderStatusFilter === "ALL" ? undefined : orderStatusFilter,
+      search: orderSearchQuery || undefined,
+    });
+    const counts = await actions.getOrderStatusCounts();
+    if (result && "orders" in result) {
+      setOrders(result.orders as any[]);
+      setOrderTotalPages(result.totalPages);
+      setOrderTotalCount(result.totalCount);
+    }
+    if (counts && typeof counts === "object") {
+      const typed = counts as Record<string, number>;
+      const total = Object.values(typed).reduce((acc, val) => acc + (Number(val) || 0), 0);
+      setOrderStatusCounts({ ALL: total, ...typed });
+    }
+  }, [actions, orderCurrentPage, orderStatusFilter, orderSearchQuery]);
 
   useSocketRefresh({
     socket,

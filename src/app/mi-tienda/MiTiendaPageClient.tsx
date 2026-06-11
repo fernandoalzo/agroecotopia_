@@ -273,11 +273,38 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     refresh: loadUnreadCounts,
   });
 
-  const refreshStoreOrders = useCallback(() => {
-    if (activeTab === "orders") {
-      setStoreOrdersRefresh(prev => prev + 1);
+  const refreshStoreOrders = useCallback(async () => {
+    if (!activeStore?.id) return;
+    const response = await actions.getSellerDashboardData(activeStore.id, {
+      page: storeOrderCurrentPage,
+      limit: 10,
+      estado: storeOrderStatusFilter === "ALL" ? undefined : storeOrderStatusFilter,
+      search: storeOrderSearchQuery || undefined,
+    });
+    const { ordersResult, statusCounts, conversations } = response || {};
+
+    if (ordersResult && "orders" in ordersResult) {
+      setStoreOrders(ordersResult.orders as AdminOrder[]);
+      setStoreOrderTotalPages(ordersResult.totalPages);
+      setStoreOrderTotalCount(ordersResult.totalCount);
     }
-  }, [activeTab]);
+
+    if (statusCounts && typeof statusCounts === "object") {
+      const typed = statusCounts as Record<string, number>;
+      const total = Object.values(typed).reduce((a, b) => a + (Number(b) || 0), 0);
+      setStoreOrderStatusCounts({ ALL: total, ...typed });
+    }
+
+    if (Array.isArray(conversations)) {
+      const counts = conversations.reduce((acc: Record<string, number>, conv: any) => {
+        if (conv?.pedido?.id) {
+          acc[conv.pedido.id] = Number(conv.unreadCount) || 0;
+        }
+        return acc;
+      }, {});
+      setOrderChatUnreadCounts(counts);
+    }
+  }, [actions, activeStore?.id, storeOrderCurrentPage, storeOrderStatusFilter, storeOrderSearchQuery]);
 
   useSocketRefresh({
     socket,
