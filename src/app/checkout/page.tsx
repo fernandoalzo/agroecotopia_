@@ -30,6 +30,7 @@ export default function CheckoutPage() {
   const { t, language } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [destinationCity, setDestinationCity] = useState("");
+  const [tipoEntrega, setTipoEntrega] = useState<string>("ENVIO");
 
   const { data: cityZones, isLoading: isCitiesLoading } = useQuery({
     queryKey: ["checkoutCities"],
@@ -67,11 +68,11 @@ export default function CheckoutPage() {
       const { toast } = await import("sonner");
 
       // 1. Create order in Database
-      const orderData = {
-        direccionEntrega: `${values.address}, ${values.city}`,
+      const orderData: Record<string, unknown> = {
         notasCliente: values.notes,
         costoEnvio: 0, // Simplified for now
         metodoPago: values.paymentMethod,
+        tipoEntrega: values.tipoEntrega,
         detalles: cart.map(item => ({
           productoId: item.product.id!,
           cantidad: item.quantity,
@@ -79,6 +80,13 @@ export default function CheckoutPage() {
           unidadMedida: item.product.unidad || "unidad"
         }))
       };
+
+      if (values.tipoEntrega === "ENVIO") {
+        orderData.direccionEntrega = `${values.address}, ${values.city}`;
+      } else {
+        orderData.direccionEntrega = null;
+        orderData.bodegaId = values.bodegaId;
+      }
 
       const response = await fetch('/api/place-order', {
         method: 'POST',
@@ -136,6 +144,7 @@ export default function CheckoutPage() {
                 email: session?.user?.email || "",
               }}
               onCityChange={setDestinationCity}
+              onTipoEntregaChange={setTipoEntrega}
               cityZones={cityZones ?? []}
             />
 
@@ -146,7 +155,7 @@ export default function CheckoutPage() {
               transition={{ delay: 0.4 }}
               className="lg:col-span-5 lg:sticky lg:top-24"
             >
-              <OrderSummary isSubmitting={isSubmitting} destinationCity={destinationCity} />
+              <OrderSummary isSubmitting={isSubmitting} destinationCity={destinationCity} tipoEntrega={tipoEntrega} />
             </motion.div>
           </div>
         </div>

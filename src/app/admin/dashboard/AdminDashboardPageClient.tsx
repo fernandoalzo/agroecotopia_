@@ -25,6 +25,7 @@ import { AdminChatPageContent } from "@/app/admin/chat/AdminChatPageClient";
 import { useProductsLogic } from "@/frontend/hooks/useProductsLogic";
 import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import logger from "@/utils/logger";
+import { toast } from "sonner";
 import { Store } from "lucide-react";
 import { getConversationUnreadCount } from "@/frontend/lib/chatUnread";
 
@@ -434,12 +435,23 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                   onPageChange={setOrderCurrentPage}
                   onSearchChange={setOrderSearchQuery}
                   onStatusFilterChange={setOrderStatusFilter}
-                  onUpdateStatus={async (orderId, newStatus) => {
-                    const result = await actions.updateOrderStatus(orderId, newStatus);
-                    if (result && "error" in result) return false;
-                    setOrdersRefresh(prev => prev + 1);
-                    return true;
-                  }}
+                   onUpdateStatus={async (orderId, newStatus) => {
+                     const result = await actions.updateOrderStatus(orderId, newStatus);
+                     if (result && "error" in result) {
+                       if (result.outOfStockProducts && result.outOfStockProducts.length > 0) {
+                         const names = result.outOfStockProducts.map((p: any) => p.productName).join(", ");
+                         toast.error("Stock insuficiente", {
+                           description: `Sin stock para: ${names}. Ve al detalle del pedido para retirarlos.`,
+                           action: { label: "Ver detalle", onClick: () => router.push(`/pedidos/${orderId}`) }
+                         });
+                       } else {
+                         toast.error("Error", { description: result.error });
+                       }
+                       return false;
+                     }
+                     setOrdersRefresh(prev => prev + 1);
+                     return true;
+                   }}
                 />
               </motion.div>
             )}

@@ -84,6 +84,12 @@ interface MiTiendaActions {
   deleteStoreShippingZone: (zoneId: string) => Promise<any>;
   addShippingRate: (zoneId: string, data: any) => Promise<any>;
   deleteShippingRate: (rateId: string) => Promise<any>;
+
+  // Bodegas
+  getStoreBodegas: (storeId: string) => Promise<any>;
+  createBodega: (storeId: string, data: { name: string; address: string; city: string; imagenUrl?: string }) => Promise<any>;
+  updateBodega: (bodegaId: string, data: { name?: string; address?: string; city?: string; imagenUrl?: string }) => Promise<any>;
+  deleteBodega: (bodegaId: string) => Promise<any>;
 }
 
 const SIDEBAR_ITEMS: { id: SellerTab; labelEs: string; labelEn: string; icon: React.ElementType }[] = [
@@ -560,7 +566,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
               {activeTab === "orders" && "Gestiona los pedidos que contienen productos de esta tienda"}
               {activeTab === "products" && "Gestiona los productos de tu tienda"}
               {activeTab === "store_info" && "Información y configuración de tu tienda"}
-              {activeTab === "configuration" && "Configura impuestos y otros ajustes de la tienda"}
+              {activeTab === "configuration" && "Configura impuestos, zonas de envío y bodegas de recogida"}
             </p>
           </div>
         </div>
@@ -589,12 +595,24 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                   onPageChange={setStoreOrderCurrentPage}
                   onSearchChange={setStoreOrderSearchQuery}
                   onStatusFilterChange={setStoreOrderStatusFilter}
-                  onUpdateStatus={async (orderId, newStatus) => {
-                    const result = await actions.updateStoreOrderStatus(activeStore.id, orderId, newStatus);
-                    if (result && "error" in result) return false;
-                    setStoreOrdersRefresh(prev => prev + 1);
-                    return true;
-                  }}
+                   onUpdateStatus={async (orderId, newStatus) => {
+                     const result = await actions.updateStoreOrderStatus(activeStore.id, orderId, newStatus);
+                     if (result && "error" in result) {
+                       if (result.outOfStockProducts && result.outOfStockProducts.length > 0) {
+                         const names = result.outOfStockProducts.map((p: any) => p.productName).join(", ");
+                         toast.error("Stock insuficiente", {
+                           description: `Sin stock para: ${names}. Ve al detalle del pedido para retirarlos.`,
+                           action: { label: "Ver detalle", onClick: () => router.push(`/pedidos/${orderId}`) }
+                         });
+                       } else {
+                         toast.error("Error", { description: result.error });
+                       }
+                       return false;
+                     }
+                     toast.success("Estado actualizado");
+                     setStoreOrdersRefresh(prev => prev + 1);
+                     return true;
+                   }}
                   emptyMessage="No hay pedidos para los productos de esta tienda con los filtros aplicados."
                   onOpenOrderChat={handleOpenOrderChat}
                   unreadChatCounts={orderChatUnreadCounts}

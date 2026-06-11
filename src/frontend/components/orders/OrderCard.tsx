@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, MapPin, Clock, CheckCircle2, Truck, Timer, XCircle, RefreshCw, Copy, Check, Trash2, Store, Package } from "lucide-react";
+import { ChevronRight, MapPin, Clock, CheckCircle2, Truck, Timer, XCircle, RefreshCw, Copy, Check, Trash2, Store, Package, Warehouse } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
@@ -17,9 +17,16 @@ import Link from "next/link";
 export interface Order {
   id: string;
   estado: PedidoEstado;
+  tipoEntrega?: string;
   fechaPedido: Date;
   total: number;
   direccionEntrega: string;
+  bodega?: {
+    id: string;
+    name: string;
+    address: string;
+    city: string;
+  } | null;
   detalles: {
     id: string;
     cantidad: number;
@@ -243,14 +250,25 @@ export const OrderCard = ({ order, index, unreadChatCount = 0, onCancelOrder, on
                 </Badge>
               </div>
 
-              {/* Center: Address + Total (compact info row) */}
+              {/* Center: Address/Delivery + Store + Total (compact info row) */}
               <div className="flex items-center gap-4 flex-1 min-w-0">
-                {/* Store Name */}
+                {/* Delivery type indicator */}
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <Store className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
-                  <span className="text-xs text-muted-foreground truncate">
-                    {order.detalles[0]?.store?.name || "Tienda no disponible"}
-                  </span>
+                  {order.tipoEntrega === "RECOJO_EN_BODEGA" ? (
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Warehouse className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span className="text-xs text-emerald-600 font-semibold truncate">
+                        {order.bodega?.name || "Recojo en bodega"}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Store className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                      <span className="text-xs text-muted-foreground truncate">
+                        {order.detalles[0]?.store?.name || "Tienda no disponible"}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Total */}

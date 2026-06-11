@@ -1,12 +1,29 @@
 import { randomUUID } from "node:crypto";
 import { OrdersRepository } from "./orders.repository";
-import { PedidoEstado, Prisma } from "@prisma/client";
+import { PedidoEstado, TipoEntrega, Prisma } from "@prisma/client";
 import logger from "@/utils/logger";
 import { notificationsService } from "@/backend/modules/notifications";
 import { storeTaxService } from "@/backend/modules/store";
 import { stockGuardianService } from "@/backend/modules/stockGuardian";
 
 const log = logger.child("src/backend/modules/orders/orders.service.ts");
+
+export type FailedProduct = {
+  productId: string;
+  productName: string;
+  detalleId: string;
+};
+
+export class StockError extends Error {
+  public readonly failedProducts: FailedProduct[];
+
+  constructor(failedProducts: FailedProduct[]) {
+    const names = failedProducts.map((p) => p.productName).join(", ");
+    super(`Stock insuficiente para: ${names}`);
+    this.name = "StockError";
+    this.failedProducts = failedProducts;
+  }
+}
 
 
 type CreatePedidoDetalle = {
@@ -23,6 +40,8 @@ type CreatePedidoData = {
   notasCliente?: string;
   costoEnvio: number;
   metodoPago?: string;
+  tipoEntrega: string;
+  bodegaId?: string | null;
   detalles: CreatePedidoDetalle[];
 };
 
@@ -132,9 +151,10 @@ export class OrdersService {
 
     log.info("Creando pedido de tienda en base de datos:", { usuarioId: data.usuarioId, storeId, subtotal, impuestos, costoEnvio, total, cantidadItems: detalles.length });
 
-    return await this.ordersRepository.createPedido({
+    const pedidoData: any = {
       usuario: { connect: { id: data.usuarioId } },
       accountId: data.accountId,
+      tipoEntrega: data.tipoEntrega as TipoEntrega,
       direccionEntrega: data.direccionEntrega,
       notasCliente: data.notasCliente,
       metodoPago: data.metodoPago,
@@ -146,7 +166,13 @@ export class OrdersService {
       detalles: {
         create: detallesInput,
       },
-    } as Prisma.PedidoCreateInput, tx);
+    };
+
+    if (data.bodegaId) {
+      pedidoData.bodega = { connect: { id: data.bodegaId } };
+    }
+
+    return await this.ordersRepository.createPedido(pedidoData as Prisma.PedidoCreateInput, tx);
   }
 
   async updateEstado(pedidoId: string, nuevoEstado: PedidoEstado, actorId: string, motivoCancelacion?: string) {
@@ -190,15 +216,14 @@ export class OrdersService {
       if (isConfirm) {
         redisLockHeld = await stockGuardianService.acquireProductLocks(productIds, lockUUID);
         if (redisLockHeld) {
-          // Redis actúa como guardián: detecta overselling ANTES de la transacción DB
+          // Redis actúa como guardián: detecta overselling ANTES de la transacción DB.
+          // Si falla, igualmente se intenta DB (fuente de verdad). No deduct si falla.
           const enoughStock = await stockGuardianService.checkAndDeductStock(items);
           if (!enoughStock) {
-            log.warn("Stock insuficiente detectado por Redis guardian:", { pedidoId });
-            throw new Error(
-              `Stock insuficiente para confirmar el pedido #${pedidoId.slice(-6).toUpperCase()}`
-            );
+            log.warn("Stock insuficiente detectado por Redis guardian, se delega a DB:", { pedidoId });
+          } else {
+            log.debug("Redis stock check superado:", { pedidoId });
           }
-          log.debug("Redis stock check superado:", { pedidoId });
         } else {
           log.warn("No se pudieron adquirir locks Redis — usando DB como fallback:", { pedidoId });
         }
@@ -227,30 +252,31 @@ export class OrdersService {
 
         log.info("Transición de estado exitosa:", { pedidoId, de: estadoAnterior, a: nuevoEstado });
 
-        // ─── CONFIRMADO: Descontar stock en DB (atómico vía updateMany) ───
+        // ─── CONFIRMADO: Descontar stock en DB y recolectar TODOS los fallos ───
         if (isConfirm) {
           log.debug("Descontando stock en DB al confirmar pedido:", { pedidoId });
+          const failedProducts: { productId: string; productName: string; detalleId: string }[] = [];
           for (const detalle of pedido.detalles) {
             const result = await (tx as any).product.updateMany({
-              where: {
-                id: detalle.productoId,
-                stock: { gte: detalle.cantidad },
-              },
-              data: {
-                stock: { decrement: detalle.cantidad },
-              },
+              where: { id: detalle.productoId, stock: { gte: detalle.cantidad } },
+              data: { stock: { decrement: detalle.cantidad } },
             });
             if (result.count === 0) {
-              log.error("Stock insuficiente en DB para confirmar pedido:", {
+              log.warn("Stock insuficiente en DB para producto:", {
                 pedidoId,
                 productoId: detalle.productoId,
                 nombre: detalle.producto.name,
                 cantidadRequerida: Number(detalle.cantidad),
               });
-              throw new Error(
-                `Stock insuficiente para el producto ${detalle.producto.name}`
-              );
+              failedProducts.push({
+                productId: detalle.productoId,
+                productName: detalle.producto.name,
+                detalleId: detalle.id,
+              });
             }
+          }
+          if (failedProducts.length > 0) {
+            throw new StockError(failedProducts);
           }
           log.debug("Stock descontado en DB exitosamente:", { pedidoId });
         }
@@ -431,5 +457,56 @@ export class OrdersService {
     const pedidoActualizado = await this.ordersRepository.updatePedido(pedidoId, data);
     log.debug("Pedido actualizado exitosamente:", { pedidoId });
     return this.serializePedido(pedidoActualizado);
+  }
+
+  async removeProductFromOrder(
+    storeId: string,
+    pedidoId: string,
+    detalleId: string,
+    userId: string
+  ) {
+    log.info("Retirando producto del pedido:", { storeId, pedidoId, detalleId });
+
+    const pedido = await this.ordersRepository.findById(pedidoId);
+    if (!pedido) {
+      log.error("Pedido no encontrado al retirar producto:", { pedidoId });
+      throw new Error("Pedido no encontrado");
+    }
+
+    const detalle = pedido.detalles.find(
+      (d: any) => d.id === detalleId && d.storeId === storeId
+    );
+    if (!detalle) {
+      log.error("Detalle no encontrado en el pedido:", { detalleId, pedidoId });
+      throw new Error("Producto no encontrado en el pedido");
+    }
+
+    const remainingDetalles = pedido.detalles.filter((d: any) => d.id !== detalleId);
+    const newSubtotal = remainingDetalles.reduce(
+      (sum: number, d: any) => sum + Number(d.cantidad) * Number(d.precioUnitario),
+      0
+    );
+
+    const activeTaxes = await storeTaxService.getTaxesByStoreId(storeId);
+    const totalTaxPercentage = activeTaxes
+      .filter((t: any) => t.isActive)
+      .reduce((sum: number, t: any) => sum + Number(t.percentage), 0);
+    const newImpuestos = newSubtotal * (totalTaxPercentage / 100);
+
+    const newCostoEnvio = Number(pedido.costoEnvio);
+    const newTotal = newSubtotal + newImpuestos + newCostoEnvio;
+
+    await this.ordersRepository.executeTransaction(async (tx) => {
+      await this.ordersRepository.removeDetalleAndUpdatePedido(
+        detalleId,
+        pedidoId,
+        { subtotal: newSubtotal, impuestos: newImpuestos, costoEnvio: newCostoEnvio, total: newTotal },
+        tx
+      );
+    });
+
+    const updatedPedido = await this.ordersRepository.findById(pedidoId);
+    log.info("Producto retirado exitosamente del pedido:", { storeId, pedidoId, detalleId });
+    return this.serializePedido(updatedPedido);
   }
 }

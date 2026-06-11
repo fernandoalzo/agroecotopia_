@@ -147,8 +147,8 @@ export function StoreShippingSection({ store, actions }: StoreShippingSectionPro
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center bg-card p-6 rounded-2xl border border-border">
+    <div className="space-y-6 relative">
+      <div className="hidden sm:flex justify-between items-center bg-card p-6 rounded-2xl border border-border">
         <div>
           <h2 className="text-xl font-bold font-display">Zonas de Envío</h2>
           <p className="text-muted-foreground text-sm mt-1">Configura las zonas donde ofreces envíos y establece las tarifas (fijas o por peso).</p>
@@ -161,6 +161,14 @@ export function StoreShippingSection({ store, actions }: StoreShippingSectionPro
           <span>Nueva Zona</span>
         </button>
       </div>
+
+      {/* Mobile floating button */}
+      <button
+        onClick={() => handleOpenZoneModal()}
+        className="fixed bottom-6 right-6 z-40 sm:hidden bg-primary text-primary-foreground w-14 h-14 rounded-full shadow-xl flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+      >
+        <Plus className="w-7 h-7" />
+      </button>
 
       {zones.length === 0 ? (
         <div className="bg-card rounded-2xl border border-border p-8 text-center text-muted-foreground">

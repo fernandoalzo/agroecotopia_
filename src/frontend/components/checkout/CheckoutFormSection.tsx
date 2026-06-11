@@ -12,6 +12,7 @@ interface CheckoutFormSectionProps {
   onSubmit: (data: CheckoutValues) => void;
   defaultValues?: Partial<CheckoutValues>;
   onCityChange?: (city: string) => void;
+  onTipoEntregaChange?: (tipoEntrega: string) => void;
   cityZones: { name: string; cities: string[] }[];
 }
 
@@ -20,6 +21,7 @@ export const CheckoutFormSection: React.FC<CheckoutFormSectionProps> = ({
   onSubmit, 
   defaultValues,
   onCityChange,
+  onTipoEntregaChange,
   cityZones,
 }) => {
   return (
@@ -43,6 +45,7 @@ export const CheckoutFormSection: React.FC<CheckoutFormSectionProps> = ({
           onSubmit={onSubmit} 
           defaultValues={defaultValues}
           onCityChange={onCityChange}
+          onTipoEntregaChange={onTipoEntregaChange}
           cityZones={cityZones}
         />
       </div>

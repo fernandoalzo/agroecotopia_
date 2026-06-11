@@ -4,9 +4,16 @@ import { PedidoEstado } from "@/types";
 export interface AdminOrder {
   id: string;
   estado: PedidoEstado;
+  tipoEntrega?: string;
   fechaPedido: Date;
   total: number;
   direccionEntrega: string;
+  bodega?: {
+    id: string;
+    name: string;
+    address: string;
+    city: string;
+  } | null;
   usuario?: {
     id: string;
     name: string | null;

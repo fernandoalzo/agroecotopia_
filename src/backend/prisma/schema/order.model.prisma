@@ -7,13 +7,39 @@ enum PedidoEstado {
   CANCELADO
 }
 
+enum TipoEntrega {
+  ENVIO
+  RECOJO_EN_BODEGA
+}
+
+model Bodega {
+  id        String   @id @default(cuid())
+  storeId   String
+  name      String
+  address   String   @db.Text
+  city      String
+  imagenUrl String?
+  isActive  Boolean  @default(true)
+
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  pedidos   Pedido[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId])
+  @@index([city])
+}
+
 model Pedido {
   id                   String       @id @default(cuid())
   usuarioId            String
   accountId            String? // Se deja como string opcional por ahora siguiendo la estructura de la base
   estado               PedidoEstado @default(PENDIENTE)
+  tipoEntrega          TipoEntrega  @default(ENVIO)
+  bodegaId             String?
   motivoCancelacion    String?      @db.Text
-  direccionEntrega     String       @db.Text
+  direccionEntrega     String?      @db.Text
   metodoPago           String? // Tipo de pago / método (e.g. "advisor", "mercadopago", "nequi", etc.)
   pagoId               String? // ID del pago/transacción de la pasarela
   pagoReferencia       String? // Referencia o ID de preferencia provisto por la pasarela
@@ -30,12 +56,14 @@ model Pedido {
 
   // Relaciones
   usuario       User            @relation(fields: [usuarioId], references: [id])
+  bodega        Bodega?         @relation(fields: [bodegaId], references: [id], onDelete: SetNull)
   detalles      DetallePedido[]
   conversations Conversation[]
 
   @@index([usuarioId])
   @@index([estado])
   @@index([fechaPedido])
+  @@index([tipoEntrega])
 }
 
 model DetallePedido {

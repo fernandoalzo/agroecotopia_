@@ -1,6 +1,6 @@
 "use server";
 
-import { ordersService } from "./index";
+import { ordersService, StockError } from "./index";
 import { authService } from "@/backend/modules/auth";
 import { withAuth, withAdmin } from "@/lib/auth-guards";
 import { PedidoEstado, Role } from "@prisma/client";
@@ -14,10 +14,12 @@ const log = logger.child("src/backend/modules/orders/orders.actions.ts");
  * Crea un nuevo pedido para el usuario autenticado.
  */
 export async function placeOrderAction(data: {
-  direccionEntrega: string;
+  direccionEntrega?: string | null;
   notasCliente?: string;
   costoEnvio: number;
   metodoPago?: string;
+  tipoEntrega?: string;
+  bodegaId?: string | null;
   detalles: {
     productoId: string;
     cantidad: number;
@@ -32,6 +34,9 @@ export async function placeOrderAction(data: {
     const pedidos = await ordersService.createPedido({
       ...data,
       usuarioId: userId,
+      tipoEntrega: data.tipoEntrega || "ENVIO",
+      bodegaId: data.bodegaId || null,
+      direccionEntrega: data.direccionEntrega || "",
     });
     const pedidoIds = pedidos.map((pedido) => pedido.id);
     const primaryPedidoId = pedidoIds[0];
@@ -61,8 +66,14 @@ export async function updateOrderStatusAction(
       revalidatePath(`/perfil/pedidos/${pedidoId}`);
       return { success: true, pedido };
     } catch (error: any) {
-      log.error("Error al actualizar estado del pedido:", { pedidoId, nuevoEstado, error: error.message });
-      return { error: error.message || "Error al actualizar el estado del pedido" };
+      log.error("Error al actualizar estado del pedido:", { pedidoId, nuevoEstado, error: error?.message });
+      if (error instanceof StockError) {
+        return {
+          error: error.message,
+          outOfStockProducts: error.failedProducts,
+        };
+      }
+      return { error: error?.message || "Error al actualizar el estado del pedido" };
     }
   });
 }
@@ -292,6 +303,9 @@ export async function updateStoreOrderStatusAction(
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Error al actualizar el estado del pedido";
       log.error("Error al actualizar estado del pedido de tienda:", { storeId, pedidoId, nuevoEstado, error: message });
+      if (error instanceof StockError) {
+        return { error: error.message, outOfStockProducts: error.failedProducts };
+      }
       return { error: message };
     }
   });
@@ -359,5 +373,26 @@ export async function calculateCartTaxesAction(cartItems: { storeId: string; sub
     log.error("Error calculating cart taxes:", error);
     return { success: false, taxes: 0 };
   }
+}
+
+export async function removeProductFromOrderAction(
+  storeId: string,
+  pedidoId: string,
+  detalleId: string
+) {
+  return await withStoreOwner(storeId, async (session) => {
+    try {
+      const userId = session.user.id;
+      log.info("Retirando producto del pedido:", { storeId, pedidoId, detalleId });
+      const pedido = await ordersService.removeProductFromOrder(storeId, pedidoId, detalleId, userId);
+      revalidatePath("/mi-tienda");
+      revalidatePath(`/pedidos/${pedidoId}`);
+      return { success: true, pedido };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Error al retirar producto del pedido";
+      log.error("Error removing product from order:", { storeId, pedidoId, detalleId, error: message });
+      return { error: message };
+    }
+  });
 }
 

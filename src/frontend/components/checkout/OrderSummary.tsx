@@ -15,9 +15,10 @@ import { calculateDiscountedPrice } from "@/utils/promotions";
 interface OrderSummaryProps {
   isSubmitting?: boolean;
   destinationCity?: string;
+  tipoEntrega?: string;
 }
 
-export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destinationCity }) => {
+export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destinationCity, tipoEntrega }) => {
   const { cart, totalPrice } = useCart();
   const { t, language } = useLanguage();
   const [showConfirm, setShowConfirm] = useState(false);
@@ -56,8 +57,8 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
         console.error('Error fetching taxes:', err);
       }
 
-      // Only fetch shipping when a city is selected
-      if (destinationCity && destinationCity.trim()) {
+      // Only fetch shipping when a city is selected and delivery type is ENVIO
+      if (tipoEntrega !== "RECOJO_EN_BODEGA" && destinationCity && destinationCity.trim()) {
         try {
           const shipRes = await fetch('/api/calculate-shipping', {
             method: 'POST',
@@ -242,7 +243,11 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
           )}
           <div className="flex justify-between text-sm items-center">
             <span className="text-muted-foreground font-medium">{t.cart.shipping}</span>
-            {!destinationCity || !destinationCity.trim() ? (
+            {tipoEntrega === "RECOJO_EN_BODEGA" ? (
+              <span className="text-[10px] font-black bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-tighter ring-1 ring-emerald-500/20">
+                Sin costo
+              </span>
+            ) : !destinationCity || !destinationCity.trim() ? (
               <span className="text-[10px] font-black bg-muted text-muted-foreground px-2 py-0.5 rounded-full uppercase tracking-tighter ring-1 ring-border">
                 {t.cart.toCalculate}
               </span>

@@ -24,7 +24,23 @@ let prisma: PrismaClient;
 const existing = getGlobalStorage();
 if (existing) {
   prisma = existing[PRISMA_GLOBAL_KEY];
-  log.debug("Reutilizando instancia existente de PrismaClient.");
+  // Si el schema cambió (ej: nuevo modelo Bodega), forzar recreación
+  if (!("bodega" in (prisma as any))) {
+    log.warn("Schema desactualizado en PrismaClient singleton — forzando recreación.");
+    delete (process as any)[PRISMA_GLOBAL_KEY];
+    delete (globalThis as any)[PRISMA_GLOBAL_KEY];
+    log.info("Creando nueva instancia de PrismaClient...");
+    prisma = new PrismaClient();
+    if (typeof process !== "undefined") (process as any)[PRISMA_GLOBAL_KEY] = prisma;
+    (globalThis as any)[PRISMA_GLOBAL_KEY] = prisma;
+    if (typeof window === "undefined") {
+      prisma.$connect().then(() => {
+        ensureDefaultAdminStore(prisma).catch(err => log.error("Error en init db:", err));
+      });
+    }
+  } else {
+    log.debug("Reutilizando instancia existente de PrismaClient.");
+  }
 } else {
   log.info("Creando nueva instancia de PrismaClient...");
   prisma = new PrismaClient();

@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Copy, Eye, Loader2, MessageSquare, User, Tag } from "lucide-react";
+import { Check, Copy, Eye, Loader2, MessageSquare, User, Tag, Warehouse } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
@@ -125,6 +125,12 @@ export const AdminOrderCardMobile = ({
                 <p className="text-sm font-semibold text-foreground/85 truncate">
                     {storeName}
                 </p>
+                {order.tipoEntrega === "RECOJO_EN_BODEGA" && (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-black bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded-md mt-1 uppercase tracking-wider">
+                        <Warehouse className="h-2.5 w-2.5" />
+                        Recojo en bodega
+                    </span>
+                )}
             </div>
 
             {/* ── Line Items ── */}

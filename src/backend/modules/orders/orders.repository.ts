@@ -70,6 +70,7 @@ export class OrdersRepository {
             name: true,
           },
         },
+        bodega: true,
         detalles: {
           include: {
             producto: true,
@@ -118,6 +119,7 @@ export class OrdersRepository {
       where: { usuarioId },
       orderBy: { fechaPedido: "desc" },
       include: {
+        bodega: true,
         detalles: {
           include: {
             producto: true,
@@ -142,6 +144,7 @@ export class OrdersRepository {
       orderBy: { fechaPedido: "desc" },
       include: {
         usuario: { select: { id: true, name: true, email: true } },
+        bodega: true,
         detalles: {
           where: { storeId },
           include: {
@@ -164,6 +167,7 @@ export class OrdersRepository {
             email: true,
           },
         },
+        bodega: true,
         detalles: {
           include: {
             producto: true,
@@ -226,6 +230,7 @@ export class OrdersRepository {
               email: true,
             },
           },
+          bodega: true,
           detalles: {
             ...(storeId ? { where: { storeId } } : {}),
             include: {
@@ -299,5 +304,26 @@ export class OrdersRepository {
     return await prisma.pedido.delete({
       where: { id },
     });
+  }
+
+  async removeDetalleAndUpdatePedido(
+    detalleId: string,
+    pedidoId: string,
+    totals: { subtotal: number; impuestos: number; costoEnvio: number; total: number },
+    tx?: TxClient
+  ) {
+    const client = tx || prisma;
+    log.debug("Eliminando detalle y actualizando totales del pedido:", { detalleId, pedidoId });
+    await client.detallePedido.delete({ where: { id: detalleId } });
+    await client.pedido.update({
+      where: { id: pedidoId },
+      data: {
+        subtotal: new Prisma.Decimal(totals.subtotal),
+        impuestos: new Prisma.Decimal(totals.impuestos),
+        costoEnvio: new Prisma.Decimal(totals.costoEnvio),
+        total: new Prisma.Decimal(totals.total),
+      },
+    });
+    log.debug("Detalle eliminado y totales actualizados:", { detalleId, pedidoId });
   }
 }

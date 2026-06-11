@@ -115,8 +115,8 @@ export function StoreTaxesSection({ store, actions }: StoreTaxesSectionProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center bg-card p-6 rounded-2xl border border-border">
+    <div className="space-y-6 relative">
+      <div className="hidden sm:flex justify-between items-center bg-card p-6 rounded-2xl border border-border">
         <div>
           <h2 className="text-xl font-bold font-display">Impuestos de la Tienda</h2>
           <p className="text-muted-foreground text-sm mt-1">Configura los impuestos que aplican a tus productos. Estos se sumarán al subtotal del pedido al momento del pago.</p>
@@ -129,6 +129,14 @@ export function StoreTaxesSection({ store, actions }: StoreTaxesSectionProps) {
           <span>Nuevo Impuesto</span>
         </button>
       </div>
+
+      {/* Mobile floating button */}
+      <button
+        onClick={() => handleOpenModal()}
+        className="fixed bottom-6 right-6 z-40 sm:hidden bg-primary text-primary-foreground w-14 h-14 rounded-full shadow-xl flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+      >
+        <Plus className="w-7 h-7" />
+      </button>
 
       <div className="bg-card rounded-2xl border border-border overflow-hidden">
         {taxes.length === 0 ? (

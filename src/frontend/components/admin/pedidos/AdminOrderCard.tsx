@@ -42,7 +42,11 @@ export const AdminOrderCard = ({ order, index, isUpdating, onUpdateStatus, onOpe
 
   const handleConfirm = async () => {
     if (confirmingStatus) {
-      await onUpdateStatus(order.id, confirmingStatus);
+      const success = await onUpdateStatus(order.id, confirmingStatus);
+      if (!success) {
+        toast.error("No se pudo actualizar el estado del pedido");
+        setConfirmingStatus(null);
+      }
     }
   };
 

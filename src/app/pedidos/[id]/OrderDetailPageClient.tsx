@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useLanguage } from "@/context/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRightCircle, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw, Copy, Check, ChevronRight, ChevronDown, MessageSquare, Tag } from "lucide-react";
+import { ArrowLeft, ArrowRightCircle, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw, Copy, Check, ChevronRight, ChevronDown, MessageSquare, Tag, Warehouse, Building2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
@@ -95,6 +95,7 @@ interface OrderDetailPageClientProps {
   getUserOrderConversations: () => Promise<any>;
   markConversationAsRead: (conversationId: string) => Promise<any>;
   updateStoreOrderStatus: (storeId: string, pedidoId: string, nuevoEstado: PedidoEstado) => Promise<any>;
+  removeProductFromOrder: (storeId: string, pedidoId: string, detalleId: string) => Promise<any>;
 }
 
 export default function OrderDetailPageClient({
@@ -109,6 +110,7 @@ export default function OrderDetailPageClient({
   getUserOrderConversations,
   markConversationAsRead,
   updateStoreOrderStatus,
+  removeProductFromOrder,
 }: OrderDetailPageClientProps) {
   const { status, data: session } = useSession();
   const router = useRouter();
@@ -136,6 +138,8 @@ export default function OrderDetailPageClient({
   const [confirmingStatus, setConfirmingStatus] = useState<PedidoEstado | null>(null);
   const [showStatusOptions, setShowStatusOptions] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [stockErrorProducts, setStockErrorProducts] = useState<{ productId: string; productName: string; detalleId: string }[] | null>(null);
+  const [removingProductId, setRemovingProductId] = useState<string | null>(null);
 
   const isBuyer = session?.user?.id === order?.usuarioId;
   const sellerStore: { id: string; name: string } | null = React.useMemo(() => {
@@ -465,16 +469,53 @@ export default function OrderDetailPageClient({
     try {
       const result = await updateStoreOrderStatus(sellerStore.id, order.id, nuevoEstado);
       if (result && "error" in result) {
-        toast.error("Error", { description: result.error });
+        if (result.outOfStockProducts && result.outOfStockProducts.length > 0) {
+          setStockErrorProducts(result.outOfStockProducts);
+          setConfirmingStatus(null);
+          setShowStatusOptions(false);
+        } else {
+          toast.error("Error", { description: result.error });
+        }
       } else {
         toast.success("Estado actualizado", { description: `Pedido cambiado a ${statusConfig[nuevoEstado].label}` });
         setOrder((prev: any) => prev ? { ...prev, estado: nuevoEstado } : prev);
+        setStockErrorProducts(null);
         setConfirmingStatus(null);
       }
     } catch {
       toast.error("Error", { description: "No se pudo actualizar el estado del pedido." });
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleRemoveProduct = async (detalleId: string) => {
+    if (!sellerStore) return;
+    setRemovingProductId(detalleId);
+    try {
+      const result = await removeProductFromOrder(sellerStore.id, order.id, detalleId);
+      if (result && "error" in result) {
+        toast.error("Error", { description: result.error });
+      } else {
+        toast.success("Producto retirado", { description: "El producto ha sido retirado del pedido." });
+        const updatedOrder = await getOrderDetail(order.id);
+        if (updatedOrder && !("error" in updatedOrder)) {
+          setOrder(updatedOrder);
+        }
+        setStockErrorProducts((prev) => {
+          if (!prev) return null;
+          const remaining = prev.filter((p) => p.detalleId !== detalleId);
+          if (remaining.length === 0) {
+            setShowStatusOptions(true);
+            return null;
+          }
+          return remaining;
+        });
+      }
+    } catch {
+      toast.error("Error", { description: "No se pudo retirar el producto." });
+    } finally {
+      setRemovingProductId(null);
     }
   };
 
@@ -588,25 +629,40 @@ export default function OrderDetailPageClient({
 
                 <div className="p-0">
                   <div className="divide-y-2 divide-dashed divide-border/30">
-                    {order.detalles.map((detalle: any) => (
+                    {order.detalles.map((detalle: any) => {
+                      const isOutOfStock = sellerStore && !isBuyer && Number(detalle.producto.stock) < Number(detalle.cantidad);
+                      return (
                       <div
                         key={detalle.id}
-                        className="group p-5 md:p-6 flex items-start sm:items-center gap-4 transition-all hover:bg-primary/[0.05] cursor-pointer active:scale-[0.99]"
-                        onClick={() => setSelectedProduct(detalle.producto)}
+                        className={cn(
+                          "group p-5 md:p-6 flex items-start sm:items-center gap-4 transition-all",
+                          isOutOfStock ? "bg-rose-500/5 cursor-default" : "hover:bg-primary/[0.05] cursor-pointer active:scale-[0.99]"
+                        )}
+                        onClick={() => !isOutOfStock && setSelectedProduct(detalle.producto)}
                       >
-                        <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-muted overflow-hidden border border-border/40 flex-shrink-0">
+                        <div className="relative h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-muted overflow-hidden border border-border/40 flex-shrink-0">
                           {detalle.producto.images && detalle.producto.images.length > 0 ? (
                             <img src={detalle.producto.images[0]} alt={detalle.producto.name} className="h-full w-full object-cover" />
                           ) : (
                             <div className="h-full w-full flex items-center justify-center text-primary font-bold">{detalle.producto.name.charAt(0)}</div>
                           )}
+                          {isOutOfStock && (
+                            <div className="absolute inset-0 bg-rose-500/10 flex items-center justify-center">
+                              <XCircle className="h-6 w-6 text-rose-500/60" />
+                            </div>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                           <div className="min-w-0">
-                            <h4 className="font-bold text-sm md:text-base leading-tight text-foreground/90 mb-1.5 group-hover:text-primary transition-colors flex items-center gap-2">
+                            <h4 className="font-bold text-sm md:text-base leading-tight text-foreground/90 mb-1.5 flex items-center gap-2 flex-wrap">
                               {detalle.producto.name}
                               {detalle.precioUnitario < detalle.producto.price && (
                                 <Badge className="bg-red-500 text-white hover:bg-red-600 text-[10px] px-1.5 py-0">OFERTA</Badge>
+                              )}
+                              {isOutOfStock && (
+                                <Badge className="bg-rose-500/10 text-rose-600 border border-rose-500/20 rounded-full text-[10px] font-bold px-2 py-0">
+                                  SIN STOCK
+                                </Badge>
                               )}
                             </h4>
                             <p className="text-xs font-bold text-muted-foreground flex items-center gap-1">
@@ -631,11 +687,31 @@ export default function OrderDetailPageClient({
                                 ${(detalle.subtotal || 0).toLocaleString("es-CO")}
                               </p>
                             </div>
-                            <ChevronRight className="w-5 h-5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                            {isOutOfStock ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="shrink-0 rounded-lg text-xs h-8 border-red-500/20 text-red-600 hover:bg-red-500/10"
+                                onClick={(e: React.MouseEvent) => {
+                                  e.stopPropagation();
+                                  handleRemoveProduct(detalle.id);
+                                }}
+                                disabled={removingProductId === detalle.id}
+                              >
+                                {removingProductId === detalle.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  "Retirar"
+                                )}
+                              </Button>
+                            ) : (
+                              <ChevronRight className="w-5 h-5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                            )}
                           </div>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -644,14 +720,45 @@ export default function OrderDetailPageClient({
               <div className="pt-6">
                 <div className="space-y-6">
                   <h3 className="font-black text-xl tracking-tight flex items-center gap-2 text-foreground/90">
-                    <MapPin className="h-6 w-6 text-primary" />
+                    {order.tipoEntrega === "RECOJO_EN_BODEGA" ? (
+                      <Warehouse className="h-6 w-6 text-primary" />
+                    ) : (
+                      <MapPin className="h-6 w-6 text-primary" />
+                    )}
                     Información de Entrega
                   </h3>
                   <div className="grid gap-6 sm:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/60">Dirección</p>
-                      <p className="font-bold text-sm text-foreground/80">{order.direccionEntrega}</p>
-                    </div>
+                    {order.tipoEntrega === "RECOJO_EN_BODEGA" ? (
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/60">Recojo en Bodega</p>
+                        <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-2">
+                          <p className="font-bold text-sm text-foreground/80 flex items-center gap-2">
+                            <Warehouse className="h-4 w-4 text-emerald-600" />
+                            {order.bodega?.name || "Bodega"}
+                          </p>
+                          {order.bodega && (
+                            <>
+                              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                <MapPin className="h-3.5 w-3.5" />
+                                {order.bodega.address}
+                              </p>
+                              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                <Building2 className="h-3.5 w-3.5" />
+                                {order.bodega.city}
+                              </p>
+                            </>
+                          )}
+                          <span className="inline-flex text-[10px] font-black bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                            Sin costo de envío
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/60">Dirección</p>
+                        <p className="font-bold text-sm text-foreground/80">{order.direccionEntrega}</p>
+                      </div>
+                    )}
                     {order.notasCliente && (
                       <div className="space-y-1.5">
                         <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground/60">Notas</p>
@@ -686,7 +793,13 @@ export default function OrderDetailPageClient({
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-muted-foreground font-semibold">Envío</span>
-                      <span className="font-bold text-foreground/80">${order.costoEnvio.toLocaleString("es-CO")}</span>
+                      {order.tipoEntrega === "RECOJO_EN_BODEGA" ? (
+                        <span className="text-[10px] font-black bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                          Sin costo
+                        </span>
+                      ) : (
+                        <span className="font-bold text-foreground/80">${order.costoEnvio.toLocaleString("es-CO")}</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1132,6 +1245,69 @@ export default function OrderDetailPageClient({
       </main>
 
       <Footer />
+
+      {stockErrorProducts && sellerStore && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-background rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+          >
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600">
+                  <XCircle className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Stock insuficiente</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Estos productos no tienen stock disponible. Retíralos del pedido para continuar.
+                  </p>
+                </div>
+              </div>
+
+              <div className="divide-y divide-border/40 rounded-xl border border-border/30">
+                {stockErrorProducts.map((fp) => (
+                  <div key={fp.detalleId} className="flex items-center justify-between gap-3 p-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Badge className="shrink-0 bg-rose-500/10 text-rose-600 border-rose-500/20 rounded-full text-[10px] font-bold px-2 py-0">
+                        SIN STOCK
+                      </Badge>
+                      <span className="text-sm font-semibold truncate">{fp.productName}</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 rounded-lg text-xs h-8 border-red-500/20 text-red-600 hover:bg-red-500/10"
+                      onClick={() => handleRemoveProduct(fp.detalleId)}
+                      disabled={removingProductId === fp.detalleId}
+                    >
+                      {removingProductId === fp.detalleId ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        "Retirar del pedido"
+                      )}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              {stockErrorProducts.length > 0 && (
+                <div className="flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-lg text-xs"
+                    onClick={() => setStockErrorProducts(null)}
+                  >
+                    Cerrar
+                  </Button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {selectedProduct && (
         <ProductModal

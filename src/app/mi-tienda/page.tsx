@@ -46,6 +46,12 @@ import {
   addShippingRateAction,
   deleteShippingRateAction,
 } from "@/backend/modules/shipping/shipping.actions";
+import {
+  getStoreBodegasAction,
+  createBodegaAction,
+  updateBodegaAction,
+  deleteBodegaAction,
+} from "@/backend/modules/bodega/bodega.actions";
 import MiTiendaPage from "./MiTiendaPageClient";
 
 export default function Page() {
@@ -93,6 +99,11 @@ export default function Page() {
         deleteStoreShippingZone: deleteStoreShippingZoneAction,
         addShippingRate: addShippingRateAction,
         deleteShippingRate: deleteShippingRateAction,
+        // Bodegas
+        getStoreBodegas: getStoreBodegasAction,
+        createBodega: createBodegaAction,
+        updateBodega: updateBodegaAction,
+        deleteBodega: deleteBodegaAction,
       }}
     />
   );
