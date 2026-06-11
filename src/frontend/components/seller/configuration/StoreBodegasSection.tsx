@@ -8,7 +8,12 @@ import { cn } from "@/lib/utils";
 
 interface StoreBodegasSectionProps {
   store: StoreType;
-  actions: any;
+  actions: {
+    getStoreBodegas: (storeId: string) => Promise<{ success: boolean; bodegas: any[] }>;
+    createBodega: (storeId: string, data: { name: string; address: string; city: string; imagenUrl?: string }) => Promise<{ success: boolean; bodega?: any; error?: string }>;
+    updateBodega: (bodegaId: string, data: { name?: string; address?: string; city?: string; imagenUrl?: string }) => Promise<{ success: boolean; bodega?: any; error?: string }>;
+    deleteBodega: (bodegaId: string) => Promise<{ success: boolean; error?: string }>;
+  };
 }
 
 export function StoreBodegasSection({ store, actions }: StoreBodegasSectionProps) {

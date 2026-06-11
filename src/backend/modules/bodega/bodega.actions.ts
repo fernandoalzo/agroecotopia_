@@ -1,9 +1,9 @@
 "use server";
 
-import prisma from "@/backend/db/prisma";
 import { withStoreOwner } from "@/lib/auth-guards";
 import { bodegaService } from "./bodega.service";
 import logger from "@/utils/logger";
+import { revalidatePath } from "next/cache";
 
 const log = logger.child("bodega.actions");
 
@@ -38,6 +38,7 @@ export async function createBodegaAction(storeId: string, data: {
   return withStoreOwner(storeId, async () => {
     try {
       const bodega = await bodegaService.createBodega({ storeId, ...data });
+      revalidatePath("/mi-tienda");
       return { success: true, bodega };
     } catch (error: any) {
       log.error("Error createBodegaAction:", error);
@@ -54,17 +55,18 @@ export async function updateBodegaAction(bodegaId: string, data: {
   isActive?: boolean;
 }) {
   try {
-    const current = await prisma.bodega.findUnique({ where: { id: bodegaId }, select: { storeId: true } });
-    if (!current) {
+    const storeId = await bodegaService.getBodegaStoreId(bodegaId);
+    if (!storeId) {
       return { error: "Bodega no encontrada" };
     }
 
-    const storeGuard = await withStoreOwner(current.storeId, async () => true as const);
+    const storeGuard = await withStoreOwner(storeId, async () => true as const);
     if (typeof storeGuard === "object" && "error" in storeGuard) {
       return storeGuard;
     }
 
     const bodega = await bodegaService.updateBodega(bodegaId, data);
+    revalidatePath("/mi-tienda");
     return { success: true, bodega };
   } catch (error: any) {
     log.error("Error updateBodegaAction:", error);
@@ -74,17 +76,18 @@ export async function updateBodegaAction(bodegaId: string, data: {
 
 export async function deleteBodegaAction(bodegaId: string) {
   try {
-    const current = await prisma.bodega.findUnique({ where: { id: bodegaId }, select: { storeId: true } });
-    if (!current) {
+    const storeId = await bodegaService.getBodegaStoreId(bodegaId);
+    if (!storeId) {
       return { error: "Bodega no encontrada" };
     }
 
-    const storeGuard = await withStoreOwner(current.storeId, async () => true as const);
+    const storeGuard = await withStoreOwner(storeId, async () => true as const);
     if (typeof storeGuard === "object" && "error" in storeGuard) {
       return storeGuard;
     }
 
     await bodegaService.deleteBodega(bodegaId);
+    revalidatePath("/mi-tienda");
     return { success: true };
   } catch (error: any) {
     log.error("Error deleteBodegaAction:", error);

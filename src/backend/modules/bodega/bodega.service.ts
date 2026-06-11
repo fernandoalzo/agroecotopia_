@@ -44,6 +44,15 @@ export const bodegaService = {
     });
   },
 
+  async getBodegaStoreId(id: string): Promise<string | null> {
+    log.debug("Obteniendo storeId de bodega:", { id });
+    const result = await prisma.bodega.findUnique({
+      where: { id },
+      select: { storeId: true },
+    });
+    return result?.storeId ?? null;
+  },
+
   async createBodega(data: {
     storeId: string;
     name: string;
