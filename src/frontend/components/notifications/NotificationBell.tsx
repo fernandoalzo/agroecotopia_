@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, Check, Loader2, Info, X } from "lucide-react";
+import { Bell, Check, Loader2, Info, Leaf, X } from "lucide-react";
 import { useNotifications } from "@/frontend/hooks/useNotifications";
+import { config } from "@/config/config";
 import { Popover, PopoverContent, PopoverTrigger } from "@/frontend/components/ui/popover";
 import { ScrollArea } from "@/frontend/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -227,14 +228,22 @@ export function NotificationBell({ isMobile }: { isMobile?: boolean }) {
                   transition={{ type: "spring", damping: 25, stiffness: 200 }}
                   className="fixed inset-0 top-0 z-[999] flex h-full w-full flex-col bg-background overflow-y-auto overscroll-none"
                 >
-                  <button
-                    onClick={() => setIsOpen(false)}
-                    className="absolute top-4 right-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-secondary/50 hover:bg-secondary transition-colors"
-                    aria-label="Cerrar notificaciones"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                  {content}
+                  <div className="relative flex flex-col min-h-full px-6 pt-24 pb-6">
+                    <div className="absolute top-6 left-6 flex items-center gap-2">
+                      <Leaf className="h-6 w-6 text-primary" />
+                      <span className="font-display text-xl font-bold text-foreground tracking-tight">{config.app.name}</span>
+                    </div>
+                    <button
+                      onClick={() => setIsOpen(false)}
+                      className="absolute top-4 right-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-secondary/50 hover:bg-secondary transition-colors"
+                      aria-label="Cerrar notificaciones"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <div className="flex-1 mt-8">
+                      {content}
+                    </div>
+                  </div>
                 </motion.div>
               </>
             )}
