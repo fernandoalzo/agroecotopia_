@@ -195,7 +195,7 @@ export class OrdersService {
     const estadosConStockDescontado: PedidoEstado[] = [
       PedidoEstado.CONFIRMADO,
       PedidoEstado.EN_PREPARACION,
-      PedidoEstado.EN_CAMINO,
+      PedidoEstado.EN_BODEGA,
       PedidoEstado.ENTREGADO,
     ];
 

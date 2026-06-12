@@ -327,7 +327,7 @@ export class ChatRepository {
               PedidoEstado.PENDIENTE,
               PedidoEstado.CONFIRMADO,
               PedidoEstado.EN_PREPARACION,
-              PedidoEstado.EN_CAMINO,
+              PedidoEstado.EN_BODEGA,
             ],
           },
         },

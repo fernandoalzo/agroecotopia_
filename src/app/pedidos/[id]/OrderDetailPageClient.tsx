@@ -36,8 +36,8 @@ const getNextStatuses = (current: PedidoEstado): PedidoEstado[] => {
     case PedidoEstado.CONFIRMADO:
       return [PedidoEstado.EN_PREPARACION, PedidoEstado.CANCELADO];
     case PedidoEstado.EN_PREPARACION:
-      return [PedidoEstado.EN_CAMINO, PedidoEstado.CANCELADO];
-    case PedidoEstado.EN_CAMINO:
+      return [PedidoEstado.EN_BODEGA, PedidoEstado.CANCELADO];
+    case PedidoEstado.EN_BODEGA:
       return [PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO];
     default:
       return [];
@@ -63,11 +63,11 @@ const statusConfig = {
     btnClass: "bg-indigo-500/10 dark:bg-indigo-500/5 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black hover:border-indigo-500/50 hover:shadow-[0_4px_12px_rgba(99,102,241,0.2)]",
     icon: Timer,
   },
-  [PedidoEstado.EN_CAMINO]: {
-    label: "En Camino",
+  [PedidoEstado.EN_BODEGA]: {
+    label: "En Bodega",
     color: "bg-purple-500/10 text-purple-600 border-purple-500/20",
     btnClass: "bg-purple-500/10 dark:bg-purple-500/5 border border-purple-500/20 text-purple-600 dark:text-purple-400 hover:bg-purple-500 hover:text-white dark:hover:bg-purple-500 dark:hover:text-black hover:border-purple-500/50 hover:shadow-[0_4px_12px_rgba(168,85,247,0.2)]",
-    icon: Truck,
+    icon: Warehouse,
   },
   [PedidoEstado.ENTREGADO]: {
     label: "Entregado",
@@ -854,7 +854,7 @@ export default function OrderDetailPageClient({
                           PedidoEstado.PENDIENTE,
                           PedidoEstado.CONFIRMADO,
                           PedidoEstado.EN_PREPARACION,
-                          PedidoEstado.EN_CAMINO,
+                          PedidoEstado.EN_BODEGA,
                           PedidoEstado.ENTREGADO,
                         ];
                         const currentIdx = allStatuses.indexOf(order.estado as PedidoEstado);
@@ -968,15 +968,15 @@ export default function OrderDetailPageClient({
                     )
                   )}
 
-                  {isBuyer && (order.estado === PedidoEstado.EN_CAMINO || order.estado === PedidoEstado.ENTREGADO) && (
+                  {isBuyer && (order.estado === PedidoEstado.EN_BODEGA || order.estado === PedidoEstado.ENTREGADO) && (
                     <Button
                       variant="outline"
                       className="mt-6 w-full rounded-2xl text-muted-foreground border-border/20 hover:bg-muted/50 cursor-not-allowed opacity-50"
                       disabled
                     >
-                      <Truck className="mr-2 h-4 w-4" />
-                      {order.estado === PedidoEstado.EN_CAMINO
-                        ? "El pedido está en camino, ya no se puede cancelar"
+                      <Warehouse className="mr-2 h-4 w-4" />
+                      {order.estado === PedidoEstado.EN_BODEGA
+                        ? "El pedido está listo para recoger en bodega, ya no se puede cancelar"
                         : "El pedido ya fue entregado, no se puede cancelar"}
                     </Button>
                   )}
@@ -1037,7 +1037,7 @@ export default function OrderDetailPageClient({
                             PedidoEstado.PENDIENTE,
                             PedidoEstado.CONFIRMADO,
                             PedidoEstado.EN_PREPARACION,
-                            PedidoEstado.EN_CAMINO,
+                            PedidoEstado.EN_BODEGA,
                             PedidoEstado.ENTREGADO,
                           ];
                           const currentIdx = allStatuses.indexOf(order.estado as PedidoEstado);

@@ -73,14 +73,14 @@ export const statusConfig = {
     icon: Timer,
     dotColor: "bg-indigo-500",
   },
-  [PedidoEstado.EN_CAMINO]: {
-    label: "En Camino",
+  [PedidoEstado.EN_BODEGA]: {
+    label: "En Bodega",
     color: "bg-purple-500/10 text-purple-600 border-purple-500/20",
     barColor: "bg-gradient-to-b from-purple-400 to-purple-600",
     glowColor: "shadow-[2px_0_12px_rgba(168,85,247,0.3)]",
     cardBorderClass: "border-purple-500/20 bg-purple-500/[0.02]",
     hoverClasses: "hover:border-purple-500/40 hover:shadow-[0_8px_30px_-5px_rgba(168,85,247,0.12)] hover:bg-purple-500/[0.04]",
-    icon: Truck,
+    icon: Warehouse,
     dotColor: "bg-purple-500",
   },
   [PedidoEstado.ENTREGADO]: {
