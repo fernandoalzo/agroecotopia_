@@ -1,57 +1,34 @@
-import prisma from "@/backend/db/prisma";
+import { BodegaRepository } from "./bodega.repository";
 import logger from "@/utils/logger";
 
-const log = logger.child("bodega.service");
+const log = logger.child("src/backend/modules/bodega/bodega.service.ts");
 
-export const bodegaService = {
+export class BodegaService {
+  constructor(private bodegaRepository: BodegaRepository) {}
+
   async getBodegasByStore(storeId: string) {
     log.debug("Obteniendo bodegas de la tienda:", { storeId });
-    return await prisma.bodega.findMany({
-      where: { storeId, isActive: true },
-      orderBy: { name: "asc" },
-    });
-  },
+    return this.bodegaRepository.findByStore(storeId);
+  }
 
   async getBodegasByCity(city: string) {
     log.debug("Obteniendo bodegas por ciudad:", { city });
-    return await prisma.bodega.findMany({
-      where: { city: { equals: city, mode: "insensitive" }, isActive: true },
-      include: {
-        store: { select: { id: true, name: true } },
-      },
-      orderBy: { name: "asc" },
-    });
-  },
+    return this.bodegaRepository.findByCity(city);
+  }
 
   async getAllBodegas() {
     log.debug("Obteniendo todas las bodegas activas.");
-    return await prisma.bodega.findMany({
-      where: { isActive: true },
-      include: {
-        store: { select: { id: true, name: true } },
-      },
-      orderBy: { name: "asc" },
-    });
-  },
+    return this.bodegaRepository.findAllActive();
+  }
 
   async getBodegaById(id: string) {
     log.debug("Obteniendo bodega por ID:", { id });
-    return await prisma.bodega.findUnique({
-      where: { id },
-      include: {
-        store: { select: { id: true, name: true } },
-      },
-    });
-  },
+    return this.bodegaRepository.findById(id);
+  }
 
   async getBodegaStoreId(id: string): Promise<string | null> {
-    log.debug("Obteniendo storeId de bodega:", { id });
-    const result = await prisma.bodega.findUnique({
-      where: { id },
-      select: { storeId: true },
-    });
-    return result?.storeId ?? null;
-  },
+    return this.bodegaRepository.findStoreIdByBodegaId(id);
+  }
 
   async createBodega(data: {
     storeId: string;
@@ -60,9 +37,9 @@ export const bodegaService = {
     city: string;
     imagenUrl?: string;
   }) {
-    log.debug("Creando bodega:", { name: data.name, storeId: data.storeId });
-    return await prisma.bodega.create({ data });
-  },
+    log.info("Creando bodega:", { name: data.name, storeId: data.storeId });
+    return this.bodegaRepository.create(data);
+  }
 
   async updateBodega(id: string, data: {
     name?: string;
@@ -71,12 +48,12 @@ export const bodegaService = {
     imagenUrl?: string;
     isActive?: boolean;
   }) {
-    log.debug("Actualizando bodega:", { id });
-    return await prisma.bodega.update({ where: { id }, data });
-  },
+    log.info("Actualizando bodega:", { id });
+    return this.bodegaRepository.update(id, data);
+  }
 
   async deleteBodega(id: string) {
-    log.debug("Eliminando bodega:", { id });
-    return await prisma.bodega.delete({ where: { id } });
-  },
-};
+    log.info("Eliminando bodega:", { id });
+    return this.bodegaRepository.delete(id);
+  }
+}

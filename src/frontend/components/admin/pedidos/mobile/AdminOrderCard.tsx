@@ -133,6 +133,12 @@ export const AdminOrderCardMobile = ({
                         Recojo en bodega
                     </span>
                 )}
+                {order.tipoEntrega === "ENVIO" && (
+                    <span className="inline-flex items-center gap-1 text-[9px] font-black bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400 px-1.5 py-0.5 rounded-md mt-1 uppercase tracking-wider">
+                        <Truck className="h-2.5 w-2.5" />
+                        Envío a domicilio
+                    </span>
+                )}
             </div>
 
             {/* ── Line Items ── */}

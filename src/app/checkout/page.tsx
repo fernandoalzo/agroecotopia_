@@ -20,6 +20,7 @@ import { Loading } from "@/components/ui/Loading";
 import logger from "@/utils/logger";
 import { calculateDiscountedPrice } from "@/utils/promotions";
 import { getAllCitiesAction } from "@/backend/modules/shipping/shipping.actions";
+import { getBodegasByCityAction } from "@/backend/modules/bodega/bodega.actions";
 
 const log = logger.child("src/app/checkout/page.tsx");
 
@@ -39,6 +40,18 @@ export default function CheckoutPage() {
       if (!res.success) throw new Error((res as any).error || "Error al cargar ciudades");
       return res.cities as { name: string; cities: string[] }[];
     },
+    staleTime: 60000,
+  });
+
+  const { data: bodegas = [], isLoading: isLoadingBodegas } = useQuery({
+    queryKey: ["bodegas", destinationCity],
+    queryFn: async () => {
+      if (!destinationCity) return [];
+      const res = await getBodegasByCityAction(destinationCity);
+      if (!res.success) return [];
+      return res.bodegas as { id: string; name: string; address: string; city: string; store: { id: string; name: string } | null }[];
+    },
+    enabled: !!destinationCity && tipoEntrega === "RECOJO_EN_BODEGA",
     staleTime: 60000,
   });
 
@@ -146,6 +159,8 @@ export default function CheckoutPage() {
               onCityChange={setDestinationCity}
               onTipoEntregaChange={setTipoEntrega}
               cityZones={cityZones ?? []}
+              bodegas={bodegas}
+              isLoadingBodegas={isLoadingBodegas}
             />
 
             {/* Summary/Invoice Section */}

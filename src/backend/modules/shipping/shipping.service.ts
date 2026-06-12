@@ -1,8 +1,8 @@
-import prisma from "@/backend/db/prisma";
-import logger from "@/utils/logger";
+import { ShippingRepository } from "./shipping.repository";
 import { TipoTarifaEnvio } from "@prisma/client";
+import logger from "@/utils/logger";
 
-const log = logger.child("shipping.service");
+const log = logger.child("src/backend/modules/shipping/shipping.service.ts");
 
 function normalizeCity(city: string): string {
   return city.trim().toLowerCase();
@@ -15,7 +15,9 @@ export interface CartItemForShipping {
   subtotal: number;
 }
 
-export const shippingService = {
+export class ShippingService {
+  constructor(private shippingRepository: ShippingRepository) {}
+
   /**
    * Valida que ninguna ciudad del array esté ya asignada a otra zona de la misma tienda.
    * @param storeId   Tienda a la que pertenecen las zonas
@@ -31,13 +33,7 @@ export const shippingService = {
     const cleanInput = [...new Set(ciudades.map(normalizeCity).filter(Boolean))];
     if (cleanInput.length === 0) return [];
 
-    const existingZones = await prisma.storeShippingZone.findMany({
-      where: {
-        storeId,
-        ...(excludeZoneId ? { id: { not: excludeZoneId } } : {}),
-      },
-      select: { ciudades: true, nombreZona: true },
-    });
+    const existingZones = await this.shippingRepository.findZonesByStoreExcluding(storeId, excludeZoneId);
 
     const existingCities = new Set<string>();
     for (const zone of existingZones) {
@@ -50,18 +46,14 @@ export const shippingService = {
       const key = normalizeCity(c);
       return key && existingCities.has(key);
     });
-  },
+  }
 
   /**
    * Retorna las zonas de envío con sus ciudades agrupadas,
    * asegurando que cada ciudad aparezca solo una vez (en la primera zona que la contiene).
    */
   async getAllCities(): Promise<{ name: string; cities: string[] }[]> {
-    const zones = await prisma.storeShippingZone.findMany({
-      where: { isActive: true },
-      select: { nombreZona: true, ciudades: true },
-      orderBy: { nombreZona: "asc" },
-    });
+    const zones = await this.shippingRepository.findAllActiveZones();
 
     const seen = new Set<string>();
     const result: { name: string; cities: string[] }[] = [];
@@ -81,7 +73,91 @@ export const shippingService = {
     }
 
     return result;
-  },
+  }
+
+  /**
+   * Obtiene las zonas de envío de una tienda mapeadas a formato de UI.
+   */
+  async getStoreShippingZones(storeId: string) {
+    log.debug("Obteniendo zonas de envío de la tienda:", { storeId });
+    const zones = await this.shippingRepository.findZonesByStore(storeId);
+
+    return zones.map(z => ({
+      id: z.id,
+      storeId: z.storeId,
+      name: z.nombreZona,
+      ciudades: z.ciudades,
+      isActive: z.isActive,
+      rates: z.tarifas.map(r => ({
+        id: r.id,
+        zoneId: r.zoneId,
+        name: r.tipo,
+        type: r.tipo,
+        price: Number(r.precioBase),
+        freeShippingThreshold: r.minimoEnvioGratis ? Number(r.minimoEnvioGratis) : undefined,
+      })),
+    }));
+  }
+
+  /**
+   * Obtiene el storeId propietario de una zona de envío.
+   */
+  async getZoneStoreId(zoneId: string): Promise<string | null> {
+    return this.shippingRepository.findZoneStoreId(zoneId);
+  }
+
+  /**
+   * Crea una nueva zona de envío con validación de ciudades duplicadas.
+   */
+  async createShippingZone(storeId: string, data: { name: string; ciudades: string[] }) {
+    log.info("Creando zona de envío:", { storeId, name: data.name });
+    const zone = await this.shippingRepository.createZone(storeId, data);
+    return { id: zone.id, name: zone.nombreZona, ciudades: zone.ciudades };
+  }
+
+  /**
+   * Actualiza una zona de envío existente.
+   */
+  async updateShippingZone(zoneId: string, data: { name: string; ciudades: string[] }) {
+    log.info("Actualizando zona de envío:", { zoneId });
+    const zone = await this.shippingRepository.updateZone(zoneId, data);
+    return { id: zone.id, name: zone.nombreZona, ciudades: zone.ciudades };
+  }
+
+  /**
+   * Elimina una zona de envío.
+   */
+  async deleteShippingZone(zoneId: string) {
+    log.info("Eliminando zona de envío:", { zoneId });
+    return this.shippingRepository.deleteZone(zoneId);
+  }
+
+  /**
+   * Agrega una tarifa a una zona de envío.
+   */
+  async addShippingRate(zoneId: string, data: {
+    name: string;
+    type: "TARIFA_FIJA" | "POR_PESO";
+    price: number;
+    minOrderValue?: number;
+    freeShippingThreshold?: number;
+  }) {
+    log.info("Agregando tarifa de envío:", { zoneId, type: data.type });
+    const rate = await this.shippingRepository.createRate(zoneId, {
+      type: data.type,
+      price: data.price,
+      freeShippingThreshold: data.freeShippingThreshold,
+    });
+    return { id: rate.id, type: rate.tipo, price: Number(rate.precioBase) };
+  }
+
+  /**
+   * Elimina una tarifa de envío.
+   */
+  async deleteShippingRate(rateId: string) {
+    log.info("Eliminando tarifa de envío:", { rateId });
+    return this.shippingRepository.deleteRate(rateId);
+  }
 
   /**
    * Calcula el envío de un carrito agrupando por tiendas y verificando
@@ -114,13 +190,9 @@ export const shippingService = {
       let storeShippingCost = 0;
 
       // Obtener reglas de envío de la tienda
-      const zones = await prisma.storeShippingZone.findMany({
-        where: { storeId, isActive: true },
-        include: { tarifas: { where: { isActive: true } } },
-      });
+      const zones = await this.shippingRepository.findActiveZonesByStoreWithRates(storeId);
 
       // Lógica de validación (por simplificación, usamos la primera zona que coincida)
-      // Si no hay ciudad de destino, pero hay tarifas, cobramos la tarifa por defecto si existe.
       let applicableZone = null;
 
       if (destCity) {
@@ -132,7 +204,6 @@ export const shippingService = {
 
       // Fallback a una zona "Nacional" o genérica si no hay match
       if (!applicableZone && zones.length > 0) {
-        // Podríamos definir que si `ciudades` incluye "*", es nacional.
         applicableZone = zones.find((z) => z.ciudades.includes("*") || z.ciudades.length === 0) || zones[0];
       }
 
@@ -150,7 +221,7 @@ export const shippingService = {
             // Calcular el peso total de los items
             let totalWeight = 0;
             for (const item of storeItems) {
-              const product = await prisma.product.findUnique({ where: { id: item.productId } });
+              const product = await this.shippingRepository.findProductById(item.productId);
               if (product && product.peso && !product.envioGratis) {
                 totalWeight += Number(product.peso) * item.quantity;
               }
@@ -158,14 +229,13 @@ export const shippingService = {
             
             storeShippingCost = Number(rate.precioBase);
             if (totalWeight > 1 && rate.precioPorKgExtra) {
-              // Ejemplo simple: 1kg cubierto por precioBase, resto por kg extra
+              // 1kg cubierto por precioBase, resto por kg extra
               storeShippingCost += (totalWeight - 1) * Number(rate.precioPorKgExtra);
             }
           }
         }
       } else {
-        // Si no hay reglas, podemos decidir si es 0, o marcar como no envíable.
-        // Asumimos 0 si el vendedor no configuró nada por ahora.
+        // Sin reglas → asumimos 0
         storeShippingCost = 0;
       }
 
@@ -182,4 +252,4 @@ export const shippingService = {
       storeBreakdown
     };
   }
-};
+}

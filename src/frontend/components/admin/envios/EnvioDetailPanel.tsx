@@ -91,15 +91,26 @@ export function EnvioDetailPanel({ envio: initialEnvio, onClose, onUpdateStatus,
 
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0, x: "100%" }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: "100%" }}
-        transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-card border-l border-border shadow-2xl flex flex-col"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+      <>
+        <motion.div
+          key="backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          onClick={onClose}
+          className="fixed inset-0 backdrop-blur-[3px] z-40 cursor-pointer"
+        />
+        <motion.div
+          key="panel"
+          initial={{ opacity: 0, x: "100%" }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: "100%" }}
+          transition={{ type: "spring", damping: 25, stiffness: 200 }}
+          className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-card border-l border-border shadow-2xl flex flex-col"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div className="min-w-0">
             <h2 className="text-lg font-bold tracking-tight truncate">
               Envío {displayEnvio.numeroGuia}
@@ -475,7 +486,8 @@ export function EnvioDetailPanel({ envio: initialEnvio, onClose, onUpdateStatus,
             </button>
           </div>
         </div>
-      </motion.div>
+        </motion.div>
+      </>
     </AnimatePresence>
   );
 }

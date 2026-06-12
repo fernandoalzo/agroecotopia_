@@ -58,6 +58,8 @@ interface AdminDashboardActions {
   getPaginatedOrders: (...args: any[]) => Promise<any>;
   getOrderStatusCounts: (...args: any[]) => Promise<any>;
   updateOrderStatus: (...args: any[]) => Promise<any>;
+  getOrderDetail: (pedidoId: string) => Promise<any>;
+  deleteOrder?: (pedidoId: string) => Promise<any>;
   getAdminConversations: () => Promise<any>;
   chat: React.ComponentProps<typeof AdminChatPageContent>["actions"];
 }
@@ -518,6 +520,11 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                   onPageChange={setOrderCurrentPage}
                   onSearchChange={setOrderSearchQuery}
                   onStatusFilterChange={setOrderStatusFilter}
+                  getOrderDetail={actions.getOrderDetail}
+                  onDeleteOrder={actions.deleteOrder}
+                  updateStoreOrderStatus={async (_storeId: string, pedidoId: string, newStatus: any) => {
+                    return await actions.updateOrderStatus(pedidoId, newStatus);
+                  }}
                    onUpdateStatus={async (orderId, newStatus) => {
                      const result = await actions.updateOrderStatus(orderId, newStatus);
                      if (result && "error" in result) {

@@ -2,8 +2,8 @@ import { Redis } from "ioredis";
 import { isRedisAvailable } from "@/backend/cache";
 import { CacheKeys } from "@/backend/cache";
 import { config } from "@/config/config";
-import prisma from "@/backend/db/prisma";
 import logger from "@/utils/logger";
+import { StockGuardianRepository } from "./stockGuardian.repository";
 
 const log = logger.child("src/backend/modules/stockGuardian/stockGuardian.service.ts");
 
@@ -18,7 +18,10 @@ type StockItem = {
 export { type StockItem };
 
 export class StockGuardianService {
-  constructor(private redis: Redis | null) {}
+  constructor(
+    private redis: Redis | null,
+    private stockGuardianRepository: StockGuardianRepository
+  ) {}
 
   private get redisReady(): boolean {
     return isRedisAvailable && this.redis !== null;
@@ -186,12 +189,8 @@ export class StockGuardianService {
    * Retorna el valor del stock.
    */
   async syncMasterFromDB(productId: string): Promise<number> {
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
-      select: { stock: true },
-    });
-
-    const stock = Number(product?.stock ?? 0);
+    const stock = await this.stockGuardianRepository.getProductStock(productId);
+    
     if (this.redisReady) {
       await this.redis!.set(CacheKeys.stock.master(productId), stock);
     }
@@ -199,10 +198,6 @@ export class StockGuardianService {
   }
 
   private async fallbackGetStock(productId: string): Promise<number> {
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
-      select: { stock: true },
-    });
-    return Number(product?.stock ?? 0);
+    return this.stockGuardianRepository.getProductStock(productId);
   }
 }

@@ -28,9 +28,11 @@ interface CheckoutFormProps {
   onCityChange?: (city: string) => void;
   onTipoEntregaChange?: (tipoEntrega: string) => void;
   cityZones: { name: string; cities: string[] }[];
+  bodegas: any[];
+  isLoadingBodegas: boolean;
 }
 
-export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultValues, onCityChange, onTipoEntregaChange, cityZones }) => {
+export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultValues, onCityChange, onTipoEntregaChange, cityZones, bodegas, isLoadingBodegas }) => {
   const { t } = useLanguage();
 
   const form = useForm<CheckoutValues>({
@@ -270,6 +272,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
                   value={field.value || ""}
                   onChange={field.onChange}
                   placeholder="Selecciona una bodega"
+                  bodegas={bodegas}
+                  isLoading={isLoadingBodegas}
                 />
                 <FormMessage />
               </FormItem>

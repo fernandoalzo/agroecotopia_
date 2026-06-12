@@ -21,6 +21,8 @@ import {
   getPaginatedOrdersAction,
   getOrderStatusCountsAction,
   updateOrderStatusAction,
+  getOrderDetailAction,
+  deleteOrderAction,
 } from "@/backend/modules/orders/orders.actions";
 import {
   getAdminConversations,
@@ -58,6 +60,8 @@ export default function Page() {
         getPaginatedOrders: getPaginatedOrdersAction,
         getOrderStatusCounts: getOrderStatusCountsAction,
         updateOrderStatus: updateOrderStatusAction,
+        getOrderDetail: getOrderDetailAction,
+        deleteOrder: deleteOrderAction,
         getAdminConversations,
         adminGetAllEnvios: adminGetAllEnviosAction,
         adminGetEnvioCounts: adminGetEnvioCountsAction,

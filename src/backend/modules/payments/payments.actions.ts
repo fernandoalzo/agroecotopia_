@@ -1,6 +1,6 @@
 "use server";
 
-import { paymentsService } from "./payments.service";
+import { paymentsService } from "./index";
 import { ordersService } from "@/backend/modules/orders";
 import { withAuth } from "@/lib/auth-guards";
 import logger from "@/utils/logger";

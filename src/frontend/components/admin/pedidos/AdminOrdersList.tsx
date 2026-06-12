@@ -36,6 +36,7 @@ interface AdminOrdersListProps {
   storeId?: string;
   getOrderDetail?: (pedidoId: string) => Promise<any>;
   updateStoreOrderStatus?: (storeId: string, pedidoId: string, newStatus: PedidoEstado) => Promise<any>;
+  onDeleteOrder?: (pedidoId: string) => Promise<any>;
   onNavigateToEnvio?: (pedidoId: string) => void;
 }
 
@@ -59,6 +60,7 @@ export const AdminOrdersList = ({
   storeId = "",
   getOrderDetail,
   updateStoreOrderStatus,
+  onDeleteOrder,
   onNavigateToEnvio,
 }: AdminOrdersListProps) => {
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
@@ -265,16 +267,20 @@ export const AdminOrdersList = ({
           <div className="w-20 hidden sm:block" />
         )}
       </div>
-      {selectedOrderId && getOrderDetail && updateStoreOrderStatus && (
-        <OrderDetailPanel
-          pedidoId={selectedOrderId}
-          storeId={storeId}
-          onClose={() => setSelectedOrderId(null)}
-          getOrderDetail={getOrderDetail}
-          updateStoreOrderStatus={updateStoreOrderStatus}
-          onNavigateToEnvio={onNavigateToEnvio}
-        />
-      )}
+      {/* Side Panel */}
+      <AnimatePresence>
+        {selectedOrderId && getOrderDetail && updateStoreOrderStatus && (
+          <OrderDetailPanel
+            pedidoId={selectedOrderId}
+            storeId={storeId}
+            onClose={() => setSelectedOrderId(null)}
+            getOrderDetail={getOrderDetail}
+            updateStoreOrderStatus={updateStoreOrderStatus}
+            onDeleteOrder={onDeleteOrder}
+            onNavigateToEnvio={onNavigateToEnvio}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -14,6 +14,8 @@ interface CheckoutFormSectionProps {
   onCityChange?: (city: string) => void;
   onTipoEntregaChange?: (tipoEntrega: string) => void;
   cityZones: { name: string; cities: string[] }[];
+  bodegas: any[];
+  isLoadingBodegas: boolean;
 }
 
 export const CheckoutFormSection: React.FC<CheckoutFormSectionProps> = ({ 
@@ -23,6 +25,8 @@ export const CheckoutFormSection: React.FC<CheckoutFormSectionProps> = ({
   onCityChange,
   onTipoEntregaChange,
   cityZones,
+  bodegas,
+  isLoadingBodegas,
 }) => {
   return (
     <motion.div 
@@ -47,6 +51,8 @@ export const CheckoutFormSection: React.FC<CheckoutFormSectionProps> = ({
           onCityChange={onCityChange}
           onTipoEntregaChange={onTipoEntregaChange}
           cityZones={cityZones}
+          bodegas={bodegas}
+          isLoadingBodegas={isLoadingBodegas}
         />
       </div>
     </motion.div>

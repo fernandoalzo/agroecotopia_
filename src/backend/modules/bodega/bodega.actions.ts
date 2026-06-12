@@ -1,7 +1,7 @@
 "use server";
 
 import { withStoreOwner } from "@/lib/auth-guards";
-import { bodegaService } from "./bodega.service";
+import { bodegaService } from "./index";
 import logger from "@/utils/logger";
 import { revalidatePath } from "next/cache";
 

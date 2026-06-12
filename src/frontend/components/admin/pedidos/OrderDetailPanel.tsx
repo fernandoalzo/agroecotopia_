@@ -26,6 +26,9 @@ import {
   RefreshCw,
   Store,
   Navigation,
+  ArrowLeft,
+  ArrowRight,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Loading } from "@/components/ui/Loading";
@@ -33,7 +36,9 @@ import { PedidoEstado } from "@/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
-import { getNextStatuses } from "./adminOrderUtils";
+import { toast } from "sonner";
+import { useSession } from "next-auth/react";
+import { getNextStatuses, getPreviousStatus, getNextStatusLineal } from "./adminOrderUtils";
 
 const statusConfig: Record<string, {
   label: string;
@@ -118,6 +123,7 @@ interface OrderDetailPanelProps {
   onClose: () => void;
   getOrderDetail: (pedidoId: string) => Promise<any>;
   updateStoreOrderStatus: (storeId: string, pedidoId: string, newStatus: PedidoEstado) => Promise<any>;
+  onDeleteOrder?: (pedidoId: string) => Promise<any>;
   onNavigateToEnvio?: (pedidoId: string) => void;
 }
 
@@ -127,65 +133,109 @@ export function OrderDetailPanel({
   onClose,
   getOrderDetail,
   updateStoreOrderStatus,
+  onDeleteOrder,
   onNavigateToEnvio,
 }: OrderDetailPanelProps) {
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
   const [isCopied, setIsCopied] = useState(false);
   const [confirmingStatus, setConfirmingStatus] = useState<PedidoEstado | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [showStatusOptions, setShowStatusOptions] = useState(false);
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
-      setLoading(true);
-      setError(null);
+      // Solo mostrar spinner en la carga inicial (cuando no hay datos aún)
+      const isInitialLoad = !order;
+      if (isInitialLoad) {
+        setLoading(true);
+        setError(null);
+      }
       try {
         const result = await getOrderDetail(pedidoId);
         if (result && "error" in result) {
-          setError(result.error);
+          if (isInitialLoad) setError(result.error);
         } else {
           setOrder(result);
         }
       } catch {
-        setError("Error al cargar el pedido");
+        if (isInitialLoad) setError("Error al cargar el pedido");
       } finally {
-        setLoading(false);
+        if (isInitialLoad) setLoading(false);
       }
     };
     if (pedidoId) fetchOrder();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pedidoId, getOrderDetail]);
 
   const handleUpdateStatus = async (nuevoEstado: PedidoEstado) => {
-    setIsUpdatingStatus(true);
+    const previousState = order.estado;
+    // Actualización optimista: cambiamos el UI inmediatamente
+    setOrder((prev: any) => prev ? { ...prev, estado: nuevoEstado } : prev);
+    setConfirmingStatus(null);
+    setShowStatusOptions(false);
+
     try {
       const result = await updateStoreOrderStatus(storeId, order.id, nuevoEstado);
       if (result && "error" in result) {
-        setError(result.error);
+        toast.error(result.error);
+        // Revertir en caso de error de API
+        setOrder((prev: any) => prev ? { ...prev, estado: previousState } : prev);
       } else {
-        setOrder((prev: any) => prev ? { ...prev, estado: nuevoEstado } : prev);
-        setConfirmingStatus(null);
-        setShowStatusOptions(false);
+        toast.success(`Estado actualizado a ${statusConfig[nuevoEstado]?.label}`);
       }
     } catch {
-      setError("No se pudo actualizar el estado del pedido");
+      toast.error("No se pudo actualizar el estado del pedido");
+      // Revertir en caso de excepción
+      setOrder((prev: any) => prev ? { ...prev, estado: previousState } : prev);
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!onDeleteOrder) return;
+    setIsDeleting(true);
+    try {
+      const result = await onDeleteOrder(order.id);
+      if (result?.error) {
+        toast.error("Error", { description: result.error });
+      } else {
+        toast.success("Pedido eliminado", { description: "El pedido ha sido eliminado permanentemente." });
+        onClose();
+      }
+    } catch (err: any) {
+      toast.error("Error", { description: err.message || "Error al eliminar el pedido" });
     } finally {
-      setIsUpdatingStatus(false);
+      setIsDeleting(false);
     }
   };
 
   if (loading) {
     return (
       <AnimatePresence>
-        <motion.div
-          initial={{ opacity: 0, x: "100%" }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: "100%" }}
-          transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-card border-l border-border shadow-2xl flex flex-col"
-        >
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+        <>
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            onClick={onClose}
+            className="fixed inset-0 backdrop-blur-[3px] z-40 cursor-pointer"
+          />
+          <motion.div
+            key="panel"
+            initial={{ opacity: 0, x: "100%" }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-card border-l border-border shadow-2xl flex flex-col"
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
             <h2 className="text-lg font-bold tracking-tight">Cargando pedido...</h2>
             <button onClick={onClose} className="p-2 hover:bg-secondary rounded-xl transition-all text-muted-foreground">
               <X className="w-5 h-5" />
@@ -194,7 +244,8 @@ export function OrderDetailPanel({
           <div className="flex-1 flex items-center justify-center">
             <Loading text="Cargando pedido..." subtext="Conectando a la huerta digital" className="py-0" />
           </div>
-        </motion.div>
+          </motion.div>
+        </>
       </AnimatePresence>
     );
   }
@@ -202,14 +253,25 @@ export function OrderDetailPanel({
   if (error || !order) {
     return (
       <AnimatePresence>
-        <motion.div
-          initial={{ opacity: 0, x: "100%" }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: "100%" }}
-          transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-card border-l border-border shadow-2xl flex flex-col"
-        >
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+        <>
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            onClick={onClose}
+            className="fixed inset-0 backdrop-blur-[3px] z-40 cursor-pointer"
+          />
+          <motion.div
+            key="panel"
+            initial={{ opacity: 0, x: "100%" }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-card border-l border-border shadow-2xl flex flex-col"
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
             <h2 className="text-lg font-bold tracking-tight">Pedido</h2>
             <button onClick={onClose} className="p-2 hover:bg-secondary rounded-xl transition-all text-muted-foreground">
               <X className="w-5 h-5" />
@@ -221,7 +283,8 @@ export function OrderDetailPanel({
               {error === "FORBIDDEN" ? "No tienes permiso para ver este pedido" : "Pedido no encontrado"}
             </p>
           </div>
-        </motion.div>
+          </motion.div>
+        </>
       </AnimatePresence>
     );
   }
@@ -229,9 +292,11 @@ export function OrderDetailPanel({
   const cfg = statusConfig[order.estado as PedidoEstado];
   const StatusIcon = cfg?.icon || Package;
   const nextStatuses = getNextStatuses(order.estado as PedidoEstado, order.tipoEntrega);
+  const prevStatus = getPreviousStatus(order.estado as PedidoEstado, order.tipoEntrega);
+  const nextStatusLineal = getNextStatusLineal(order.estado as PedidoEstado, order.tipoEntrega);
   const esEnvio = order.tipoEntrega === "ENVIO";
   const esRecojo = order.tipoEntrega === "RECOJO_EN_BODEGA";
-  const esEnvioEnPreparacion = esEnvio && order.estado === PedidoEstado.EN_PREPARACION;
+  const esEnvioEnProceso = esEnvio && ([PedidoEstado.EN_PREPARACION, PedidoEstado.EN_CAMINO, PedidoEstado.ENTREGADO] as PedidoEstado[]).includes(order.estado as PedidoEstado);
 
   const totalDiscount = order.detalles?.reduce((acc: number, d: any) => {
     const diff = (d.producto?.price || 0) - d.precioUnitario;
@@ -243,15 +308,26 @@ export function OrderDetailPanel({
 
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0, x: "100%" }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: "100%" }}
-        transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-card border-l border-border shadow-2xl flex flex-col"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+      <>
+        <motion.div
+          key="backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          onClick={onClose}
+          className="fixed inset-0 backdrop-blur-[3px] z-40 cursor-pointer"
+        />
+        <motion.div
+          key="panel"
+          initial={{ opacity: 0, x: "100%" }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: "100%" }}
+          transition={{ type: "spring", damping: 25, stiffness: 200 }}
+          className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-card border-l border-border shadow-2xl flex flex-col"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold tracking-tight truncate">
@@ -572,113 +648,141 @@ export function OrderDetailPanel({
             </div>
           </section>
 
-          {/* Status Update */}
-          {nextStatuses.length > 0 && !esEnvioEnPreparacion && (
+          {/* Status Update (Premium Arrows) */}
+          {(!esEnvioEnProceso && order.estado !== PedidoEstado.CANCELADO) && (
             <section>
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+              <h3 className="text-sm font-semibold mb-4 text-foreground/90 uppercase tracking-wider flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                 Actualizar Estado
               </h3>
-              <div className="overflow-hidden rounded-xl border border-border/30 bg-card/30">
-                <button
-                  type="button"
-                  onClick={() => setShowStatusOptions(s => !s)}
-                  className={cn(
-                    "flex items-center justify-between w-full px-4 py-3 text-xs font-semibold transition-colors",
-                    showStatusOptions || confirmingStatus
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <ArrowRightCircle className="h-3.5 w-3.5 text-primary/70" />
-                    Avanzar pedido
-                  </span>
-                  <ChevronDown className={cn(
-                    "h-3.5 w-3.5 transition-transform duration-200",
-                    (showStatusOptions || confirmingStatus) && "rotate-180"
-                  )} />
-                </button>
 
-                <AnimatePresence>
-                  {(showStatusOptions || confirmingStatus) && (
-                    <motion.div
-                      key="content"
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="border-t border-border/20 overflow-hidden"
-                    >
-                      {confirmingStatus ? (
-                        <div className="p-3">
-                          <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-2 mb-3">
-                            <Timer className="h-3.5 w-3.5 shrink-0 text-amber-600" />
-                            <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
-                              &iquest;{statusConfig[confirmingStatus]?.label}?
-                            </p>
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setConfirmingStatus(null)}
-                              disabled={isUpdatingStatus}
-                              className="flex-1 rounded-lg border border-border/40 px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-accent transition-colors disabled:opacity-50"
-                            >
-                              Cancelar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateStatus(confirmingStatus)}
-                              disabled={isUpdatingStatus}
-                              className={cn(
-                                "flex-1 rounded-lg px-3 py-2 text-xs font-semibold text-white transition-all disabled:opacity-50 flex items-center justify-center gap-1.5",
-                                confirmingStatus === PedidoEstado.CANCELADO
-                                  ? "bg-rose-600 hover:bg-rose-700"
-                                  : "bg-primary hover:bg-primary/90"
-                              )}
-                            >
-                              {isUpdatingStatus ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Check className="h-3.5 w-3.5" />
-                              )}
-                              Confirmar
-                            </button>
-                          </div>
+              <div className="bg-secondary/20 border border-border/40 rounded-xl p-2 relative overflow-hidden group/status">
+                {/* Decorative background gradient */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent translate-x-[-100%] group-hover/status:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
+                
+                <div className="flex items-center justify-between gap-2 relative z-10">
+                  {/* Retroceder Button */}
+                  <button
+                    onClick={() => {
+                      const prevStatus = getPreviousStatus(order.estado, order.tipoEntrega, isAdmin);
+                      if (prevStatus) handleUpdateStatus(prevStatus);
+                    }}
+                    disabled={!getPreviousStatus(order.estado, order.tipoEntrega, isAdmin)}
+                    className="h-10 w-12 flex items-center justify-center rounded-lg border border-border/50 bg-background hover:bg-secondary/80 hover:text-foreground text-muted-foreground disabled:opacity-40 disabled:hover:bg-background disabled:cursor-not-allowed transition-all"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                  
+                  <div className="flex flex-col items-center px-2 text-center">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 mb-1.5">
+                      ESTADO ACTUAL
+                    </span>
+                    <div className="flex items-center gap-2 bg-background px-4 py-2 rounded-full border border-border/50 shadow-sm">
+                      <StatusIcon className={cn("w-4 h-4", cfg?.color)} />
+                      <span className="text-sm font-bold text-foreground">{cfg?.label}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => nextStatusLineal && handleUpdateStatus(nextStatusLineal)}
+                    disabled={!nextStatusLineal}
+                    title={nextStatusLineal ? `Avanzar a ${statusConfig[nextStatusLineal]?.label}` : "No se puede avanzar"}
+                    className="p-3 rounded-xl bg-primary/10 hover:bg-primary/20 hover:shadow-md border border-primary/20 text-primary transition-all disabled:opacity-30 disabled:hover:shadow-none disabled:hover:bg-primary/10 disabled:cursor-not-allowed group relative"
+                  >
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+
+                {/* Cancelar Action */}
+                {order.estado !== PedidoEstado.ENTREGADO && (
+                   <>
+                     {!confirmingStatus ? (
+                       <button
+                         type="button"
+                         onClick={() => setConfirmingStatus(PedidoEstado.CANCELADO)}
+                         className="flex items-center justify-center gap-2 w-full mt-3 py-2.5 text-xs font-semibold text-rose-600 bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 rounded-lg transition-colors"
+                       >
+                         <XCircle className="w-4 h-4" />
+                         Cancelar Pedido
+                       </button>
+                     ) : (
+                       <div className="p-3 mt-3 border border-rose-500/20 bg-rose-500/5 rounded-lg">
+                         <div className="flex items-center gap-2 mb-3">
+                           <XCircle className="h-4 w-4 shrink-0 text-rose-500" />
+                           <p className="text-xs font-medium text-rose-700 dark:text-rose-400">
+                             ¿Seguro que deseas cancelar este pedido?
+                           </p>
+                         </div>
+                         <div className="flex gap-2">
+                           <button
+                             type="button"
+                             onClick={() => setConfirmingStatus(null)}
+                             className="flex-1 rounded-lg border border-border/40 px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-accent transition-colors"
+                           >
+                             Volver
+                           </button>
+                           <button
+                             type="button"
+                             onClick={() => handleUpdateStatus(PedidoEstado.CANCELADO)}
+                             className="flex-1 rounded-lg px-3 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 transition-all flex items-center justify-center gap-1.5"
+                           >
+                             <Check className="h-3.5 w-3.5" />
+                             Confirmar Cancelación
+                           </button>
+                         </div>
+                       </div>
+                     )}
+                   </>
+                )}
+
+                {/* Delete Order Action (Admin Only) */}
+                {isAdmin && onDeleteOrder && (
+                  <div className="mt-4 pt-4 border-t border-border/40">
+                    {!confirmingDelete ? (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingDelete(true)}
+                        className="flex items-center justify-center gap-2 w-full py-2.5 text-xs font-bold text-red-600 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg transition-colors"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Eliminar Permanentemente
+                      </button>
+                    ) : (
+                      <div className="flex items-center justify-between p-2.5 border border-red-500/30 bg-red-500/10 rounded-lg">
+                        <p className="text-xs font-bold text-red-600 dark:text-red-400 pl-2">
+                          ¿Confirmar eliminación del pedido?
+                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => setConfirmingDelete(false)}
+                            disabled={isDeleting}
+                            className="p-2 text-muted-foreground hover:bg-red-500/10 rounded-md transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={handleDeleteOrder}
+                            disabled={isDeleting}
+                            className="p-2 text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors flex items-center justify-center"
+                          >
+                            {isDeleting ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Check className="w-4 h-4" />
+                            )}
+                          </button>
                         </div>
-                      ) : (
-                        <div className="p-1.5">
-                          {nextStatuses.map((ns) => {
-                            const Icon = statusConfig[ns]?.icon || Package;
-                            const isCancel = ns === PedidoEstado.CANCELADO;
-                            return (
-                              <button
-                                key={ns}
-                                type="button"
-                                onClick={() => setConfirmingStatus(ns)}
-                                className={cn(
-                                  "flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                                  isCancel
-                                    ? "text-rose-600 hover:bg-rose-500/10"
-                                    : "text-foreground/70 hover:bg-accent hover:text-foreground"
-                                )}
-                              >
-                                <Icon className={cn("h-4 w-4", isCancel && "text-rose-500")} />
-                                <span className="flex-1 text-left">{statusConfig[ns]?.label}</span>
-                                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30" />
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </section>
           )}
 
-          {/* Envío tracking info (for ENVIO + EN_PREPARACION) */}
-          {esEnvioEnPreparacion && (
+          {/* Envío tracking info (for ENVIO + EN_PREPARACION / EN_CAMINO) */}
+          {esEnvioEnProceso && (
             <section>
               <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
                 <div className="flex items-start gap-3">
@@ -724,7 +828,8 @@ export function OrderDetailPanel({
             </a>
           </div>
         </div>
-      </motion.div>
+        </motion.div>
+      </>
     </AnimatePresence>
   );
 }

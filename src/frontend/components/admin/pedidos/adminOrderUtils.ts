@@ -131,3 +131,27 @@ export const getNextStatuses = (current: PedidoEstado, tipoEntrega?: string): Pe
       return [];
   }
 };
+
+export const getPreviousStatus = (current: PedidoEstado, tipoEntrega?: string, isAdmin?: boolean): PedidoEstado | null => {
+  const isEnvio = tipoEntrega === "ENVIO";
+  switch (current) {
+    case PedidoEstado.CONFIRMADO: return PedidoEstado.PENDIENTE;
+    case PedidoEstado.EN_PREPARACION: return PedidoEstado.CONFIRMADO;
+    case PedidoEstado.EN_CAMINO: return isEnvio ? PedidoEstado.EN_PREPARACION : null;
+    case PedidoEstado.EN_BODEGA: return PedidoEstado.EN_PREPARACION;
+    case PedidoEstado.ENTREGADO: return isAdmin ? (isEnvio ? PedidoEstado.EN_CAMINO : PedidoEstado.EN_BODEGA) : null;
+    default: return null;
+  }
+};
+
+export const getNextStatusLineal = (current: PedidoEstado, tipoEntrega?: string): PedidoEstado | null => {
+  const isEnvio = tipoEntrega === "ENVIO";
+  switch (current) {
+    case PedidoEstado.PENDIENTE: return PedidoEstado.CONFIRMADO;
+    case PedidoEstado.CONFIRMADO: return PedidoEstado.EN_PREPARACION;
+    case PedidoEstado.EN_PREPARACION: return isEnvio ? PedidoEstado.EN_CAMINO : PedidoEstado.EN_BODEGA;
+    case PedidoEstado.EN_CAMINO: return PedidoEstado.ENTREGADO;
+    case PedidoEstado.EN_BODEGA: return PedidoEstado.ENTREGADO;
+    default: return null;
+  }
+};

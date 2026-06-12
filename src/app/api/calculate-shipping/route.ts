@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { shippingService } from '@/backend/modules/shipping/shipping.service';
+import { shippingService } from "@/backend/modules/shipping";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/app/api/calculate-shipping/route.ts");

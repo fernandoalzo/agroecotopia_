@@ -61,7 +61,7 @@ export async function updateOrderStatusAction(
       const userId = session.user.id;
 
       log.info("Admin actualizando estado del pedido:", { pedidoId, nuevoEstado, motivoCancelacion });
-      const pedido = await ordersService.updateEstado(pedidoId, nuevoEstado, userId, motivoCancelacion);
+      const pedido = await ordersService.updateEstado(pedidoId, nuevoEstado, userId, motivoCancelacion, true);
       log.info("Estado del pedido actualizado exitosamente:", { pedidoId, nuevoEstado });
       revalidatePath("/admin/pedidos");
       revalidatePath(`/perfil/pedidos/${pedidoId}`);
@@ -75,6 +75,24 @@ export async function updateOrderStatusAction(
         };
       }
       return { error: error?.message || "Error al actualizar el estado del pedido" };
+    }
+  });
+}
+
+/**
+ * Elimina un pedido permanentemente de la base de datos (Solo Administradores).
+ */
+export async function deleteOrderAction(pedidoId: string) {
+  return await withAdmin(async () => {
+    try {
+      log.info("Admin eliminando pedido:", { pedidoId });
+      await ordersService.deletePedido(pedidoId);
+      log.info("Pedido eliminado exitosamente:", { pedidoId });
+      revalidatePath("/admin/pedidos");
+      return deepSerialize({ success: true });
+    } catch (error: any) {
+      log.error("Error al eliminar pedido:", { pedidoId, error: error?.message });
+      return { error: error?.message || "Error al eliminar el pedido" };
     }
   });
 }

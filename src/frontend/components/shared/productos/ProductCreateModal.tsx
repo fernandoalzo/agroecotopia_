@@ -6,8 +6,9 @@ import { X, Save, AlertCircle, ImageIcon, Plus, Trash2, Search, Check } from "lu
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { productSchema, ProductFormValues } from "./schemas/productSchema";
+import { getProductSchema, ProductFormValues } from "./schemas/productSchema";
 import { Store } from "lucide-react";
+import { useLanguage } from "@/frontend/context/LanguageContext";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/frontend/components/shared/productos/ProductCreateModal.tsx");
@@ -27,6 +28,7 @@ export const ProductCreateModal = ({
   storesList = [],
   onSubmitForm,
 }: ProductCreateModalProps) => {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [imagesList, setImagesList] = useState<string[]>([]);
   const [newImage, setNewImage] = useState("");
@@ -98,7 +100,7 @@ export const ProductCreateModal = ({
     setValue,
     formState: { errors },
   } = useForm<any>({
-    resolver: zodResolver(productSchema),
+    resolver: zodResolver(getProductSchema(t)),
     defaultValues: {
       name: "",
       description: "",

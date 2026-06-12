@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Warehouse, Search, Store } from "lucide-react";
-import { getBodegasByCityAction } from "@/backend/modules/bodega/bodega.actions";
 
 interface Bodega {
   id: string;
@@ -18,6 +17,8 @@ interface BodegaSelectProps {
   value: string;
   onChange: (bodegaId: string) => void;
   placeholder?: string;
+  bodegas: Bodega[];
+  isLoading?: boolean;
 }
 
 export function BodegaSelect({
@@ -25,10 +26,10 @@ export function BodegaSelect({
   value,
   onChange,
   placeholder = "Selecciona una bodega",
+  bodegas,
+  isLoading = false,
 }: BodegaSelectProps) {
   const [open, setOpen] = useState(false);
-  const [bodegas, setBodegas] = useState<Bodega[]>([]);
-  const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -46,18 +47,6 @@ export function BodegaSelect({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    if (city && open) {
-      setLoading(true);
-      getBodegasByCityAction(city).then((res) => {
-        if (res.success) {
-          setBodegas(res.bodegas as Bodega[]);
-        }
-        setLoading(false);
-      });
-    }
-  }, [city, open]);
 
   const filtered = query.trim()
     ? bodegas.filter((b) =>
@@ -130,7 +119,7 @@ export function BodegaSelect({
               </div>
             </div>
 
-            {loading ? (
+            {isLoading ? (
               <div className="px-3 py-6 text-center text-xs text-muted-foreground">
                 Cargando bodegas...
               </div>

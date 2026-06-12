@@ -34,10 +34,10 @@ export class StockError extends Error {
  */
 const VALID_TRANSITIONS: Record<PedidoEstado, PedidoEstado[]> = {
   [PedidoEstado.PENDIENTE]: [PedidoEstado.CONFIRMADO, PedidoEstado.CANCELADO],
-  [PedidoEstado.CONFIRMADO]: [PedidoEstado.EN_PREPARACION, PedidoEstado.CANCELADO],
-  [PedidoEstado.EN_PREPARACION]: [PedidoEstado.EN_BODEGA, PedidoEstado.CANCELADO],
-  [PedidoEstado.EN_CAMINO]: [PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO],
-  [PedidoEstado.EN_BODEGA]: [PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO],
+  [PedidoEstado.CONFIRMADO]: [PedidoEstado.PENDIENTE, PedidoEstado.EN_PREPARACION, PedidoEstado.CANCELADO],
+  [PedidoEstado.EN_PREPARACION]: [PedidoEstado.CONFIRMADO, PedidoEstado.EN_BODEGA, PedidoEstado.EN_CAMINO, PedidoEstado.CANCELADO],
+  [PedidoEstado.EN_CAMINO]: [PedidoEstado.EN_PREPARACION, PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO],
+  [PedidoEstado.EN_BODEGA]: [PedidoEstado.EN_PREPARACION, PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO],
   [PedidoEstado.ENTREGADO]: [],
   [PedidoEstado.CANCELADO]: [],
 };
@@ -47,10 +47,13 @@ const VALID_TRANSITIONS: Record<PedidoEstado, PedidoEstado[]> = {
  * Para pedidos ENVIO en EN_PREPARACION, solo CANCELADO es válido desde Pedidos
  * (el resto se gestiona desde la sección Envíos que sincroniza automáticamente).
  */
-function getValidTransitions(estado: PedidoEstado, tipoEntrega?: string): PedidoEstado[] {
+function getValidTransitions(estado: PedidoEstado, tipoEntrega?: string, isAdmin: boolean = false): PedidoEstado[] {
   const base = VALID_TRANSITIONS[estado] || [];
-  if (tipoEntrega === "ENVIO" && estado === PedidoEstado.EN_PREPARACION) {
+  if (tipoEntrega === "ENVIO" && estado === PedidoEstado.EN_PREPARACION && !isAdmin) {
     return [PedidoEstado.CANCELADO];
+  }
+  if (isAdmin && estado === PedidoEstado.ENTREGADO) {
+    return [PedidoEstado.EN_BODEGA, PedidoEstado.EN_CAMINO];
   }
   return base;
 }
@@ -215,7 +218,7 @@ export class OrdersService {
     return await this.ordersRepository.createPedido(pedidoData as Prisma.PedidoCreateInput, tx);
   }
 
-  async updateEstado(pedidoId: string, nuevoEstado: PedidoEstado, actorId: string, motivoCancelacion?: string) {
+  async updateEstado(pedidoId: string, nuevoEstado: PedidoEstado, actorId: string, motivoCancelacion?: string, isAdmin: boolean = false) {
     log.info("Iniciando transición de estado del pedido:", { pedidoId, nuevoEstado });
 
     const isConfirm = nuevoEstado === PedidoEstado.CONFIRMADO;
@@ -246,8 +249,14 @@ export class OrdersService {
       }));
       const productIds = items.map((i: { productId: string }) => i.productId);
 
-      // 2. Validar que la transición es legal
-      const transicionesValidas = getValidTransitions(estadoAnterior, pedido.tipoEntrega);
+      // 2. Si ya está en el estado destino → retorno idempotente (sin tocar stock)
+      if (estadoAnterior === nuevoEstado) {
+        log.debug("Transición idempotente: el pedido ya está en el estado destino:", { pedidoId, estado: nuevoEstado });
+        return this.serializePedido(pedido);
+      }
+
+      // 3. Validar que la transición es legal
+      const transicionesValidas = getValidTransitions(estadoAnterior, pedido.tipoEntrega, isAdmin);
       if (!transicionesValidas.includes(nuevoEstado)) {
         log.warn("Transición de estado inválida:", {
           pedidoId,
@@ -260,12 +269,6 @@ export class OrdersService {
           throw new Error("Para pedidos con envío a domicilio, el seguimiento debe gestionarse desde la sección Envíos");
         }
         throw new Error(`Transición de estado no permitida: ${estadoAnterior} → ${nuevoEstado}`);
-      }
-
-      // 3. Si ya está en el estado destino → retorno idempotente (sin tocar stock)
-      if (estadoAnterior === nuevoEstado) {
-        log.debug("Transición idempotente: el pedido ya está en el estado destino:", { pedidoId, estado: nuevoEstado });
-        return this.serializePedido(pedido);
       }
 
       // ─── CONFIRMADO: Adquirir locks + verificar en Redis (barrera de carrera) ───
@@ -310,7 +313,8 @@ export class OrdersService {
         log.info("Transición de estado exitosa:", { pedidoId, de: estadoAnterior, a: nuevoEstado });
 
         // ─── CONFIRMADO: Descontar stock en DB y recolectar TODOS los fallos ───
-        if (isConfirm) {
+        const isInitialConfirm = isConfirm && estadoAnterior === PedidoEstado.PENDIENTE;
+        if (isInitialConfirm) {
           log.debug("Descontando stock en DB al confirmar pedido:", { pedidoId });
           const failedProducts: { productId: string; productName: string; detalleId: string }[] = [];
           for (const detalle of pedido.detalles) {
@@ -336,7 +340,6 @@ export class OrdersService {
             throw new StockError(failedProducts);
           }
           log.debug("Stock descontado en DB exitosamente:", { pedidoId });
-
         }
 
         // ─── EN_PREPARACION + ENVIO: Crear registro de envío automáticamente ───
@@ -350,11 +353,15 @@ export class OrdersService {
           }
         }
 
-        // ─── CANCELADO: Revertir stock en DB ───
-        if (isCancel && estadosConStockDescontado.includes(estadoAnterior)) {
-          log.debug("Revirtiendo stock por cancelación desde estado con stock descontado:", {
+        // ─── CANCELADO o REVERT A PENDIENTE: Revertir stock en DB ───
+        const isRevertToPendiente = nuevoEstado === PedidoEstado.PENDIENTE && estadosConStockDescontado.includes(estadoAnterior);
+        const shouldRestoreStock = (isCancel || isRevertToPendiente) && estadosConStockDescontado.includes(estadoAnterior);
+        
+        if (shouldRestoreStock) {
+          log.debug("Revirtiendo stock por cancelación o regreso a pendiente:", {
             pedidoId,
             estadoAnterior,
+            nuevoEstado,
           });
           for (const detalle of pedido.detalles) {
             await (tx as any).product.update({
@@ -362,7 +369,7 @@ export class OrdersService {
               data: { stock: { increment: detalle.cantidad } },
             });
           }
-          if (redisLockHeld) {
+          if (redisLockHeld && isCancel) {
             await stockGuardianService.restoreStock(items);
           }
           log.debug("Stock revertido exitosamente:", { pedidoId });
@@ -555,8 +562,7 @@ export class OrdersService {
     }
 
     if (pedido.estado !== PedidoEstado.CANCELADO) {
-      log.warn("Intento de eliminar pedido en estado no cancelado:", { pedidoId, estado: pedido.estado });
-      throw new Error("Solo se pueden eliminar pedidos en estado Cancelado");
+      log.warn("Eliminando pedido en estado no cancelado (Forzado por Admin):", { pedidoId, estado: pedido.estado });
     }
 
     const result = await this.ordersRepository.deletePedido(pedidoId);
