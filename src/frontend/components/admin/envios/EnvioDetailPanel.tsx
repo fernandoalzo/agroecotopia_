@@ -29,6 +29,9 @@ export function EnvioDetailPanel({ envio: initialEnvio, onClose, onUpdateStatus,
   const [statusOpen, setStatusOpen] = useState(false);
   const statusInputRef = useRef<HTMLInputElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const [bodegaOpen, setBodegaOpen] = useState(false);
+  const bodegaInputRef = useRef<HTMLInputElement>(null);
+  const bodegaDropdownRef = useRef<HTMLDivElement>(null);
 
   const displayEnvio = fullEnvio || initialEnvio;
 
@@ -75,6 +78,9 @@ export function EnvioDetailPanel({ envio: initialEnvio, onClose, onUpdateStatus,
     const handleClickOutside = (e: MouseEvent) => {
       if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
         setStatusOpen(false);
+      }
+      if (bodegaDropdownRef.current && !bodegaDropdownRef.current.contains(e.target as Node)) {
+        setBodegaOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -309,31 +315,84 @@ export function EnvioDetailPanel({ envio: initialEnvio, onClose, onUpdateStatus,
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
-                    className="overflow-hidden"
+                    className={cn(bodegaOpen ? "overflow-visible" : "overflow-hidden")}
                   >
                     <div className="pt-2">
                       <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
                         Bodega de Retorno
                       </label>
-                      <div className="relative">
-                        <Warehouse className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
-                        <select
-                          value={bodegaId}
-                          onChange={(e) => setBodegaId(e.target.value)}
-                          className="w-full bg-background border border-input rounded-xl pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none transition-shadow cursor-pointer"
-                        >
-                          <option value="">Selecciona la bodega original</option>
-                          {bodegas.map((b) => (
-                            <option key={b.id} value={b.id}>
-                              {b.name} ({b.city})
-                            </option>
-                          ))}
-                        </select>
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none">
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
+                      <div className="relative" ref={bodegaDropdownRef}>
+                        <div className="relative flex items-center">
+                          <div className="absolute left-3 text-muted-foreground/50 pointer-events-none z-10">
+                            <Warehouse className={cn("h-4 w-4", bodegaId ? "text-primary" : "")} />
+                          </div>
+                          <input
+                            ref={bodegaInputRef}
+                            readOnly
+                            value={bodegaId ? `${bodegas.find(b => b.id === bodegaId)?.name} (${bodegas.find(b => b.id === bodegaId)?.city})` : ""}
+                            onFocus={() => setBodegaOpen(true)}
+                            placeholder="Selecciona la bodega original..."
+                            className={`w-full border border-border/50 bg-background pl-10 pr-10 py-2.5 text-sm font-medium focus:outline-none transition-all placeholder:text-muted-foreground/40 cursor-pointer ${
+                              bodegaOpen
+                                ? "rounded-t-xl border-b-transparent focus:ring-0 shadow-[0_4px_20px_-10px_rgba(var(--primary),0.3)]"
+                                : "rounded-xl focus:ring-2 focus:ring-primary/30 shadow-sm"
+                            }`}
+                          />
+                          <div className="absolute right-3 text-muted-foreground/40 pointer-events-none">
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 12 12"
+                              fill="none"
+                              className={`transition-transform ${bodegaOpen ? "rotate-180" : ""}`}
+                            >
+                              <path
+                                d="M3 4.5L6 7.5L9 4.5"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </div>
                         </div>
+
+                        <AnimatePresence>
+                          {bodegaOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -4 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -4 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute z-20 w-full top-full bg-card border border-border/50 border-t-0 rounded-b-xl shadow-[0_15px_30px_-15px_rgba(var(--primary),0.2)] p-1 max-h-48 overflow-y-auto"
+                            >
+                              {bodegas.map((b) => {
+                                const selected = bodegaId === b.id;
+                                return (
+                                  <button
+                                    key={b.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setBodegaId(b.id);
+                                      setBodegaOpen(false);
+                                      bodegaInputRef.current?.blur();
+                                    }}
+                                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-colors group text-left ${
+                                      selected
+                                        ? "bg-primary/10 text-primary"
+                                        : "hover:bg-secondary/70 text-foreground/90"
+                                    }`}
+                                  >
+                                    <span className={cn("flex items-center gap-2", selected ? "text-primary" : "")}>
+                                      <Warehouse className="w-4 h-4" />
+                                      {b.name} ({b.city})
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1.5">
                         Indica a qué bodega fue retornado el pedido para actualizar su estado.
