@@ -38,7 +38,7 @@ interface EnviosListProps {
   getOrderDetail?: (pedidoId: string) => Promise<any>;
   getEnvioDetail?: (envioId: string) => Promise<any>;
   updateStoreOrderStatus?: (storeId: string, pedidoId: string, newStatus: PedidoEstado) => Promise<any>;
-  getStoreBodegas?: (storeId: string) => Promise<any>;
+  bodegas?: any[];
   autoOpenPedidoId?: string | null;
   onAutoOpenConsumed?: () => void;
 }
@@ -61,25 +61,14 @@ export function EnviosList({
   getOrderDetail,
   getEnvioDetail,
   updateStoreOrderStatus,
-  getStoreBodegas,
+  bodegas = [],
   autoOpenPedidoId,
   onAutoOpenConsumed,
 }: EnviosListProps) {
   const [selectedEnvio, setSelectedEnvio] = useState<Envio | null>(null);
   const [selectedPedidoId, setSelectedPedidoId] = useState<string | null>(null);
-  const [bodegasList, setBodegasList] = useState<any[]>([]);
   const totalEnvios = Object.values(stats).reduce((a, b) => a + (Number(b) || 0), 0);
   const allStats: Record<string, number> = { ALL: totalEnvios || totalCount, ...stats };
-
-  React.useEffect(() => {
-    if (getStoreBodegas && storeId) {
-      getStoreBodegas(storeId).then((res) => {
-        if (res && res.success) {
-          setBodegasList(res.bodegas || []);
-        }
-      });
-    }
-  }, [getStoreBodegas, storeId]);
 
   React.useEffect(() => {
     if (autoOpenPedidoId && envios.length > 0) {
@@ -263,7 +252,7 @@ export function EnviosList({
             setSelectedPedidoId(null);
           }}
           onUpdateStatus={handleStatusUpdate}
-          bodegas={bodegasList}
+          bodegas={bodegas}
           getEnvioDetail={getEnvioDetail}
           onOpenOrderDetail={(id) => setSelectedPedidoId(id)}
         />

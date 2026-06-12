@@ -153,6 +153,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
   const [enviosTotalCount, setEnviosTotalCount] = useState(0);
   const [enviosRefresh, setEnviosRefresh] = useState(0);
   const [autoOpenEnvioPedidoId, setAutoOpenEnvioPedidoId] = useState<string | null>(null);
+  const [bodegasList, setBodegasList] = useState<any[]>([]);
 
   const activeStore = stores.find(s => s.id === activeStoreId) || null;
 
@@ -265,11 +266,26 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     };
     load();
     return () => { cancelled = true; };
-  }, [activeStore?.id, activeTab, enviosCurrentPage, enviosStatusFilter, enviosSearchQuery, enviosRefresh, actions]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStore?.id, activeTab, enviosCurrentPage, enviosStatusFilter, enviosSearchQuery, enviosRefresh]);
 
   useEffect(() => {
     enviosLoadedRef.current = false;
   }, [activeStore?.id]);
+
+  // Bodegas: cargar UNA sola vez por tienda cuando se activa la pestaña envíos (Dumb Components rule)
+  const bodegasLoadedForStoreRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!activeStore?.id || activeTab !== "envios") return;
+    if (bodegasLoadedForStoreRef.current === activeStore.id) return;
+    bodegasLoadedForStoreRef.current = activeStore.id;
+    actions.getStoreBodegas(activeStore.id).then((res: any) => {
+      if (res?.success) {
+        setBodegasList(res.bodegas || []);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStore?.id, activeTab]);
 
   const loadStore = async () => {
     if (!session?.user?.id) return;
@@ -786,7 +802,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                     onRefresh={() => setEnviosRefresh(prev => prev + 1)}
                     getOrderDetail={actions.getOrderDetail}
                     getEnvioDetail={actions.getEnvioDetail}
-                    getStoreBodegas={actions.getStoreBodegas}
+                    bodegas={bodegasList}
                     updateStoreOrderStatus={async (_storeId, pedidoId, newStatus) => {
                       const result = await actions.updateStoreOrderStatus(activeStore.id, pedidoId, newStatus);
                       if (result && "error" in result) {
