@@ -66,6 +66,7 @@ interface MiTiendaActions {
   getProductsPageData: (page: number, limit: number, category?: string, storeId?: string) => Promise<any>;
   updateStoreOrderStatus: (...args: any[]) => Promise<any>;
   getAllActiveStoresList: () => Promise<any>;
+  getOrderDetail: (pedidoId: string) => Promise<any>;
   
   // Promotions
   getPromotionsByStore: (storeId: string) => Promise<any>;
@@ -768,6 +769,14 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                       return true;
                     }}
                     onRefresh={() => setEnviosRefresh(prev => prev + 1)}
+                    getOrderDetail={actions.getOrderDetail}
+                    updateStoreOrderStatus={async (orderId, newStatus) => {
+                      const result = await actions.updateStoreOrderStatus(activeStore.id, orderId, newStatus);
+                      if (result && "error" in result) {
+                        return false;
+                      }
+                      return true;
+                    }}
                   />
                 )}
                 {activeTab === "products" && activeStore && (

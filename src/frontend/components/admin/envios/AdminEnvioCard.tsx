@@ -13,9 +13,10 @@ interface AdminEnvioCardProps {
   envio: EnvioCardData;
   index: number;
   onOpenDetail: (envio: EnvioCardData) => void;
+  onOpenOrderDetail?: (pedidoId: string) => void;
 }
 
-export function AdminEnvioCard({ envio, index, onOpenDetail }: AdminEnvioCardProps) {
+export function AdminEnvioCard({ envio, index, onOpenDetail, onOpenOrderDetail }: AdminEnvioCardProps) {
   const cfg = envioStatusConfig[envio.estado as EnvioEstadoKey];
 
   return (
@@ -31,8 +32,8 @@ export function AdminEnvioCard({ envio, index, onOpenDetail }: AdminEnvioCardPro
         cfg?.hoverClasses
       )}>
         <CardContent className="p-0">
-          <AdminEnvioCardMobile envio={envio} onOpenDetail={onOpenDetail} />
-          <AdminEnvioCardDesktop envio={envio} onOpenDetail={onOpenDetail} />
+          <AdminEnvioCardMobile envio={envio} onOpenDetail={onOpenDetail} onOpenOrderDetail={onOpenOrderDetail} />
+          <AdminEnvioCardDesktop envio={envio} onOpenDetail={onOpenDetail} onOpenOrderDetail={onOpenOrderDetail} />
         </CardContent>
       </Card>
     </motion.div>

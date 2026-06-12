@@ -158,7 +158,8 @@ export class EnvioService {
         });
       }
 
-      return await this.envioRepository.findById(envioId, tx);
+      const updated = await this.envioRepository.findById(envioId, tx);
+      return this.serializeEnvio(updated);
     });
   }
 
@@ -193,7 +194,7 @@ export class EnvioService {
 
   private serializeEnvio(envio: any) {
     if (!envio) return envio;
-    return deepSerialize({
+    const serialized: any = {
       ...envio,
       pedido: envio.pedido
         ? {
@@ -202,8 +203,23 @@ export class EnvioService {
             subtotal: envio.pedido.subtotal ? Number(envio.pedido.subtotal) : undefined,
             impuestos: envio.pedido.impuestos ? Number(envio.pedido.impuestos) : undefined,
             costoEnvio: envio.pedido.costoEnvio ? Number(envio.pedido.costoEnvio) : undefined,
+            detalles: envio.pedido.detalles?.map((d: any) => ({
+              ...d,
+              cantidad: Number(d.cantidad),
+              precioUnitario: Number(d.precioUnitario),
+              subtotal: Number(d.subtotal),
+              producto: d.producto
+                ? {
+                    ...d.producto,
+                    price: Number(d.producto.price),
+                    stock: Number(d.producto.stock),
+                    peso: d.producto.peso ? Number(d.producto.peso) : undefined,
+                  }
+                : d.producto,
+            })),
           }
         : envio.pedido,
-    });
+    };
+    return serialized;
   }
 }

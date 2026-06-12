@@ -19,6 +19,7 @@ import {
   getProductsPageDataAction,
 } from "@/backend/modules/product/product.actions";
 import {
+  getOrderDetailAction,
   getStoreOrdersAction,
   getStoreOrderStatusCountsAction,
   getStoreOrdersWithCountsAction,
@@ -87,6 +88,7 @@ export default function Page() {
         getStoreOrdersWithCounts: getStoreOrdersWithCountsAction,
         getSellerDashboardData: getSellerDashboardDataAction,
         updateStoreOrderStatus: updateStoreOrderStatusAction,
+        getOrderDetail: getOrderDetailAction,
         getAllActiveStoresList: getAllActiveStoresListAction,
         // Promotions
         createPromotion: createPromotionAction,

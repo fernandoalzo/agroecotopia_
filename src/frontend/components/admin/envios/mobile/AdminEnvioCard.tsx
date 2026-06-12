@@ -3,7 +3,6 @@
 import { Eye, ExternalLink, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { envioStatusConfig, type EnvioEstadoKey } from "../envioUtils";
 import type { EnvioCardData } from "../AdminEnvioCard";
@@ -11,9 +10,10 @@ import type { EnvioCardData } from "../AdminEnvioCard";
 interface AdminEnvioCardMobileProps {
   envio: EnvioCardData;
   onOpenDetail: (envio: EnvioCardData) => void;
+  onOpenOrderDetail?: (pedidoId: string) => void;
 }
 
-export function AdminEnvioCardMobile({ envio, onOpenDetail }: AdminEnvioCardMobileProps) {
+export function AdminEnvioCardMobile({ envio, onOpenDetail, onOpenOrderDetail }: AdminEnvioCardMobileProps) {
   const cfg = envioStatusConfig[envio.estado as EnvioEstadoKey];
   const StatusIcon = cfg?.icon || Package;
 
@@ -87,11 +87,9 @@ export function AdminEnvioCardMobile({ envio, onOpenDetail }: AdminEnvioCardMobi
             variant="ghost"
             size="sm"
             className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary"
-            asChild
+            onClick={() => onOpenOrderDetail?.(envio.pedidoId)}
           >
-            <Link href={`/pedidos/${envio.pedidoId}`} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4" />
-            </Link>
+            <ExternalLink className="h-4 w-4" />
           </Button>
         </div>
       </div>

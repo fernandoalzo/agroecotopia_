@@ -12,9 +12,11 @@ import {
 import { cn } from "@/lib/utils";
 import { envioStatusConfig, type EnvioEstadoKey } from "./envioUtils";
 import { EnvioDetailPanel } from "./EnvioDetailPanel";
+import { OrderDetailPanel } from "@/components/admin/pedidos/OrderDetailPanel";
 import { AdminEnvioCard } from "./AdminEnvioCard";
 import { Loading } from "@/components/ui/Loading";
 import { Fragment } from "react";
+import { PedidoEstado } from "@/types";
 
 type Envio = any;
 
@@ -33,6 +35,8 @@ interface EnviosListProps {
   onStatusFilterChange: (status: string) => void;
   onUpdateStatus: (envioId: string, nuevoEstado: EnvioEstadoKey, extra?: any) => Promise<boolean>;
   onRefresh: () => void;
+  getOrderDetail?: (pedidoId: string) => Promise<any>;
+  updateStoreOrderStatus?: (storeId: string, pedidoId: string, newStatus: PedidoEstado) => Promise<any>;
 }
 
 export function EnviosList({
@@ -50,8 +54,11 @@ export function EnviosList({
   onStatusFilterChange,
   onUpdateStatus,
   onRefresh,
+  getOrderDetail,
+  updateStoreOrderStatus,
 }: EnviosListProps) {
   const [selectedEnvio, setSelectedEnvio] = useState<Envio | null>(null);
+  const [selectedPedidoId, setSelectedPedidoId] = useState<string | null>(null);
   const totalEnvios = Object.values(stats).reduce((a, b) => a + (Number(b) || 0), 0);
   const allStats: Record<string, number> = { ALL: totalEnvios || totalCount, ...stats };
 
@@ -147,6 +154,7 @@ export function EnviosList({
                 envio={envio}
                 index={index}
                 onOpenDetail={setSelectedEnvio}
+                onOpenOrderDetail={setSelectedPedidoId}
               />
             ))}
           </div>
@@ -208,12 +216,21 @@ export function EnviosList({
         )}
       </div>
 
-      {/* Detail Panel */}
+      {/* Detail Panels */}
       {selectedEnvio && (
         <EnvioDetailPanel
           envio={selectedEnvio}
           onClose={() => setSelectedEnvio(null)}
           onUpdateStatus={handleStatusUpdate}
+        />
+      )}
+      {selectedPedidoId && getOrderDetail && updateStoreOrderStatus && (
+        <OrderDetailPanel
+          pedidoId={selectedPedidoId}
+          storeId={storeId}
+          onClose={() => setSelectedPedidoId(null)}
+          getOrderDetail={getOrderDetail}
+          updateStoreOrderStatus={updateStoreOrderStatus}
         />
       )}
     </>
