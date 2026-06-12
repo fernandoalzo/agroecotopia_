@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
@@ -29,13 +30,19 @@ import { Loader2 } from "lucide-react";
 
 const log = logger.child("src/app/pedidos/[id]/page.tsx");
 
-const getNextStatuses = (current: PedidoEstado): PedidoEstado[] => {
+const getNextStatuses = (current: PedidoEstado, tipoEntrega?: string): PedidoEstado[] => {
+  const isEnvio = tipoEntrega === "ENVIO";
   switch (current) {
     case PedidoEstado.PENDIENTE:
       return [PedidoEstado.CONFIRMADO, PedidoEstado.CANCELADO];
     case PedidoEstado.CONFIRMADO:
       return [PedidoEstado.EN_PREPARACION, PedidoEstado.CANCELADO];
     case PedidoEstado.EN_PREPARACION:
+      if (isEnvio) {
+        // Para ENVIO, el tracking se gestiona desde Envíos (DESPACHADO → EN_TRANSITO → EN_REPARTO → ENTREGADO)
+        // El Pedido se sincroniza automáticamente cuando el Envio llega a ENTREGADO
+        return [PedidoEstado.CANCELADO];
+      }
       return [PedidoEstado.EN_BODEGA, PedidoEstado.CANCELADO];
     case PedidoEstado.EN_BODEGA:
       return [PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO];
@@ -1121,8 +1128,33 @@ export default function OrderDetailPageClient({
 
                       {/* ─── Status Update ─── */}
                       {(() => {
-                        const nextStatuses = getNextStatuses(order.estado);
-                        if (nextStatuses.length === 0) return null;
+                        const nextStatuses = getNextStatuses(order.estado, order.tipoEntrega);
+                        const esEnvioEnPreparacion = order.tipoEntrega === "ENVIO" && order.estado === PedidoEstado.EN_PREPARACION;
+                        if (nextStatuses.length === 0 && !esEnvioEnPreparacion) return null;
+                        if (esEnvioEnPreparacion) {
+                          return (
+                            <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
+                              <div className="flex items-start gap-3">
+                                <Truck className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
+                                    Seguimiento de Envío
+                                  </p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Este pedido es de tipo envío a domicilio. El seguimiento se gestiona desde la sección <strong>Envíos</strong> del panel de tu tienda.
+                                  </p>
+                                  <Link
+                                    href="/mi-tienda?tab=envios"
+                                    className="inline-flex items-center gap-1.5 mt-3 rounded-lg text-xs font-bold h-8 px-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all"
+                                  >
+                                    <Truck className="w-3.5 h-3.5" />
+                                    Ir a Envíos
+                                  </Link>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
                         return (
                           <div className="overflow-hidden rounded-xl border border-border/30 bg-card/30">
                             <button

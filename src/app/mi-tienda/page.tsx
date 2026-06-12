@@ -52,6 +52,13 @@ import {
   updateBodegaAction,
   deleteBodegaAction,
 } from "@/backend/modules/bodega/bodega.actions";
+import {
+  getEnviosByStoreAction,
+  getEnviosWithCountsAction,
+  getEnvioStatsAction,
+  updateEnvioEstadoAction,
+  getEnvioDetailAction,
+} from "@/backend/modules/envio/envio.actions";
 import MiTiendaPage from "./MiTiendaPageClient";
 
 export default function Page() {
@@ -104,6 +111,12 @@ export default function Page() {
         createBodega: createBodegaAction,
         updateBodega: updateBodegaAction,
         deleteBodega: deleteBodegaAction,
+        // Envios
+        getEnviosByStore: getEnviosByStoreAction,
+        getEnviosWithCounts: getEnviosWithCountsAction,
+        getEnvioStats: getEnvioStatsAction,
+        updateEnvioStatus: updateEnvioEstadoAction,
+        getEnvioDetail: getEnvioDetailAction,
       }}
     />
   );

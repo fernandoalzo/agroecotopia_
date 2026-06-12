@@ -59,6 +59,7 @@ model Pedido {
   bodega        Bodega?         @relation(fields: [bodegaId], references: [id], onDelete: SetNull)
   detalles      DetallePedido[]
   conversations Conversation[]
+  envio         Envio?
 
   @@index([usuarioId])
   @@index([estado])

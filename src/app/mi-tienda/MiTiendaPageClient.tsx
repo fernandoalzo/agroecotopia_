@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Tag,
   Settings,
+  Truck,
 } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { cn } from "@/lib/utils";
@@ -34,10 +35,12 @@ import { PromotionsList } from "@/components/seller/promotions/PromotionsList";
 import { PromotionCreateModal } from "@/components/seller/promotions/PromotionCreateModal";
 import { StoreConfigurationPanel } from "@/components/seller/configuration/StoreConfigurationPanel";
 import { Promotion } from "@prisma/client";
+import { EnviosList } from "@/components/admin/envios/EnviosList";
+import { envioStatusConfig, type EnvioEstadoKey } from "@/components/admin/envios/envioUtils";
 
 const log = logger.child();
 
-type SellerTab = "orders" | "products" | "promotions" | "store_info" | "configuration";
+type SellerTab = "orders" | "envios" | "products" | "promotions" | "store_info" | "configuration";
 
 interface MiTiendaActions {
   getMyStores: () => Promise<any>;
@@ -90,11 +93,19 @@ interface MiTiendaActions {
   createBodega: (storeId: string, data: { name: string; address: string; city: string; imagenUrl?: string }) => Promise<any>;
   updateBodega: (bodegaId: string, data: { name?: string; address?: string; city?: string; imagenUrl?: string }) => Promise<any>;
   deleteBodega: (bodegaId: string) => Promise<any>;
+
+  // Envios
+  getEnviosByStore: (...args: any[]) => Promise<any>;
+  getEnviosWithCounts: (...args: any[]) => Promise<any>;
+  getEnvioStats: (...args: any[]) => Promise<any>;
+  updateEnvioStatus: (...args: any[]) => Promise<any>;
+  getEnvioDetail: (...args: any[]) => Promise<any>;
 }
 
 const SIDEBAR_ITEMS: { id: SellerTab; labelEs: string; labelEn: string; icon: React.ElementType }[] = [
   { id: "store_info", labelEs: "Mi Tienda", labelEn: "My Store", icon: Store },
   { id: "orders", labelEs: "Pedidos", labelEn: "Orders", icon: ClipboardList },
+  { id: "envios", labelEs: "Envíos", labelEn: "Shipments", icon: Truck },
   { id: "products", labelEs: "Mis Productos", labelEn: "My Products", icon: Package },
   { id: "promotions", labelEs: "Promociones", labelEn: "Promotions", icon: Tag },
   { id: "configuration", labelEs: "Configuración", labelEn: "Configuration", icon: Settings },
@@ -130,6 +141,16 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loadingPromotions, setLoadingPromotions] = useState(false);
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
+
+  const [envios, setEnvios] = useState<any[]>([]);
+  const [enviosLoading, setEnviosLoading] = useState(false);
+  const [enviosStats, setEnviosStats] = useState<Record<string, number>>({ ALL: 0 });
+  const [enviosCurrentPage, setEnviosCurrentPage] = useState(1);
+  const [enviosStatusFilter, setEnviosStatusFilter] = useState<string>("ALL");
+  const [enviosSearchQuery, setEnviosSearchQuery] = useState("");
+  const [enviosTotalPages, setEnviosTotalPages] = useState(1);
+  const [enviosTotalCount, setEnviosTotalCount] = useState(0);
+  const [enviosRefresh, setEnviosRefresh] = useState(0);
 
   const activeStore = stores.find(s => s.id === activeStoreId) || null;
 
@@ -205,6 +226,48 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
   useEffect(() => {
     loadPromotions();
   }, [loadPromotions]);
+
+  const enviosLoadedRef = useRef(false);
+
+  useEffect(() => {
+    if (!activeStore?.id || activeTab !== "envios") return;
+    let cancelled = false;
+    const load = async () => {
+      if (!enviosLoadedRef.current) setEnviosLoading(true);
+      try {
+        const response = await actions.getEnviosWithCounts(activeStore.id, {
+          page: enviosCurrentPage,
+          limit: 10,
+          estado: enviosStatusFilter === "ALL" ? undefined : enviosStatusFilter,
+          search: enviosSearchQuery || undefined,
+        });
+        if (cancelled) return;
+        if (response?.enviosResult) {
+          setEnvios(response.enviosResult.envios || []);
+          setEnviosTotalPages(response.enviosResult.totalPages || 1);
+          setEnviosTotalCount(response.enviosResult.totalCount || 0);
+        }
+        if (response?.stats) {
+          const s = response.stats as Record<string, number>;
+          const total = Object.values(s).reduce((a, b) => a + (Number(b) || 0), 0);
+          setEnviosStats({ ALL: total, ...s });
+        }
+      } catch (err) {
+        log.error("Error loading envios:", err);
+      } finally {
+        if (!cancelled) {
+          enviosLoadedRef.current = true;
+          setEnviosLoading(false);
+        }
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [activeStore?.id, activeTab, enviosCurrentPage, enviosStatusFilter, enviosSearchQuery, enviosRefresh, actions]);
+
+  useEffect(() => {
+    enviosLoadedRef.current = false;
+  }, [activeStore?.id]);
 
   const loadStore = async () => {
     if (!session?.user?.id) return;
@@ -320,11 +383,20 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     events: ["product:stock_updated"],
   });
 
+  useSocketRefresh({
+    socket,
+    enabled: !!activeStore?.id && !!isSeller && activeTab === "envios",
+    refresh: () => setEnviosRefresh(prev => prev + 1),
+    events: ["envio:created", "envio:status_updated"],
+  });
+
+  const ordersLoadedRef = useRef(false);
+
   useEffect(() => {
     if (!activeStore?.id || !isSeller || activeTab !== "orders") return;
     let cancelled = false;
     const load = async () => {
-      setStoreOrdersLoading(true);
+      if (!ordersLoadedRef.current) setStoreOrdersLoading(true);
       const response = await actions.getSellerDashboardData(activeStore.id, {
         page: storeOrderCurrentPage,
         limit: 10,
@@ -359,11 +431,16 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
         setOrderChatUnreadCounts(counts);
       }
 
+      ordersLoadedRef.current = true;
       setStoreOrdersLoading(false);
     };
     load();
     return () => { cancelled = true; };
   }, [activeStore?.id, isSeller, activeTab, storeOrderCurrentPage, storeOrderStatusFilter, storeOrderSearchQuery, storeOrdersRefresh]);
+
+  useEffect(() => {
+    ordersLoadedRef.current = false;
+  }, [activeStore?.id]);
 
   // Update tab in URL
   const handleTabChange = (tab: SellerTab) => {
@@ -570,6 +647,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
             const isActive = activeTab === item.id;
             return (
               <React.Fragment key={item.id}>
+                {item.id === "products" && <div className="h-px bg-border/50 my-2 mx-2" />}
                 {item.id === "configuration" && <div className="h-px bg-border/50 my-2 mx-2" />}
                 <button
                   onClick={() => handleTabChange(item.id)}
@@ -611,6 +689,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
             </motion.h1>
             <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
               {activeTab === "orders" && "Gestiona los pedidos que contienen productos de esta tienda"}
+              {activeTab === "envios" && "Seguimiento de envíos de pedidos a clientes"}
               {activeTab === "products" && "Gestiona los productos de tu tienda"}
               {activeTab === "store_info" && "Información y configuración de tu tienda"}
               {activeTab === "configuration" && "Configura impuestos, zonas de envío y bodegas de recogida"}
@@ -664,6 +743,31 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                   onOpenOrderChat={handleOpenOrderChat}
                   unreadChatCounts={orderChatUnreadCounts}
                   openingChatOrderId={openingChatOrderId}
+                  />
+                )}
+                {activeTab === "envios" && activeStore && (
+                  <EnviosList
+                    storeId={activeStore.id}
+                    envios={envios}
+                    loading={enviosLoading}
+                    totalPages={enviosTotalPages}
+                    totalCount={enviosTotalCount}
+                    stats={enviosStats}
+                    currentPage={enviosCurrentPage}
+                    statusFilter={enviosStatusFilter}
+                    searchQuery={enviosSearchQuery}
+                    onPageChange={setEnviosCurrentPage}
+                    onSearchChange={setEnviosSearchQuery}
+                    onStatusFilterChange={setEnviosStatusFilter}
+                    onUpdateStatus={async (envioId, nuevoEstado, extra) => {
+                      const result = await actions.updateEnvioStatus(activeStore.id, envioId, nuevoEstado, extra);
+                      if (result && "error" in result) {
+                        return false;
+                      }
+                      setEnviosRefresh(prev => prev + 1);
+                      return true;
+                    }}
+                    onRefresh={() => setEnviosRefresh(prev => prev + 1)}
                   />
                 )}
                 {activeTab === "products" && activeStore && (

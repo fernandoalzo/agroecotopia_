@@ -25,7 +25,7 @@ export const AdminOrderCard = ({ order, index, isUpdating, onUpdateStatus, onOpe
   const [showAllItems, setShowAllItems] = useState(false);
 
   const cfg = statusConfig[order.estado];
-  const nextStatuses = getNextStatuses(order.estado);
+  const nextStatuses = getNextStatuses(order.estado, order.tipoEntrega);
 
   useEffect(() => {
     if (confirmingStatus && order.estado === confirmingStatus && !isUpdating) {

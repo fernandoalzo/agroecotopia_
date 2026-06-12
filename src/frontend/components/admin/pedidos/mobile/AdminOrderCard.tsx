@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Copy, Eye, Loader2, MessageSquare, User, Tag, Warehouse } from "lucide-react";
+import { Check, Copy, Eye, Loader2, MessageSquare, User, Tag, Warehouse, Truck } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
@@ -84,7 +84,7 @@ export const AdminOrderCardMobile = ({
                         </button>
                     </div>
                     <p className="text-xs text-muted-foreground/60 mt-0.5 font-medium">
-                        {format(new Date(order.fechaPedido), "dd MMM yyyy, HH:mm", { locale: es })}
+                        {order.fechaPedido ? format(new Date(order.fechaPedido), "dd MMM yyyy, HH:mm", { locale: es }) : "-"}
                     </p>
                 </div>
                 <Badge
@@ -244,7 +244,8 @@ export const AdminOrderCardMobile = ({
                             exit={{ opacity: 0, scale: 0.98 }}
                             className="flex items-center gap-2 w-full"
                         >
-                            {nextStatuses.map((ns) => (
+                            {nextStatuses.length > 0 ? (
+                              nextStatuses.map((ns) => (
                                 <button
                                     key={ns}
                                     className={cn(
@@ -255,7 +256,16 @@ export const AdminOrderCardMobile = ({
                                 >
                                     {statusConfig[ns].label}
                                 </button>
-                            ))}
+                              ))
+                            ) : order.tipoEntrega === "ENVIO" && order.estado === "EN_PREPARACION" ? (
+                              <Link
+                                href="/mi-tienda?tab=envios"
+                                className="inline-flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold h-9 px-4 flex-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all"
+                              >
+                                <Truck className="w-3.5 h-3.5" />
+                                Envíos
+                              </Link>
+                            ) : null}
                             {onOpenOrderChat && (
                                 <div className="relative shrink-0">
                                     <Button

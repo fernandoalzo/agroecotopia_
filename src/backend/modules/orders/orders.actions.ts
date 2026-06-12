@@ -7,6 +7,7 @@ import { PedidoEstado, Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { chatService } from "@/backend/modules/chat";
 import logger from "@/utils/logger";
+import { deepSerialize } from "@/lib/serialize";
 
 const log = logger.child("src/backend/modules/orders/orders.actions.ts");
 
@@ -43,7 +44,7 @@ export async function placeOrderAction(data: {
 
     log.info("Pedido creado exitosamente:", { pedidoIds, userId });
     revalidatePath("/perfil/pedidos");
-    return { success: true, pedidoId: primaryPedidoId, pedidoIds };
+    return deepSerialize({ success: true, pedidoId: primaryPedidoId, pedidoIds });
   });
 }
 
@@ -64,7 +65,7 @@ export async function updateOrderStatusAction(
       log.info("Estado del pedido actualizado exitosamente:", { pedidoId, nuevoEstado });
       revalidatePath("/admin/pedidos");
       revalidatePath(`/perfil/pedidos/${pedidoId}`);
-      return { success: true, pedido };
+      return deepSerialize({ success: true, pedido });
     } catch (error: any) {
       log.error("Error al actualizar estado del pedido:", { pedidoId, nuevoEstado, error: error?.message });
       if (error instanceof StockError) {
@@ -182,7 +183,7 @@ export async function cancelUserOrderAction(pedidoId: string) {
       revalidatePath(`/pedidos/${pedidoId}`);
       revalidatePath("/perfil/pedidos");
       
-      return { success: true, pedido: pedidoCancelado };
+      return deepSerialize({ success: true, pedido: pedidoCancelado });
     } catch (error: any) {
       log.error("Error al cancelar pedido:", { pedidoId, error: error.message });
       return { error: error.message || "Error al cancelar el pedido" };
@@ -237,10 +238,10 @@ export async function getStoreOrdersAction(storeId: string, params: { page: numb
   return await withStoreOwner(storeId, async () => {
     log.info(`Action: getStoreOrdersAction`, { storeId, params });
     try {
-      return await ordersService.getPaginatedPedidos({ ...params, storeId });
+      return deepSerialize(await ordersService.getPaginatedPedidos({ ...params, storeId }));
     } catch (error: any) {
       log.error("Error getting store orders:", error);
-      return { orders: [], totalCount: 0, totalPages: 0, page: params.page, limit: params.limit };
+      return deepSerialize({ orders: [], totalCount: 0, totalPages: 0, page: params.page, limit: params.limit });
     }
   });
 }
@@ -272,13 +273,13 @@ export async function getStoreOrdersWithCountsAction(
         ordersService.getPaginatedPedidos({ ...params, storeId }),
         ordersService.getOrderStatusCounts(storeId),
       ]);
-      return { ordersResult, statusCounts };
+      return deepSerialize({ ordersResult, statusCounts });
     } catch (error: any) {
       log.error("Error getting store orders with counts:", error);
-      return {
+      return deepSerialize({
         ordersResult: { orders: [], totalCount: 0, totalPages: 0, page: params.page, limit: params.limit },
         statusCounts: {},
-      };
+      });
     }
   });
 }
@@ -299,7 +300,7 @@ export async function updateStoreOrderStatusAction(
       revalidatePath("/mi-tienda");
       revalidatePath("/admin/pedidos");
       revalidatePath(`/pedidos/${pedidoId}`);
-      return { success: true, pedido };
+      return deepSerialize({ success: true, pedido });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Error al actualizar el estado del pedido";
       log.error("Error al actualizar estado del pedido de tienda:", { storeId, pedidoId, nuevoEstado, error: message });
@@ -331,14 +332,14 @@ export async function getSellerDashboardDataAction(
         chatService.getSellerOrderConversations(storeId, userId, userRole),
       ]);
 
-      return { ordersResult, statusCounts, conversations };
+      return deepSerialize({ ordersResult, statusCounts, conversations });
     } catch (error: any) {
       log.error("Error getting seller dashboard data:", error);
-      return {
+      return deepSerialize({
         ordersResult: { orders: [], totalCount: 0, totalPages: 0, page: params.page, limit: params.limit },
         statusCounts: {},
         conversations: [],
-      };
+      });
     }
   });
 }
@@ -387,7 +388,7 @@ export async function removeProductFromOrderAction(
       const pedido = await ordersService.removeProductFromOrder(storeId, pedidoId, detalleId, userId);
       revalidatePath("/mi-tienda");
       revalidatePath(`/pedidos/${pedidoId}`);
-      return { success: true, pedido };
+      return deepSerialize({ success: true, pedido });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Error al retirar producto del pedido";
       log.error("Error removing product from order:", { storeId, pedidoId, detalleId, error: message });

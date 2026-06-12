@@ -6,6 +6,7 @@ import { notificationsService } from "@/backend/modules/notifications";
 import { storeTaxService } from "@/backend/modules/store";
 import { stockGuardianService } from "@/backend/modules/stockGuardian";
 import eventBus from "@/utils/eventBus";
+import { deepSerialize } from "@/lib/serialize";
 
 const log = logger.child("src/backend/modules/orders/orders.service.ts");
 
@@ -216,7 +217,17 @@ export class OrdersService {
       }));
       const productIds = items.map((i: { productId: string }) => i.productId);
 
-      // 2. Si ya está en el estado destino → retorno idempotente (sin tocar stock)
+      // 2.5 Para pedidos ENVIO: una vez en EN_PREPARACION, el tracking migra a la sección Envíos
+      if (pedido.tipoEntrega === "ENVIO" && estadoAnterior === PedidoEstado.EN_PREPARACION && !isCancel) {
+        log.warn("Intento de actualizar estado de pedido ENVIO desde Pedidos (debe hacerse desde Envíos):", {
+          pedidoId,
+          estadoAnterior,
+          nuevoEstado,
+        });
+        throw new Error("Para pedidos con envío a domicilio, el seguimiento debe gestionarse desde la sección Envíos");
+      }
+
+      // 3. Si ya está en el estado destino → retorno idempotente (sin tocar stock)
       if (estadoAnterior === nuevoEstado) {
         log.debug("Transición idempotente: el pedido ya está en el estado destino:", { pedidoId, estado: nuevoEstado });
         return this.serializePedido(pedido);
@@ -290,6 +301,18 @@ export class OrdersService {
             throw new StockError(failedProducts);
           }
           log.debug("Stock descontado en DB exitosamente:", { pedidoId });
+
+        }
+
+        // ─── EN_PREPARACION + ENVIO: Crear registro de envío automáticamente ───
+        if (nuevoEstado === PedidoEstado.EN_PREPARACION && pedido.tipoEntrega === "ENVIO") {
+          log.info("Creando registro de envío al iniciar preparación:", { pedidoId });
+          try {
+            const { envioService } = await import("@/backend/modules/envio");
+            await envioService.createEnvioFromPedido(pedido, tx);
+          } catch (err) {
+            log.error("Error creando envío automático (el pedido ya fue confirmado):", err);
+          }
         }
 
         // ─── CANCELADO: Revertir stock en DB ───
@@ -430,18 +453,18 @@ export class OrdersService {
    * Convierte objetos Decimal de Prisma a numbers para serialización
    */
   private serializePedido(pedido: any) {
-    return {
+    return deepSerialize({
       ...pedido,
       subtotal: Number(pedido.subtotal),
       impuestos: Number(pedido.impuestos),
       costoEnvio: Number(pedido.costoEnvio),
       total: Number(pedido.total),
       detalles: pedido.detalles?.map((d: any) => this.serializeDetalle(d)),
-    };
+    });
   }
 
   private serializeDetalle(detalle: any) {
-    return {
+    return deepSerialize({
       ...detalle,
       cantidad: Number(detalle.cantidad),
       precioUnitario: Number(detalle.precioUnitario),
@@ -451,7 +474,7 @@ export class OrdersService {
         stock: Number(detalle.producto.stock),
         peso: detalle.producto.peso ? Number(detalle.producto.peso) : null,
       } : undefined
-    };
+    });
   }
 
   async deletePedido(pedidoId: string) {

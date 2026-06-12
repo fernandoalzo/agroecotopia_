@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Menu,
   X,
+  Truck,
 } from "lucide-react";
 import { AdminOrdersList } from "@/components/admin/pedidos/AdminOrdersList";
 import { ProductsList } from "@/components/shared/productos/ProductsList";
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { AdminChatPageContent } from "@/app/admin/chat/AdminChatPageClient";
+import { EnviosList } from "@/components/admin/envios/EnviosList";
 import { useProductsLogic } from "@/frontend/hooks/useProductsLogic";
 import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import logger from "@/utils/logger";
@@ -31,10 +33,13 @@ import { getConversationUnreadCount } from "@/frontend/lib/chatUnread";
 
 const log = logger.child();
 
-type DashboardTab = "orders" | "products" | "chat" | "store_requests";
+type DashboardTab = "orders" | "products" | "chat" | "store_requests" | "envios";
 type StoreRequestsResponse = any;
 
 interface AdminDashboardActions {
+  adminGetAllEnvios?: (...args: any[]) => Promise<any>;
+  adminGetEnvioCounts?: (...args: any[]) => Promise<any>;
+  updateEnvioStatus?: (...args: any[]) => Promise<any>;
   getPaginatedProducts: (...args: any[]) => Promise<any>;
   searchProducts: (...args: any[]) => Promise<any>;
   getCategoryCounts: (...args: any[]) => Promise<any>;
@@ -59,6 +64,7 @@ interface AdminDashboardActions {
 
 const SIDEBAR_ITEMS: { id: DashboardTab; labelEs: string; labelEn: string; icon: any }[] = [
   { id: "orders", labelEs: "Gestión de Pedidos", labelEn: "Order Management", icon: Package },
+  { id: "envios", labelEs: "Gestión de Envíos", labelEn: "Shipment Management", icon: Truck },
   { id: "products", labelEs: "Gestión de Productos", labelEn: "Product Management", icon: Package },
   { id: "store_requests", labelEs: "Solicitudes de Tienda", labelEn: "Store Requests", icon: Store },
   { id: "chat", labelEs: "Soporte Chat", labelEn: "Chat Support", icon: MessageSquare },
@@ -85,6 +91,16 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
   const [orderTotalPages, setOrderTotalPages] = useState(1);
   const [orderTotalCount, setOrderTotalCount] = useState(0);
   const [ordersRefresh, setOrdersRefresh] = useState(0);
+
+  const [adminEnvios, setAdminEnvios] = useState<any[]>([]);
+  const [adminEnviosLoading, setAdminEnviosLoading] = useState(false);
+  const [adminEnviosStats, setAdminEnviosStats] = useState<Record<string, number>>({ ALL: 0 });
+  const [adminEnviosPage, setAdminEnviosPage] = useState(1);
+  const [adminEnviosFilter, setAdminEnviosFilter] = useState<string>("ALL");
+  const [adminEnviosSearch, setAdminEnviosSearch] = useState("");
+  const [adminEnviosTotalPages, setAdminEnviosTotalPages] = useState(1);
+  const [adminEnviosTotalCount, setAdminEnviosTotalCount] = useState(0);
+  const [adminEnviosRefresh, setAdminEnviosRefresh] = useState(0);
 
   const { state: productState, actions: productActions } = useProductsLogic(undefined, true, {
     getCategoriesAction: actions.getCategories,
@@ -262,6 +278,36 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
     return () => { cancelled = true; };
   }, [actions, isAdmin, activeTab, orderCurrentPage, orderStatusFilter, orderSearchQuery, ordersRefresh]);
 
+  // ─── Admin Envios ───
+  useEffect(() => {
+    if (!isAdmin || activeTab !== "envios" || !actions.adminGetAllEnvios) return;
+    let cancelled = false;
+    const loadAdminEnvios = async () => {
+      setAdminEnviosLoading(true);
+      const result = await actions.adminGetAllEnvios!({
+        page: adminEnviosPage,
+        limit: 10,
+        estado: adminEnviosFilter === "ALL" ? undefined : adminEnviosFilter,
+        search: adminEnviosSearch || undefined,
+      });
+      const counts = await actions.adminGetEnvioCounts!();
+      if (cancelled) return;
+      if (result && "envios" in result) {
+        setAdminEnvios(result.envios);
+        setAdminEnviosTotalPages(result.totalPages);
+        setAdminEnviosTotalCount(result.totalCount);
+      }
+      if (counts && typeof counts === "object") {
+        const typed = counts as Record<string, number>;
+        const total = Object.values(typed).reduce((acc, val) => acc + (Number(val) || 0), 0);
+        setAdminEnviosStats({ ALL: total, ...typed });
+      }
+      setAdminEnviosLoading(false);
+    };
+    loadAdminEnvios();
+    return () => { cancelled = true; };
+  }, [actions, isAdmin, activeTab, adminEnviosPage, adminEnviosFilter, adminEnviosSearch, adminEnviosRefresh]);
+
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -366,6 +412,9 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
               <React.Fragment key={item.id}>
                 {isChat && (
                   <div className="my-3 border-t border-border/40 mx-2" />
+                )}
+                {(item.id === "products" || item.id === "store_requests") && (
+                  <div className="my-2 border-t border-border/40 mx-2" />
                 )}
                 <button
                   onClick={() => handleTabChange(item.id)}
@@ -486,6 +535,38 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                      setOrdersRefresh(prev => prev + 1);
                      return true;
                    }}
+                />
+              </motion.div>
+            )}
+
+            {activeTab === "envios" && (
+              <motion.div
+                key="envios"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2 }}
+                className="p-4 md:p-8"
+              >
+                <div className="mb-6">
+                  <h2 className="text-2xl font-black tracking-tight">Gestión de Envíos</h2>
+                  <p className="text-sm text-muted-foreground mt-1">Seguimiento de todos los envíos del sistema</p>
+                </div>
+                <EnviosList
+                  storeId=""
+                  envios={adminEnvios}
+                  loading={adminEnviosLoading}
+                  totalPages={adminEnviosTotalPages}
+                  totalCount={adminEnviosTotalCount}
+                  stats={adminEnviosStats}
+                  currentPage={adminEnviosPage}
+                  statusFilter={adminEnviosFilter}
+                  searchQuery={adminEnviosSearch}
+                  onPageChange={setAdminEnviosPage}
+                  onSearchChange={setAdminEnviosSearch}
+                  onStatusFilterChange={setAdminEnviosFilter}
+                  onUpdateStatus={async () => false}
+                  onRefresh={() => setAdminEnviosRefresh(prev => prev + 1)}
                 />
               </motion.div>
             )}

@@ -30,6 +30,10 @@ import {
   getAdminUsersList,
   getOrCreateConversationForAdmin,
 } from "@/backend/modules/chat/chat.actions";
+import {
+  adminGetAllEnviosAction,
+  adminGetEnvioCountsAction,
+} from "@/backend/modules/envio/envio.actions";
 import AdminDashboardPage from "./AdminDashboardPageClient";
 
 export default function Page() {
@@ -55,6 +59,8 @@ export default function Page() {
         getOrderStatusCounts: getOrderStatusCountsAction,
         updateOrderStatus: updateOrderStatusAction,
         getAdminConversations,
+        adminGetAllEnvios: adminGetAllEnviosAction,
+        adminGetEnvioCounts: adminGetEnvioCountsAction,
         chat: {
           getAdminConversations,
           getConversationMessages,

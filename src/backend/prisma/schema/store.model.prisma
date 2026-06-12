@@ -36,6 +36,7 @@ model Store {
   taxes         StoreTax[]
   shippingZones StoreShippingZone[]
   bodegas       Bodega[]
+  envios        Envio[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

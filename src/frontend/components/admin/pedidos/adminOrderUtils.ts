@@ -99,13 +99,19 @@ export const statusConfig = {
   },
 };
 
-export const getNextStatuses = (current: PedidoEstado): PedidoEstado[] => {
+export const getNextStatuses = (current: PedidoEstado, tipoEntrega?: string): PedidoEstado[] => {
+  const isEnvio = tipoEntrega === "ENVIO";
   switch (current) {
     case PedidoEstado.PENDIENTE:
       return [PedidoEstado.CONFIRMADO, PedidoEstado.CANCELADO];
     case PedidoEstado.CONFIRMADO:
       return [PedidoEstado.EN_PREPARACION, PedidoEstado.CANCELADO];
     case PedidoEstado.EN_PREPARACION:
+      if (isEnvio) {
+        // Para ENVIO, el tracking se gestiona desde Envíos (DESPACHADO → EN_TRANSITO → EN_REPARTO → ENTREGADO)
+        // El Pedido se sincroniza automáticamente cuando el Envio llega a ENTREGADO
+        return [PedidoEstado.CANCELADO];
+      }
       return [PedidoEstado.EN_BODEGA, PedidoEstado.CANCELADO];
     case PedidoEstado.EN_BODEGA:
       return [PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO];

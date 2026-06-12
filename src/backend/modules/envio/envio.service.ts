@@ -1,0 +1,209 @@
+import { EnvioRepository } from "./envio.repository";
+import { EnvioEstado, PedidoEstado } from "@prisma/client";
+import logger from "@/utils/logger";
+import { deepSerialize } from "@/lib/serialize";
+import eventBus from "@/utils/eventBus";
+
+const log = logger.child("src/backend/modules/envio/envio.service.ts");
+
+export class EnvioService {
+  constructor(private envioRepository: EnvioRepository) {}
+
+  private generarNumeroGuia(): string {
+    const prefix = "AGRO";
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${prefix}-${timestamp}${rand}`;
+  }
+
+  async createEnvioFromPedido(pedido: any, tx: any) {
+    if (pedido.tipoEntrega !== "ENVIO") {
+      log.debug("Pedido no es de tipo ENVIO, saltando creación de envío:", {
+        pedidoId: pedido.id,
+        tipoEntrega: pedido.tipoEntrega,
+      });
+      return null;
+    }
+
+    const storeId = pedido.detalles?.[0]?.storeId;
+    if (!storeId) {
+      log.warn("No se pudo determinar storeId del pedido para crear envío:", {
+        pedidoId: pedido.id,
+      });
+      return null;
+    }
+
+    log.info("Creando registro de envío para pedido confirmado:", {
+      pedidoId: pedido.id,
+      storeId,
+    });
+
+    const envio = await this.envioRepository.create(
+      {
+        pedido: { connect: { id: pedido.id } },
+        store: { connect: { id: storeId } },
+        numeroGuia: this.generarNumeroGuia(),
+        estado: EnvioEstado.PREPARANDO,
+        direccionEntrega: pedido.direccionEntrega || "",
+        destinatarioNombre: pedido.usuario?.name || null,
+        instruccionesEntrega: pedido.notasCliente || null,
+        fechaEstimadaEntrega: pedido.fechaEntregaEstimada || null,
+        eventos: {
+          create: {
+            estado: EnvioEstado.PREPARANDO,
+            descripcion: "Envío registrado y en preparación",
+          },
+        },
+      },
+      tx
+    );
+
+    log.info("Envío creado exitosamente:", {
+      envioId: envio.id,
+      numeroGuia: envio.numeroGuia,
+      pedidoId: pedido.id,
+    });
+
+    eventBus.emit("envio:created", {
+      envioId: envio.id,
+      storeId,
+      pedidoId: pedido.id,
+    });
+
+    return envio;
+  }
+
+  async updateEstado(
+    envioId: string,
+    nuevoEstado: EnvioEstado,
+    actorId: string,
+    extra?: { ubicacion?: string; descripcion?: string; transportadora?: string }
+  ) {
+    log.info("Actualizando estado de envío:", { envioId, nuevoEstado, actorId });
+
+    return await this.envioRepository.executeTransaction(async (tx) => {
+      const envio = await this.envioRepository.findById(envioId, tx);
+      if (!envio) {
+        log.error("Envío no encontrado:", { envioId });
+        throw new Error("Envío no encontrado");
+      }
+
+      const fromEstado = envio.estado;
+      if (fromEstado === nuevoEstado) {
+        log.debug("Transición idempotente: el envío ya está en el estado destino:", {
+          envioId,
+          estado: nuevoEstado,
+        });
+        return envio;
+      }
+
+      const fechaMap: Record<string, keyof typeof envio> = {
+        DESPACHADO: "fechaDespacho",
+        EN_TRANSITO: "fechaTransito",
+        EN_REPARTO: "fechaReparto",
+        ENTREGADO: "fechaEntrega",
+      };
+      const fechaField = fechaMap[nuevoEstado];
+      const extraData: any = { estado: nuevoEstado };
+      if (fechaField) extraData[fechaField] = new Date();
+      if (extra?.transportadora) extraData.transportadora = extra.transportadora;
+
+      const transitioned = await this.envioRepository.tryTransitionEstado(
+        envioId,
+        fromEstado,
+        nuevoEstado,
+        extraData,
+        tx
+      );
+
+      if (!transitioned) {
+        log.warn("Transición fallida (race condition) para envío:", { envioId });
+        const current = await this.envioRepository.findById(envioId, tx);
+        return current;
+      }
+
+      log.info("Estado de envío actualizado:", {
+        envioId,
+        de: fromEstado,
+        a: nuevoEstado,
+      });
+
+      await this.envioRepository.createEvento(
+        {
+          envio: { connect: { id: envioId } },
+          estado: nuevoEstado,
+          ubicacion: extra?.ubicacion || null,
+          descripcion:
+            extra?.descripcion || `Estado actualizado a: ${nuevoEstado}`,
+        },
+        tx
+      );
+
+      eventBus.emit("envio:status_updated", {
+        envioId,
+        pedidoId: envio.pedidoId,
+        estadoAnterior: fromEstado,
+        estadoNuevo: nuevoEstado,
+      });
+
+      // Sincronizar Pedido cuando el envío se marca como ENTREGADO
+      if (nuevoEstado === EnvioEstado.ENTREGADO) {
+        log.info("Sincronizando pedido como ENTREGADO:", { pedidoId: envio.pedidoId });
+        await tx.pedido.update({
+          where: { id: envio.pedidoId },
+          data: {
+            estado: PedidoEstado.ENTREGADO,
+            fechaEntregaReal: new Date(),
+          },
+        });
+      }
+
+      return await this.envioRepository.findById(envioId, tx);
+    });
+  }
+
+  async getEnviosByStore(storeId: string, params: any) {
+    log.debug("Obteniendo envíos por tienda:", { storeId, params });
+    const result = await this.envioRepository.findByStoreId(storeId, params);
+    return {
+      ...result,
+      envios: result.envios.map((e: any) => this.serializeEnvio(e)),
+    };
+  }
+
+  async getEnvioDetallado(envioId: string) {
+    log.debug("Obteniendo detalle de envío:", { envioId });
+    const envio = await this.envioRepository.findById(envioId);
+    return envio ? this.serializeEnvio(envio) : null;
+  }
+
+  async getEnvioStats(storeId?: string) {
+    log.debug("Obteniendo estadísticas de envíos:", { storeId });
+    return await this.envioRepository.getStatusCounts(storeId);
+  }
+
+  async getAllEnvios(params: any) {
+    log.debug("Obteniendo todos los envíos (admin):", params);
+    const result = await this.envioRepository.findAllPaginated(params);
+    return {
+      ...result,
+      envios: result.envios.map((e: any) => this.serializeEnvio(e)),
+    };
+  }
+
+  private serializeEnvio(envio: any) {
+    if (!envio) return envio;
+    return deepSerialize({
+      ...envio,
+      pedido: envio.pedido
+        ? {
+            ...envio.pedido,
+            total: envio.pedido.total ? Number(envio.pedido.total) : undefined,
+            subtotal: envio.pedido.subtotal ? Number(envio.pedido.subtotal) : undefined,
+            impuestos: envio.pedido.impuestos ? Number(envio.pedido.impuestos) : undefined,
+            costoEnvio: envio.pedido.costoEnvio ? Number(envio.pedido.costoEnvio) : undefined,
+          }
+        : envio.pedido,
+    });
+  }
+}

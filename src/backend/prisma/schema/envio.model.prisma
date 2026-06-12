@@ -1,0 +1,57 @@
+enum EnvioEstado {
+  PREPARANDO
+  DESPACHADO
+  EN_TRANSITO
+  EN_REPARTO
+  ENTREGADO
+  FALLIDO
+  DEVUELTO
+}
+
+model Envio {
+  id                   String       @id @default(cuid())
+  pedidoId             String       @unique
+  storeId              String
+  numeroGuia           String       @unique
+  transportadora       String?
+  estado               EnvioEstado  @default(PREPARANDO)
+
+  destinatarioNombre   String?
+  destinatarioTelefono String?
+  direccionEntrega     String       @db.Text
+  ciudad               String?
+  departamento         String?
+  codigoPostal         String?
+  instruccionesEntrega String?      @db.Text
+
+  fechaDespacho        DateTime?
+  fechaTransito        DateTime?
+  fechaReparto         DateTime?
+  fechaEntrega         DateTime?
+  fechaEstimadaEntrega DateTime?
+  notas                String?      @db.Text
+
+  pedido               Pedido       @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  store                Store        @relation(fields: [storeId], references: [id])
+  eventos              EnvioEvento[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId, estado])
+  @@index([numeroGuia])
+  @@index([pedidoId])
+}
+
+model EnvioEvento {
+  id          String      @id @default(cuid())
+  envioId     String
+  estado      EnvioEstado
+  ubicacion   String?     @db.Text
+  descripcion String?     @db.Text
+  fecha       DateTime    @default(now())
+
+  envio       Envio       @relation(fields: [envioId], references: [id], onDelete: Cascade)
+
+  @@index([envioId])
+}
