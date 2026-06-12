@@ -25,6 +25,7 @@ interface AdminOrderCardMobileProps {
     onOpenOrderChat?: () => void;
     unreadChatCount?: number;
     isOpeningChat?: boolean;
+    onOpenOrderDetail?: () => void;
 }
 
 export const AdminOrderCardMobile = ({
@@ -41,6 +42,7 @@ export const AdminOrderCardMobile = ({
     onOpenOrderChat,
     unreadChatCount = 0,
     isOpeningChat = false,
+    onOpenOrderDetail,
 }: AdminOrderCardMobileProps) => {
     const cfg = statusConfig[order.estado];
     const StatusIcon = cfg.icon;
@@ -292,11 +294,9 @@ export const AdminOrderCardMobile = ({
                                 variant="ghost"
                                 size="icon"
                                 className="h-9 w-9 rounded-xl text-muted-foreground hover:text-primary transition-colors shrink-0 border border-border/30"
-                                asChild
+                                onClick={onOpenOrderDetail}
                             >
-                                <Link href={`/pedidos/${order.id}`}>
-                                    <Eye className="h-4 w-4" />
-                                </Link>
+                                <Eye className="h-4 w-4" />
                             </Button>
                         </motion.div>
                     )}

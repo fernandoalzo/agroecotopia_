@@ -73,6 +73,16 @@ export const statusConfig = {
     icon: Timer,
     dotColor: "bg-indigo-500",
   },
+  [PedidoEstado.EN_CAMINO]: {
+    label: "En Camino",
+    color: "bg-sky-500/10 text-sky-600 border-sky-500/20",
+    barColor: "bg-gradient-to-b from-sky-400 to-sky-600",
+    glowColor: "shadow-[2px_0_12px_rgba(14,165,233,0.3)]",
+    cardBorderClass: "border-sky-500/20 bg-sky-500/[0.02]",
+    hoverClasses: "hover:border-sky-500/40 hover:shadow-[0_8px_30px_-5px_rgba(14,165,233,0.12)] hover:bg-sky-500/[0.04]",
+    icon: MapPin,
+    dotColor: "bg-sky-500",
+  },
   [PedidoEstado.EN_BODEGA]: {
     label: "En Bodega",
     color: "bg-purple-500/10 text-purple-600 border-purple-500/20",

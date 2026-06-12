@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ExternalLink, Clock, MapPin as MapPinIcon, Package } from "lucide-react";
+import { X, ExternalLink, Clock, MapPin as MapPinIcon, Package, Warehouse } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { envioStatusConfig, nextValidStatuses, type EnvioEstadoKey } from "./envioUtils";
 
@@ -12,35 +12,59 @@ type EnvioEvento = any;
 interface EnvioDetailPanelProps {
   envio: Envio;
   onClose: () => void;
-  onUpdateStatus: (envioId: string, nuevoEstado: EnvioEstadoKey, extra?: { ubicacion?: string; descripcion?: string; transportadora?: string }) => Promise<boolean>;
+  onUpdateStatus: (envioId: string, nuevoEstado: EnvioEstadoKey, extra?: { ubicacion?: string; descripcion?: string; transportadora?: string; bodegaId?: string }) => Promise<boolean>;
+  bodegas?: any[];
+  getEnvioDetail?: (envioId: string) => Promise<any>;
 }
 
-export function EnvioDetailPanel({ envio, onClose, onUpdateStatus }: EnvioDetailPanelProps) {
+export function EnvioDetailPanel({ envio: initialEnvio, onClose, onUpdateStatus, bodegas = [], getEnvioDetail }: EnvioDetailPanelProps) {
+  const [fullEnvio, setFullEnvio] = useState<Envio | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<EnvioEstadoKey | "">("");
   const [ubicacion, setUbicacion] = useState("");
   const [descripcion, setDescripcion] = useState("");
-  const [transportadora, setTransportadora] = useState(envio.transportadora || "");
+  const [transportadora, setTransportadora] = useState(initialEnvio.transportadora || "");
+  const [bodegaId, setBodegaId] = useState("");
   const [updating, setUpdating] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const statusInputRef = useRef<HTMLInputElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
 
-  const currentConfig = envioStatusConfig[envio.estado as EnvioEstadoKey];
+  const displayEnvio = fullEnvio || initialEnvio;
+
+  const currentConfig = envioStatusConfig[displayEnvio.estado as EnvioEstadoKey];
   const StatusIcon = currentConfig?.icon || Package;
-  const nextStatuses = nextValidStatuses[envio.estado as EnvioEstadoKey] || [];
+  const nextStatuses = nextValidStatuses[displayEnvio.estado as EnvioEstadoKey] || [];
+
+  const loadDetail = async () => {
+    if (getEnvioDetail && initialEnvio.id) {
+      const detail = await getEnvioDetail(initialEnvio.id);
+      if (detail) {
+        setFullEnvio(detail);
+      }
+    }
+  };
+
+  useEffect(() => {
+    loadDetail();
+  }, [initialEnvio.id, getEnvioDetail]);
 
   const handleUpdateStatus = async () => {
     if (!selectedStatus) return;
     setUpdating(true);
     try {
-      await onUpdateStatus(envio.id, selectedStatus as EnvioEstadoKey, {
+      const success = await onUpdateStatus(displayEnvio.id, selectedStatus as EnvioEstadoKey, {
         ubicacion: ubicacion || undefined,
         descripcion: descripcion || undefined,
         transportadora: transportadora || undefined,
+        bodegaId: bodegaId || undefined,
       });
+      if (success) {
+        await loadDetail();
+      }
       setSelectedStatus("");
       setUbicacion("");
       setDescripcion("");
+      setBodegaId("");
     } finally {
       setUpdating(false);
     }
@@ -56,7 +80,7 @@ export function EnvioDetailPanel({ envio, onClose, onUpdateStatus }: EnvioDetail
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const eventos = envio.eventos || [];
+  const eventos = displayEnvio.eventos || [];
 
   return (
     <AnimatePresence>
@@ -71,10 +95,10 @@ export function EnvioDetailPanel({ envio, onClose, onUpdateStatus }: EnvioDetail
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div className="min-w-0">
             <h2 className="text-lg font-bold tracking-tight truncate">
-              Envío {envio.numeroGuia}
+              Envío {displayEnvio.numeroGuia}
             </h2>
             <p className="text-xs text-muted-foreground">
-              Pedido #{envio.pedidoId?.slice(-6).toUpperCase()}
+              Pedido #{displayEnvio.pedidoId?.slice(-6).toUpperCase()}
             </p>
           </div>
           <button
@@ -97,9 +121,9 @@ export function EnvioDetailPanel({ envio, onClose, onUpdateStatus }: EnvioDetail
               <StatusIcon className="w-4 h-4" />
               {currentConfig?.labelEs}
             </span>
-            {envio.transportadora && (
+            {displayEnvio.transportadora && (
               <span className="text-sm text-muted-foreground">
-                {envio.transportadora}
+                {displayEnvio.transportadora}
               </span>
             )}
           </div>
@@ -110,22 +134,22 @@ export function EnvioDetailPanel({ envio, onClose, onUpdateStatus }: EnvioDetail
               Datos del Destinatario
             </h3>
             <div className="bg-secondary/30 rounded-xl p-4 space-y-2">
-              {envio.destinatarioNombre && (
-                <p className="text-sm font-medium">{envio.destinatarioNombre}</p>
+              {displayEnvio.destinatarioNombre && (
+                <p className="text-sm font-medium">{displayEnvio.destinatarioNombre}</p>
               )}
-              {envio.destinatarioTelefono && (
-                <p className="text-sm text-muted-foreground">{envio.destinatarioTelefono}</p>
+              {displayEnvio.destinatarioTelefono && (
+                <p className="text-sm text-muted-foreground">{displayEnvio.destinatarioTelefono}</p>
               )}
-              <p className="text-sm text-muted-foreground">{envio.direccionEntrega}</p>
-              {envio.ciudad && (
+              <p className="text-sm text-muted-foreground">{displayEnvio.direccionEntrega}</p>
+              {displayEnvio.ciudad && (
                 <p className="text-sm text-muted-foreground">
-                  {envio.ciudad}{envio.departamento ? `, ${envio.departamento}` : ""}
+                  {displayEnvio.ciudad}{displayEnvio.departamento ? `, ${displayEnvio.departamento}` : ""}
                 </p>
               )}
-              {envio.instruccionesEntrega && (
+              {displayEnvio.instruccionesEntrega && (
                 <div className="pt-2 border-t border-border/40 mt-2">
                   <p className="text-xs text-muted-foreground/70">Instrucciones:</p>
-                  <p className="text-sm">{envio.instruccionesEntrega}</p>
+                  <p className="text-sm">{displayEnvio.instruccionesEntrega}</p>
                 </div>
               )}
             </div>
@@ -280,6 +304,43 @@ export function EnvioDetailPanel({ envio, onClose, onUpdateStatus }: EnvioDetail
                   </AnimatePresence>
                 </div>
 
+                {(selectedStatus === "FALLIDO" || selectedStatus === "DEVUELTO") && bodegas.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="pt-2">
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                        Bodega de Retorno
+                      </label>
+                      <div className="relative">
+                        <Warehouse className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
+                        <select
+                          value={bodegaId}
+                          onChange={(e) => setBodegaId(e.target.value)}
+                          className="w-full bg-background border border-input rounded-xl pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none transition-shadow cursor-pointer"
+                        >
+                          <option value="">Selecciona la bodega original</option>
+                          {bodegas.map((b) => (
+                            <option key={b.id} value={b.id}>
+                              {b.name} ({b.city})
+                            </option>
+                          ))}
+                        </select>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none">
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        Indica a qué bodega fue retornado el pedido para actualizar su estado.
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
                     Transportadora
@@ -339,9 +400,9 @@ export function EnvioDetailPanel({ envio, onClose, onUpdateStatus }: EnvioDetail
         {/* Footer */}
         <div className="px-6 py-4 border-t border-border shrink-0">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Creado: {new Date(envio.createdAt).toLocaleDateString("es-CO")}</span>
+            <span>Creado: {new Date(displayEnvio.createdAt).toLocaleDateString("es-CO")}</span>
             <a
-              href={`/pedidos/${envio.pedidoId}`}
+              href={`/pedidos/${displayEnvio.pedidoId}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-primary hover:underline font-medium"

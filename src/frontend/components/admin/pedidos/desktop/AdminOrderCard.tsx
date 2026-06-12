@@ -23,6 +23,7 @@ interface AdminOrderCardDesktopProps {
     onOpenOrderChat?: () => void;
     unreadChatCount?: number;
     isOpeningChat?: boolean;
+    onOpenOrderDetail?: () => void;
 }
 
 export const AdminOrderCardDesktop = ({
@@ -37,6 +38,7 @@ export const AdminOrderCardDesktop = ({
     onOpenOrderChat,
     unreadChatCount = 0,
     isOpeningChat = false,
+    onOpenOrderDetail,
 }: AdminOrderCardDesktopProps) => {
     const cfg = statusConfig[order.estado];
     const StatusIcon = cfg.icon;
@@ -252,11 +254,9 @@ export const AdminOrderCardDesktop = ({
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary transition-colors"
-                                    asChild
+                                    onClick={onOpenOrderDetail}
                                 >
-                                    <Link href={`/pedidos/${order.id}`}>
-                                        <Eye className="h-4 w-4" />
-                                    </Link>
+                                    <Eye className="h-4 w-4" />
                                 </Button>
                             </motion.div>
                         )}

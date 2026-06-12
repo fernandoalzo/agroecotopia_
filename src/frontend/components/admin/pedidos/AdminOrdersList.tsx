@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/Loading";
 import { SearchInput } from "@/components/shared/SearchInput";
+import { OrderDetailPanel } from "./OrderDetailPanel";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/frontend/components/admin/AdminOrdersList.tsx");
@@ -32,6 +33,10 @@ interface AdminOrdersListProps {
   searchQuery: string;
   onStatusFilterChange: (status: PedidoEstado | "ALL") => void;
   statusFilter: PedidoEstado | "ALL";
+  storeId?: string;
+  getOrderDetail?: (pedidoId: string) => Promise<any>;
+  updateStoreOrderStatus?: (storeId: string, pedidoId: string, newStatus: PedidoEstado) => Promise<any>;
+  onNavigateToEnvio?: (pedidoId: string) => void;
 }
 
 export const AdminOrdersList = ({
@@ -51,8 +56,13 @@ export const AdminOrdersList = ({
   searchQuery,
   onStatusFilterChange,
   statusFilter,
+  storeId = "",
+  getOrderDetail,
+  updateStoreOrderStatus,
+  onNavigateToEnvio,
 }: AdminOrdersListProps) => {
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   // ── Admin view ────────────────────────────────────────────────────
   return (
@@ -153,6 +163,7 @@ export const AdminOrdersList = ({
                 onOpenOrderChat={onOpenOrderChat}
                 unreadChatCount={unreadChatCounts?.[order.id] || 0}
                 isOpeningChat={openingChatOrderId === order.id}
+                onOpenOrderDetail={setSelectedOrderId}
               />
             ))
           )}
@@ -254,6 +265,16 @@ export const AdminOrdersList = ({
           <div className="w-20 hidden sm:block" />
         )}
       </div>
+      {selectedOrderId && getOrderDetail && updateStoreOrderStatus && (
+        <OrderDetailPanel
+          pedidoId={selectedOrderId}
+          storeId={storeId}
+          onClose={() => setSelectedOrderId(null)}
+          getOrderDetail={getOrderDetail}
+          updateStoreOrderStatus={updateStoreOrderStatus}
+          onNavigateToEnvio={onNavigateToEnvio}
+        />
+      )}
     </div>
   );
 };

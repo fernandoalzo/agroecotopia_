@@ -3,8 +3,19 @@ import { EnvioEstado, PedidoEstado } from "@prisma/client";
 import logger from "@/utils/logger";
 import { deepSerialize } from "@/lib/serialize";
 import eventBus from "@/utils/eventBus";
+import { stockGuardianService } from "@/backend/modules/stockGuardian";
 
 const log = logger.child("src/backend/modules/envio/envio.service.ts");
+
+const VALID_ENVIO_TRANSITIONS: Record<EnvioEstado, EnvioEstado[]> = {
+  [EnvioEstado.PREPARANDO]: [EnvioEstado.DESPACHADO, EnvioEstado.ENTREGADO, EnvioEstado.FALLIDO],
+  [EnvioEstado.DESPACHADO]: [EnvioEstado.EN_TRANSITO, EnvioEstado.ENTREGADO, EnvioEstado.FALLIDO, EnvioEstado.DEVUELTO],
+  [EnvioEstado.EN_TRANSITO]: [EnvioEstado.EN_REPARTO, EnvioEstado.ENTREGADO, EnvioEstado.FALLIDO, EnvioEstado.DEVUELTO],
+  [EnvioEstado.EN_REPARTO]: [EnvioEstado.ENTREGADO, EnvioEstado.FALLIDO, EnvioEstado.DEVUELTO],
+  [EnvioEstado.ENTREGADO]: [],
+  [EnvioEstado.FALLIDO]: [EnvioEstado.EN_REPARTO, EnvioEstado.DEVUELTO],
+  [EnvioEstado.DEVUELTO]: [],
+};
 
 export class EnvioService {
   constructor(private envioRepository: EnvioRepository) {}
@@ -77,7 +88,7 @@ export class EnvioService {
     envioId: string,
     nuevoEstado: EnvioEstado,
     actorId: string,
-    extra?: { ubicacion?: string; descripcion?: string; transportadora?: string }
+    extra?: { ubicacion?: string; descripcion?: string; transportadora?: string; bodegaId?: string }
   ) {
     log.info("Actualizando estado de envío:", { envioId, nuevoEstado, actorId });
 
@@ -89,6 +100,18 @@ export class EnvioService {
       }
 
       const fromEstado = envio.estado;
+
+      const transicionesValidas = VALID_ENVIO_TRANSITIONS[fromEstado as EnvioEstado] || [];
+      if (fromEstado !== nuevoEstado && !transicionesValidas.includes(nuevoEstado)) {
+        log.warn("Transición de estado de envío inválida:", {
+          envioId,
+          de: fromEstado,
+          a: nuevoEstado,
+          permitidas: transicionesValidas,
+        });
+        throw new Error(`Transición de estado no permitida: ${fromEstado} → ${nuevoEstado}`);
+      }
+
       if (fromEstado === nuevoEstado) {
         log.debug("Transición idempotente: el envío ya está en el estado destino:", {
           envioId,
@@ -146,8 +169,34 @@ export class EnvioService {
         estadoNuevo: nuevoEstado,
       });
 
+      // ─── Sincronización con Pedido ───
+      const pedido = await tx.pedido.findUnique({
+        where: { id: envio.pedidoId },
+        include: { detalles: true }
+      });
+
+      if (!pedido) {
+        log.error("Pedido asociado no encontrado:", { pedidoId: envio.pedidoId });
+        const updatedEnvio = await this.envioRepository.findById(envioId, tx);
+        return this.serializeEnvio(updatedEnvio);
+      }
+
+      let orderStatusChanged = false;
+      let nuevoEstadoPedido: PedidoEstado | null = null;
+
+      // Sincronizar Pedido cuando el envío entra en ruta (DESPACHADO, EN_TRANSITO, EN_REPARTO)
+      if (([EnvioEstado.DESPACHADO, EnvioEstado.EN_TRANSITO, EnvioEstado.EN_REPARTO] as EnvioEstado[]).includes(nuevoEstado) && pedido.estado !== PedidoEstado.EN_CAMINO && pedido.estado !== PedidoEstado.CANCELADO && pedido.estado !== PedidoEstado.ENTREGADO) {
+        log.info("Sincronizando pedido como EN_CAMINO:", { pedidoId: envio.pedidoId, estadoEnvio: nuevoEstado });
+        await tx.pedido.update({
+          where: { id: envio.pedidoId },
+          data: { estado: PedidoEstado.EN_CAMINO },
+        });
+        orderStatusChanged = true;
+        nuevoEstadoPedido = PedidoEstado.EN_CAMINO;
+      }
+
       // Sincronizar Pedido cuando el envío se marca como ENTREGADO
-      if (nuevoEstado === EnvioEstado.ENTREGADO) {
+      if (nuevoEstado === EnvioEstado.ENTREGADO && pedido.estado !== PedidoEstado.ENTREGADO && pedido.estado !== PedidoEstado.CANCELADO) {
         log.info("Sincronizando pedido como ENTREGADO:", { pedidoId: envio.pedidoId });
         await tx.pedido.update({
           where: { id: envio.pedidoId },
@@ -155,6 +204,33 @@ export class EnvioService {
             estado: PedidoEstado.ENTREGADO,
             fechaEntregaReal: new Date(),
           },
+        });
+        orderStatusChanged = true;
+        nuevoEstadoPedido = PedidoEstado.ENTREGADO;
+      }
+
+      // Sincronizar Pedido cuando el envío falla o es devuelto -> Mover a EN_BODEGA
+      if ((nuevoEstado === EnvioEstado.FALLIDO || nuevoEstado === EnvioEstado.DEVUELTO) && pedido.estado !== PedidoEstado.EN_BODEGA) {
+        log.info("Sincronizando pedido como EN_BODEGA (Envío fallido o devuelto):", { pedidoId: envio.pedidoId, estadoEnvio: nuevoEstado });
+        const dataToUpdate: any = { estado: PedidoEstado.EN_BODEGA };
+        if (extra?.bodegaId) {
+          dataToUpdate.bodegaId = extra.bodegaId;
+        }
+        await tx.pedido.update({
+          where: { id: envio.pedidoId },
+          data: dataToUpdate,
+        });
+        
+        orderStatusChanged = true;
+        nuevoEstadoPedido = PedidoEstado.EN_BODEGA;
+      }
+
+      if (orderStatusChanged && nuevoEstadoPedido) {
+        log.info("Emitting order:status_updated from envio:", { pedidoId: envio.pedidoId, nuevoEstadoPedido, usuarioId: pedido.usuarioId });
+        eventBus.emit("order:status_updated", {
+          pedidoId: envio.pedidoId,
+          estado: nuevoEstadoPedido,
+          usuarioId: pedido.usuarioId,
         });
       }
 

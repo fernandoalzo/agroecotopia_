@@ -1,4 +1,4 @@
-import { Package, Clock, CheckCircle2, Truck, Timer, XCircle, Warehouse } from "lucide-react";
+import { Package, Clock, CheckCircle2, Truck, Timer, XCircle, Warehouse, MapPin } from "lucide-react";
 import { PedidoEstado } from "@/types";
 
 export interface AdminOrder {
@@ -67,6 +67,16 @@ export const statusConfig = {
     btnClass: "bg-indigo-500/10 dark:bg-indigo-500/5 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black hover:border-indigo-500/50 hover:shadow-[0_4px_12px_rgba(99,102,241,0.2)]",
     icon: Timer,
   },
+  [PedidoEstado.EN_CAMINO]: {
+    label: "En Camino",
+    color: "bg-sky-500/10 text-sky-600 border-sky-500/20",
+    barColor: "bg-gradient-to-b from-sky-400 to-sky-600",
+    glowColor: "shadow-[2px_0_12px_rgba(14,165,233,0.3)] lg:shadow-[2px_0_15px_rgba(14,165,233,0.25)]",
+    cardBorderClass: "border-sky-500/20 bg-sky-500/[0.01]",
+    hoverClasses: "hover:border-sky-500/40 hover:shadow-[0_10px_35px_-5px_rgba(14,165,233,0.15)] hover:bg-sky-500/[0.03]",
+    btnClass: "bg-sky-500/10 dark:bg-sky-500/5 border border-sky-500/20 text-sky-600 dark:text-sky-400 hover:bg-sky-500 hover:text-white dark:hover:bg-sky-500 dark:hover:text-black hover:border-sky-500/50 hover:shadow-[0_4px_12px_rgba(14,165,233,0.2)]",
+    icon: MapPin,
+  },
   [PedidoEstado.EN_BODEGA]: {
     label: "En Bodega",
     color: "bg-purple-500/10 text-purple-600 border-purple-500/20",
@@ -109,10 +119,12 @@ export const getNextStatuses = (current: PedidoEstado, tipoEntrega?: string): Pe
     case PedidoEstado.EN_PREPARACION:
       if (isEnvio) {
         // Para ENVIO, el tracking se gestiona desde Envíos (DESPACHADO → EN_TRANSITO → EN_REPARTO → ENTREGADO)
-        // El Pedido se sincroniza automáticamente cuando el Envio llega a ENTREGADO
+        // El Pedido se sincroniza automáticamente: DESPACHADO → EN_CAMINO, ENTREGADO → ENTREGADO
         return [PedidoEstado.CANCELADO];
       }
       return [PedidoEstado.EN_BODEGA, PedidoEstado.CANCELADO];
+    case PedidoEstado.EN_CAMINO:
+      return [PedidoEstado.CANCELADO];
     case PedidoEstado.EN_BODEGA:
       return [PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO];
     default:

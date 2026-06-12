@@ -152,6 +152,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
   const [enviosTotalPages, setEnviosTotalPages] = useState(1);
   const [enviosTotalCount, setEnviosTotalCount] = useState(0);
   const [enviosRefresh, setEnviosRefresh] = useState(0);
+  const [autoOpenEnvioPedidoId, setAutoOpenEnvioPedidoId] = useState<string | null>(null);
 
   const activeStore = stores.find(s => s.id === activeStoreId) || null;
 
@@ -453,6 +454,11 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     router.replace(`/mi-tienda?${params.toString()}`, { scroll: false });
   };
 
+  const handleNavigateToEnvio = (pedidoId: string) => {
+    setAutoOpenEnvioPedidoId(pedidoId);
+    handleTabChange("envios");
+  };
+
   const handleStoreChange = (storeId: string) => {
     setActiveStoreId(storeId);
     setIsStoreSelectorOpen(false);
@@ -744,6 +750,15 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                   onOpenOrderChat={handleOpenOrderChat}
                   unreadChatCounts={orderChatUnreadCounts}
                   openingChatOrderId={openingChatOrderId}
+                  storeId={activeStore.id}
+                  getOrderDetail={actions.getOrderDetail}
+                  updateStoreOrderStatus={async (_storeId, pedidoId, newStatus) => {
+                    const result = await actions.updateStoreOrderStatus(activeStore.id, pedidoId, newStatus);
+                    if (result && "error" in result) return result;
+                    setStoreOrdersRefresh(prev => prev + 1);
+                    return result;
+                  }}
+                  onNavigateToEnvio={handleNavigateToEnvio}
                   />
                 )}
                 {activeTab === "envios" && activeStore && (
@@ -770,13 +785,17 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                     }}
                     onRefresh={() => setEnviosRefresh(prev => prev + 1)}
                     getOrderDetail={actions.getOrderDetail}
-                    updateStoreOrderStatus={async (orderId, newStatus) => {
-                      const result = await actions.updateStoreOrderStatus(activeStore.id, orderId, newStatus);
+                    getEnvioDetail={actions.getEnvioDetail}
+                    getStoreBodegas={actions.getStoreBodegas}
+                    updateStoreOrderStatus={async (_storeId, pedidoId, newStatus) => {
+                      const result = await actions.updateStoreOrderStatus(activeStore.id, pedidoId, newStatus);
                       if (result && "error" in result) {
-                        return false;
+                        return result;
                       }
-                      return true;
+                      return result;
                     }}
+                    autoOpenPedidoId={autoOpenEnvioPedidoId}
+                    onAutoOpenConsumed={() => setAutoOpenEnvioPedidoId(null)}
                   />
                 )}
                 {activeTab === "products" && activeStore && (

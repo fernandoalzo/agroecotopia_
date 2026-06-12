@@ -28,28 +28,9 @@ import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import logger from "@/utils/logger";
 import { Loader2 } from "lucide-react";
 
+import { getNextStatuses } from "@/frontend/components/admin/pedidos/adminOrderUtils";
 const log = logger.child("src/app/pedidos/[id]/page.tsx");
 
-const getNextStatuses = (current: PedidoEstado, tipoEntrega?: string): PedidoEstado[] => {
-  const isEnvio = tipoEntrega === "ENVIO";
-  switch (current) {
-    case PedidoEstado.PENDIENTE:
-      return [PedidoEstado.CONFIRMADO, PedidoEstado.CANCELADO];
-    case PedidoEstado.CONFIRMADO:
-      return [PedidoEstado.EN_PREPARACION, PedidoEstado.CANCELADO];
-    case PedidoEstado.EN_PREPARACION:
-      if (isEnvio) {
-        // Para ENVIO, el tracking se gestiona desde Envíos (DESPACHADO → EN_TRANSITO → EN_REPARTO → ENTREGADO)
-        // El Pedido se sincroniza automáticamente cuando el Envio llega a ENTREGADO
-        return [PedidoEstado.CANCELADO];
-      }
-      return [PedidoEstado.EN_BODEGA, PedidoEstado.CANCELADO];
-    case PedidoEstado.EN_BODEGA:
-      return [PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO];
-    default:
-      return [];
-  }
-};
 
 const statusConfig = {
   [PedidoEstado.PENDIENTE]: {
@@ -69,6 +50,12 @@ const statusConfig = {
     color: "bg-indigo-500/10 text-indigo-600 border-indigo-500/20",
     btnClass: "bg-indigo-500/10 dark:bg-indigo-500/5 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black hover:border-indigo-500/50 hover:shadow-[0_4px_12px_rgba(99,102,241,0.2)]",
     icon: Timer,
+  },
+  [PedidoEstado.EN_CAMINO]: {
+    label: "En Camino",
+    color: "bg-sky-500/10 text-sky-600 border-sky-500/20",
+    btnClass: "bg-sky-500/10 dark:bg-sky-500/5 border border-sky-500/20 text-sky-600 dark:text-sky-400 hover:bg-sky-500 hover:text-white dark:hover:bg-sky-500 dark:hover:text-black hover:border-sky-500/50 hover:shadow-[0_4px_12px_rgba(14,165,233,0.2)]",
+    icon: MapPin,
   },
   [PedidoEstado.EN_BODEGA]: {
     label: "En Bodega",
@@ -857,13 +844,25 @@ export default function OrderDetailPageClient({
                       </div>
 
                       {(() => {
-                        const allStatuses: PedidoEstado[] = [
-                          PedidoEstado.PENDIENTE,
-                          PedidoEstado.CONFIRMADO,
-                          PedidoEstado.EN_PREPARACION,
-                          PedidoEstado.EN_BODEGA,
-                          PedidoEstado.ENTREGADO,
-                        ];
+                        const getStatuses = () => {
+                          if (order.tipoEntrega === "ENVIO") {
+                            return [
+                              PedidoEstado.PENDIENTE,
+                              PedidoEstado.CONFIRMADO,
+                              PedidoEstado.EN_PREPARACION,
+                              PedidoEstado.EN_CAMINO,
+                              PedidoEstado.ENTREGADO,
+                            ];
+                          }
+                          return [
+                            PedidoEstado.PENDIENTE,
+                            PedidoEstado.CONFIRMADO,
+                            PedidoEstado.EN_PREPARACION,
+                            PedidoEstado.EN_BODEGA,
+                            PedidoEstado.ENTREGADO,
+                          ];
+                        };
+                        const allStatuses: PedidoEstado[] = getStatuses();
                         const currentIdx = allStatuses.indexOf(order.estado as PedidoEstado);
                         const isCancelled = order.estado === PedidoEstado.CANCELADO;
 
@@ -1040,13 +1039,25 @@ export default function OrderDetailPageClient({
                         </div>
 
                         {(() => {
-                          const allStatuses: PedidoEstado[] = [
-                            PedidoEstado.PENDIENTE,
-                            PedidoEstado.CONFIRMADO,
-                            PedidoEstado.EN_PREPARACION,
-                            PedidoEstado.EN_BODEGA,
-                            PedidoEstado.ENTREGADO,
-                          ];
+                          const getStatuses = () => {
+                            if (order.tipoEntrega === "ENVIO") {
+                              return [
+                                PedidoEstado.PENDIENTE,
+                                PedidoEstado.CONFIRMADO,
+                                PedidoEstado.EN_PREPARACION,
+                                PedidoEstado.EN_CAMINO,
+                                PedidoEstado.ENTREGADO,
+                              ];
+                            }
+                            return [
+                              PedidoEstado.PENDIENTE,
+                              PedidoEstado.CONFIRMADO,
+                              PedidoEstado.EN_PREPARACION,
+                              PedidoEstado.EN_BODEGA,
+                              PedidoEstado.ENTREGADO,
+                            ];
+                          };
+                          const allStatuses: PedidoEstado[] = getStatuses();
                           const currentIdx = allStatuses.indexOf(order.estado as PedidoEstado);
                           const isCancelled = order.estado === PedidoEstado.CANCELADO;
 

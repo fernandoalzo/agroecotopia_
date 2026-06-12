@@ -27,6 +27,34 @@ export class StockError extends Error {
   }
 }
 
+/**
+ * Mapa canónico de transiciones válidas para PedidoEstado.
+ * Diferencia flujo ENVIO vs RECOJO_EN_BODEGA.
+ * CANCELADO es siempre permitido desde cualquier estado activo.
+ */
+const VALID_TRANSITIONS: Record<PedidoEstado, PedidoEstado[]> = {
+  [PedidoEstado.PENDIENTE]: [PedidoEstado.CONFIRMADO, PedidoEstado.CANCELADO],
+  [PedidoEstado.CONFIRMADO]: [PedidoEstado.EN_PREPARACION, PedidoEstado.CANCELADO],
+  [PedidoEstado.EN_PREPARACION]: [PedidoEstado.EN_BODEGA, PedidoEstado.CANCELADO],
+  [PedidoEstado.EN_CAMINO]: [PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO],
+  [PedidoEstado.EN_BODEGA]: [PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO],
+  [PedidoEstado.ENTREGADO]: [],
+  [PedidoEstado.CANCELADO]: [],
+};
+
+/**
+ * Obtiene las transiciones válidas considerando el tipoEntrega.
+ * Para pedidos ENVIO en EN_PREPARACION, solo CANCELADO es válido desde Pedidos
+ * (el resto se gestiona desde la sección Envíos que sincroniza automáticamente).
+ */
+function getValidTransitions(estado: PedidoEstado, tipoEntrega?: string): PedidoEstado[] {
+  const base = VALID_TRANSITIONS[estado] || [];
+  if (tipoEntrega === "ENVIO" && estado === PedidoEstado.EN_PREPARACION) {
+    return [PedidoEstado.CANCELADO];
+  }
+  return base;
+}
+
 
 type CreatePedidoDetalle = {
   productoId: string;
@@ -196,6 +224,7 @@ export class OrdersService {
     const estadosConStockDescontado: PedidoEstado[] = [
       PedidoEstado.CONFIRMADO,
       PedidoEstado.EN_PREPARACION,
+      PedidoEstado.EN_CAMINO,
       PedidoEstado.EN_BODEGA,
       PedidoEstado.ENTREGADO,
     ];
@@ -217,14 +246,20 @@ export class OrdersService {
       }));
       const productIds = items.map((i: { productId: string }) => i.productId);
 
-      // 2.5 Para pedidos ENVIO: una vez en EN_PREPARACION, el tracking migra a la sección Envíos
-      if (pedido.tipoEntrega === "ENVIO" && estadoAnterior === PedidoEstado.EN_PREPARACION && !isCancel) {
-        log.warn("Intento de actualizar estado de pedido ENVIO desde Pedidos (debe hacerse desde Envíos):", {
+      // 2. Validar que la transición es legal
+      const transicionesValidas = getValidTransitions(estadoAnterior, pedido.tipoEntrega);
+      if (!transicionesValidas.includes(nuevoEstado)) {
+        log.warn("Transición de estado inválida:", {
           pedidoId,
-          estadoAnterior,
-          nuevoEstado,
+          de: estadoAnterior,
+          a: nuevoEstado,
+          tipoEntrega: pedido.tipoEntrega,
+          transicionesPermitidas: transicionesValidas,
         });
-        throw new Error("Para pedidos con envío a domicilio, el seguimiento debe gestionarse desde la sección Envíos");
+        if (pedido.tipoEntrega === "ENVIO" && estadoAnterior === PedidoEstado.EN_PREPARACION && !isCancel) {
+          throw new Error("Para pedidos con envío a domicilio, el seguimiento debe gestionarse desde la sección Envíos");
+        }
+        throw new Error(`Transición de estado no permitida: ${estadoAnterior} → ${nuevoEstado}`);
       }
 
       // 3. Si ya está en el estado destino → retorno idempotente (sin tocar stock)
@@ -331,6 +366,40 @@ export class OrdersService {
             await stockGuardianService.restoreStock(items);
           }
           log.debug("Stock revertido exitosamente:", { pedidoId });
+        }
+
+        // ─── CANCELADO + ENVIO: Cancelar envío asociado ───
+        if (isCancel && pedido.tipoEntrega === "ENVIO") {
+          try {
+            const { envioRepository } = await import("@/backend/modules/envio");
+            const envio = await envioRepository.findByPedidoId(pedidoId, tx);
+            if (envio && envio.estado !== "ENTREGADO" && envio.estado !== "DEVUELTO") {
+              log.info("Cancelando envío asociado al pedido cancelado:", {
+                pedidoId,
+                envioId: envio.id,
+                envioEstado: envio.estado,
+              });
+              await (tx as any).envio.update({
+                where: { id: envio.id },
+                data: { estado: "DEVUELTO" },
+              });
+              await (tx as any).envioEvento.create({
+                data: {
+                  envioId: envio.id,
+                  estado: "DEVUELTO",
+                  descripcion: "Envío cancelado por cancelación del pedido",
+                },
+              });
+              eventBus.emit("envio:status_updated", {
+                envioId: envio.id,
+                pedidoId,
+                estadoAnterior: envio.estado,
+                estadoNuevo: "DEVUELTO",
+              });
+            }
+          } catch (err) {
+            log.error("Error cancelando envío asociado (el pedido fue cancelado):", err);
+          }
         }
       } catch (err) {
         // Si falla la transacción DB, restaurar stock en Redis

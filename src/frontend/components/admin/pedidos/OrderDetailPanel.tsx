@@ -25,12 +25,15 @@ import {
   Loader2,
   RefreshCw,
   Store,
+  Navigation,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Loading } from "@/components/ui/Loading";
 import { PedidoEstado } from "@/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
+import { getNextStatuses } from "./adminOrderUtils";
 
 const statusConfig: Record<string, {
   label: string;
@@ -60,6 +63,13 @@ const statusConfig: Record<string, {
     borderColor: "border-indigo-500/20",
     icon: Timer,
   },
+  [PedidoEstado.EN_CAMINO]: {
+    label: "En Camino",
+    color: "text-sky-600",
+    bgColor: "bg-sky-500/10",
+    borderColor: "border-sky-500/20",
+    icon: Navigation,
+  },
   [PedidoEstado.EN_BODEGA]: {
     label: "En Bodega",
     color: "text-purple-600",
@@ -83,29 +93,13 @@ const statusConfig: Record<string, {
   },
 };
 
-const getNextStatuses = (current: PedidoEstado, tipoEntrega?: string): PedidoEstado[] => {
-  const isEnvio = tipoEntrega === "ENVIO";
-  switch (current) {
-    case PedidoEstado.PENDIENTE:
-      return [PedidoEstado.CONFIRMADO, PedidoEstado.CANCELADO];
-    case PedidoEstado.CONFIRMADO:
-      return [PedidoEstado.EN_PREPARACION, PedidoEstado.CANCELADO];
-    case PedidoEstado.EN_PREPARACION:
-      if (isEnvio) return [PedidoEstado.CANCELADO];
-      return [PedidoEstado.EN_BODEGA, PedidoEstado.CANCELADO];
-    case PedidoEstado.EN_BODEGA:
-      return [PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO];
-    default:
-      return [];
-  }
-};
-
 const getTimelineStatuses = (tipoEntrega?: string): PedidoEstado[] => {
   if (tipoEntrega === "ENVIO") {
     return [
       PedidoEstado.PENDIENTE,
       PedidoEstado.CONFIRMADO,
       PedidoEstado.EN_PREPARACION,
+      PedidoEstado.EN_CAMINO,
       PedidoEstado.ENTREGADO,
     ];
   }
@@ -124,6 +118,7 @@ interface OrderDetailPanelProps {
   onClose: () => void;
   getOrderDetail: (pedidoId: string) => Promise<any>;
   updateStoreOrderStatus: (storeId: string, pedidoId: string, newStatus: PedidoEstado) => Promise<any>;
+  onNavigateToEnvio?: (pedidoId: string) => void;
 }
 
 export function OrderDetailPanel({
@@ -132,6 +127,7 @@ export function OrderDetailPanel({
   onClose,
   getOrderDetail,
   updateStoreOrderStatus,
+  onNavigateToEnvio,
 }: OrderDetailPanelProps) {
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -196,7 +192,7 @@ export function OrderDetailPanel({
             </button>
           </div>
           <div className="flex-1 flex items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <Loading text="Cargando pedido..." subtext="Conectando a la huerta digital" className="py-0" />
           </div>
         </motion.div>
       </AnimatePresence>
@@ -694,13 +690,19 @@ export function OrderDetailPanel({
                     <p className="text-xs text-muted-foreground mt-1">
                       Este pedido es de tipo env&iacute;o a domicilio. El seguimiento se gestiona desde la secci&oacute;n <strong>Env&iacute;os</strong> del panel de tu tienda.
                     </p>
-                    <Link
-                      href="/mi-tienda?tab=envios"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onNavigateToEnvio) {
+                          onNavigateToEnvio(order.id);
+                          onClose();
+                        }
+                      }}
                       className="inline-flex items-center gap-1.5 mt-3 rounded-lg text-xs font-bold h-8 px-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all"
                     >
                       <Truck className="w-3.5 h-3.5" />
                       Ir a Envíos
-                    </Link>
+                    </button>
                   </div>
                 </div>
               </div>

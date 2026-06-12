@@ -36,7 +36,11 @@ interface EnviosListProps {
   onUpdateStatus: (envioId: string, nuevoEstado: EnvioEstadoKey, extra?: any) => Promise<boolean>;
   onRefresh: () => void;
   getOrderDetail?: (pedidoId: string) => Promise<any>;
+  getEnvioDetail?: (envioId: string) => Promise<any>;
   updateStoreOrderStatus?: (storeId: string, pedidoId: string, newStatus: PedidoEstado) => Promise<any>;
+  getStoreBodegas?: (storeId: string) => Promise<any>;
+  autoOpenPedidoId?: string | null;
+  onAutoOpenConsumed?: () => void;
 }
 
 export function EnviosList({
@@ -55,12 +59,46 @@ export function EnviosList({
   onUpdateStatus,
   onRefresh,
   getOrderDetail,
+  getEnvioDetail,
   updateStoreOrderStatus,
+  getStoreBodegas,
+  autoOpenPedidoId,
+  onAutoOpenConsumed,
 }: EnviosListProps) {
   const [selectedEnvio, setSelectedEnvio] = useState<Envio | null>(null);
   const [selectedPedidoId, setSelectedPedidoId] = useState<string | null>(null);
+  const [bodegasList, setBodegasList] = useState<any[]>([]);
   const totalEnvios = Object.values(stats).reduce((a, b) => a + (Number(b) || 0), 0);
   const allStats: Record<string, number> = { ALL: totalEnvios || totalCount, ...stats };
+
+  React.useEffect(() => {
+    if (getStoreBodegas && storeId) {
+      getStoreBodegas(storeId).then((res) => {
+        if (res && res.success) {
+          setBodegasList(res.bodegas || []);
+        }
+      });
+    }
+  }, [getStoreBodegas, storeId]);
+
+  React.useEffect(() => {
+    if (autoOpenPedidoId && envios.length > 0) {
+      const targetEnvio = envios.find((e: any) => e.pedidoId === autoOpenPedidoId);
+      if (targetEnvio) {
+        setSelectedEnvio(targetEnvio);
+        onAutoOpenConsumed?.();
+      }
+    }
+  }, [autoOpenPedidoId, envios, onAutoOpenConsumed]);
+
+  React.useEffect(() => {
+    if (selectedEnvio && envios.length > 0) {
+      const updatedEnvio = envios.find((e: any) => e.id === selectedEnvio.id);
+      if (updatedEnvio && JSON.stringify(updatedEnvio) !== JSON.stringify(selectedEnvio)) {
+        setSelectedEnvio(updatedEnvio);
+      }
+    }
+  }, [envios]);
 
   const handleStatusUpdate = async (envioId: string, nuevoEstado: EnvioEstadoKey, extra?: any) => {
     const result = await onUpdateStatus(envioId, nuevoEstado, extra);
@@ -220,8 +258,13 @@ export function EnviosList({
       {selectedEnvio && (
         <EnvioDetailPanel
           envio={selectedEnvio}
-          onClose={() => setSelectedEnvio(null)}
+          onClose={() => {
+            setSelectedEnvio(null);
+            setSelectedPedidoId(null);
+          }}
           onUpdateStatus={handleStatusUpdate}
+          bodegas={bodegasList}
+          getEnvioDetail={getEnvioDetail}
         />
       )}
       {selectedPedidoId && getOrderDetail && updateStoreOrderStatus && (

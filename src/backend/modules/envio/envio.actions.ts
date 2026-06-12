@@ -13,7 +13,7 @@ export async function updateEnvioEstadoAction(
   storeId: string,
   envioId: string,
   nuevoEstado: EnvioEstado,
-  extra?: { ubicacion?: string; descripcion?: string; transportadora?: string }
+  extra?: { ubicacion?: string; descripcion?: string; transportadora?: string; bodegaId?: string }
 ) {
   return await withStoreOwner(storeId, async (session) => {
     try {
