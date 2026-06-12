@@ -214,7 +214,7 @@ export const ProductEditModal = ({
                     <input
                       name="stock"
                       type="number"
-                      step="0.01"
+                      step="1"
                       value={formData.stock !== undefined ? String(formData.stock) : ""}
                       onChange={handleChange}
                       className="w-full rounded-xl border border-border/50 bg-background px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
