@@ -15,9 +15,10 @@ interface EnvioDetailPanelProps {
   onUpdateStatus: (envioId: string, nuevoEstado: EnvioEstadoKey, extra?: { ubicacion?: string; descripcion?: string; transportadora?: string; bodegaId?: string }) => Promise<boolean>;
   bodegas?: any[];
   getEnvioDetail?: (envioId: string) => Promise<any>;
+  onOpenOrderDetail?: (pedidoId: string) => void;
 }
 
-export function EnvioDetailPanel({ envio: initialEnvio, onClose, onUpdateStatus, bodegas = [], getEnvioDetail }: EnvioDetailPanelProps) {
+export function EnvioDetailPanel({ envio: initialEnvio, onClose, onUpdateStatus, bodegas = [], getEnvioDetail, onOpenOrderDetail }: EnvioDetailPanelProps) {
   const [fullEnvio, setFullEnvio] = useState<Envio | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<EnvioEstadoKey | "">("");
   const [ubicacion, setUbicacion] = useState("");
@@ -401,14 +402,18 @@ export function EnvioDetailPanel({ envio: initialEnvio, onClose, onUpdateStatus,
         <div className="px-6 py-4 border-t border-border shrink-0">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>Creado: {new Date(displayEnvio.createdAt).toLocaleDateString("es-CO")}</span>
-            <a
-              href={`/pedidos/${displayEnvio.pedidoId}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => {
+                if (onOpenOrderDetail && displayEnvio.pedidoId) {
+                  onOpenOrderDetail(displayEnvio.pedidoId);
+                } else if (displayEnvio.pedidoId) {
+                  window.open(`/pedidos/${displayEnvio.pedidoId}`, '_blank');
+                }
+              }}
               className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
             >
               Ver Pedido <ExternalLink className="w-3 h-3" />
-            </a>
+            </button>
           </div>
         </div>
       </motion.div>

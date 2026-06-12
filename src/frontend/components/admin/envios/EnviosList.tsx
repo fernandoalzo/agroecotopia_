@@ -265,6 +265,7 @@ export function EnviosList({
           onUpdateStatus={handleStatusUpdate}
           bodegas={bodegasList}
           getEnvioDetail={getEnvioDetail}
+          onOpenOrderDetail={(id) => setSelectedPedidoId(id)}
         />
       )}
       {selectedPedidoId && getOrderDetail && updateStoreOrderStatus && (
