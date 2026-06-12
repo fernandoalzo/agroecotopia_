@@ -85,12 +85,13 @@ export class AdvisorPaymentHandler implements PaymentHandler {
           })
         );
       }
-      // 2. Disparar evento para enviar mensaje automático por el chat
-      if (typeof window !== "undefined") {
-        const event = new CustomEvent("send_advisor_chat_message", {
-          detail: { messages: advisorSummary }
-        });
-        window.dispatchEvent(event);
+      
+      // 2. Enviar mensaje automático al chat del pedido (notificando al dueño de la tienda)
+      try {
+        const { sendAdvisorOrderMessagesAction } = await import("@/backend/modules/chat/chat.actions");
+        await sendAdvisorOrderMessagesAction({ messages: advisorSummary });
+      } catch (chatError) {
+        log.error("Error al enviar mensaje de asesor al chat del pedido:", chatError);
       }
 
       // 3. Redirigir al usuario a la página estilizada de éxito del asesor, pasando el ID del pedido

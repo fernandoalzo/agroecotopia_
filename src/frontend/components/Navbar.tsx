@@ -33,6 +33,7 @@ type NavbarProps = {
 
 const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
   const [open, setOpen] = useState(false);
+  const [userProfileOpen, setUserProfileOpen] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [activeSection, setActiveSection] = useState("");
   const pathname = usePathname();
@@ -58,6 +59,22 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
   useEffect(() => {
     setActiveSection(pathname);
   }, [pathname]);
+
+  useEffect(() => {
+    if (userProfileOpen) {
+      window.dispatchEvent(new CustomEvent("close-other-menus", { detail: "user-profile" }));
+    }
+  }, [userProfileOpen]);
+
+  useEffect(() => {
+    const handleCloseOther = (e: any) => {
+      if (e.detail !== "user-profile") setUserProfileOpen(false);
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("close-other-menus", handleCloseOther);
+      return () => window.removeEventListener("close-other-menus", handleCloseOther);
+    }
+  }, []);
 
   const isActive = (href: string) => {
     if (pathname === "/" && (href === "/" || href.includes("#"))) {
@@ -219,7 +236,7 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
             )}
             
             {isAuthenticated ? (
-              <DropdownMenu>
+              <DropdownMenu open={userProfileOpen} onOpenChange={setUserProfileOpen}>
                 <DropdownMenuTrigger asChild>
                   <motion.button
                     whileHover={{ scale: 1.03 }}

@@ -26,8 +26,21 @@ export function NotificationBell({ isMobile }: { isMobile?: boolean }) {
   useEffect(() => {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("notifications-menu-state", { detail: isOpen }));
+      if (isOpen) {
+        window.dispatchEvent(new CustomEvent("close-other-menus", { detail: "notifications" }));
+      }
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const handleCloseOther = (e: any) => {
+      if (e.detail !== "notifications") setIsOpen(false);
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("close-other-menus", handleCloseOther);
+      return () => window.removeEventListener("close-other-menus", handleCloseOther);
+    }
+  }, []);
 
   const handleNotificationClick = (n: any) => {
     if (n.status !== "READ") markAsRead(n.id);
@@ -261,10 +274,13 @@ export function NotificationBell({ isMobile }: { isMobile?: boolean }) {
       </PopoverTrigger>
       <PopoverContent 
         align="end" 
-        sideOffset={8}
-        className="w-[380px] p-0 rounded-2xl shadow-2xl border-border/50 bg-card/95 backdrop-blur-xl z-[100] h-[450px] flex flex-col"
+        sideOffset={15}
+        className="w-[380px] p-1.5 rounded-2xl bg-card/90 backdrop-blur-3xl border-border/30 shadow-2xl shadow-black/5 dark:shadow-black/30 z-[100] h-[450px] flex flex-col relative overflow-hidden"
       >
-        {content}
+        <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent z-10" />
+        <div className="flex flex-col h-full w-full bg-card/50 rounded-xl overflow-hidden border border-border/5">
+          {content}
+        </div>
       </PopoverContent>
     </Popover>
   );

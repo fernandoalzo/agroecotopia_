@@ -75,18 +75,24 @@ function AppChromeData() {
     refreshUnread();
   }, [refreshUnread]);
 
+  const isOrderConfirmationPage = 
+    pathname?.startsWith("/checkout/success") || 
+    pathname?.startsWith("/checkout/advisor-success");
+
   return (
     <>
       <GlobalNavbar unreadCount={unreadCount} />
-      <ChatWidget
-        chatDeps={{
-          getOrCreateMyConversation,
-          getConversationMessages,
-          markAsRead,
-          deleteConversationAction,
-          getOrCreateConversationForAdmin,
-        }}
-      />
+      {!isOrderConfirmationPage && (
+        <ChatWidget
+          chatDeps={{
+            getOrCreateMyConversation,
+            getConversationMessages,
+            markAsRead,
+            deleteConversationAction,
+            getOrCreateConversationForAdmin,
+          }}
+        />
+      )}
     </>
   );
 }

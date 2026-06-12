@@ -365,21 +365,7 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
         return () => clearTimeout(timer);
     }, [messages, isAdminTyping, isLoading, isOpen, enabled]);
 
-    // Advisor message event listener
-    useEffect(() => {
-        if (!enabled) return;
-        const handleAdvisorMessageEvent = async (e: Event) => {
-            const customEvent = e as CustomEvent;
-            const { messages } = customEvent.detail;
-
-            if (Array.isArray(messages) && messages.length > 0) {
-                window.dispatchEvent(new CustomEvent("advisor_chat_message_missing_backend", { detail: { messages } }));
-            }
-        };
-
-        window.addEventListener("send_advisor_chat_message", handleAdvisorMessageEvent);
-        return () => window.removeEventListener("send_advisor_chat_message", handleAdvisorMessageEvent);
-    }, [isAdminUser, targetUserId, enabled]);
+    // Advisor message event listener removed as it's now handled via server action directly in AdvisorPaymentHandler.
 
     // ── Handlers ──────────────────────────────────────────────────────
 

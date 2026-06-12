@@ -37,11 +37,24 @@ export default function UserMenu() {
     }
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("settings-menu-state", { detail: open }));
+      if (open) {
+        window.dispatchEvent(new CustomEvent("close-other-menus", { detail: "preferences" }));
+      }
     }
     return () => {
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  useEffect(() => {
+    const handleCloseOther = (e: any) => {
+      if (e.detail !== "preferences") setOpen(false);
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("close-other-menus", handleCloseOther);
+      return () => window.removeEventListener("close-other-menus", handleCloseOther);
+    }
+  }, []);
 
   if (!mounted) {
     return <div className="h-9 w-9 animate-pulse rounded-full bg-secondary/60" />;
