@@ -182,7 +182,7 @@ export const es: Translations = {
     notes: "Notas adicionales",
     notesPlaceholder: "¿Alguna indicación especial para la entrega?",
     orderSummary: "Resumen del Pedido",
-    invoiceTitle: "FACTURA PROFORMA",
+    invoiceTitle: "FACTURA",
     invoiceDate: "Fecha",
     invoiceNumber: "Pedido Nº",
     billTo: "Facturar a",

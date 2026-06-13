@@ -113,7 +113,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
   return (
     <div className="bg-card border border-border shadow-2xl rounded-3xl overflow-hidden flex flex-col h-full ring-1 ring-primary/5">
       {/* Invoice Header */}
-      <div className="p-8 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-b border-primary/10">
+      <div className="p-5 sm:p-6 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-b border-primary/10">
         <div className="flex justify-between items-start mb-6">
           <div>
             <div className="flex items-center gap-2 text-primary font-display font-black text-xl mb-1">
@@ -125,102 +125,101 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs font-bold text-muted-foreground transition-colors hover:text-primary">
+            <p className="text-xs font-mono font-bold text-muted-foreground">
               {t.checkout.invoiceNumber} <span className="text-foreground">#{orderId}</span>
             </p>
-            <p className="text-xs font-medium text-muted-foreground">
+            <p className="text-xs font-mono font-medium text-muted-foreground">
               {t.checkout.invoiceDate}: {today}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 py-3 px-4 bg-background/50 rounded-2xl border border-primary/10 shadow-sm backdrop-blur-sm">
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-            <ShoppingBag className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-primary/70 uppercase tracking-wider mb-0.5">
+        {/* Order Summary Label */}
+        <div className="flex justify-between items-center pt-5 mt-2 border-t border-primary/10">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <ShoppingBag className="w-4 h-4 text-primary" />
+            </div>
+            <p className="text-xs font-black text-foreground uppercase tracking-widest">
               {t.cart.orderSummary}
             </p>
-            <p className="text-sm font-bold text-foreground">
-              {cart.length} {cart.length === 1 ? 'item' : 'items'}
-            </p>
           </div>
+          <p className="text-sm font-mono font-bold text-muted-foreground">
+            {cart.length} {cart.length === 1 ? 'item' : 'items'}
+          </p>
         </div>
       </div>
 
-      {/* Invoice Content */}
-      <div className="p-8 flex-1 space-y-6 overflow-y-auto max-h-[400px] scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent">
-        <div className="space-y-4">
-          {cart.map((item) => {
-            const productTranslation = t.products.items[item.product.id!] || {
-              name: item.product.name,
-              unit: item.product.unidad
-            };
+      {/* Invoice Items */}
+      <div className="px-5 sm:px-6 py-4 flex-1 space-y-1 overflow-y-auto max-h-[400px] scrollbar-thin scrollbar-thumb-primary/10 scrollbar-track-transparent">
+        {cart.map((item) => {
+          const productTranslation = t.products.items[item.product.id!] || {
+            name: item.product.name,
+            unit: item.product.unidad
+          };
 
-            const discountedPrice = calculateDiscountedPrice(
-              item.product.price,
-              (item.product as any).promotions,
-              (item.product as any).store?.promotions
-            );
-            const hasDiscount = discountedPrice !== null;
-            const finalPrice = hasDiscount ? discountedPrice : item.product.price;
+          const discountedPrice = calculateDiscountedPrice(
+            item.product.price,
+            (item.product as any).promotions,
+            (item.product as any).store?.promotions
+          );
+          const hasDiscount = discountedPrice !== null;
+          const finalPrice = hasDiscount ? discountedPrice : item.product.price;
 
-            return (
-              <div key={item.product.id} className="group flex justify-between items-center py-2 transition-all hover:translate-x-1">
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                    {productTranslation.name}
-                  </p>
-                  {hasDiscount ? (
-                    <div className="flex items-center gap-1.5 text-xs">
-                      <span className="text-muted-foreground line-through decoration-muted-foreground/50">
-                        {item.quantity} x {formatPrice(item.product.price)}
-                      </span>
-                      <span className="font-bold text-red-600">
-                        {item.quantity} x {formatPrice(finalPrice)}
-                      </span>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground font-medium">
+          return (
+            <div key={item.product.id} className="group flex justify-between items-center py-3 border-b border-border/40 last:border-0 transition-all">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                  {productTranslation.name}
+                </p>
+                {hasDiscount ? (
+                  <div className="flex items-center gap-1.5 text-xs mt-0.5">
+                    <span className="text-muted-foreground line-through decoration-muted-foreground/50 font-mono">
                       {item.quantity} x {formatPrice(item.product.price)}
-                    </p>
-                  )}
-                </div>
-                <div className="text-right ml-4">
-                  {hasDiscount ? (
-                    <div className="flex flex-col items-end">
-                      <span className="text-[10px] text-muted-foreground line-through decoration-muted-foreground/50">
-                        {formatPrice(item.product.price * item.quantity)}
-                      </span>
-                      <p className="text-sm font-black text-red-600">
-                        {formatPrice(finalPrice * item.quantity)}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-sm font-black text-foreground">
-                      {formatPrice(item.product.price * item.quantity)}
-                    </p>
-                  )}
-                </div>
+                    </span>
+                    <span className="font-bold text-red-600 font-mono">
+                      {item.quantity} x {formatPrice(finalPrice)}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                    {item.quantity} x {formatPrice(item.product.price)}
+                  </p>
+                )}
               </div>
-            );
-          })}
-        </div>
+              <div className="text-right ml-4">
+                {hasDiscount ? (
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] text-muted-foreground line-through decoration-muted-foreground/50 font-mono">
+                      {formatPrice(item.product.price * item.quantity)}
+                    </span>
+                    <p className="text-sm font-black text-red-600 font-mono">
+                      {formatPrice(finalPrice * item.quantity)}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm font-black text-foreground font-mono">
+                    {formatPrice(item.product.price * item.quantity)}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Invoice Totals */}
-      <div className="p-8 bg-secondary/30 border-t border-border mt-auto">
-        <div className="space-y-3 mb-8">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground font-medium">{t.cart.subtotal}</span>
-            <span className="text-foreground font-bold">{formattedSubtotal}</span>
+      <div className="p-5 sm:p-6 bg-secondary/30 border-t border-border mt-auto rounded-b-3xl">
+        <div className="space-y-4 font-mono text-sm text-muted-foreground mb-6">
+          <div className="flex justify-between items-end">
+            <span className="uppercase tracking-wider">{t.cart.subtotal}</span>
+            <span className="text-base font-medium text-foreground">{formattedSubtotal}</span>
           </div>
           {taxBreakdown.length > 0 ? (
             taxBreakdown.map((tax, idx) => (
-              <div key={idx} className="flex justify-between text-sm">
-                <span className="text-muted-foreground font-medium">{tax.name} ({tax.percentage}%)</span>
-                <span className="text-foreground font-bold">
+              <div key={idx} className="flex justify-between items-end">
+                <span className="uppercase tracking-wider">{tax.name} ({tax.percentage}%)</span>
+                <span className="text-base font-medium text-foreground">
                   {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
                     style: "currency",
                     currency: language === 'es' ? "COP" : "USD",
@@ -230,9 +229,9 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
               </div>
             ))
           ) : (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground font-medium">{t.cart.taxes}</span>
-              <span className="text-foreground font-bold">
+            <div className="flex justify-between items-end">
+              <span className="uppercase tracking-wider">{t.cart.taxes}</span>
+              <span className="text-base font-medium text-foreground">
                 {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
                   style: "currency",
                   currency: language === 'es' ? "COP" : "USD",
@@ -241,18 +240,18 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
               </span>
             </div>
           )}
-          <div className="flex justify-between text-sm items-center">
-            <span className="text-muted-foreground font-medium">{t.cart.shipping}</span>
+          <div className="flex justify-between items-end">
+            <span className="uppercase tracking-wider">{t.cart.shipping}</span>
             {tipoEntrega === "RECOJO_EN_BODEGA" ? (
               <span className="text-[10px] font-black bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-tighter ring-1 ring-emerald-500/20">
                 Sin costo
               </span>
             ) : !destinationCity || !destinationCity.trim() ? (
-              <span className="text-[10px] font-black bg-muted text-muted-foreground px-2 py-0.5 rounded-full uppercase tracking-tighter ring-1 ring-border">
+              <span className="font-medium text-primary">
                 {t.cart.toCalculate}
               </span>
             ) : shippingCost > 0 ? (
-              <span className="text-foreground font-bold">
+              <span className="text-base font-medium text-foreground">
                 {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
                   style: "currency",
                   currency: language === 'es' ? "COP" : "USD",
@@ -260,28 +259,28 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
                 }).format(shippingCost)}
               </span>
             ) : (
-              <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-tighter ring-1 ring-primary/20">
+              <span className="font-medium text-primary">
                 {t.cart.toCalculate}
               </span>
             )}
           </div>
-          <Separator className="bg-primary/10 h-0.5" />
-          <div className="flex justify-between items-end pt-2">
-            <span className="text-base font-black text-foreground uppercase tracking-tight">{t.cart.total}</span>
-            <div className="text-right">
-              <span className="block text-3xl font-display font-black text-primary leading-none">
-                {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
-                  style: "currency",
-                  currency: language === 'es' ? "COP" : "USD",
-                  maximumFractionDigits: 0,
-                }).format(subtotal + calculatedTaxes + shippingCost)}
-              </span>
-              <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1 block">
-                {t.products.taxesIncluded}
-              </span>
-            </div>
-          </div>
         </div>
+
+        <div className="border-t-2 border-dashed border-foreground/20 w-full mb-6" />
+
+        <div className="flex justify-between items-end mb-1">
+          <span className="font-black uppercase tracking-widest text-foreground font-display text-lg">{t.cart.total}</span>
+          <span className="font-mono text-3xl font-black text-primary">
+            {new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
+              style: "currency",
+              currency: language === 'es' ? "COP" : "USD",
+              maximumFractionDigits: 0,
+            }).format(subtotal + calculatedTaxes + shippingCost)}
+          </span>
+        </div>
+        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest text-right mb-8">
+          {t.products.taxesIncluded}
+        </p>
 
         {showConfirm ? (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -313,7 +312,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
             </div>
           </div>
         ) : (
-          <Button 
+          <Button
             type="button"
             onClick={() => setShowConfirm(true)}
             disabled={isSubmitting}
@@ -326,8 +325,8 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
             </div>
           </Button>
         )}
-        
-        <p className="mt-4 text-center text-[10px] text-muted-foreground font-medium flex items-center justify-center gap-2">
+
+        <p className="mt-6 text-center text-[10px] text-muted-foreground flex items-center justify-center gap-1.5 uppercase tracking-widest font-mono">
           <CreditCard className="w-3 h-3 text-primary opacity-60" />
           {t.cart.securePayment}
         </p>

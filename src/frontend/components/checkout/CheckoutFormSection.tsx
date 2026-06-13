@@ -18,9 +18,9 @@ interface CheckoutFormSectionProps {
   isLoadingBodegas: boolean;
 }
 
-export const CheckoutFormSection: React.FC<CheckoutFormSectionProps> = ({ 
-  t, 
-  onSubmit, 
+export const CheckoutFormSection: React.FC<CheckoutFormSectionProps> = ({
+  t,
+  onSubmit,
   defaultValues,
   onCityChange,
   onTipoEntregaChange,
@@ -29,32 +29,30 @@ export const CheckoutFormSection: React.FC<CheckoutFormSectionProps> = ({
   isLoadingBodegas,
 }) => {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
-      className="lg:col-span-7"
+      className="pt-2"
     >
-      <div className="bg-card/50 backdrop-blur-sm border border-border p-8 rounded-3xl shadow-sm">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <MapPin className="w-5 h-5 text-primary" />
-          </div>
-          <h2 className="text-2xl font-display font-black text-foreground">
-            {t.checkout.shippingInfo}
-          </h2>
+      <div className="mb-10 border-b-2 border-foreground/10 pb-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+          <MapPin className="w-5 h-5 text-primary" />
         </div>
-        
-        <CheckoutForm 
-          onSubmit={onSubmit} 
-          defaultValues={defaultValues}
-          onCityChange={onCityChange}
-          onTipoEntregaChange={onTipoEntregaChange}
-          cityZones={cityZones}
-          bodegas={bodegas}
-          isLoadingBodegas={isLoadingBodegas}
-        />
+        <h2 className="text-2xl font-display font-black uppercase tracking-widest text-foreground">
+          {t.checkout.shippingInfo}
+        </h2>
       </div>
+
+      <CheckoutForm
+        onSubmit={onSubmit}
+        defaultValues={defaultValues}
+        onCityChange={onCityChange}
+        onTipoEntregaChange={onTipoEntregaChange}
+        cityZones={cityZones}
+        bodegas={bodegas}
+        isLoadingBodegas={isLoadingBodegas}
+      />
     </motion.div>
   );
 };

@@ -143,25 +143,28 @@ export default function CheckoutPage() {
 
       <main className="flex-1 pt-24 pb-16">
         <div className="container px-4 md:px-6 max-w-7xl mx-auto">
-          {/* Header */}
-          <CheckoutHeader t={t} />
-
           {/* Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-            {/* Form Section */}
-            <CheckoutFormSection
-              t={t}
-              onSubmit={handleCheckoutSubmit}
-              defaultValues={{
-                fullName: session?.user?.name || "",
-                email: session?.user?.email || "",
-              }}
-              onCityChange={setDestinationCity}
-              onTipoEntregaChange={setTipoEntrega}
-              cityZones={cityZones ?? []}
-              bodegas={bodegas}
-              isLoadingBodegas={isLoadingBodegas}
-            />
+            {/* Left Column: Header + Form Section */}
+            <div className="lg:col-span-7">
+              {/* Header */}
+              <CheckoutHeader t={t} />
+
+              {/* Form Section */}
+              <CheckoutFormSection
+                t={t}
+                onSubmit={handleCheckoutSubmit}
+                defaultValues={{
+                  fullName: session?.user?.name || "",
+                  email: session?.user?.email || "",
+                }}
+                onCityChange={setDestinationCity}
+                onTipoEntregaChange={setTipoEntrega}
+                cityZones={cityZones ?? []}
+                bodegas={bodegas}
+                isLoadingBodegas={isLoadingBodegas}
+              />
+            </div>
 
             {/* Summary/Invoice Section */}
             <motion.div

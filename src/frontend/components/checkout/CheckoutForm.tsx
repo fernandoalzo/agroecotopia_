@@ -80,15 +80,15 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
 
   return (
     <Form {...form}>
-      <form id="checkout-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <form id="checkout-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <FormField
             control={form.control}
             name="fullName"
             render={({ field }) => (
               <FormItem className="space-y-2">
-                <FormLabel className="text-foreground/80 font-semibold flex items-center gap-2">
-                  <User className="w-4 h-4 text-primary" />
+                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <User className="w-3.5 h-3.5 text-primary" />
                   {t.checkout.fullName}
                 </FormLabel>
                 <FormControl>
@@ -108,8 +108,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
             name="email"
             render={({ field }) => (
               <FormItem className="space-y-2">
-                <FormLabel className="text-foreground/80 font-semibold flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-primary" />
+                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <Mail className="w-3.5 h-3.5 text-primary" />
                   {t.checkout.email}
                 </FormLabel>
                 <FormControl>
@@ -126,14 +126,14 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <FormField
             control={form.control}
             name="phone"
             render={({ field }) => (
               <FormItem className="space-y-2">
-                <FormLabel className="text-foreground/80 font-semibold flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-primary" />
+                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <Phone className="w-3.5 h-3.5 text-primary" />
                   {t.checkout.phone}
                 </FormLabel>
                 <FormControl>
@@ -153,8 +153,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
             name="city"
             render={({ field }) => (
               <FormItem className="space-y-2">
-                <FormLabel className="text-foreground/80 font-semibold flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-primary" />
+                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <Building2 className="w-3.5 h-3.5 text-primary" />
                   {t.checkout.city}
                 </FormLabel>
                 <CitySelect
@@ -170,13 +170,13 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
         </div>
 
         {/* Delivery Type */}
-        <div className="pt-4 border-t border-border/50">
+        <div className="pt-8 mt-4 border-t-2 border-dashed border-foreground/20">
           <FormField
             control={form.control}
             name="tipoEntrega"
             render={({ field }) => (
-              <FormItem className="space-y-4">
-                <FormLabel className="text-xl font-display font-black text-foreground">
+              <FormItem className="space-y-6">
+                <FormLabel className="text-lg font-display font-black uppercase tracking-widest text-foreground">
                   Tipo de entrega
                 </FormLabel>
                 <FormControl>
@@ -239,8 +239,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
             name="address"
             render={({ field }) => (
               <FormItem className="space-y-2">
-                <FormLabel className="text-foreground/80 font-semibold flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-primary" />
+                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-primary" />
                   {t.checkout.address}
                 </FormLabel>
                 <FormControl>
@@ -263,8 +263,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
             name="bodegaId"
             render={({ field }) => (
               <FormItem className="space-y-2">
-                <FormLabel className="text-foreground/80 font-semibold flex items-center gap-2">
-                  <Warehouse className="w-4 h-4 text-primary" />
+                <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <Warehouse className="w-3.5 h-3.5 text-primary" />
                   Bodega de recogida
                 </FormLabel>
                 <BodegaSelect
@@ -286,8 +286,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
           name="notes"
           render={({ field }) => (
             <FormItem className="space-y-2">
-              <FormLabel className="text-foreground/80 font-semibold flex items-center gap-2">
-                <FileText className="w-4 h-4 text-primary" />
+              <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <FileText className="w-3.5 h-3.5 text-primary" />
                 {t.checkout.notes}
               </FormLabel>
               <FormControl>
@@ -303,13 +303,13 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
         />
 
         {/* Payment Method Section */}
-        <div className="pt-6 border-t border-border/50">
+        <div className="pt-8 mt-4 border-t-2 border-dashed border-foreground/20">
           <FormField
             control={form.control}
             name="paymentMethod"
             render={({ field }) => (
-              <FormItem className="space-y-4">
-                <FormLabel className="text-xl font-display font-black text-foreground">
+              <FormItem className="space-y-6">
+                <FormLabel className="text-lg font-display font-black uppercase tracking-widest text-foreground">
                   {t.checkout.paymentMethod}
                 </FormLabel>
                 <FormControl>

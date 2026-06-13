@@ -36,7 +36,7 @@ export const UserMenuDesktop = ({
             className={cn(
                 "hidden md:block absolute right-0 top-full mt-[18px] w-80 z-[100] overflow-hidden",
                 "rounded-2xl",
-                "bg-card/80 dark:bg-card/60 backdrop-blur-2xl backdrop-saturate-150",
+                "bg-card dark:bg-card",
                 "ring-1 ring-border/50 dark:ring-white/10",
                 "shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15),0_0_1px_0_rgba(0,0,0,0.05)] dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6),0_0_1px_0_rgba(255,255,255,0.05)]",
             )}

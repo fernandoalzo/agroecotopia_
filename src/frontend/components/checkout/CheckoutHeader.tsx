@@ -34,13 +34,13 @@ export const CheckoutHeader: React.FC<CheckoutHeaderProps> = ({ t }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="flex items-center gap-4 mt-4"
+            className="flex items-center gap-6 mt-4"
           >
-            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-primary/70 bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
+            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary/70">
               <ShieldCheck className="w-3.5 h-3.5" />
               {t.cart.securePayment}
             </div>
-            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               <Truck className="w-3.5 h-3.5" />
               {t.cart.shipping}: {t.cart.toCalculate}
             </div>
