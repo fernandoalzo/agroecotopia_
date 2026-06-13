@@ -448,12 +448,21 @@ export class OrdersService {
         eventBus.emit("product:stock_updated", { productIds });
       }
 
-      // 8. Emitir evento para que el comprador vea el cambio de estado en tiempo real
+      // 8. Emitir evento para que el comprador vea el cambio de estado en tiempo real (Room scoped)
       log.info("Emitting order:status_updated:", { pedidoId, nuevoEstado, usuarioId: pedidoActualizado.usuarioId });
       eventBus.emit("order:status_updated", {
         pedidoId,
         estado: nuevoEstado,
         usuarioId: pedidoActualizado.usuarioId,
+        _room: `order:${pedidoId}`,
+      });
+
+      // Emitir evento para actualizar el listado de pedidos del usuario
+      eventBus.emit("order:status_updated_user", {
+        pedidoId,
+        estado: nuevoEstado,
+        usuarioId: pedidoActualizado.usuarioId,
+        _room: `user:${pedidoActualizado.usuarioId}:notifications`,
       });
 
       return this.serializePedido(pedidoActualizado);

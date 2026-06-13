@@ -149,6 +149,20 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
       }
     });
 
+    // ─── Order rooms ───
+    socket.on("join_order", ({ pedidoId }: { pedidoId: string }) => {
+      if (pedidoId) {
+        socket.join(`order:${pedidoId}`);
+        log.debug(`Socket ${socket.id} joined order room: order:${pedidoId}`);
+      }
+    });
+
+    socket.on("leave_order", ({ pedidoId }: { pedidoId: string }) => {
+      if (pedidoId) {
+        socket.leave(`order:${pedidoId}`);
+      }
+    });
+
     // ─── Notification private channels ───
     socket.on("join_notifications", ({ userId }: { userId: string }) => {
       if (userId) {
@@ -210,6 +224,7 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
     "order:created",
     "product:stock_updated",
     "order:status_updated",
+    "order:status_updated_user",
     "envio:created",
     "envio:status_updated",
     "notification_read_state_changed",

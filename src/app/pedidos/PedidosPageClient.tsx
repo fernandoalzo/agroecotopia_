@@ -111,7 +111,7 @@ export default function PedidosPageClient({
     socket,
     enabled: status === "authenticated" && !isAdmin,
     refresh: refreshUserOrders,
-    events: ["order:status_updated"],
+    events: ["order:status_updated_user"],
   });
 
   useEffect(() => {

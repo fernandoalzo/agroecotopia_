@@ -730,11 +730,30 @@ for (const eventName of BRIDGE_EVENTS) {
 
 **Convención `_room`**: Si el payload incluye una propiedad `_room`, el evento se emite solo a esa sala (`io.to(room).emit()`). Si no, se emite globalmente (`io.emit()`).
 
-**Para agregar un nuevo evento en tiempo real, solo necesitas:**
-1. Agregar el nombre al array `BRIDGE_EVENTS` en `socketHandler.ts`
-2. Emitirlo desde el service/action: `eventBus.emit("entity:action", payload)`
-3. (Opcional) Si es room-scoped, incluir `_room` en el payload
-4. En el cliente, escucharlo con `useSocketRefresh({ events: ["entity:action"] })`
+### 17.4 ABSOLUTE SCALABILITY LAW (ULTRA INSTINCT ⚡️)
+> [!CAUTION]
+> **SUPER SAIYAN ARCHITECTURE LAW:** NEVER, ever, under any circumstances, emit domain update events GLOBALLY (`io.emit()`) if the information belongs to or is only relevant to a single user or a small group of users (e.g., an order status, a chat message, a payment).
+
+Using `io.emit()` for specific events is a scalability abomination that destroys server bandwidth, violates user privacy, and forces thousands of innocent clients to needlessly re-render React components.
+
+**YOUR DUTY AS AN ULTRA INSTINCT DEVELOPER:**
+1. **Identify the Room:** Who cares about this event? If it's an order, the room is `order:${pedidoId}`. If it's the user's notification list, the room is `user:${userId}:notifications`. If it's a forum post, `forum:post:${postId}`.
+2. **Backend - Surgical Emission:** Use the `Auto-Bridge` by injecting `_room` directly from the Service layer. The server will route the network packet ONLY to the correct TCP connections.
+   ```typescript
+   eventBus.emit("order:status_updated", {
+     pedidoId: id,
+     estado: "NUEVO_ESTADO",
+     _room: `order:${id}`, // ⚡️ SURGICAL PRECISION
+   });
+   ```
+3. **Frontend - Join the Room:** The React component (the Page Client) MUST join the room upon mounting and leave upon unmounting via `socket.emit("join_...")`.
+4. **Listen and React:** Use `useSocketRefresh({ events: ["your:event"] })` to update the data.
+
+**To add a new real-time event, you just need to:**
+1. Create the `join_X` and `leave_X` handlers in `socketHandler.ts` if the room does not exist yet.
+2. Add the event name to the `BRIDGE_EVENTS` array in `socketHandler.ts`.
+3. Emit it from the service/action by injecting the `_room` property.
+4. On the client, join the room and listen to it using `useSocketRefresh()`.
 
 **Eventos con routing especial** (no pasan por el auto-bridge):
 - `notification_dispatched` → emite a per-user rooms con nombre de evento distinto (`new_notification`)

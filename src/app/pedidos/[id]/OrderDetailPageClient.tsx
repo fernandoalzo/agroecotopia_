@@ -331,6 +331,33 @@ export default function OrderDetailPageClient({
   });
 
   useEffect(() => {
+    if (!socket || !id) return;
+    socket.emit("join_order", { pedidoId: id });
+    return () => { socket.emit("leave_order", { pedidoId: id }); };
+  }, [socket, id]);
+
+  const orderUpdateEvents = React.useMemo(() => ["order:status_updated"], []);
+
+  useSocketRefresh({
+    socket,
+    enabled: !!order?.id,
+    refresh: async () => {
+      try {
+        const result = await getOrderDetail(id);
+        if (result && !("error" in result)) {
+          setOrder(result);
+          toast.info(`El pedido ha sido actualizado`, { 
+            description: `El estado del pedido ahora es ${statusConfig[result.estado as PedidoEstado]?.label || result.estado}`
+          });
+        }
+      } catch (error) {
+        log.error("Error fetching updated order detail via socket:", error);
+      }
+    },
+    events: orderUpdateEvents,
+  });
+
+  useEffect(() => {
     loadUnreadCounts();
   }, [loadUnreadCounts]);
 
