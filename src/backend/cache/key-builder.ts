@@ -41,6 +41,39 @@ export const CacheKeys = {
     allPattern: `${NAMESPACE}:product:*`,
   },
 
+  order: {
+    byId: (id: string) => `${NAMESPACE}:order:id:${id}`,
+
+    byUsuarioId: (usuarioId: string) => `${NAMESPACE}:order:user:${usuarioId}`,
+
+    all: `${NAMESPACE}:order:all`,
+
+    paginated: (page: number, limit: number, estado?: string, search?: string, storeId?: string) =>
+      `${NAMESPACE}:order:paginated:${page}:${limit}:${estado || ""}:${search ? hash(search.toLowerCase()) : ""}:${storeId || ""}`,
+
+    statusCounts: (storeId?: string) => `${NAMESPACE}:order:status-counts:${storeId || ""}`,
+
+    byStore: (storeId: string) => `${NAMESPACE}:order:store:${storeId}`,
+
+    allPattern: `${NAMESPACE}:order:*`,
+  },
+
+  envio: {
+    byId: (id: string) => `${NAMESPACE}:envio:id:${id}`,
+
+    byPedidoId: (pedidoId: string) => `${NAMESPACE}:envio:pedido:${pedidoId}`,
+
+    byStore: (storeId: string, page: number, limit: number, estado?: string, search?: string) =>
+      `${NAMESPACE}:envio:store:${storeId}:${page}:${limit}:${estado || ""}:${search ? hash(search.toLowerCase()) : ""}`,
+
+    allPaginated: (page: number, limit: number, estado?: string, search?: string) =>
+      `${NAMESPACE}:envio:all:${page}:${limit}:${estado || ""}:${search ? hash(search.toLowerCase()) : ""}`,
+
+    statusCounts: (storeId?: string) => `${NAMESPACE}:envio:status-counts:${storeId || ""}`,
+
+    allPattern: `${NAMESPACE}:envio:*`,
+  },
+
   stock: {
     master: (productId: string) => `stock:master:${productId}`,
     lock: (productId: string) => `lock:stock:${productId}`,

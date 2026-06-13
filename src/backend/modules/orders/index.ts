@@ -1,7 +1,10 @@
 import { OrdersRepository } from "./orders.repository";
 import { OrdersService } from "./orders.service";
+import { CacheService } from "@/backend/cache";
 
-export const ordersRepository = new OrdersRepository();
+const cacheService = new CacheService();
+
+export const ordersRepository = new OrdersRepository(cacheService);
 export const ordersService = new OrdersService(ordersRepository);
 
 export * from "./orders.service";

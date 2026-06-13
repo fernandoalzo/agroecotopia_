@@ -103,6 +103,12 @@ export const config = {
       forumTopContributors: 300,
       forumTrendingLabels: 300,
       stockLock: 5,
+      orderList: 60,
+      orderDetail: 120,
+      orderStatusCounts: 120,
+      envioList: 60,
+      envioDetail: 120,
+      envioStatusCounts: 120,
     },
   },
 } as const;

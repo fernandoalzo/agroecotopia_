@@ -1,5 +1,7 @@
 import prisma from "@/backend/db/prisma";
 import { PedidoEstado, Prisma } from "@prisma/client";
+import { CacheService, CacheKeys } from "@/backend/cache";
+import { config } from "@/config/config";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/orders/orders.repository.ts");
@@ -8,11 +10,12 @@ const log = logger.child("src/backend/modules/orders/orders.repository.ts");
 type TxClient = any;
 
 export class OrdersRepository {
+  constructor(private cacheService?: CacheService) {}
   /**
    * Ejecuta operaciones dentro de una transacción atómica de base de datos.
    */
   async executeTransaction<T>(fn: (tx: TxClient) => Promise<T>): Promise<T> {
-    log.debug("Iniciando transacción atómica de base de datos.");
+    log.debug("[db] Iniciando transacción atómica de base de datos.");
     return await prisma.$transaction(fn);
   }
 
@@ -29,29 +32,32 @@ export class OrdersRepository {
     tx?: TxClient
   ): Promise<boolean> {
     const client = tx || prisma;
-    log.debug("Intentando transición de estado:", { pedidoId: id, de: fromEstado, a: toEstado });
+    log.debug("[db] Intentando transición de estado:", { pedidoId: id, de: fromEstado, a: toEstado });
     const result = await client.pedido.updateMany({
       where: { id, estado: fromEstado },
       data: { estado: toEstado, ...extraData }
     });
     const success = result.count > 0;
-    log.debug("Resultado de transición:", { pedidoId: id, success, affectedCount: result.count });
+    if (success) {
+      await this.cacheService?.delPattern(CacheKeys.order.allPattern);
+    }
+    log.debug("[db] Resultado de transición:", { pedidoId: id, success, affectedCount: result.count });
     return success;
   }
 
   async createPedido(data: Prisma.PedidoCreateInput, tx?: TxClient) {
     const client = tx || prisma;
-    log.debug("Creando pedido en la base de datos.");
-    return await client.pedido.create({
+    log.debug("[db] Creando pedido en la base de datos.");
+    const pedido = await client.pedido.create({
       data,
-      include: {
-        detalles: true,
-      },
+      include: { detalles: true },
     });
+    await this.cacheService?.delPattern(CacheKeys.order.allPattern);
+    return pedido;
   }
 
   async findProductsStoreIds(productIds: string[]) {
-    log.debug("Buscando tiendas asociadas a productos:", { productIdsCount: productIds.length });
+    log.debug("[db] Buscando tiendas asociadas a productos:", { productIdsCount: productIds.length });
     return await prisma.product.findMany({
       where: { id: { in: productIds } },
       select: { id: true, storeId: true, store: { select: { ownerId: true } } },
@@ -59,36 +65,47 @@ export class OrdersRepository {
   }
 
   async findById(id: string, tx?: TxClient) {
-    const client = tx || prisma;
-    log.debug("Buscando pedido por ID:", { pedidoId: id });
-    return await client.pedido.findUnique({
-      where: { id },
-      include: {
-        usuario: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        bodega: true,
-        detalles: {
-          include: {
-            producto: true,
-            store: {
-              select: {
-                id: true,
-                name: true,
-                ownerId: true,
-              },
+    if (tx) {
+      log.debug("[db] Buscando pedido por ID (transacción):", { pedidoId: id });
+      return await tx.pedido.findUnique({
+        where: { id },
+        include: {
+          usuario: { select: { id: true, name: true } },
+          bodega: true,
+          detalles: {
+            include: {
+              producto: true,
+              store: { select: { id: true, name: true, ownerId: true } },
             },
           },
         },
+      });
+    }
+    const key = CacheKeys.order.byId(id);
+    return this.cacheService?.getOrSet(
+      key,
+      async () => {
+        log.debug("[db] Buscando pedido por ID:", { pedidoId: id });
+        return prisma.pedido.findUnique({
+          where: { id },
+          include: {
+            usuario: { select: { id: true, name: true } },
+            bodega: true,
+            detalles: {
+              include: {
+                producto: true,
+                store: { select: { id: true, name: true, ownerId: true } },
+              },
+            },
+          },
+        });
       },
-    });
+      config.cache.ttl.orderDetail,
+    ) ?? null;
   }
 
   async belongsToStoreOwner(pedidoId: string, ownerId: string) {
-    log.debug("Validando si el pedido pertenece a una tienda del vendedor:", { pedidoId, ownerId });
+    log.debug("[db] Validando si el pedido pertenece a una tienda del vendedor:", { pedidoId, ownerId });
     const count = await prisma.detallePedido.count({
       where: {
         pedidoId,
@@ -103,78 +120,80 @@ export class OrdersRepository {
 
   async updatePedido(id: string, data: Prisma.PedidoUpdateInput, tx?: TxClient) {
     const client = tx || prisma;
-    log.debug("Actualizando pedido en la base de datos:", { pedidoId: id });
-    return await client.pedido.update({
+    log.debug("[db] Actualizando pedido en la base de datos:", { pedidoId: id });
+    const pedido = await client.pedido.update({
       where: { id },
       data,
-      include: {
-        detalles: true,
-      },
+      include: { detalles: true },
     });
+    await this.cacheService?.delPattern(CacheKeys.order.allPattern);
+    return pedido;
   }
 
   async findByUsuarioId(usuarioId: string) {
-    log.debug("Buscando pedidos por usuario:", { usuarioId });
-    return await prisma.pedido.findMany({
-      where: { usuarioId },
-      orderBy: { fechaPedido: "desc" },
-      include: {
-        bodega: true,
-        detalles: {
+    const key = CacheKeys.order.byUsuarioId(usuarioId);
+    return this.cacheService?.getOrSet(
+      key,
+      async () => {
+        log.debug("[db] Buscando pedidos por usuario:", { usuarioId });
+        return prisma.pedido.findMany({
+          where: { usuarioId },
+          orderBy: { fechaPedido: "desc" },
           include: {
-            producto: true,
-            store: {
-              select: {
-                id: true,
-                name: true,
+            bodega: true,
+            detalles: {
+              include: {
+                producto: true,
+                store: { select: { id: true, name: true } },
               },
             },
           },
-        },
+        });
       },
-    });
+      config.cache.ttl.orderList,
+    ) ?? [];
   }
 
   async findByStoreId(storeId: string) {
-    log.debug("Buscando pedidos por tienda:", { storeId });
-    return await prisma.pedido.findMany({
-      where: {
-        detalles: { some: { storeId } }
-      },
-      orderBy: { fechaPedido: "desc" },
-      include: {
-        usuario: { select: { id: true, name: true, email: true } },
-        bodega: true,
-        detalles: {
-          where: { storeId },
+    const key = CacheKeys.order.byStore(storeId);
+    return this.cacheService?.getOrSet(
+      key,
+      async () => {
+        log.debug("[db] Buscando pedidos por tienda:", { storeId });
+        return prisma.pedido.findMany({
+          where: { detalles: { some: { storeId } } },
+          orderBy: { fechaPedido: "desc" },
           include: {
-            producto: true,
+            usuario: { select: { id: true, name: true, email: true } },
+            bodega: true,
+            detalles: {
+              where: { storeId },
+              include: { producto: true },
+            },
           },
-        },
+        });
       },
-    });
+      config.cache.ttl.orderList,
+    ) ?? [];
   }
 
   async findAll() {
-    log.debug("Buscando todos los pedidos.");
-    return await prisma.pedido.findMany({
-      orderBy: { fechaPedido: "desc" },
-      include: {
-        usuario: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        bodega: true,
-        detalles: {
+    const key = CacheKeys.order.all;
+    return this.cacheService?.getOrSet(
+      key,
+      async () => {
+        log.debug("[db] Buscando todos los pedidos.");
+        return prisma.pedido.findMany({
+          orderBy: { fechaPedido: "desc" },
           include: {
-            producto: true,
+            usuario: { select: { id: true, name: true, email: true } },
+            bodega: true,
+            detalles: { include: { producto: true } },
           },
-        },
+        });
       },
-    });
+      config.cache.ttl.orderList,
+    ) ?? [];
   }
 
   async findPaginated(params: {
@@ -185,101 +204,79 @@ export class OrdersRepository {
     storeId?: string;
   }) {
     const { page, limit, estado, search, storeId } = params;
-    const skip = (page - 1) * limit;
-
-    const where: Prisma.PedidoWhereInput = {};
-
-    if (estado) {
-      where.estado = estado;
-    }
-
-    if (storeId) {
-      where.detalles = { some: { storeId } };
-    }
-
-    if (search && search.trim() !== "") {
-      const q = search.trim();
-      where.OR = [
-        { id: { contains: q, mode: "insensitive" } },
-        { direccionEntrega: { contains: q, mode: "insensitive" } },
-        {
-          usuario: {
-            OR: [
-              { name: { contains: q, mode: "insensitive" } },
-              { email: { contains: q, mode: "insensitive" } },
-            ],
-          },
-        },
-      ];
-    }
-
-    log.debug("Buscando pedidos paginados y filtrados:", { page, limit, estado, search });
-
-    const [totalCount, orders] = await Promise.all([
-      prisma.pedido.count({ where }),
-      prisma.pedido.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { fechaPedido: "desc" },
-        include: {
-          usuario: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
+    const key = CacheKeys.order.paginated(page, limit, estado, search, storeId);
+    return this.cacheService?.getOrSet(
+      key,
+      async () => {
+        log.debug("[db] Buscando pedidos paginados y filtrados:", { page, limit, estado, search, storeId });
+        const skip = (page - 1) * limit;
+        const where: Prisma.PedidoWhereInput = {};
+        if (estado) where.estado = estado;
+        if (storeId) where.detalles = { some: { storeId } };
+        if (search?.trim()) {
+          const q = search.trim();
+          where.OR = [
+            { id: { contains: q, mode: "insensitive" } },
+            { direccionEntrega: { contains: q, mode: "insensitive" } },
+            {
+              usuario: {
+                OR: [
+                  { name: { contains: q, mode: "insensitive" } },
+                  { email: { contains: q, mode: "insensitive" } },
+                ],
+              },
             },
-          },
-          bodega: true,
-          detalles: {
-            ...(storeId ? { where: { storeId } } : {}),
+          ];
+        }
+        const [totalCount, orders] = await Promise.all([
+          prisma.pedido.count({ where }),
+          prisma.pedido.findMany({
+            where,
+            skip,
+            take: limit,
+            orderBy: { fechaPedido: "desc" },
             include: {
-              producto: true,
-              store: {
-                select: {
-                  id: true,
-                  name: true,
-                  ownerId: true,
+              usuario: { select: { id: true, name: true, email: true } },
+              bodega: true,
+              detalles: {
+                ...(storeId ? { where: { storeId } } : {}),
+                include: {
+                  producto: true,
+                  store: { select: { id: true, name: true, ownerId: true } },
                 },
               },
             },
-          },
-        },
-      }),
-    ]);
-
-    return {
-      orders,
-      totalCount,
-      totalPages: Math.ceil(totalCount / limit),
-      page,
-      limit,
-    };
+          }),
+        ]);
+        return { orders, totalCount, totalPages: Math.ceil(totalCount / limit), page, limit };
+      },
+      config.cache.ttl.orderList,
+    ) ?? { orders: [], totalCount: 0, totalPages: 0, page, limit };
   }
 
   async getStatusCounts(storeId?: string) {
-    log.debug("Obteniendo conteo de pedidos por estado en la base de datos.");
-    const where = storeId ? { detalles: { some: { storeId } } } : {};
-    
-    const counts = await prisma.pedido.groupBy({
-      by: ['estado'],
-      where,
-      _count: {
-        _all: true,
+    const key = CacheKeys.order.statusCounts(storeId);
+    return this.cacheService?.getOrSet(
+      key,
+      async () => {
+        log.debug("[db] Obteniendo conteo de pedidos por estado.");
+        const where = storeId ? { detalles: { some: { storeId } } } : {};
+        const counts = await prisma.pedido.groupBy({
+          by: ["estado"],
+          where,
+          _count: { _all: true },
+        });
+        const result: Record<string, number> = {};
+        counts.forEach((c) => { result[c.estado] = c._count._all; });
+        return result;
       },
-    });
-    
-    // Map list to Record<string, number>
-    const result: Record<string, number> = {};
-    counts.forEach((c) => {
-      result[c.estado] = c._count._all;
-    });
-    return result;
+      config.cache.ttl.orderStatusCounts,
+    ) ?? {};
   }
 
   async updateProductStock(productoId: string, cantidad: number | Prisma.Decimal, tx?: TxClient) {
     const client = tx || prisma;
-    log.debug("Actualizando stock del producto:", { productoId, incremento: Number(cantidad) });
+    log.debug("[db] Actualizando stock del producto:", { productoId, incremento: Number(cantidad) });
     return await client.product.update({
       where: { id: productoId },
       data: {
@@ -300,10 +297,12 @@ export class OrdersRepository {
   }
 
   async deletePedido(id: string) {
-    log.info("Eliminando pedido de la base de datos:", { pedidoId: id });
-    return await prisma.pedido.delete({
+    log.info("[db] Eliminando pedido de la base de datos:", { pedidoId: id });
+    const result = await prisma.pedido.delete({
       where: { id },
     });
+    await this.cacheService?.delPattern(CacheKeys.order.allPattern);
+    return result;
   }
 
   async removeDetalleAndUpdatePedido(
@@ -313,7 +312,7 @@ export class OrdersRepository {
     tx?: TxClient
   ) {
     const client = tx || prisma;
-    log.debug("Eliminando detalle y actualizando totales del pedido:", { detalleId, pedidoId });
+    log.debug("[db] Eliminando detalle y actualizando totales del pedido:", { detalleId, pedidoId });
     await client.detallePedido.delete({ where: { id: detalleId } });
     await client.pedido.update({
       where: { id: pedidoId },
@@ -324,6 +323,7 @@ export class OrdersRepository {
         total: new Prisma.Decimal(totals.total),
       },
     });
-    log.debug("Detalle eliminado y totales actualizados:", { detalleId, pedidoId });
+    await this.cacheService?.delPattern(CacheKeys.order.allPattern);
+    log.debug("[db] Detalle eliminado y totales actualizados:", { detalleId, pedidoId });
   }
 }
