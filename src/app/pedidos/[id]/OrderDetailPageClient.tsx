@@ -82,7 +82,7 @@ interface OrderDetailPageClientProps {
   getOrderDetail: (orderId: string) => Promise<any>;
   cancelUserOrder: (orderId: string) => Promise<any>;
   deleteUserOrder: (orderId: string) => Promise<any>;
-  processMercadoPagoPayment: (paymentId: string) => Promise<any>;
+  processMercadoPagoPayment: (storeId: string, paymentId: string) => Promise<any>;
   getConversationMessages: (conversationId: string) => Promise<any>;
   getOrCreateOrderConversation: (pedidoId: string, storeId: string) => Promise<any>;
   getSellerOrderConversations: (storeId: string) => Promise<any>;
@@ -218,7 +218,11 @@ export default function OrderDetailPageClient({
         // Es seguro: consulta la API de MercadoPago para validar que el pago es real
         if (!confirmed && paymentId) {
           try {
-            const result = await processMercadoPagoPayment(paymentId);
+            const storeId = orderStoreIds[0] || (order?.detalles?.[0]?.storeId);
+            if (!storeId) {
+               throw new Error("No se pudo determinar la tienda para verificar el pago");
+            }
+            const result = await processMercadoPagoPayment(storeId, paymentId);
             if (result && "success" in result) {
               confirmed = true;
               const updatedOrder = await getOrderDetail(id);

@@ -3,6 +3,7 @@ import { Store as StoreType } from "@/types/store";
 import { StoreTaxesSection } from "./StoreTaxesSection";
 import { StoreShippingSection } from "./StoreShippingSection";
 import { StoreBodegasSection } from "./StoreBodegasSection";
+import { StorePaymentSection } from "./StorePaymentSection";
 
 interface StoreConfigurationPanelProps {
   store: StoreType;
@@ -10,13 +11,14 @@ interface StoreConfigurationPanelProps {
 }
 
 const TABS = [
+  { id: "payment" as const, label: "Métodos de Pago" },
   { id: "taxes" as const, label: "Impuestos" },
   { id: "shipping" as const, label: "Envíos" },
   { id: "bodegas" as const, label: "Bodegas" },
 ];
 
 export function StoreConfigurationPanel({ store, actions }: StoreConfigurationPanelProps) {
-  const [activeTab, setActiveTab] = useState<"taxes" | "shipping" | "bodegas">("shipping");
+  const [activeTab, setActiveTab] = useState<"payment" | "taxes" | "shipping" | "bodegas">("payment");
 
   return (
     <div className="space-y-6">
@@ -49,6 +51,9 @@ export function StoreConfigurationPanel({ store, actions }: StoreConfigurationPa
         )}
         {activeTab === "bodegas" && (
           <StoreBodegasSection store={store} actions={actions} />
+        )}
+        {activeTab === "payment" && (
+          <StorePaymentSection store={store} actions={actions} />
         )}
       </div>
     </div>

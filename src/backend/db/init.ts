@@ -6,6 +6,22 @@ const log = logger.child("src/backend/db/init.ts");
 
 export async function ensureDefaultAdminStore(prisma: PrismaClient) {
   try {
+    const bitcoin = await prisma.cryptocurrency.findUnique({
+      where: { symbol: 'BTC' }
+    });
+    
+    if (!bitcoin) {
+      log.info(`Creando criptomoneda por defecto (Bitcoin)...`);
+      await prisma.cryptocurrency.create({
+        data: {
+          name: 'Bitcoin',
+          symbol: 'BTC',
+          logo: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png',
+          isActive: true
+        }
+      });
+    }
+
     const adminEmail = config.auth.admin.email;
     if (!adminEmail) return;
 

@@ -21,6 +21,7 @@ import logger from "@/utils/logger";
 import { calculateDiscountedPrice } from "@/utils/promotions";
 import { getAllCitiesAction } from "@/backend/modules/shipping/shipping.actions";
 import { getBodegasByCityAction } from "@/backend/modules/bodega/bodega.actions";
+import { getStoreConfigsAction } from "@/backend/modules/store/store.actions";
 
 const log = logger.child("src/app/checkout/page.tsx");
 
@@ -53,6 +54,24 @@ export default function CheckoutPage() {
     },
     enabled: !!destinationCity && tipoEntrega === "RECOJO_EN_BODEGA",
     staleTime: 60000,
+  });
+
+  const storeIds = React.useMemo(() => {
+    const ids = new Set<string>();
+    cart.forEach(item => {
+      if (item.product.storeId) ids.add(item.product.storeId);
+    });
+    return Array.from(ids);
+  }, [cart]);
+
+  const { data: storeConfigs, isLoading: isLoadingStoreConfigs } = useQuery({
+    queryKey: ["storeConfigs", storeIds],
+    queryFn: async () => {
+      if (storeIds.length === 0) return [];
+      return await getStoreConfigsAction(storeIds);
+    },
+    enabled: storeIds.length > 0,
+    staleTime: 0,
   });
 
   // Protected route logic
@@ -128,6 +147,7 @@ export default function CheckoutPage() {
         t,
         clearCart,
         router,
+        transactionId: values.transactionId,
       });
 
     } catch (error) {
@@ -163,6 +183,8 @@ export default function CheckoutPage() {
                 cityZones={cityZones ?? []}
                 bodegas={bodegas}
                 isLoadingBodegas={isLoadingBodegas}
+                storeConfigs={storeConfigs}
+                isLoadingStoreConfigs={isLoadingStoreConfigs}
               />
             </div>
 

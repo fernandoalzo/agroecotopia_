@@ -16,6 +16,8 @@ interface CheckoutFormSectionProps {
   cityZones: { name: string; cities: string[] }[];
   bodegas: any[];
   isLoadingBodegas: boolean;
+  storeConfigs?: any[];
+  isLoadingStoreConfigs?: boolean;
 }
 
 export const CheckoutFormSection: React.FC<CheckoutFormSectionProps> = ({
@@ -27,6 +29,8 @@ export const CheckoutFormSection: React.FC<CheckoutFormSectionProps> = ({
   cityZones,
   bodegas,
   isLoadingBodegas,
+  storeConfigs,
+  isLoadingStoreConfigs,
 }) => {
   return (
     <motion.div
@@ -52,6 +56,8 @@ export const CheckoutFormSection: React.FC<CheckoutFormSectionProps> = ({
         cityZones={cityZones}
         bodegas={bodegas}
         isLoadingBodegas={isLoadingBodegas}
+        storeConfigs={storeConfigs}
+        isLoadingStoreConfigs={isLoadingStoreConfigs}
       />
     </motion.div>
   );

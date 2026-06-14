@@ -33,17 +33,21 @@ export class StoreRepository {
       where: { id },
       include: {
         owner: { select: { id: true, name: true, image: true } },
-        _count: { select: { products: true } }
+        _count: { select: { products: true } },
+        config: true
       }
     });
   }
 
   async findByOwnerId(ownerId: string) {
     log.debug("Buscando tiendas por Owner ID", { ownerId });
+    // Force recompile to pick up new Prisma Client
+    console.log("Recargando Prisma client para findByOwnerId...");
     return await prisma.store.findMany({
       where: { ownerId },
       include: {
-        _count: { select: { products: true } }
+        _count: { select: { products: true } },
+        config: true
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -55,7 +59,8 @@ export class StoreRepository {
       where: { slug },
       include: {
         owner: { select: { id: true, name: true, image: true } },
-        _count: { select: { products: true } }
+        _count: { select: { products: true } },
+        config: true
       }
     });
   }
@@ -65,6 +70,24 @@ export class StoreRepository {
     return await prisma.store.update({
       where: { id },
       data,
+    });
+  }
+
+  // --- StoreConfig CRUD ---
+
+  async getStoreConfig(storeId: string) {
+    log.debug("Obteniendo configuración de tienda", { storeId });
+    return await prisma.storeConfig.findUnique({
+      where: { storeId }
+    });
+  }
+
+  async upsertStoreConfig(storeId: string, data: any) {
+    log.info("Actualizando configuración de tienda", { storeId });
+    return await prisma.storeConfig.upsert({
+      where: { storeId },
+      update: { ...data },
+      create: { storeId, ...data }
     });
   }
 

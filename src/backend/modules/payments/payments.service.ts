@@ -7,16 +7,23 @@ import { PaymentsRepository } from './payments.repository';
 
 const log = logger.child("src/backend/modules/payments/payments.service.ts");
 
-// Initialize MercadoPago configuration
-const client = new MercadoPagoConfig({
-  accessToken: config.mercadopago.accessToken,
-  options: { timeout: 5000 }
-});
-
 export class PaymentsService {
   constructor(private paymentsRepository: PaymentsRepository) {}
 
+  private async getMercadoPagoConfig(storeId: string) {
+    const { storeService } = await import("@/backend/modules/store");
+    const store = await storeService.getStoreById(storeId);
+    const mpConfig = (store as any)?.config?.paymentMethods?.mercadopago;
+
+    if (!mpConfig || !mpConfig.enabled || !mpConfig.accessToken) {
+      throw new Error("MercadoPago no está configurado para esta tienda");
+    }
+
+    return mpConfig;
+  }
+
   async createPreference(
+    storeId: string,
     pedidoId: string,
     items: {
       id: string;
@@ -30,9 +37,11 @@ export class PaymentsService {
       email: string;
     }
   ) {
-    if (!config.mercadopago.accessToken) {
-      throw new Error("MERCADOPAGO_ACCESS_TOKEN is not configured");
-    }
+    const mpConfig = await this.getMercadoPagoConfig(storeId);
+    const client = new MercadoPagoConfig({
+      accessToken: mpConfig.accessToken,
+      options: { timeout: 5000 }
+    });
 
     try {
       const preference = new Preference(client);
@@ -59,7 +68,7 @@ export class PaymentsService {
         },
         ...(isHttps ? { auto_return: "approved" } : {}),
         external_reference: pedidoId, // We link MP with our order ID
-        ...(isHttps ? { notification_url: `${appUrl}/api/webhooks/mercadopago` } : {}),
+        ...(isHttps ? { notification_url: `${appUrl}/api/webhooks/mercadopago?storeId=${storeId}` } : {}),
       };
 
       const result = await preference.create({ body });
@@ -70,10 +79,12 @@ export class PaymentsService {
     }
   }
 
-  async processNotification(paymentId: string) {
-    if (!config.mercadopago.accessToken) {
-      throw new Error("MERCADOPAGO_ACCESS_TOKEN is not configured");
-    }
+  async processNotification(storeId: string, paymentId: string) {
+    const mpConfig = await this.getMercadoPagoConfig(storeId);
+    const client = new MercadoPagoConfig({
+      accessToken: mpConfig.accessToken,
+      options: { timeout: 5000 }
+    });
 
     try {
       const payment = new Payment(client);

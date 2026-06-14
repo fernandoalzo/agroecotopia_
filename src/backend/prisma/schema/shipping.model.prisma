@@ -4,34 +4,34 @@ enum TipoTarifaEnvio {
 }
 
 model StoreShippingZone {
-  id          String   @id @default(cuid())
-  storeId     String
-  nombreZona  String   // Ej. "Nacional", "Bogotá y alrededores"
-  ciudades    String[] // Array de ciudades cubiertas
-  isActive    Boolean  @default(true)
-  
-  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  tarifas     StoreShippingRate[]
+  id         String   @id @default(cuid())
+  storeId    String
+  nombreZona String // Ej. "Nacional", "Bogotá y alrededores"
+  ciudades   String[] // Array de ciudades cubiertas
+  isActive   Boolean  @default(true)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  store   Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  tarifas StoreShippingRate[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([storeId])
 }
 
 model StoreShippingRate {
-  id                String   @id @default(cuid())
+  id                String          @id @default(cuid())
   zoneId            String
   tipo              TipoTarifaEnvio @default(TARIFA_FIJA)
-  precioBase        Decimal  @db.Decimal(12, 2)
-  precioPorKgExtra  Decimal? @db.Decimal(12, 2) // Solo si tipo es POR_PESO
-  minimoEnvioGratis Decimal? @db.Decimal(12, 2) // Si la compra en esta tienda supera este monto, envío gratis
-  isActive          Boolean  @default(true)
+  precioBase        Decimal         @db.Decimal(12, 2)
+  precioPorKgExtra  Decimal?        @db.Decimal(12, 2) // Solo si tipo es POR_PESO
+  minimoEnvioGratis Decimal?        @db.Decimal(12, 2) // Si la compra en esta tienda supera este monto, envío gratis
+  isActive          Boolean         @default(true)
 
-  zone              StoreShippingZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  zone StoreShippingZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([zoneId])
 }

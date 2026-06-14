@@ -86,6 +86,19 @@ export const updateMyStoreAction = async (storeId: string, data: Partial<StoreCr
   });
 };
 
+export const updateStoreConfigAction = async (storeId: string, data: any) => {
+  return withSeller(async (session) => {
+    log.info("Action: updateStoreConfigAction", { storeId });
+    const userId = session.user.id;
+    
+    const config = await storeService.updateStoreConfig(userId, storeId, data);
+    revalidatePath(`/mi-tienda/${storeId}`);
+    // Also revalidate checkout as config affects checkout
+    revalidatePath(`/checkout`);
+    return { success: true, data: config };
+  });
+};
+
 // --- Admin Actions ---
 
 export const getPendingRequestsAction = async (page: number = 1, search?: string) => {
@@ -236,6 +249,12 @@ export const getStoreBySlugAction = async (slug: string) => {
   return await storeService.getStoreBySlug(slug);
 };
 
+export const getStoreConfigsAction = async (storeIds: string[]) => {
+  log.info("Action: getStoreConfigsAction", { storeIds });
+  const stores = await Promise.all(storeIds.map(id => storeService.getStoreById(id)));
+  return stores.map(s => ({ storeId: s.id, config: s.config }));
+};
+
 export const getActiveStoresCatalogAction = async (page: number = 1) => {
   log.info("Action: getActiveStoresCatalogAction", { page });
   return await storeService.getActiveStoresForCatalog(page);
@@ -247,5 +266,14 @@ export const getAllActiveStoresListAction = async () => {
     // Get up to 1000 active stores for select dropdowns
     const result = await storeService.getAllStores(1, 1000, 'ACTIVE');
     return result.stores.map((s): StoreListItem => ({ id: s.id, name: s.name }));
+  });
+};
+
+export const getCryptocurrenciesAction = async () => {
+  log.info("Action: getCryptocurrenciesAction");
+  const { default: prisma } = await import("@/backend/db/prisma");
+  return await prisma.cryptocurrency.findMany({
+    where: { isActive: true },
+    orderBy: { name: 'asc' }
   });
 };

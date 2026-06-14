@@ -5,32 +5,32 @@ enum Role {
 }
 
 model User {
-  id                     String                  @id @default(cuid())
-  name                   String?
-  email                  String                  @unique
-  emailVerified          DateTime?
-  image                  String?
-  password               String?
-  role                   Role                    @default(user)
-  accounts               Account[]
-  pedidos                Pedido[]
-  conversationsAsUser    Conversation[]          @relation("ConversationUser")
-  conversationsAsSeller  Conversation[]          @relation("ConversationSeller")
-  e2eeDevice             E2EEDevice?
-  forumPosts             ForumPost[]
-  forumAnswers           ForumAnswer[]
-  forumRatings           ForumRating[]
-  stores                 Store[]
-  storeRequests          StoreRequest[]
+  id                      String                  @id @default(cuid())
+  name                    String?
+  email                   String                  @unique
+  emailVerified           DateTime?
+  image                   String?
+  password                String?
+  role                    Role                    @default(user)
+  accounts                Account[]
+  pedidos                 Pedido[]
+  conversationsAsUser     Conversation[]          @relation("ConversationUser")
+  conversationsAsSeller   Conversation[]          @relation("ConversationSeller")
+  e2eeDevice              E2EEDevice?
+  forumPosts              ForumPost[]
+  forumAnswers            ForumAnswer[]
+  forumRatings            ForumRating[]
+  stores                  Store[]
+  storeRequests           StoreRequest[]
   // ─── Notification System Relations ───
-  domainEvents           DomainEvent[]           @relation("DomainEventActor")
-  createdNotifications   Notification[]          @relation("NotificationCreator")
-  notificationRecipients NotificationRecipient[]
-  createdGroups          Group[]                 @relation("GroupCreator")
-  groupMemberships       GroupMember[]
-  createdAt                 DateTime                @default(now())
-  updatedAt                 DateTime                @updatedAt
-  unreadNotificationCount   Int                     @default(0)
+  domainEvents            DomainEvent[]           @relation("DomainEventActor")
+  createdNotifications    Notification[]          @relation("NotificationCreator")
+  notificationRecipients  NotificationRecipient[]
+  createdGroups           Group[]                 @relation("GroupCreator")
+  groupMemberships        GroupMember[]
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  unreadNotificationCount Int                     @default(0)
 }
 
 model Account {

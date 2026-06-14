@@ -25,17 +25,16 @@ const log = logger.child("src/app/api/webhooks/mercadopago/route.ts");
 function verifyWebhookSignature(
   xSignature: string | null,
   xRequestId: string | null,
-  dataId: string | null
+  dataId: string | null,
+  secret: string | null | undefined
 ): boolean {
-  const secret = config.mercadopago.webhookSecret;
-
   // Si no hay secret configurado, no podemos verificar
   if (!secret) {
     log.warn(
-      "MERCADOPAGO_WEBHOOK_SECRET no está configurado. " +
-      "La verificación HMAC está deshabilitada. Configúrala en producción."
+      "El store no tiene configurado un secret de MercadoPago. " +
+      "La verificación HMAC está deshabilitada."
     );
-    return true; // Permite pasar en desarrollo sin secret
+    return true; // Permite pasar sin secret
   }
 
   if (!xSignature || !xRequestId || !dataId) {
@@ -96,10 +95,11 @@ export async function POST(request: Request) {
     const xSignature = request.headers.get("x-signature");
     const xRequestId = request.headers.get("x-request-id");
 
-    // 2. Extraer data.id de los query params
+    // 2. Extraer data.id y storeId de los query params
     const { searchParams } = new URL(request.url);
     let dataId = searchParams.get("data.id") || searchParams.get("id");
     let topic = searchParams.get("type") || searchParams.get("topic");
+    const storeId = searchParams.get("storeId");
 
     // 3. Si no están en la URL, intentar obtener del cuerpo JSON
     if (!dataId) {
@@ -112,22 +112,30 @@ export async function POST(request: Request) {
       }
     }
 
+    if (!storeId) {
+      log.error("Webhook de pago rechazado: Falta el storeId.");
+      return NextResponse.json({ error: "Missing storeId" }, { status: 400 });
+    }
+
     // MP docs: si data.id contiene letras, convertir a lowercase para HMAC
     if (dataId) dataId = dataId.toLowerCase();
 
-    log.info(`MercadoPago Webhook recibido: id=${dataId}, tipo/tópico=${topic}`);
+    log.info(`MercadoPago Webhook recibido: id=${dataId}, tipo/tópico=${topic}, storeId=${storeId}`);
 
     // 4. Filtrar por tipo de evento PRIMERO
-    //    Solo procesamos eventos de pago. Eventos como "merchant_order" u otros
-    //    se confirman con 200 OK para evitar reintentos infinitos de MP.
     const isPaymentEvent = topic === "payment" || topic === "payment.created" || topic === "payment.updated";
 
     if (!dataId || !isPaymentEvent) {
       return NextResponse.json({ received: true });
     }
 
-    // 5. ✅ VERIFICAR FIRMA HMAC solo para eventos de pago que vamos a procesar
-    const isSignatureValid = verifyWebhookSignature(xSignature, xRequestId, dataId);
+    // Fetch store secret dynamically
+    const { storeService } = await import("@/backend/modules/store");
+    const store = await storeService.getStoreById(storeId);
+    const storeSecret = (store as any)?.config?.paymentMethods?.mercadopago?.secret;
+
+    // 5. ✅ VERIFICAR FIRMA HMAC
+    const isSignatureValid = verifyWebhookSignature(xSignature, xRequestId, dataId, storeSecret);
 
     if (!isSignatureValid) {
       log.error("Webhook de pago rechazado: Firma HMAC inválida o ausente.");
@@ -138,7 +146,7 @@ export async function POST(request: Request) {
     }
 
     // 6. Procesar la notificación de pago
-    const result = await paymentsService.processNotification(String(dataId));
+    const result = await paymentsService.processNotification(storeId, String(dataId));
     return NextResponse.json(result);
   } catch (error: any) {
     log.error("Error en Ruta de Webhook:", error);

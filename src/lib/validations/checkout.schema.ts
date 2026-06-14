@@ -9,7 +9,8 @@ export const CheckoutSchema = z.object({
   city: z.string().min(2, { message: "City must be at least 2 characters" }),
   bodegaId: z.string().optional(),
   notes: z.string().optional(),
-  paymentMethod: z.enum(["advisor", "nequi", "mercadopago", "pse", "wompi"]),
+  paymentMethod: z.enum(["advisor", "nequi", "mercadopago", "pse", "wompi", "crypto"]),
+  transactionId: z.string().optional(),
 }).refine(
   (data) => {
     if (data.tipoEntrega === "ENVIO") {
@@ -32,6 +33,14 @@ export const CheckoutSchema = z.object({
     message: "Debes seleccionar una bodega para recoger el pedido",
     path: ["bodegaId"],
   }
-);
+).superRefine((data, ctx) => {
+  if (data.paymentMethod === "crypto" && !data.transactionId?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "El ID de transacción es requerido para pagos con criptomonedas",
+      path: ["transactionId"],
+    });
+  }
+});
 
 export type CheckoutValues = z.infer<typeof CheckoutSchema>;

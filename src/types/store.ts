@@ -13,6 +13,7 @@ export interface Store {
   city?: string | null;
   owner?: { id: string; name?: string | null; image?: string | null };
   _count?: { products: number };
+  config?: any;
   createdAt: Date;
   updatedAt: Date;
 }

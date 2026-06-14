@@ -168,6 +168,7 @@ export interface Translations {
     processing: string;
     paymentMethod: string;
     paymentOptionAdvisor: string;
+    paymentOptionCrypto: string;
     paymentOptionNequi: string;
     paymentOptionMercadoPago: string;
     paymentOptionPSE: string;

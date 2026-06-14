@@ -61,6 +61,14 @@ export class StoreService {
     return await this.storeRepository.updateStore(storeId, data);
   }
 
+  async updateStoreConfig(userId: string, storeId: string, data: any) {
+    const store = await this.getStoreById(storeId);
+    if (store.ownerId !== userId) {
+      throw new Error("No tienes permiso para editar la configuración de esta tienda.");
+    }
+    return await this.storeRepository.upsertStoreConfig(storeId, data);
+  }
+
   // --- Admin Flow ---
 
   async getRequestById(requestId: string) {

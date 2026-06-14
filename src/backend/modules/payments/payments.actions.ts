@@ -39,9 +39,13 @@ export async function createMercadoPagoPreferenceAction(pedidoId: string) {
       });
     }
 
+    const storeId = pedido.detalles[0]?.storeId;
+    if (!storeId) return { error: "No se encontró la tienda del pedido" };
+
     // 4. Crear preferencia
     try {
       const preference = await paymentsService.createPreference(
+        storeId,
         pedido.id,
         items,
         { name: userName, email: userEmail }
@@ -63,10 +67,10 @@ export async function createMercadoPagoPreferenceAction(pedidoId: string) {
   });
 }
 
-export async function processMercadoPagoPaymentAction(paymentId: string) {
+export async function processMercadoPagoPaymentAction(storeId: string, paymentId: string) {
   return await withAuth(async () => {
     try {
-      const result = await paymentsService.processNotification(paymentId);
+      const result = await paymentsService.processNotification(storeId, paymentId);
       return result;
     } catch (error: any) {
       log.error("Error en processMercadoPagoPaymentAction:", error);

@@ -194,6 +194,7 @@ export const es: Translations = {
     processing: "Procesando...",
     paymentMethod: "Método de Pago",
     paymentOptionAdvisor: "Acordar con un Asesor",
+    paymentOptionCrypto: "Criptomonedas (Bitcoin, etc.)",
     paymentOptionNequi: "Nequi",
     paymentOptionMercadoPago: "Mercado Pago",
     paymentOptionPSE: "PSE (Débito Bancario)",

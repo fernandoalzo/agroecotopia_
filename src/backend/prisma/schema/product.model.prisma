@@ -1,19 +1,19 @@
 model Product {
-  id             String          @id @default(cuid())
-  name           String
-  description    String
-  price          Int
-  categories     Categoria[]
-  unidad         String
-  tag            String
-  emoji          String
-  images         String[]
-  stock          Decimal         @default(0) @db.Decimal(12, 2)
+  id          String      @id @default(cuid())
+  name        String
+  description String
+  price       Int
+  categories  Categoria[]
+  unidad      String
+  tag         String
+  emoji       String
+  images      String[]
+  stock       Decimal     @default(0) @db.Decimal(12, 2)
   // Envíos
-  peso           Decimal?        @db.Decimal(10, 2) // en kg
-  dimensiones    String?         // ej: "20x30x10" o JSON
-  envioGratis    Boolean         @default(false)
-  
+  peso        Decimal?    @db.Decimal(10, 2) // en kg
+  dimensiones String? // ej: "20x30x10" o JSON
+  envioGratis Boolean     @default(false)
+
   storeId        String
   detallesPedido DetallePedido[]
   store          Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)

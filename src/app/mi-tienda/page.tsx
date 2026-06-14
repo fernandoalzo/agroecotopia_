@@ -1,4 +1,5 @@
-import { getMyStoresAction, updateMyStoreAction, getAllActiveStoresListAction } from "@/backend/modules/store/store.actions";
+import { getMyStoresAction, updateMyStoreAction, getAllActiveStoresListAction, updateStoreConfigAction } from "@/backend/modules/store/store.actions";
+
 import {
   getConversationMessages,
   getOrCreateOrderConversationAction,
@@ -69,6 +70,7 @@ export default function Page() {
       actions={{
         getMyStores: getMyStoresAction,
         updateMyStore: updateMyStoreAction,
+        updateStoreConfig: updateStoreConfigAction,
         getConversationMessages,
         getOrCreateOrderConversation: getOrCreateOrderConversationAction,
         getSellerOrderConversations: getSellerOrderConversationsAction,

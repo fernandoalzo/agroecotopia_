@@ -27,16 +27,17 @@ model Store {
   city    String?
 
   // Relaciones
-  owner         User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  owner         User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   products      Product[]
   orderDetails  DetallePedido[]
   conversations Conversation[]
-  requests      StoreRequest[]  @relation("StoreToRequests")
+  requests      StoreRequest[]      @relation("StoreToRequests")
   promotions    Promotion[]
   taxes         StoreTax[]
   shippingZones StoreShippingZone[]
   bodegas       Bodega[]
   envios        Envio[]
+  config        StoreConfig?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -71,17 +72,28 @@ model StoreRequest {
 }
 
 model StoreTax {
-  id          String   @id @default(cuid())
-  name        String
-  percentage  Decimal  @db.Decimal(5, 2)
-  isActive    Boolean  @default(true)
-  storeId     String
+  id         String  @id @default(cuid())
+  name       String
+  percentage Decimal @db.Decimal(5, 2)
+  isActive   Boolean @default(true)
+  storeId    String
 
-  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([storeId])
 }
 
+model StoreConfig {
+  id      String @id @default(cuid())
+  storeId String @unique
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  paymentMethods  Json @default("{}")
+  shippingMethods Json @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

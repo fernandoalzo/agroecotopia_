@@ -59,6 +59,7 @@ interface MiTiendaActions {
   updateStoreProduct: (...args: any[]) => Promise<any>;
   deleteProduct: (...args: any[]) => Promise<any>;
   deleteStoreProduct: (...args: any[]) => Promise<any>;
+  updateStoreConfig: (storeId: string, paymentMethods: any) => Promise<any>;
   getCategories: () => Promise<any>;
   getStoreOrders: (...args: any[]) => Promise<any>;
   getStoreOrderStatusCounts: (storeId: string) => Promise<any>;

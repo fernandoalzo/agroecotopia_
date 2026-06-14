@@ -3,6 +3,7 @@ import { Store as StoreType } from "@/types/store";
 import { Plus, Trash2, Edit2, CheckCircle2, XCircle, MapPin, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { Loading } from "@/components/ui/Loading";
+import { Switch } from "@/components/ui/switch";
 
 interface StoreShippingSectionProps {
   store: StoreType;
@@ -142,16 +143,86 @@ export function StoreShippingSection({ store, actions }: StoreShippingSectionPro
     }
   };
 
+  const [deliveryEnabled, setDeliveryEnabled] = useState(
+    store.config?.shippingMethods?.delivery?.enabled ?? true
+  );
+  const [pickupEnabled, setPickupEnabled] = useState(
+    store.config?.shippingMethods?.pickup?.enabled ?? true
+  );
+
+  const toggleShippingMethod = async (type: 'delivery' | 'pickup', value: boolean) => {
+    try {
+      if (type === 'delivery') setDeliveryEnabled(value);
+      if (type === 'pickup') setPickupEnabled(value);
+
+      const newConfig = {
+        delivery: { enabled: type === 'delivery' ? value : deliveryEnabled },
+        pickup: { enabled: type === 'pickup' ? value : pickupEnabled }
+      };
+
+      const res = await actions.updateStoreConfig(store.id, { shippingMethods: newConfig });
+      if (res && res.success) {
+        toast.success("Opciones de entrega actualizadas");
+      }
+    } catch (err) {
+      toast.error("Error al actualizar opciones de entrega");
+      // Revert state
+      if (type === 'delivery') setDeliveryEnabled(!value);
+      if (type === 'pickup') setPickupEnabled(!value);
+    }
+  };
+
   if (loading) {
     return <div className="py-12 flex justify-center"><Loading /></div>;
   }
 
   return (
     <div className="space-y-6 relative">
-      <div className="hidden sm:flex justify-between items-center bg-card p-6 rounded-2xl border border-border">
+      <div className="bg-card p-6 rounded-2xl border border-border">
+        <div className="mb-6">
+          <h2 className="text-xl font-bold font-display">Opciones de Entrega</h2>
+          <p className="text-muted-foreground text-sm mt-1">Activa o desactiva las formas en las que los clientes pueden recibir sus pedidos.</p>
+        </div>
+        
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-xl border border-border/50 hover:bg-secondary/5 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Truck className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-bold text-sm">Envío a domicilio</p>
+                <p className="text-xs text-muted-foreground">Permitir envíos usando tus zonas y tarifas configuradas.</p>
+              </div>
+            </div>
+            <Switch
+              checked={deliveryEnabled}
+              onCheckedChange={(checked) => toggleShippingMethod('delivery', checked)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-xl border border-border/50 hover:bg-secondary/5 transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <MapPin className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="font-bold text-sm">Recoger en bodega</p>
+                <p className="text-xs text-muted-foreground">Permitir a los clientes recoger sus pedidos sin costo de envío.</p>
+              </div>
+            </div>
+            <Switch
+              checked={pickupEnabled}
+              onCheckedChange={(checked) => toggleShippingMethod('pickup', checked)}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="hidden sm:flex justify-between items-center bg-card p-6 rounded-2xl border border-border mt-8">
         <div>
           <h2 className="text-xl font-bold font-display">Zonas de Envío</h2>
-          <p className="text-muted-foreground text-sm mt-1">Configura las zonas donde ofreces envíos y establece las tarifas (fijas o por peso).</p>
+          <p className="text-muted-foreground text-sm mt-1">Configura las zonas donde ofreces envíos a domicilio y establece las tarifas.</p>
         </div>
         <button
           onClick={() => handleOpenZoneModal()}

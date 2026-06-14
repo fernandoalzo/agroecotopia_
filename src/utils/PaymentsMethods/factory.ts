@@ -4,6 +4,7 @@ import { MercadoPagoPaymentHandler } from "./mercadopago/handler";
 import { NequiPaymentHandler } from "./nequi/handler";
 import { PSEPaymentHandler } from "./pse/handler";
 import { WompiPaymentHandler } from "./wompi/handler";
+import { CryptoPaymentHandler } from "./crypto/handler";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/utils/PaymentsMethods/factory.ts");
@@ -19,6 +20,7 @@ export class PaymentHandlerFactory {
     nequi: new NequiPaymentHandler(),
     pse: new PSEPaymentHandler(),
     wompi: new WompiPaymentHandler(),
+    crypto: new CryptoPaymentHandler(),
   };
 
   /**

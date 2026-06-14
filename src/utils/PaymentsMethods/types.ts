@@ -4,7 +4,7 @@ import { CheckoutValues } from "@/lib/validations/checkout.schema";
 import { CartItem } from "@/types";
 
 export interface PaymentMethodConfig {
-  id: "advisor" | "nequi" | "mercadopago" | "pse" | "wompi";
+  id: "advisor" | "nequi" | "mercadopago" | "pse" | "wompi" | "crypto";
   icon: LucideIcon;
   color: string;
   bgColor: string;
@@ -22,6 +22,7 @@ export interface PaymentHandlerContext {
   t: Translations;
   clearCart: () => void;
   router: { push: (url: string) => void };
+  transactionId?: string;
 }
 
 export interface PaymentHandler {

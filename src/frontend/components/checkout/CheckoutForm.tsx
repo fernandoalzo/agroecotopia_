@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/context/LanguageContext";
-import { User, Mail, Phone, MapPin, Building2, FileText, Truck, Warehouse } from "lucide-react";
+import { User, Mail, Phone, MapPin, Building2, FileText, Truck, Warehouse, Bitcoin } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { PAYMENT_METHODS } from "@/utils/PaymentsMethods";
@@ -30,9 +30,11 @@ interface CheckoutFormProps {
   cityZones: { name: string; cities: string[] }[];
   bodegas: any[];
   isLoadingBodegas: boolean;
+  storeConfigs?: any[];
+  isLoadingStoreConfigs?: boolean;
 }
 
-export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultValues, onCityChange, onTipoEntregaChange, cityZones, bodegas, isLoadingBodegas }) => {
+export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultValues, onCityChange, onTipoEntregaChange, cityZones, bodegas, isLoadingBodegas, storeConfigs, isLoadingStoreConfigs }) => {
   const { t } = useLanguage();
 
   const form = useForm<CheckoutValues>({
@@ -174,7 +176,29 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
           <FormField
             control={form.control}
             name="tipoEntrega"
-            render={({ field }) => (
+            render={({ field }) => {
+              const isDeliveryEnabled = storeConfigs?.every(sc => {
+                const sm = sc.config?.shippingMethods as any;
+                if (!sm || !sm.delivery) return true;
+                return sm.delivery.enabled !== false;
+              }) ?? true;
+
+              const isPickupEnabled = storeConfigs?.every(sc => {
+                const sm = sc.config?.shippingMethods as any;
+                if (!sm || !sm.pickup) return true;
+                return sm.pickup.enabled !== false;
+              }) ?? true;
+
+              // Auto-select logic if current value is disabled
+              React.useEffect(() => {
+                if (field.value === "ENVIO" && !isDeliveryEnabled && isPickupEnabled) {
+                  form.setValue("tipoEntrega", "RECOJO_EN_BODEGA");
+                } else if (field.value === "RECOJO_EN_BODEGA" && !isPickupEnabled && isDeliveryEnabled) {
+                  form.setValue("tipoEntrega", "ENVIO");
+                }
+              }, [isDeliveryEnabled, isPickupEnabled, field.value, form]);
+
+              return (
               <FormItem className="space-y-6">
                 <FormLabel className="text-lg font-display font-black uppercase tracking-widest text-foreground">
                   Tipo de entrega
@@ -183,8 +207,10 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
                   <RadioGroup
                     onValueChange={field.onChange}
                     defaultValue={field.value}
+                    value={field.value}
                     className="grid grid-cols-1 md:grid-cols-2 gap-4"
                   >
+                    {isDeliveryEnabled && (
                     <FormItem>
                       <FormControl>
                         <RadioGroupItem value="ENVIO" className="sr-only" />
@@ -204,7 +230,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
                         </div>
                       </FormLabel>
                     </FormItem>
+                    )}
 
+                    {isPickupEnabled && (
                     <FormItem>
                       <FormControl>
                         <RadioGroupItem value="RECOJO_EN_BODEGA" className="sr-only" />
@@ -224,11 +252,17 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
                         </div>
                       </FormLabel>
                     </FormItem>
+                    )}
                   </RadioGroup>
                 </FormControl>
+                {(!isDeliveryEnabled && !isPickupEnabled) && (
+                  <div className="text-sm text-destructive p-4 bg-destructive/10 rounded-xl border border-destructive/20 mt-4">
+                    No hay métodos de entrega disponibles para los productos de tu carrito.
+                  </div>
+                )}
                 <FormMessage />
               </FormItem>
-            )}
+            )}}
           />
         </div>
 
@@ -318,37 +352,88 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
                     defaultValue={field.value}
                     className="grid grid-cols-1 md:grid-cols-2 gap-4"
                   >
-                    {PAYMENT_METHODS.map((method) => {
-                      const Icon = method.icon;
-                      return (
-                        <FormItem key={method.id}>
-                          <FormControl>
-                            <RadioGroupItem value={method.id} className="sr-only" />
-                          </FormControl>
-                          <FormLabel className={cn(
-                            "flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all hover:bg-primary/5 shadow-sm",
-                            field.value === method.id ? "border-primary bg-primary/10" : "border-border/50",
-                            method.isMute && "opacity-60"
-                          )}>
-                            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0", method.isMute ? "bg-muted/50" : method.bgColor)}>
-                              <Icon className={cn("w-6 h-6", method.isMute && "text-muted-foreground")} style={method.isMute ? undefined : { color: method.color }} />
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-bold text-sm">{t.checkout[method.labelKey]}</p>
-                              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider italic">
-                                {method.isMute ? t.checkout.paymentMuteNote : t.cart.completeOrder}
-                              </p>
-                            </div>
-                          </FormLabel>
-                        </FormItem>
-                      );
-                    })}
+                    {isLoadingStoreConfigs ? (
+                      <div className="col-span-1 md:col-span-2 text-sm text-muted-foreground p-4 bg-secondary/30 rounded-xl border border-border animate-pulse">
+                        Cargando métodos de pago disponibles...
+                      </div>
+                    ) : (
+                      PAYMENT_METHODS.filter(method => {
+                        if (method.isMute) return false;
+                        if (!storeConfigs || storeConfigs.length === 0) return false;
+                        return storeConfigs.every(sc => {
+                          const methods = sc.config?.paymentMethods as any;
+                          if (!methods) return false;
+                          return methods[method.id]?.enabled === true;
+                        });
+                      }).map((method) => {
+                        const Icon = method.icon;
+                        return (
+                          <FormItem key={method.id}>
+                            <FormControl>
+                              <RadioGroupItem value={method.id} className="sr-only" />
+                            </FormControl>
+                            <FormLabel className={cn(
+                              "flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all hover:bg-primary/5 shadow-sm",
+                              field.value === method.id ? "border-primary bg-primary/10" : "border-border/50"
+                            )}>
+                              <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0", method.bgColor)}>
+                                <Icon className="w-6 h-6" style={{ color: method.color }} />
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-bold text-sm">{t.checkout[method.labelKey]}</p>
+                                <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider italic">
+                                  {t.cart.completeOrder}
+                                </p>
+                              </div>
+                            </FormLabel>
+                          </FormItem>
+                        );
+                      })
+                    )}
                   </RadioGroup>
                 </FormControl>
+                {!isLoadingStoreConfigs && storeConfigs && storeConfigs.length > 0 && PAYMENT_METHODS.filter(method => {
+                  if (method.isMute) return false;
+                  return storeConfigs.every(sc => {
+                    const methods = sc.config?.paymentMethods as any;
+                    if (!methods) return false;
+                    return methods[method.id]?.enabled === true;
+                  });
+                }).length === 0 && (
+                  <div className="col-span-1 md:col-span-2 text-sm text-destructive p-4 bg-destructive/10 rounded-xl border border-destructive/20 mt-4">
+                    No hay métodos de pago disponibles en común para los productos de tu carrito. Por favor, contacta a soporte o al vendedor.
+                  </div>
+                )}
                 <FormMessage />
               </FormItem>
             )}
           />
+
+          {form.watch("paymentMethod") === "crypto" && (
+            <FormField
+              control={form.control}
+              name="transactionId"
+              render={({ field }) => (
+                <FormItem className="space-y-2 mt-6">
+                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                    <Bitcoin className="w-3.5 h-3.5 text-orange-500" />
+                    ID de Transacción (TXID)
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="0x... o el TXID de tu transacción blockchain"
+                      className="bg-background/50 border-border/50 focus:border-orange-500/50 focus:ring-orange-500/20 rounded-xl h-12 transition-all font-mono text-sm"
+                      {...field}
+                    />
+                  </FormControl>
+                  <p className="text-[10px] text-muted-foreground">
+                    Ingresa el TXID de tu pago con criptomonedas para que el asesor lo verifique.
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
         </div>
       </form>
     </Form>

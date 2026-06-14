@@ -9,31 +9,31 @@ enum EnvioEstado {
 }
 
 model Envio {
-  id                   String       @id @default(cuid())
-  pedidoId             String       @unique
-  storeId              String
-  numeroGuia           String       @unique
-  transportadora       String?
-  estado               EnvioEstado  @default(PREPARANDO)
+  id             String      @id @default(cuid())
+  pedidoId       String      @unique
+  storeId        String
+  numeroGuia     String      @unique
+  transportadora String?
+  estado         EnvioEstado @default(PREPARANDO)
 
   destinatarioNombre   String?
   destinatarioTelefono String?
-  direccionEntrega     String       @db.Text
+  direccionEntrega     String  @db.Text
   ciudad               String?
   departamento         String?
   codigoPostal         String?
-  instruccionesEntrega String?      @db.Text
+  instruccionesEntrega String? @db.Text
 
   fechaDespacho        DateTime?
   fechaTransito        DateTime?
   fechaReparto         DateTime?
   fechaEntrega         DateTime?
   fechaEstimadaEntrega DateTime?
-  notas                String?      @db.Text
+  notas                String?   @db.Text
 
-  pedido               Pedido       @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-  store                Store        @relation(fields: [storeId], references: [id])
-  eventos              EnvioEvento[]
+  pedido  Pedido        @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  store   Store         @relation(fields: [storeId], references: [id])
+  eventos EnvioEvento[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -51,7 +51,7 @@ model EnvioEvento {
   descripcion String?     @db.Text
   fecha       DateTime    @default(now())
 
-  envio       Envio       @relation(fields: [envioId], references: [id], onDelete: Cascade)
+  envio Envio @relation(fields: [envioId], references: [id], onDelete: Cascade)
 
   @@index([envioId])
 }

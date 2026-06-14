@@ -182,6 +182,55 @@ export async function sendAdvisorOrderMessagesAction(params: {
   });
 }
 
+export async function sendCryptoTransactionMessageAction(params: {
+  messages: Array<{
+    pedidoId: string;
+    storeId: string;
+    content: string;
+  }>;
+}) {
+  return withAuth(async (session) => {
+    const userId = session.user.id;
+    const userRole = session.user.role as Role;
+
+    try {
+      const createdMessages = [];
+
+      for (const msgData of params.messages || []) {
+        if (!msgData?.pedidoId || !msgData?.storeId || !msgData?.content) continue;
+        const conversation = await chatService.getOrCreateOrderConversation(
+          String(msgData.pedidoId),
+          String(msgData.storeId),
+          String(userId),
+          userRole
+        );
+
+        if (!conversation?.id) continue;
+
+        const message = await chatService.sendRealtimeMessage({
+          conversationId: conversation.id,
+          content: msgData.content,
+          senderId: userId,
+          senderRole: userRole,
+        });
+        createdMessages.push(message);
+      }
+
+      log.info("Mensajes de transacción cripto enviados a conversaciones de pedido:", {
+        userId,
+        transactionCount: createdMessages.length,
+      });
+
+      eventBus.emit("unread_count_updated", { role: userRole });
+
+      return createdMessages;
+    } catch (error) {
+      log.warn("No se pudieron enviar los mensajes de transacción cripto:", { userId, error });
+      return { error: getChatActionErrorMessage(error as unknown as Error) };
+    }
+  });
+}
+
 export async function openOrderChatAction(pedidoId: string, storeId: string) {
   return withAuth(async (session) => {
     const userId = session.user.id;
