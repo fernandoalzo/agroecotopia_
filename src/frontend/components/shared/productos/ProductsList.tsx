@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Package, Plus } from "lucide-react";
 import { Product } from "@prisma/client";
 import { ProductCard } from "./ProductCard";
-import { ProductModal } from "./ProductModal";
-import { ProductEditModal } from "./ProductEditModal";
+import { ProductDetailPanel } from "./ProductDetailPanel";
 import { ProductCreateModal } from "./ProductCreateModal";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -68,8 +67,17 @@ export const ProductsList = ({
   onDeleteProduct
 }: ProductsListProps) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Keep the selected product updated if the products list changes (e.g. after a save or real-time update)
+  useEffect(() => {
+    if (selectedProduct) {
+      const updatedProduct = products.find((p) => p.id === selectedProduct.id);
+      if (updatedProduct && JSON.stringify(updatedProduct) !== JSON.stringify(selectedProduct)) {
+        setSelectedProduct(updatedProduct);
+      }
+    }
+  }, [products, selectedProduct]);
 
   const renderPagination = () => (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl bg-secondary/20 border border-border/30 px-6 py-4">
@@ -294,7 +302,6 @@ export const ProductsList = ({
                 product={product}
                 index={index}
                 onView={() => setSelectedProduct(product)}
-                onEdit={() => setEditingProduct(product)}
               />
             ))
           )}
@@ -315,19 +322,15 @@ export const ProductsList = ({
         <Plus className="h-6 w-6" />
       </motion.button>
 
-      <ProductModal
-        product={selectedProduct}
-        onClose={() => setSelectedProduct(null)}
-      />
-
-      <ProductEditModal
-        storeId={storeId}
-        product={editingProduct}
-        onClose={() => setEditingProduct(null)}
-        availableCategories={availableCategories}
-        onSubmitForm={onSubmitUpdate}
-        onDeleteProduct={onDeleteProduct}
-      />
+      {selectedProduct && (
+        <ProductDetailPanel
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          availableCategories={availableCategories}
+          onSubmitUpdate={onSubmitUpdate}
+          onDeleteProduct={onDeleteProduct}
+        />
+      )}
 
       {isCreateModalOpen && (
         <ProductCreateModal

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Eye, Edit, Image as ImageIcon, Store, Tag } from "lucide-react";
+import { Check, Copy, Eye, Image as ImageIcon, Store, Tag } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,6 @@ interface ProductCardMobileProps {
   stockLabel: string;
   onCopyId: () => void;
   onView: () => void;
-  onEdit: () => void;
 }
 
 export const ProductCardMobile = ({
@@ -25,7 +24,6 @@ export const ProductCardMobile = ({
   stockLabel,
   onCopyId,
   onView,
-  onEdit,
 }: ProductCardMobileProps) => {
   const discountedPrice = calculateDiscountedPrice(
     Number(product.price),
@@ -96,9 +94,6 @@ export const ProductCardMobile = ({
       </div>
 
       <div className="mt-4 pt-4 border-t border-border/40 flex justify-end gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-muted-foreground" onClick={onEdit}>
-            <Edit className="w-4 h-4" />
-          </Button>
           <Button variant="outline" size="sm" className="h-8 rounded-xl text-xs font-bold" onClick={onView}>
             <Eye className="w-3.5 h-3.5 mr-1" />
             Ver

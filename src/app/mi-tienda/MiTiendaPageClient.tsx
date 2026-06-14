@@ -211,9 +211,9 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     }
   };
 
-  const loadPromotions = useCallback(async () => {
+  const loadPromotions = useCallback(async (silent = false) => {
     if (!activeStoreId || activeTab !== "promotions") return;
-    setLoadingPromotions(true);
+    if (!silent) setLoadingPromotions(true);
     try {
       const res = await actions.getPromotionsByStore(activeStoreId);
       if (res && res.success) {
@@ -222,7 +222,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     } catch (err) {
       log.error("Error cargando promociones:", err);
     } finally {
-      setLoadingPromotions(false);
+      if (!silent) setLoadingPromotions(false);
     }
   }, [activeStoreId, activeTab, actions]);
 
@@ -844,19 +844,22 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                     loading={loadingPromotions}
                     onCreateNew={() => setIsPromoModalOpen(true)}
                     onToggleStatus={async (id, isActive) => {
+                      setPromotions(prev => prev.map(p => p.id === id ? { ...p, isActive } : p));
                       const res = await actions.togglePromotion(activeStore.id, id, isActive);
                       if (res && res.success) {
                         toast.success(`Promoción ${isActive ? 'activada' : 'desactivada'}`);
-                        loadPromotions();
+                        loadPromotions(true);
                         return true;
                       }
+                      setPromotions(prev => prev.map(p => p.id === id ? { ...p, isActive: !isActive } : p));
+                      toast.error("Error al actualizar estado");
                       return false;
                     }}
                     onDelete={async (id) => {
                       const res = await actions.deletePromotion(activeStore.id, id);
                       if (res && res.success) {
                         toast.success("Promoción eliminada");
-                        loadPromotions();
+                        loadPromotions(true);
                         return true;
                       }
                       return false;

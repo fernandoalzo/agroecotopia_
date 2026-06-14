@@ -14,10 +14,9 @@ interface ProductCardProps {
   product: any;
   index: number;
   onView: () => void;
-  onEdit: () => void;
 }
 
-export const ProductCard = ({ product, index, onView, onEdit }: ProductCardProps) => {
+export const ProductCard = ({ product, index, onView }: ProductCardProps) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleCopyId = () => {
@@ -39,7 +38,6 @@ export const ProductCard = ({ product, index, onView, onEdit }: ProductCardProps
     stockLabel,
     onCopyId: handleCopyId,
     onView,
-    onEdit,
   };
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Eye, Edit, Image as ImageIcon, Store, Tag } from "lucide-react";
+import { Check, Copy, Eye, Image as ImageIcon, Store, Tag } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,6 @@ interface ProductCardDesktopProps {
   stockLabel: string;
   onCopyId: () => void;
   onView: () => void;
-  onEdit: () => void;
 }
 
 export const ProductCardDesktop = ({
@@ -27,7 +26,6 @@ export const ProductCardDesktop = ({
   stockLabel,
   onCopyId,
   onView,
-  onEdit,
 }: ProductCardDesktopProps) => {
   const discountedPrice = calculateDiscountedPrice(
     Number(product.price),
@@ -117,9 +115,6 @@ export const ProductCardDesktop = ({
         <div className="flex items-center gap-2 shrink-0 justify-end w-24">
           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary transition-colors" onClick={onView}>
             <Eye className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-primary transition-colors" onClick={onEdit}>
-            <Edit className="h-4 w-4" />
           </Button>
         </div>
       </div>

@@ -169,17 +169,11 @@ const ProductModal = ({ product, isOpen, onClose, viewOnly = false, resolvedProd
                         </div>
                         <div className="font-display text-2xl md:text-3xl font-black text-red-600">
                           {formatPrice(discountedPrice)}
-                          <span className="text-sm font-body text-muted-foreground ml-2 font-medium">
-                            {t.products.taxesIncluded}
-                          </span>
                         </div>
                       </div>
                     ) : (
                       <div className="font-display text-2xl md:text-3xl font-black text-primary mt-4">
                         {formatPrice(currentProduct.price)}
-                        <span className="text-sm font-body text-muted-foreground ml-2 font-medium">
-                          {t.products.taxesIncluded}
-                        </span>
                       </div>
                     )}
                   </div>

@@ -47,7 +47,6 @@ export const togglePromotionAction = async (storeId: string, id: string, isActiv
   withStoreOwner(storeId, async () => {
     try {
       const result = await promotionService.togglePromotion(id, isActive);
-      revalidatePath("/mi-tienda");
       return { success: true, promotion: result };
     } catch (error: any) {
       log.error("Error en togglePromotionAction:", error);
