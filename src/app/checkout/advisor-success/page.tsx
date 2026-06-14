@@ -4,12 +4,12 @@ import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/context/LanguageContext";
-import { motion, AnimatePresence } from "framer-motion";
-import { Check, Copy, ShoppingBag, ArrowRight, PhoneCall, Database, Truck, FileText, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
+import { ShoppingBag, ArrowRight, PhoneCall, Database, Truck, FileText, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { CopyToClipboard } from "@/frontend/components/shared/CopyToClipboard";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/app/checkout/advisor-success/page.tsx");
@@ -18,7 +18,7 @@ function AdvisorSuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { t, language } = useLanguage();
-  const [copied, setCopied] = useState(false);
+
   const [storeSummaries, setStoreSummaries] = useState<Array<{
     pedidoId: string;
     storeId: string;
@@ -67,25 +67,7 @@ function AdvisorSuccessContent() {
     }));
   }, [storeSummaries, orderIds, isEs]);
 
-  const handleCopy = async () => {
-    if (!displayOrderCode) return;
-    try {
-      await navigator.clipboard.writeText(displayOrderCode);
-      setCopied(true);
-      toast.success(
-        isEs ? "¡Copiado con éxito!" : "Copied successfully!",
-        {
-          description: isEs 
-            ? "El ID del pedido ha sido copiado a tu portapapeles." 
-            : "The order ID has been copied to your clipboard.",
-          duration: 3000,
-        }
-      );
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      log.error("Failed to copy text: ", err);
-    }
-  };
+
 
   if (!orderId) {
     return (
@@ -215,35 +197,12 @@ function AdvisorSuccessContent() {
                       {displayOrderCode}
                     </span>
                     
-                    <button
-                      onClick={handleCopy}
-                      className="p-2.5 rounded-xl bg-background hover:bg-primary/10 border border-border hover:border-primary/30 text-muted-foreground hover:text-primary transition-all duration-200 flex-shrink-0 shadow-sm relative overflow-hidden active:scale-95"
-                      title={isEs ? "Copiar ID" : "Copy ID"}
-                    >
-                      <AnimatePresence mode="wait">
-                        {copied ? (
-                          <motion.div
-                            key="check"
-                            initial={{ scale: 0.5, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.5, opacity: 0 }}
-                            transition={{ duration: 0.15 }}
-                          >
-                            <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                          </motion.div>
-                        ) : (
-                          <motion.div
-                            key="copy"
-                            initial={{ scale: 0.5, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.5, opacity: 0 }}
-                            transition={{ duration: 0.15 }}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </button>
+                    <CopyToClipboard
+                      text={displayOrderCode}
+                      iconClassName="w-4 h-4"
+                      className="p-2.5 rounded-xl bg-background hover:bg-primary/10 border border-border hover:border-primary/30 shadow-sm"
+                      ariaLabel={isEs ? "Copiar ID" : "Copy ID"}
+                    />
                   </div>
                 </div>
               </div>

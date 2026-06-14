@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useCallback, useMemo } from "react";
 import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,7 @@ import { Loading } from "@/components/ui/Loading";
 import { cn } from "@/lib/utils";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { config } from "@/config/config";
 
@@ -39,9 +40,8 @@ export default function PedidosPageClient({
   const router = useRouter();
   const { t } = useLanguage();
   const isAdmin = session?.user?.role === "admin";
-  const [orders, setOrders] = useState<any[]>([]);
-  const [ordersLoading, setOrdersLoading] = useState(true);
-  const [unreadChatCounts, setUnreadChatCounts] = useState<Record<string, number>>({});
+  const { socket } = useSocket();
+  const queryClient = useQueryClient();
 
   // Protected route logic
   useEffect(() => {
@@ -54,58 +54,75 @@ export default function PedidosPageClient({
     }
   }, [status, isAdmin, router]);
 
-  useEffect(() => {
-    if (status !== "authenticated" || isAdmin) return;
+  // React Query: Fetch Orders
+  const { data: rawOrders, isLoading: ordersLoading } = useQuery({
+    queryKey: ["userOrders"],
+    queryFn: async () => {
+      const result = await getUserOrders();
+      if (hasError(result)) throw new Error(result.error);
+      return Array.isArray(result) ? result : [];
+    },
+    enabled: status === "authenticated" && !isAdmin,
+  });
+  
+  const orders = Array.isArray(rawOrders) ? rawOrders : [];
 
-    let cancelled = false;
+  // React Query: Fetch Conversations Unread Counts
+  const { data: conversationsData } = useQuery({
+    queryKey: ["userOrderConversations"],
+    queryFn: async () => {
+      const res = await getUserOrderConversations();
+      if (hasError(res)) throw new Error(res.error);
+      return Array.isArray(res) ? res : [];
+    },
+    enabled: status === "authenticated" && !isAdmin && orders.length > 0,
+  });
 
-    const loadOrders = async () => {
-      try {
-        setOrdersLoading(true);
-        const result = await getUserOrders();
-        if (!cancelled && Array.isArray(result)) {
-          setOrders(result as any[]);
-        }
-      } finally {
-        if (!cancelled) setOrdersLoading(false);
-      }
-    };
-
-    loadOrders();
-    return () => {
-      cancelled = true;
-    };
-  }, [getUserOrders, status, isAdmin]);
-
-  const { socket } = useSocket();
-
-  const loadUnreadCounts = useCallback(async () => {
-    if (status !== "authenticated" || isAdmin || orders.length === 0) {
-      setUnreadChatCounts({});
-      return;
-    }
-    const res = await getUserOrderConversations();
-    if (!Array.isArray(res)) return;
-    const counts = res.reduce((acc: Record<string, number>, conv: any) => {
+  const unreadChatCounts = useMemo(() => {
+    if (!conversationsData) return {};
+    return conversationsData.reduce((acc: Record<string, number>, conv: any) => {
       if (conv?.pedido?.id) acc[conv.pedido.id] = Number(conv.unreadCount) || 0;
       return acc;
     }, {});
-    setUnreadChatCounts(counts);
-  }, [getUserOrderConversations, status, isAdmin, orders.length]);
+  }, [conversationsData]);
+
+  // React Query Mutations
+  const cancelOrderMutation = useMutation({
+    mutationFn: cancelUserOrder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userOrders"] });
+    },
+  });
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: deleteUserOrder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userOrders"] });
+    },
+  });
+
+  const handleCancelOrder = async (orderId: string) => {
+    await cancelOrderMutation.mutateAsync(orderId);
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    await deleteOrderMutation.mutateAsync(orderId);
+  };
+
+  // Socket Refresh Listeners
+  const refreshUnreadCounts = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["userOrderConversations"] });
+  }, [queryClient]);
 
   useSocketRefresh({
     socket,
     enabled: status === "authenticated" && !isAdmin && orders.length > 0,
-    refresh: loadUnreadCounts,
+    refresh: refreshUnreadCounts,
   });
 
-  const refreshUserOrders = useCallback(async () => {
-    if (status !== "authenticated" || isAdmin) return;
-    const result = await getUserOrders();
-    if (Array.isArray(result)) {
-      setOrders(result as any[]);
-    }
-  }, [getUserOrders, status, isAdmin]);
+  const refreshUserOrders = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["userOrders"] });
+  }, [queryClient]);
 
   useSocketRefresh({
     socket,
@@ -113,22 +130,6 @@ export default function PedidosPageClient({
     refresh: refreshUserOrders,
     events: ["order:status_updated_user"],
   });
-
-  useEffect(() => {
-    loadUnreadCounts();
-  }, [loadUnreadCounts]);
-
-  const handleCancelOrder = async (orderId: string) => {
-    const result = await cancelUserOrder(orderId);
-    if (hasError(result)) throw new Error(result.error);
-    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, estado: "CANCELADO" } : o)));
-  };
-
-  const handleDeleteOrder = async (orderId: string) => {
-    const result = await deleteUserOrder(orderId);
-    if (hasError(result)) throw new Error(result.error);
-    setOrders((prev) => prev.filter((o) => o.id !== orderId));
-  };
 
   if (status === "loading" && !session) {
     return <Loading fullScreen />;

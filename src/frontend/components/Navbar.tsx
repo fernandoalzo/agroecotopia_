@@ -52,7 +52,7 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
     { label: t.navbar.inicio, href: "/" },
     { label: t.navbar.productos, href: "/products" },
     { label: t.navbar.nosotros, href: "/nosotros" },
-    { label: t.navbar.contacto, href: "/contacto" },
+    ...(!isAuthenticated ? [{ label: t.navbar.contacto, href: "/contacto" }] : []),
     { label: t.navbar.comunidad, href: "/comunidad" },
   ];
 

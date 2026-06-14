@@ -330,8 +330,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
                             field.value === method.id ? "border-primary bg-primary/10" : "border-border/50",
                             method.isMute && "opacity-60"
                           )}>
-                            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0", method.bgColor)}>
-                              <Icon className="w-6 h-6" style={{ color: method.color }} />
+                            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0", method.isMute ? "bg-muted/50" : method.bgColor)}>
+                              <Icon className={cn("w-6 h-6", method.isMute && "text-muted-foreground")} style={method.isMute ? undefined : { color: method.color }} />
                             </div>
                             <div className="flex-1">
                               <p className="font-bold text-sm">{t.checkout[method.labelKey]}</p>
