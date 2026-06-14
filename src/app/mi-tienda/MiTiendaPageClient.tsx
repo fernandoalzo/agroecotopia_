@@ -49,6 +49,7 @@ interface MiTiendaActions {
   getOrCreateOrderConversation: (pedidoId: string, storeId: string) => Promise<any>;
   getSellerOrderConversations: (storeId: string) => Promise<any>;
   markAsRead: (conversationId: string) => Promise<any>;
+  openOrderChat: (pedidoId: string, storeId: string) => Promise<any>;
   getPaginatedProducts: (...args: any[]) => Promise<any>;
   searchProducts: (...args: any[]) => Promise<any>;
   getCategoryCounts: (...args: any[]) => Promise<any>;
@@ -492,22 +493,15 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
 
     setOpeningChatOrderId(order.id);
     try {
-      const conversation = await actions.getOrCreateOrderConversation(order.id, storeId);
-      if (!conversation || "error" in conversation) {
+      const res = await actions.openOrderChat(order.id, storeId);
+      if (!res || "error" in res) {
         toast.error("No se pudo abrir el chat", {
-          description: conversation && "error" in conversation ? String(conversation.error) : undefined,
+          description: res && "error" in res ? String(res.error) : undefined,
         });
         return;
       }
 
-      const messages = await actions.getConversationMessages(conversation.id);
-      if (messages && "error" in messages) {
-        toast.error("No se pudieron cargar los mensajes", { description: String(messages.error) });
-        return;
-      }
-
-      await actions.markAsRead(conversation.id);
-      setOrderChat({ conversation: conversation as OrderConversation, messages: (messages || []) as Message[] });
+      setOrderChat({ conversation: res.conversation as OrderConversation, messages: (res.messages || []) as Message[] });
     } catch (err) {
       log.error("Error abriendo chat de pedido:", err);
       toast.error("Ocurrió un error abriendo el chat del pedido.");

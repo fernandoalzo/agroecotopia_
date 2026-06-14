@@ -88,6 +88,7 @@ interface OrderDetailPageClientProps {
   getSellerOrderConversations: (storeId: string) => Promise<any>;
   getUserOrderConversations: () => Promise<any>;
   markConversationAsRead: (conversationId: string) => Promise<any>;
+  openOrderChat: (pedidoId: string, storeId: string) => Promise<any>;
   updateStoreOrderStatus: (storeId: string, pedidoId: string, nuevoEstado: PedidoEstado) => Promise<any>;
   removeProductFromOrder: (storeId: string, pedidoId: string, detalleId: string) => Promise<any>;
 }
@@ -103,6 +104,7 @@ export default function OrderDetailPageClient({
   getSellerOrderConversations,
   getUserOrderConversations,
   markConversationAsRead,
+  openOrderChat,
   updateStoreOrderStatus,
   removeProductFromOrder,
 }: OrderDetailPageClientProps) {
@@ -431,43 +433,26 @@ export default function OrderDetailPageClient({
 
     setIsOpeningChat(true);
     try {
-      const conversation = await getOrCreateOrderConversation(order.id, storeId);
-      if (!conversation || "error" in conversation) {
+      const res = await openOrderChat(order.id, storeId);
+      if (!res || "error" in res) {
         toast.error("No se pudo abrir el chat", {
-          description: conversation && "error" in conversation ? String(conversation.error) : undefined,
+          description: res && "error" in res ? String(res.error) : undefined,
         });
         return;
       }
 
-      // Monta el panel apenas tenemos la conversación para evitar que el botón
-      // se sienta "pegado" mientras llega el historial.
-      setOrderChat({ conversation: conversation as OrderConversation, messages: [], isLoading: true, unreadCount: 0 });
-
-      const messages = await getConversationMessages(conversation.id);
-      if (messages && "error" in messages) {
-        setOrderChat({
-          conversation: conversation as OrderConversation,
-          messages: [],
-          isLoading: false,
-          unreadCount: 0,
-        });
-        toast.error("No se pudieron cargar los mensajes", { description: String(messages.error) });
-        return;
-      }
-
-      const messageList = (messages || []) as Message[];
+      const conversation = res.conversation as OrderConversation;
+      const messageList = (res.messages || []) as Message[];
       const unreadCount = messageList.filter(
         (message) => !message.isRead && message.senderId !== session?.user?.id
       ).length;
 
       setOrderChat({
-        conversation: conversation as OrderConversation,
+        conversation,
         messages: messageList,
         isLoading: false,
         unreadCount,
       });
-
-      void markConversationAsRead(conversation.id);
     } catch (err) {
       log.error("Error abriendo chat con vendedor:", err);
       const description = err instanceof Error

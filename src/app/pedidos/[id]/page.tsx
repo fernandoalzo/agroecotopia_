@@ -6,6 +6,7 @@ import {
   getSellerOrderConversationsAction,
   getUserOrderConversationsAction,
   markAsRead,
+  openOrderChatAction,
 } from "@/backend/modules/chat/chat.actions";
 import OrderDetailPageClient from "./OrderDetailPageClient";
 
@@ -24,6 +25,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       getSellerOrderConversations={getSellerOrderConversationsAction}
       getUserOrderConversations={getUserOrderConversationsAction}
       markConversationAsRead={markAsRead}
+      openOrderChat={openOrderChatAction}
       updateStoreOrderStatus={updateStoreOrderStatusAction}
       removeProductFromOrder={removeProductFromOrderAction}
     />

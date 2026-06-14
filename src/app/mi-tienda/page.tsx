@@ -4,6 +4,7 @@ import {
   getOrCreateOrderConversationAction,
   getSellerOrderConversationsAction,
   markAsRead,
+  openOrderChatAction,
 } from "@/backend/modules/chat/chat.actions";
 import {
   getPaginatedProductsAction,
@@ -72,6 +73,7 @@ export default function Page() {
         getOrCreateOrderConversation: getOrCreateOrderConversationAction,
         getSellerOrderConversations: getSellerOrderConversationsAction,
         markAsRead,
+        openOrderChat: openOrderChatAction,
         getPaginatedProducts: getPaginatedProductsAction,
         searchProducts: searchProductsAction,
         getCategoryCounts: getCategoryCountsAction,

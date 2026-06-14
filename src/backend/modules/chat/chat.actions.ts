@@ -181,3 +181,26 @@ export async function sendAdvisorOrderMessagesAction(params: {
     }
   });
 }
+
+export async function openOrderChatAction(pedidoId: string, storeId: string) {
+  return withAuth(async (session) => {
+    const userId = session.user.id;
+    const userRole = session.user.role as Role;
+
+    try {
+      log.info("Abriendo chat consolidado de pedido:", { pedidoId, storeId, userId });
+      const conversation = await chatService.getOrCreateOrderConversation(pedidoId, storeId, userId, userRole);
+      
+      const messages = await chatService.getMessages(conversation.id, userId, userRole);
+      
+      await chatService.markAsRead(conversation.id, userId);
+      eventBus.emit("unread_count_updated", { conversationId: conversation.id });
+
+      return { conversation, messages };
+    } catch (error) {
+      log.warn("No se pudo abrir el chat consolidado de pedido:", { pedidoId, storeId, userId, error });
+      return { error: getChatActionErrorMessage(error) };
+    }
+  });
+}
+
