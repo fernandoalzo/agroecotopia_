@@ -49,6 +49,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
       bodegaId: "",
       notes: defaultValues?.notes || "",
       paymentMethod: (defaultValues?.paymentMethod as any) || "advisor",
+      transactionId: "",
     },
   });
 

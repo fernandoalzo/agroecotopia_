@@ -24,9 +24,8 @@ export class CryptoPaymentHandler implements PaymentHandler {
       });
 
       const buildSummary = (items: typeof cart, meta: { storeId: string; storeName: string }, pedidoRef: string) => {
-        let content = `🧾 Pago con criptomonedas confirmado.\n`;
-        if (transactionId) content += `ID de transacción (TXID): ${transactionId}\n`;
-        content += `\n¡Hola! He realizado un pago con criptomonedas para mi pedido.\n\n`;
+        let content = `🧾 Pago con criptomonedas confirmado.\n\n`;
+        content += `¡Hola! He realizado un pago con criptomonedas para mi pedido.\n\n`;
         content += `TIENDA: ${meta.storeName}\n`;
         content += `PEDIDO: ${pedidoRef}\n`;
         content += `===================\n\n`;
@@ -64,13 +63,28 @@ export class CryptoPaymentHandler implements PaymentHandler {
         };
       });
 
-      // 1. Enviar TXID y resumen al asesor vía chat del pedido
+      // 1. Enviar dos mensajes al asesor vía chat del pedido:
+      //    - Primero: el resumen del pedido
+      //    - Segundo: solo el ID de transacción (mensaje exclusivo)
       try {
         const { sendCryptoTransactionMessageAction } = await import("@/backend/modules/chat/chat.actions");
+
+        // Mensaje 1: resumen del pedido sin TXID
         await sendCryptoTransactionMessageAction({ messages: cryptoSummary });
-        log.info("Mensaje de transacción cripto enviado al asesor para verificación:", { pedidoId, transactionId });
+        log.info("Resumen de pedido cripto enviado al asesor:", { pedidoId });
+
+        // Mensaje 2: solo el TXID como mensaje exclusivo
+        if (transactionId) {
+          const txMessages = storeOrder.map((storeId, index) => ({
+            pedidoId: pedidoIds?.[index] || pedidoId,
+            storeId,
+            content: `${transactionId}`,
+          }));
+          await sendCryptoTransactionMessageAction({ messages: txMessages });
+          log.info("TXID exclusivo enviado al asesor:", { pedidoId, transactionId });
+        }
       } catch (chatError) {
-        log.error("Error al enviar mensaje de transacción cripto al chat del pedido:", chatError);
+        log.error("Error al enviar mensajes de transacción cripto al chat del pedido:", chatError);
       }
 
       // 2. Limpiar carrito
