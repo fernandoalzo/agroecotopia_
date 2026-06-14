@@ -66,6 +66,7 @@ export const ChatMessageList = ({
         <div
             ref={messagesScrollRef}
             className="flex-1 p-4 overflow-y-auto space-y-3 bg-secondary/5 min-h-0 overscroll-y-contain"
+            style={{ overflowX: "hidden" }}
         >
             {isLoading ? (
                 <div className="h-full flex items-center justify-center">

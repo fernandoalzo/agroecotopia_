@@ -162,7 +162,7 @@ export function OrderChatPanel({
           </Button>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 py-4">
           {isLoading ? (
             <div className="flex h-full items-center justify-center">
               <Loading text="" subtext="" className="py-0 scale-75" />

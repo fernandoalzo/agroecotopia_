@@ -33,17 +33,15 @@ export class AdvisorPaymentHandler implements PaymentHandler {
         content += `TIENDA: ${meta.storeName}\n`;
         content += `PEDIDO: ${pedidoRef}\n`;
         content += `===================\n\n`;
-        content += `CANTIDAD\tPRODUCTO\t\tPRECIO UNIT.\tSUBTOTAL\n`;
-        content += `--------\t--------\t\t------------\t--------\n`;
         let totalCalculado = 0;
         items.forEach((item: any) => {
           const itemName = item.product?.name || item.name || "Producto";
           const precioUnitario = item.product?.price || 0;
           const subtotal = item.quantity * precioUnitario;
           totalCalculado += subtotal;
-          content += `${item.quantity}\t\t${itemName}\t\t$${precioUnitario.toLocaleString()}\t\t$${subtotal.toLocaleString()}\n`;
+          content += `• ${item.quantity}x ${itemName} — $${precioUnitario.toLocaleString()} c/u = $${subtotal.toLocaleString()}\n`;
         });
-        content += `\nTOTAL\t\t\t\t$${totalCalculado.toLocaleString()}\n`;
+        content += `\nTOTAL: $${totalCalculado.toLocaleString()}\n`;
         if (values) {
           content += `\nINFORMACIÓN DE CONTACTO\n======================\n\n`;
           const name = values.fullName || "";

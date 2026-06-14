@@ -73,10 +73,11 @@ export const ChatMessageBubble = ({
     return (
         <div
             ref={isFirstUnread ? firstUnreadRef : null}
-            className={`flex flex-col max-w-[80%] ${isMe
+            className={`flex flex-col ${isMe
                 ? "ml-auto items-end"
                 : "mr-auto items-start"
                 }`}
+            style={{ maxWidth: "80%", minWidth: 0 }}
         >
             <div
                 onClick={() => onToggleActive(msg.id)}
@@ -84,6 +85,7 @@ export const ChatMessageBubble = ({
                     ? "bg-primary text-primary-foreground rounded-tr-none"
                     : "bg-card text-card-foreground border border-border/60 rounded-tl-none"
                     } md:cursor-default cursor-pointer`}
+                style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowWrap: "anywhere", wordBreak: "break-word", whiteSpace: "pre-line" }}
             >
                 {/* Reply preview */}
                 {msg.replyTo && (
@@ -104,13 +106,15 @@ export const ChatMessageBubble = ({
                                 : chatTitle}
                         </div>
 
-                        <div className="truncate opacity-90">
+                        <div className="truncate opacity-90" style={{ maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" }}>
                             {msg.replyTo.content}
                         </div>
                     </div>
                 )}
 
-                {msg.content}
+                <div style={{ whiteSpace: "pre-line", overflowWrap: "anywhere", wordBreak: "break-word", maxWidth: "100%", width: "100%", display: "block", overflow: "hidden" }}>
+                  {msg.content}
+                </div>
 
                 {/* Desktop hover actions */}
                 <div
