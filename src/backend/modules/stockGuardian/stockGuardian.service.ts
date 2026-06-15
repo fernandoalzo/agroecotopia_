@@ -1,9 +1,8 @@
 import { Redis } from "ioredis";
-import { isRedisAvailable } from "@/backend/cache";
-import { CacheKeys } from "@/backend/cache";
 import { config } from "@/config/config";
 import logger from "@/utils/logger";
 import { StockGuardianRepository } from "./stockGuardian.repository";
+import { StockKeys } from "./keys";
 
 const log = logger.child("src/backend/modules/stockGuardian/stockGuardian.service.ts");
 
@@ -24,7 +23,7 @@ export class StockGuardianService {
   ) {}
 
   private get redisReady(): boolean {
-    return isRedisAvailable && this.redis !== null;
+    return this.redis !== null && this.redis.status === 'ready';
   }
 
   /**
@@ -47,7 +46,7 @@ export class StockGuardianService {
       const acquired: string[] = [];
 
       for (const pid of sortedIds) {
-        const key = CacheKeys.stock.lock(pid);
+        const key = StockKeys.lock(pid);
         const ok = await this.redis!.set(key, lockUUID, "EX", ttl, "NX");
         if (ok) {
           acquired.push(key);
@@ -93,7 +92,7 @@ export class StockGuardianService {
     `;
 
     for (const pid of sortedIds) {
-      pipeline.eval(releaseScript, 1, CacheKeys.stock.lock(pid), lockUUID);
+      pipeline.eval(releaseScript, 1, StockKeys.lock(pid), lockUUID);
     }
 
     await pipeline.exec();
@@ -114,7 +113,7 @@ export class StockGuardianService {
       return true;
     }
 
-    const keys = items.map((i) => CacheKeys.stock.master(i.productId));
+    const keys = items.map((i) => StockKeys.master(i.productId));
     const args = items.map((i) => String(i.quantity));
 
     const luaScript = `
@@ -158,7 +157,7 @@ export class StockGuardianService {
 
     const pipeline = this.redis!.pipeline();
     for (const item of items) {
-      pipeline.incrby(CacheKeys.stock.master(item.productId), item.quantity);
+      pipeline.incrby(StockKeys.master(item.productId), item.quantity);
     }
     await pipeline.exec();
     log.debug("Stock restaurado en Redis", {
@@ -175,7 +174,7 @@ export class StockGuardianService {
       return this.fallbackGetStock(productId);
     }
 
-    const key = CacheKeys.stock.master(productId);
+    const key = StockKeys.master(productId);
     const val = await this.redis!.get(key);
     if (val !== null) {
       return parseInt(val, 10);
@@ -192,7 +191,7 @@ export class StockGuardianService {
     const stock = await this.stockGuardianRepository.getProductStock(productId);
     
     if (this.redisReady) {
-      await this.redis!.set(CacheKeys.stock.master(productId), stock);
+      await this.redis!.set(StockKeys.master(productId), stock);
     }
     return stock;
   }

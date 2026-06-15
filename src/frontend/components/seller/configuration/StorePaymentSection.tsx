@@ -13,7 +13,9 @@ import { AdvisorPaymentMethod } from "./payment-methods/AdvisorPaymentMethod";
 import { MercadoPagoPaymentMethod } from "./payment-methods/MercadoPagoPaymentMethod";
 
 import { CryptoPaymentMethod } from "./payment-methods/CryptoPaymentMethod";
-import { getCryptocurrenciesAction } from "@/backend/modules/store/store.actions";
+import logger from "@/utils/logger";
+
+const log = logger.child();
 
 interface StorePaymentSectionProps {
   store: StoreType;
@@ -26,7 +28,7 @@ export function StorePaymentSection({ store, actions }: StorePaymentSectionProps
   const [availableCryptos, setAvailableCryptos] = useState<any[]>([]);
 
   useEffect(() => {
-    getCryptocurrenciesAction().then(setAvailableCryptos).catch(console.error);
+    actions.getCryptocurrencies().then(setAvailableCryptos).catch((err: unknown) => log.error("Error fetching cryptos:", err));
   }, []);
 
   // Parse config
@@ -83,7 +85,7 @@ export function StorePaymentSection({ store, actions }: StorePaymentSectionProps
         <p className="text-sm text-muted-foreground mt-1">Configura las opciones de pago disponibles en tu tienda.</p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit, (errs) => console.log("Form errors:", errs))} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit, (errs) => log.debug("Form errors:", errs))} className="space-y-6">
         
         {/* Coordinar con el Asesor */}
         <AdvisorPaymentMethod control={control} isEnabled={isAdvisorEnabled} />

@@ -4,14 +4,6 @@ import React, { createContext, useCallback, useEffect, useState, useRef } from "
 import { useSession } from "next-auth/react";
 import { useSocket } from "./SocketContext";
 import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
-import {
-  getMyNotificationsAction,
-  getMyUnreadCountAction,
-  getNotificationInitialDataAction,
-  markNotificationAsReadAction,
-  markAllNotificationsAsReadAction,
-  deleteNotificationAction,
-} from "@/backend/modules/notifications/notifications.actions";
 import logger from "@/utils/logger";
 import { RecipientStatus } from "@prisma/client";
 
@@ -33,7 +25,21 @@ type NotificationContextType = {
 
 export const NotificationContext = createContext<NotificationContextType | null>(null);
 
-export const NotificationProvider = ({ children }: { children: React.ReactNode }) => {
+interface NotificationActions {
+  getMyNotifications: (page?: number, limit?: number, status?: any) => Promise<any>;
+  getMyUnreadCount: () => Promise<any>;
+  getNotificationInitialData: () => Promise<any>;
+  markNotificationAsRead: (recipientId: string) => Promise<any>;
+  markAllNotificationsAsRead: () => Promise<any>;
+  deleteNotification: (recipientId: string) => Promise<any>;
+}
+
+interface NotificationProviderProps {
+  children: React.ReactNode;
+  actions: NotificationActions;
+}
+
+export const NotificationProvider = ({ children, actions }: NotificationProviderProps) => {
   const { data: session } = useSession();
   const { socket, isConnected } = useSocket();
   const userId = session?.user?.id;
@@ -51,7 +57,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
   const fetchUnreadCount = useCallback(async () => {
     if (!userId) return;
     try {
-      const result = await getMyUnreadCountAction();
+      const result = await actions.getMyUnreadCount();
       if (typeof result === "number") {
         setUnreadCount(result);
       }
@@ -65,7 +71,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     if (!userId) return;
     try {
       if (!append) setIsLoading(true);
-      const result = await getMyNotificationsAction(pageNum, LIMIT);
+      const result = await actions.getMyNotifications(pageNum, LIMIT);
 
       if ("error" in result) {
         log.error("Error fetching notifications:", result.error);
@@ -87,7 +93,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     if (!userId) return;
     try {
       setIsLoading(true);
-      const result = await getNotificationInitialDataAction();
+      const result = await actions.getNotificationInitialData();
       if ("error" in result) {
         log.error("Error fetching initial notification data:", result.error);
         return;
@@ -155,7 +161,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     );
     setUnreadCount((prev) => Math.max(0, prev - 1));
 
-    const result = await markNotificationAsReadAction(recipientId);
+    const result = await actions.markNotificationAsRead(recipientId);
     if (result.error) {
       // Revert on failure (simplified)
       fetchUnreadCount();
@@ -170,7 +176,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     );
     setUnreadCount(0);
 
-    const result = await markAllNotificationsAsReadAction();
+    const result = await actions.markAllNotificationsAsRead();
     if (result.error) {
       fetchUnreadCount();
       fetchNotifications(1, false);
@@ -186,7 +192,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     
     setNotifications(prev => prev.filter(n => n.id !== recipientId));
 
-    const result = await deleteNotificationAction(recipientId);
+    const result = await actions.deleteNotification(recipientId);
     if (result?.error) {
       fetchUnreadCount();
       fetchNotifications(1, false);

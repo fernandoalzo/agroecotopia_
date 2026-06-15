@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
-import { redisClient, isRedisAvailable } from "@/backend/cache/client";
-import { CacheKeys } from "@/backend/cache";
+import { redisClient } from "@/backend/cache/client";
 import logger from "@/utils/logger";
+import { StockKeys } from "./keys";
 
 const log = logger.child("src/backend/modules/stockGuardian/init.ts");
 
@@ -11,7 +11,7 @@ const log = logger.child("src/backend/modules/stockGuardian/init.ts");
  * si Redis ya tenía datos (ej: después de un reinicio del servidor sin reiniciar Redis).
  */
 export async function initializeStockMaster(prisma: PrismaClient): Promise<void> {
-  if (!isRedisAvailable || !redisClient) {
+  if (!redisClient || redisClient.status !== 'ready') {
     log.info("[init] Redis no disponible — saltando inicialización de stock master");
     return;
   }
@@ -25,7 +25,7 @@ export async function initializeStockMaster(prisma: PrismaClient): Promise<void>
     let count = 0;
 
     for (const p of products) {
-      pipeline.set(CacheKeys.stock.master(p.id), Number(p.stock), "NX");
+      pipeline.set(StockKeys.master(p.id), Number(p.stock), "NX");
       count++;
     }
 

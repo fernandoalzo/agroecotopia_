@@ -16,6 +16,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { getAdminConversations, getOrCreateMyConversation, getConversationMessages, markAsRead, deleteConversationAction, getOrCreateConversationForAdmin } from "@/backend/modules/chat/chat.actions";
+import { getMyNotificationsAction, getMyUnreadCountAction, getNotificationInitialDataAction, markNotificationAsReadAction, markAllNotificationsAsReadAction, deleteNotificationAction } from "@/backend/modules/notifications/notifications.actions";
 import logger from "@/utils/logger";
 import { getConversationUnreadCount } from "@/frontend/lib/chatUnread";
 import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
@@ -43,7 +44,20 @@ function PageFocusTracker() {
   return null;
 }
 
-function AppChromeData() {
+interface ChatDeps {
+  getOrCreateMyConversation: () => Promise<unknown>;
+  getConversationMessages: (conversationId: string) => Promise<unknown>;
+  markAsRead: (conversationId: string) => Promise<unknown>;
+  deleteConversationAction: (conversationId: string) => Promise<unknown>;
+  getOrCreateConversationForAdmin: (targetUserId: string) => Promise<unknown>;
+}
+
+interface AppChromeDataProps {
+  getAdminConversations: () => Promise<unknown>;
+  chatDeps: ChatDeps;
+}
+
+function AppChromeData({ getAdminConversations, chatDeps }: AppChromeDataProps) {
   const { data: session } = useSession();
   const { socket } = useSocket();
   const pathname = usePathname();
@@ -60,9 +74,9 @@ function AppChromeData() {
 
     const res = await getAdminConversations();
     if (Array.isArray(res)) {
-      setUnreadCount(res.reduce((acc: number, conv: any) => acc + getConversationUnreadCount(conv), 0));
+      setUnreadCount(res.reduce((acc: number, conv) => acc + getConversationUnreadCount(conv), 0));
     }
-  }, [isAdmin, isOnDashboard]);
+  }, [isAdmin, isOnDashboard, getAdminConversations]);
 
   useSocketRefresh({
     socket,
@@ -83,15 +97,7 @@ function AppChromeData() {
     <>
       <GlobalNavbar unreadCount={unreadCount} />
       {!isOrderConfirmationPage && (
-        <ChatWidget
-          chatDeps={{
-            getOrCreateMyConversation,
-            getConversationMessages,
-            markAsRead,
-            deleteConversationAction,
-            getOrCreateConversationForAdmin,
-          }}
-        />
+        <ChatWidget chatDeps={chatDeps} />
       )}
     </>
   );
@@ -107,13 +113,29 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <QueryClientProvider client={queryClient}>
             <CartProvider>
               <SocketProvider>
-                <NotificationProvider>
+                <NotificationProvider actions={{
+                    getMyNotifications: getMyNotificationsAction,
+                    getMyUnreadCount: getMyUnreadCountAction,
+                    getNotificationInitialData: getNotificationInitialDataAction,
+                    markNotificationAsRead: markNotificationAsReadAction,
+                    markAllNotificationsAsRead: markAllNotificationsAsReadAction,
+                    deleteNotification: deleteNotificationAction,
+                  }}>
                   <TooltipProvider>
                     <Suspense fallback={null}>
                       <ScrollToAnchor />
                     </Suspense>
                     <PageFocusTracker />
-                    <AppChromeData />
+                    <AppChromeData
+                      getAdminConversations={getAdminConversations}
+                      chatDeps={{
+                        getOrCreateMyConversation,
+                        getConversationMessages,
+                        markAsRead,
+                        deleteConversationAction,
+                        getOrCreateConversationForAdmin,
+                      }}
+                    />
                     {children}
                     <Sonner />
                   </TooltipProvider>

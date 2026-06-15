@@ -15,11 +15,11 @@ export type LogLevelName = keyof typeof LOG_LEVELS;
 export type LogLevelValue = typeof LOG_LEVELS[LogLevelName];
 
 const getDefaultLogLevel = (): LogLevelValue => {
-  const envLogLevel = process.env.LOG_LEVEL?.toUpperCase();
+  const envLogLevel = config.logLevel.toUpperCase();
   if (envLogLevel && envLogLevel in LOG_LEVELS) {
     return LOG_LEVELS[envLogLevel as LogLevelName];
   }
-  return process.env.NODE_ENV === "production" ? LOG_LEVELS.INFO : LOG_LEVELS.DEBUG;
+  return config.isProduction ? LOG_LEVELS.INFO : LOG_LEVELS.DEBUG;
 };
 
 // Module-level private state to allow dynamic updates even if the instance is frozen

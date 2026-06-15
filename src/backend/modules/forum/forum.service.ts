@@ -1,6 +1,6 @@
 import { ForumRepository } from "./forum.repository";
 import { notificationsService } from "@/backend/modules/notifications";
-import { userRepository } from "@/backend/modules/user";
+import type { UserRepository } from "@/backend/modules/user/user.repository";
 import logger from "@/utils/logger";
 import { getForumNotificationStrings } from "./forum-notification-strings";
 import { config } from "@/config/config";
@@ -9,7 +9,10 @@ import eventBus from "@/utils/eventBus";
 const log = logger.child("src/backend/modules/forum/forum.service.ts");
 
 export class ForumService {
-  constructor(private readonly forumRepository: ForumRepository) { }
+  constructor(
+    private readonly forumRepository: ForumRepository,
+    private readonly userRepository: UserRepository,
+  ) { }
 
   async createPost(
     data: { title: string; body: string; labels: string[] },
@@ -30,7 +33,7 @@ export class ForumService {
     const nls = getForumNotificationStrings(locale);
 
     // Notify all admins about the new post
-    userRepository.findAdmins().then(admins => {
+    this.userRepository.findAdmins().then(admins => {
       for (const admin of admins) {
         notificationsService.dispatchNotification({
           eventType: "post_created",

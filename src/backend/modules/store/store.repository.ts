@@ -41,8 +41,6 @@ export class StoreRepository {
 
   async findByOwnerId(ownerId: string) {
     log.debug("Buscando tiendas por Owner ID", { ownerId });
-    // Force recompile to pick up new Prisma Client
-    console.log("Recargando Prisma client para findByOwnerId...");
     return await prisma.store.findMany({
       where: { ownerId },
       include: {

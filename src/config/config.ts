@@ -9,6 +9,7 @@ export const config = {
   isDevelopment: process.env.NODE_ENV === 'development',
   isTest: process.env.NODE_ENV === 'test',
   enableLogging: true,
+  logLevel: process.env.LOG_LEVEL || 'DEBUG',
 
   app: {
     name: process.env.NEXT_PUBLIC_APP_NAME || 'Agrotopia',

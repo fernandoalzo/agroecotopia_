@@ -45,6 +45,7 @@ type SellerTab = "orders" | "envios" | "products" | "promotions" | "store_info" 
 interface MiTiendaActions {
   getMyStores: () => Promise<any>;
   updateMyStore: (storeId: string, data: Partial<StoreCreateInput>) => Promise<any>;
+  getCryptocurrencies: () => Promise<any>;
   getConversationMessages: (conversationId: string) => Promise<any>;
   getOrCreateOrderConversation: (pedidoId: string, storeId: string) => Promise<any>;
   getSellerOrderConversations: (storeId: string) => Promise<any>;
