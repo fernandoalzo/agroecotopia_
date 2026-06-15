@@ -386,6 +386,9 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
                     ? "bg-background/85 sm:bg-background/90 border-accent/40 shadow-accent/10 shadow-2xl cursor-pointer"
                     : "bg-background/60 sm:bg-background/70 border-accent/10 shadow-lg cursor-pointer"
                 } border p-3.5 sm:p-5 rounded-2xl sm:backdrop-blur-xl backdrop-blur-md flex flex-col gap-2.5 sm:gap-4 group overflow-hidden`}
+                role="button"
+                tabIndex={0}
+
               >
                 {/* Echo ripple overlay */}
                 {isEchoing && (

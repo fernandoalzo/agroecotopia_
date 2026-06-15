@@ -155,8 +155,8 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
       const next = [
         v < 0.33,                    // Stage 0 fades out at 0.29
         v > 0.12 && v < 0.67,        // Stage 1 fades in at 0.16, out at 0.63
-        v > 0.46 && v < 0.99,        // Stage 2 fades in at 0.50, out at 0.95
-        v > 0.78                     // Stage 3 fades in at 0.82
+        v > 0.46 && v < 0.95,        // Stage 2 fades in at 0.50, out at 0.95
+        v > 0.75                     // Stage 3 fades in at 0.78
       ];
 
       if (next[0] !== prevRendered[0] || next[1] !== prevRendered[1] ||
@@ -181,12 +181,12 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
   // Stage 3 (Catalog 3D Showcase) Transforms
   const stage3Z = useTransform(smoothProgress, [0.50, 0.68, 0.95], [-1200, 0, 700]);
   const stage3Opacity = useTransform(smoothProgress, [0.50, 0.63, 0.84, 0.95], [0, 1, 1, 0]);
-  const stage3Scale = useTransform(smoothProgress, [0.50, 0.68, 0.95], [0.6, 0.85, 1.0]);
+  const stage3Scale = useTransform(smoothProgress, [0.50, 0.68, 0.95], [0.6, 1.0, 1.2]);
 
   // Stage 4 (Community & Network) Transforms
-  const stage4Z = useTransform(smoothProgress, [0.82, 1.0], [-1200, 0]);
-  const stage4Opacity = useTransform(smoothProgress, [0.82, 0.95, 1.0], [0, 1, 1]);
-  const stage4Scale = useTransform(smoothProgress, [0.82, 1.0], [0.7, 1]);
+  const stage4Z = useTransform(smoothProgress, [0.78, 0.92], [-1200, 0]);
+  const stage4Opacity = useTransform(smoothProgress, [0.78, 0.88, 0.92], [0, 1, 1]);
+  const stage4Scale = useTransform(smoothProgress, [0.78, 0.92], [0.7, 1]);
 
 
   // Snap points for each stage (progress values matching navigation targets)
@@ -239,14 +239,19 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
       if (nextStage !== current) {
         isAnimating.current = true;
 
-        // Kill native momentum scroll on mobile by briefly hiding overflow
-        const originalOverflow = document.body.style.overflow;
-        document.body.style.overflow = "hidden";
+        // Kill native momentum scroll on desktop by briefly hiding overflow.
+        // On mobile, skip this to avoid breaking touch/click events on interactive elements.
+        if (!isMobile) {
+          const originalOverflow = document.body.style.overflow;
+          document.body.style.overflow = "hidden";
+          setTimeout(() => {
+            document.body.style.overflow = originalOverflow;
+          }, ANIMATION_LOCK_MS);
+        }
 
         scrollToStage(nextStage);
 
         setTimeout(() => {
-          document.body.style.overflow = originalOverflow;
           isAnimating.current = false;
         }, ANIMATION_LOCK_MS);
       }
@@ -322,7 +327,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
       window.removeEventListener("keydown", handleKeyDown);
       if (wheelResetTimer.current) clearTimeout(wheelResetTimer.current);
     };
-  }, [mounted, scrollToStage]);
+    }, [mounted, scrollToStage, isMobile]);
 
   const startJourney = useCallback(() => {
     scrollToStage(1);
@@ -346,7 +351,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
     <div
       ref={containerRef}
       className="relative w-full bg-background"
-      style={{ height: "313vh" }} // Provides the scroll headroom, ending exactly at stage 4
+      style={{ height: "340vh" }} // Provides scroll headroom for all 4 stages
     >
       {/* PERSISTENT HUD: Navigation dots and scroll indicators */}
       <div className="fixed right-6 top-1/2 -translate-y-1/2 z-50 hidden md:flex flex-col gap-4 items-center bg-background/30 backdrop-blur-md px-3 py-6 rounded-full border border-primary/10 shadow-lg">
