@@ -22,11 +22,11 @@ export class VisionService {
 
   async analyzeImage(_imageUrl: string): Promise<ImageAnalysisResult> {
     if (!this.provider.availableFeatures.includes(AIFeature.VISION)) {
-      log.warn("[Vision] El proveedor activo no soporta visión por computadora.");
+      log.warn("🤖 [Vision] El proveedor activo no soporta visión por computadora.");
       throw new Error("Visión no disponible con el proveedor actual.");
     }
 
-    log.info("[Vision] analyzeImage placeholder — implementar cuando se active.");
+    log.info("🤖 [Vision] analyzeImage placeholder — implementar cuando se active.");
     return {
       labels: [],
       quality: "medium",
@@ -35,12 +35,12 @@ export class VisionService {
   }
 
   async searchByImage(_imageUrl: string): Promise<VisualSearchResult[]> {
-    log.info("[Vision] searchByImage placeholder.");
+    log.info("🤖 [Vision] searchByImage placeholder.");
     return [];
   }
 
   async classifyImage(_imageUrl: string): Promise<string[]> {
-    log.info("[Vision] classifyImage placeholder.");
+    log.info("🤖 [Vision] classifyImage placeholder.");
     return [];
   }
 }

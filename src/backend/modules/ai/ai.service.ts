@@ -33,7 +33,7 @@ export class AIService {
     });
 
     const elapsed = Date.now() - startTime;
-    log.debug("[ai] Chat completado", {
+    log.debug("🤖 [ai] Chat completado", {
       model: response.model,
       tokens: response.tokens,
       elapsed: `${elapsed}ms`,
@@ -48,7 +48,7 @@ export class AIService {
     const response = await this.provider.embed(text);
 
     const elapsed = Date.now() - startTime;
-    log.debug("[ai] Embedding generado", {
+    log.debug("🤖 [ai] Embedding generado", {
       model: response.model,
       dimensions: response.embedding.length,
       elapsed: `${elapsed}ms`,

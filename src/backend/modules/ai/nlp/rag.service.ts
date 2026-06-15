@@ -16,17 +16,17 @@ export class RAGService {
   constructor(private provider: AIProvider) {}
 
   async retrieve(_query: string, _options?: RAGOptions): Promise<RAGContext> {
-    log.info("[RAG] Service placeholder — implementar con pgvector cuando se active.");
+    log.info("🤖 [RAG] Service placeholder — implementar con pgvector cuando se active.");
     return { documents: [] };
   }
 
   async augmentPrompt(_query: string, _context: RAGContext): Promise<string> {
-    log.info("[RAG] augmentPrompt placeholder — pendiente de implementación.");
+    log.info("🤖 [RAG] augmentPrompt placeholder — pendiente de implementación.");
     return "";
   }
 
   async search(_query: string): Promise<Array<Record<string, unknown>>> {
-    log.info("[RAG] search placeholder — pendiente de implementación.");
+    log.info("🤖 [RAG] search placeholder — pendiente de implementación.");
     return [];
   }
 }

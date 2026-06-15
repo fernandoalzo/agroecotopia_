@@ -8,7 +8,7 @@ export class ContentModerationService {
 
   async moderate(content: string, options?: ModerationOptions): Promise<ModerationResult> {
     if (!this.provider.moderate) {
-      log.warn("[Moderation] El proveedor activo no soporta moderación.");
+      log.warn("🤖 [Moderation] El proveedor activo no soporta moderación.");
       return {
         isSpam: false,
         isOffensive: false,
@@ -22,7 +22,7 @@ export class ContentModerationService {
   }
 
   async moderateProductDescription(_description: string): Promise<ModerationResult> {
-    log.info("[Moderation] moderateProductDescription placeholder.");
+    log.info("🤖 [Moderation] moderateProductDescription placeholder.");
     return {
       isSpam: false,
       isOffensive: false,
@@ -33,7 +33,7 @@ export class ContentModerationService {
   }
 
   async moderateForumPost(_title: string, _body: string): Promise<ModerationResult> {
-    log.info("[Moderation] moderateForumPost placeholder.");
+    log.info("🤖 [Moderation] moderateForumPost placeholder.");
     return {
       isSpam: false,
       isOffensive: false,

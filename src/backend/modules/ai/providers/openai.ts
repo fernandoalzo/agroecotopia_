@@ -29,7 +29,7 @@ export class OpenAIProvider implements AIProvider {
   }
 
   async chat(_messages: ChatMessage[], _options?: ChatOptions): Promise<ChatResponse> {
-    log.warn("[OpenAI] Provider no implementado. Configure DEEPSEEK_API_KEY o implemente OpenAIProvider.");
+    log.warn("🤖 [OpenAI] Provider no implementado. Configure DEEPSEEK_API_KEY o implemente OpenAIProvider.");
     throw new Error(
       "OpenAIProvider no está implementado. " +
       "Use AIProviderFactory.create('deepseek') como fallback por defecto.",

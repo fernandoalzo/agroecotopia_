@@ -10,12 +10,12 @@ export class TranslationService {
     _targetLocale: SupportedLocale,
     _sourceLocale?: SupportedLocale,
   ): Promise<string> {
-    log.info("[Translation] Service placeholder — implementar cuando se active.");
+    log.info("🤖 [Translation] Service placeholder — implementar cuando se active.");
     throw new Error("TranslationService no implementado. Active AI_FEATURE_TRANSLATION para usarlo.");
   }
 
   async detectLanguage(_text: string): Promise<SupportedLocale> {
-    log.info("[Translation] detectLanguage placeholder.");
+    log.info("🤖 [Translation] detectLanguage placeholder.");
     return "es";
   }
 }

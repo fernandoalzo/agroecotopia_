@@ -47,7 +47,7 @@ export class AIProviderFactory {
       timeout: overrides?.timeout ?? 30000,
     };
 
-    log.info("Creando proveedor AI:", {
+    log.info("🤖 Creando proveedor AI:", {
       provider: name,
       baseUrl: config.baseUrl,
       model: config.defaultModel,
@@ -60,7 +60,7 @@ export class AIProviderFactory {
     name: ProviderName,
     providerClass: ProviderConstructor,
   ): void {
-    log.info("Registrando proveedor AI dinámico:", { provider: name });
+    log.info("🤖 Registrando proveedor AI dinámico:", { provider: name });
     AIProviderFactory.registry.set(name, providerClass);
   }
 

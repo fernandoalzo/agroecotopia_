@@ -49,6 +49,10 @@ let demandService: DemandForecastingService | null = null;
 let pricingService: AIPricingService | null = null;
 let visionService: VisionService | null = null;
 
+// ═══════════════════════════════════════════════════════════════
+//  🤖  AI MODULE STATUS
+// ═══════════════════════════════════════════════════════════════
+
 if (AI_ENABLED) {
   try {
     const provider = AIProviderFactory.create(
@@ -67,17 +71,23 @@ if (AI_ENABLED) {
 
     aiService = new AIService(provider, aiRepository, ragService);
 
-    log.info("[AI] Módulo AI inicializado correctamente:", {
+    log.info("🤖 [AI] Módulo AI inicializado correctamente:", {
       provider: provider.name,
       features: provider.availableFeatures,
     });
   } catch (error) {
-    log.error("[AI] Error al inicializar el módulo AI:", error);
-    log.warn("[AI] El módulo AI no estará disponible. Verifique la configuración.");
+    log.error("🤖 [AI] Error al inicializar el módulo AI:", error);
+    log.warn("🤖 [AI] El módulo AI no estará disponible. Verifique la configuración.");
   }
 } else {
-  log.info("[AI] Módulo AI presente pero desactivado. Configure AI_ENABLED=true para activarlo.");
+  log.info("🤖 [AI] Módulo AI presente pero DESACTIVADO. Configure AI_ENABLED=true para activarlo.");
 }
+
+const aiStatus = AI_ENABLED
+  ? `🤖 [AI] ESTADO: ✅ ACTIVO (proveedor: ${process.env.AI_PROVIDER || "deepseek"})`
+  : "🤖 [AI] ESTADO: ⛔ INACTIVO — módulo presente, esperando AI_ENABLED=true";
+
+log.info(aiStatus);
 
 // ─── Exports ───────────────────────────────────────────────────
 // NOTA: Solo se exportan los servicios como null-safe wrappers.

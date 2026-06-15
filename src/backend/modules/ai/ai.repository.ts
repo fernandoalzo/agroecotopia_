@@ -18,7 +18,7 @@ export class AIRepository {
     const key = this.buildCacheKey("response", queryHash);
     const cached = await this.cacheService?.get<string>(key);
     if (cached) {
-      log.debug("[cache] FAQ cache HIT:", { queryHash });
+      log.debug("🤖 [cache] FAQ cache HIT:", { queryHash });
     }
     return cached ?? null;
   }
@@ -26,7 +26,7 @@ export class AIRepository {
   async setCachedResponse(queryHash: string, response: string): Promise<void> {
     const key = this.buildCacheKey("response", queryHash);
     await this.cacheService?.set(key, response, this.options.defaultTTL ?? 3600);
-    log.debug("[cache] FAQ cache SET:", { queryHash, ttl: this.options.defaultTTL ?? 3600 });
+    log.debug("🤖 [cache] FAQ cache SET:", { queryHash, ttl: this.options.defaultTTL ?? 3600 });
   }
 
   async getCachedEmbedding(textHash: string): Promise<number[] | null> {
@@ -42,7 +42,7 @@ export class AIRepository {
 
   async invalidateAll(): Promise<void> {
     await this.cacheService?.delPattern("cache:ai:*");
-    log.info("[cache] Caché de AI invalidado completamente.");
+    log.info("🤖 [cache] Caché de AI invalidado completamente.");
   }
 
   private buildCacheKey(type: string, hash: string): string {

@@ -1076,6 +1076,32 @@ src/backend/modules/ai/
 > - No asumir que `aiService`, `ragService` u otros servicios están disponibles — siempre verificar con `if (config.ai.enabled)` o null-check.
 > - Todo código AI debe respetar las mismas reglas de capas: `UI → CTRL → SVC → REPO → CACHE → DB`.
 
+### 20.3.1 Logging Convention — 🤖 Emoji Mandatory (STRICT LAW)
+
+> [!CAUTION]
+> **TODO mensaje de log dentro del módulo AI DEBE comenzar con el emoji `🤖`.**
+> Esta es una regla obligatoria, no opcional. El emoji permite identificar instantáneamente
+> en la consola cualquier operación relacionada con IA, esté el módulo activo o no.
+
+**Reglas:**
+- Todo `log.info()`, `log.debug()`, `log.warn()`, `log.error()` en cualquier archivo dentro de `src/backend/modules/ai/` debe tener el string `"🤖"` al inicio del mensaje.
+- El emoji va **antes** del tag contextual, ej: `log.info("🤖 [DeepSeek] Chat completado", ...)`
+- Esto aplica a: `ai.service.ts`, `ai.repository.ts`, `ai.actions.ts`, `index.ts`, todos los providers, y todos los stubs de dominio (`nlp/`, `moderation/`, `forecasting/`, `vision/`).
+- Cualquier nuevvo archivo agregado al módulo AI debe seguir esta misma convención.
+
+**Ejemplos correctos:**
+```typescript
+log.info("🤖 [AI] Módulo AI inicializado correctamente:", { provider, features });
+log.debug("🤖 [DeepSeek] Chat completado", { model, tokens, elapsed });
+log.warn("🤖 [AI] El módulo AI no estará disponible. Verifique la configuración.");
+log.error("🤖 [DeepSeek] Error parseando resultado de moderación:", { raw });
+```
+
+**Ejemplo incorrecto (violación):**
+```typescript
+log.info("[AI] Módulo AI inicializado correctamente");  // ❌ Falta 🤖
+```
+
 ### 20.4 Core Technology & Dependencies
 
 | Aspecto | Decisión |

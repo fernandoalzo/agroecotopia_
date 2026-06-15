@@ -27,7 +27,7 @@ export class OllamaProvider implements AIProvider {
   }
 
   async chat(_messages: ChatMessage[], _options?: ChatOptions): Promise<ChatResponse> {
-    log.warn("[Ollama] Provider no implementado. Use DeepSeek u OpenAI como fallback.");
+    log.warn("🤖 [Ollama] Provider no implementado. Use DeepSeek u OpenAI como fallback.");
     throw new Error(
       "OllamaProvider no está implementado. " +
       "Para ejecución local, implemente la integración con Ollama API.",

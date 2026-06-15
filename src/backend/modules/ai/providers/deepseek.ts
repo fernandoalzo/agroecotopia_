@@ -79,11 +79,11 @@ export class DeepSeekProvider implements AIProvider {
     }>("/v1/chat/completions", body);
 
     if (!data.choices?.[0]?.message?.content) {
-      log.error("[DeepSeek] Respuesta vacía del modelo", { model });
+      log.error("🤖 [DeepSeek] Respuesta vacía del modelo", { model });
       throw new Error("DeepSeek: respuesta vacía del modelo.");
     }
 
-    log.debug("[DeepSeek] Chat completado", {
+    log.debug("🤖 [DeepSeek] Chat completado", {
       model: data.model,
       tokens: data.usage?.prompt_tokens,
       outputTokens: data.usage?.completion_tokens,
@@ -110,11 +110,11 @@ export class DeepSeekProvider implements AIProvider {
     const data = await this.request<DeepSeekEmbeddingResponse>("/v1/embeddings", body);
 
     if (!data.data?.[0]?.embedding) {
-      log.error("[DeepSeek] Embedding vacío", { model });
+      log.error("🤖 [DeepSeek] Embedding vacío", { model });
       throw new Error("DeepSeek: embedding vacío.");
     }
 
-    log.debug("[DeepSeek] Embedding generado", {
+    log.debug("🤖 [DeepSeek] Embedding generado", {
       model: data.model,
       dimensions: data.data[0].embedding.length,
       tokens: data.usage?.total_tokens,
@@ -162,7 +162,7 @@ export class DeepSeekProvider implements AIProvider {
 
     try {
       const parsed = JSON.parse(response.content) as ModerationResult;
-      log.debug("[DeepSeek] Moderación completada", {
+      log.debug("🤖 [DeepSeek] Moderación completada", {
         spam: parsed.isSpam,
         offensive: parsed.isOffensive,
         harmful: parsed.isHarmful,
@@ -170,7 +170,7 @@ export class DeepSeekProvider implements AIProvider {
       });
       return parsed;
     } catch {
-      log.error("[DeepSeek] Error parseando resultado de moderación:", {
+      log.error("🤖 [DeepSeek] Error parseando resultado de moderación:", {
         raw: response.content,
       });
       return {
@@ -237,7 +237,7 @@ export class DeepSeekProvider implements AIProvider {
 
         if (attempt < this.config.maxRetries) {
           const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-          log.warn(`[DeepSeek] Reintento ${attempt}/${this.config.maxRetries}`, {
+          log.warn(`🤖 [DeepSeek] Reintento ${attempt}/${this.config.maxRetries}`, {
             path,
             delay,
             error: lastError.message,
@@ -247,7 +247,7 @@ export class DeepSeekProvider implements AIProvider {
       }
     }
 
-    log.error("[DeepSeek] Todos los reintentos agotados", {
+    log.error("🤖 [DeepSeek] Todos los reintentos agotados", {
       path,
       lastError: lastError?.message,
     });

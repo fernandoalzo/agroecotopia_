@@ -11,12 +11,12 @@ export interface DemandForecast {
 
 export class DemandForecastingService {
   async predictDemand(_productId: string): Promise<DemandForecast> {
-    log.info("[Forecasting] predictDemand placeholder — implementar con ML cuando se active.");
+    log.info("🤖 [Forecasting] predictDemand placeholder — implementar con ML cuando se active.");
     throw new Error("DemandForecastingService no implementado.");
   }
 
   async predictStoreDemand(_storeId: string): Promise<DemandForecast[]> {
-    log.info("[Forecasting] predictStoreDemand placeholder.");
+    log.info("🤖 [Forecasting] predictStoreDemand placeholder.");
     return [];
   }
 }

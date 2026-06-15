@@ -7,7 +7,7 @@ const log = logger.child("src/backend/modules/ai/ai.actions.ts");
 
 export async function aiChatAction(_conversationId: string, _message: string) {
   return withAuth(async () => {
-    log.info("[AI Action] aiChatAction — NO IMPLEMENTADO. Active el módulo AI para usar esta función.");
+    log.info("🤖 [Action] aiChatAction — NO IMPLEMENTADO. Active el módulo AI para usar esta función.");
     return {
       error: "El módulo de IA no está activo. Consulte la documentación de FASE IA para más información.",
     };
@@ -16,7 +16,7 @@ export async function aiChatAction(_conversationId: string, _message: string) {
 
 export async function aiSemanticSearchAction(_query: string) {
   return withAuth(async () => {
-    log.info("[AI Action] aiSemanticSearchAction — NO IMPLEMENTADO.");
+    log.info("🤖 [Action] aiSemanticSearchAction — NO IMPLEMENTADO.");
     return { results: [], error: "Búsqueda semántica no activa." };
   });
 }
@@ -25,14 +25,14 @@ export async function aiGenerateDescriptionAction(
   _data: { name: string; category: string; tags: string[] },
 ) {
   return withAuth(async () => {
-    log.info("[AI Action] aiGenerateDescriptionAction — NO IMPLEMENTADO.");
+    log.info("🤖 [Action] aiGenerateDescriptionAction — NO IMPLEMENTADO.");
     return { error: "Generación de descripciones no activa." };
   });
 }
 
 export async function aiModerateContentAction(_content: string) {
   return withAuth(async () => {
-    log.info("[AI Action] aiModerateContentAction — NO IMPLEMENTADO.");
+    log.info("🤖 [Action] aiModerateContentAction — NO IMPLEMENTADO.");
     return {
       isSpam: false,
       isOffensive: false,
