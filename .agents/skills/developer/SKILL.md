@@ -1018,3 +1018,252 @@ initializeStockMaster(prisma);
 ```
 
 Cada `getAvailableStock(productId)` también sincroniza lazy si la key no existe en Redis.
+
+---
+
+## 20. ⚠️ FASE IA — Artificial Intelligence Layer (DESACTIVADO POR DEFECTO)
+
+> [!CAUTION]
+> **IMPORTANTE: Este módulo NO está activo por defecto.**
+> La capa AI es una base estructural para futuras implementaciones inteligentes.
+> **SOLO debe implementarse o activarse por instrucciones explícitas y precisas del desarrollador.**
+> No asumir que debe estar operativa — toda funcionalidad de IA requiere configuración expresa
+> mediante variables de entorno (`AI_ENABLED=true`) y orquestación manual.
+
+### 20.1 Propósito
+
+La capa AI proporciona una base arquitectónica para integrar modelos de lenguaje (LLMs),
+búsqueda semántica, visión por computadora, predicción de demanda y otras capacidades
+de inteligencia artificial en la plataforma. Sigue los mismos patrones del resto del backend
+(IoC/DI, Factory Pattern, Repository Pattern, Cache-Aside).
+
+### 20.2 Estado Actual
+
+```
+src/backend/modules/ai/
+├── index.ts                          ← IoC: inicializa condicionalmente (AI_ENABLED)
+├── ai.actions.ts                     ← Server Actions placeholder (retornan error "no activo")
+├── ai.service.ts                     ← Orquestador central (chat, embed, isAvailable)
+├── ai.repository.ts                  ← Data access con CacheService inyectado
+├── providers/
+│   ├── types.ts                      ← AIProvider interface + tipos compartidos
+│   ├── factory.ts                    ← AIProviderFactory (Factory Pattern)
+│   ├── deepseek.ts                   ← ✅ Provider DeepSeek (implementado, usa fetch nativo)
+│   ├── openai.ts                     ← ⏳ Placeholder (estructura lista)
+│   └── ollama.ts                     ← ⏳ Placeholder (estructura lista)
+├── nlp/
+│   ├── rag.service.ts                ← ⏳ Placeholder RAG
+│   └── translation.service.ts        ← ⏳ Placeholder traducción
+├── moderation/
+│   └── content-moderation.service.ts ← ⏳ Placeholder moderación
+├── forecasting/
+│   ├── demand.service.ts             ← ⏳ Placeholder predicción demanda
+│   └── pricing.service.ts            ← ⏳ Placeholder pricing dinámico
+└── vision/
+    └── vision.service.ts             ← ⏳ Placeholder visión
+```
+
+- **✅ Implementado completamente**: Provider interface, Factory, DeepSeek provider (chat + embeddings + moderación con retry y exponential backoff), Repository con CacheService, AIService orquestador, IoC condicional
+- **⏳ Placeholder (estructura vacía)**: OpenAI provider, Ollama provider, RAG, traducción, moderación, forecasting, pricing, visión — todos lanzan error "no implementado"
+- **❌ No integrado con la aplicación**: Ningún módulo existente importa de `@/backend/modules/ai`
+
+### 20.3 Reglas de Arquitectura (STRICT LAW)
+
+> [!CAUTION]
+> **LA CAPA AI SOLO SE ACTIVA BAJO INSTRUCCIÓN EXPLÍCITA DEL DESARROLLADOR.**
+> - No implementar funcionalidad AI sin que el desarrollador lo solicite.
+> - No integrar la capa AI con módulos existentes sin autorización.
+> - No asumir que `aiService`, `ragService` u otros servicios están disponibles — siempre verificar con `if (config.ai.enabled)` o null-check.
+> - Todo código AI debe respetar las mismas reglas de capas: `UI → CTRL → SVC → REPO → CACHE → DB`.
+
+### 20.4 Core Technology & Dependencies
+
+| Aspecto | Decisión |
+|---------|----------|
+| **Provider default** | DeepSeek (API OpenAI-compatible, `fetch()` nativo — 0 dependencias externas) |
+| **Embeddings** | DeepSeek Embedding → pgvector en PostgreSQL |
+| **Cache** | `CacheService` existente (Redis) con TTLs específicos para respuestas AI |
+| **Eventos** | `eventBus` + Socket.IO bridge (mismo patrón que notificaciones) |
+| **Factory Pattern** | `AIProviderFactory` — registrar providers y crear instancias por nombre |
+| **Feature Flags** | `config.ai.features.*` — cada feature se habilita individualmente |
+| **Provider Swap** | Cambiar de DeepSeek a OpenAI/Ollama sin modificar lógica de negocio |
+
+### 20.5 AIProvider Interface
+
+```typescript
+// src/backend/modules/ai/providers/types.ts
+interface AIProvider {
+  readonly name: ProviderName;
+  readonly availableFeatures: AIFeature[];
+
+  chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse>;
+  embed(text: string): Promise<EmbeddingResponse>;
+  moderate?(content: string, options?: ModerationOptions): Promise<ModerationResult>;
+  isAvailable(): Promise<boolean>;
+}
+```
+
+**Provider implementations disponibles:**
+| Provider | Chat | Embeddings | Moderación | Visión | Dependencias |
+|----------|------|------------|------------|--------|-------------|
+| `deepseek` | ✅ | ✅ | ✅ (vía prompt) | ❌ | `fetch()` nativo |
+| `openai` | ⏳ | ⏳ | ⏳ | ⏳ | Ninguna instalada |
+| `ollama` | ⏳ | ⏳ | ❌ | ❌ | Ninguna instalada |
+
+### 20.6 Factory Pattern
+
+```typescript
+// src/backend/modules/ai/providers/factory.ts
+const provider = AIProviderFactory.create("deepseek", {
+  apiKey: process.env.DEEPSEEK_API_KEY,
+});
+// → Devuelve DeepSeekProvider configurado con retry + timeout + logging
+
+// Para extender con un provider custom:
+AIProviderFactory.registerProvider("miProvider", MiProviderClass);
+```
+
+### 20.7 IoC Conditional Initialization
+
+```typescript
+// src/backend/modules/ai/index.ts
+const AI_ENABLED = process.env.AI_ENABLED === 'true';
+
+let aiService: AIService | null = null;
+// ... otros servicios null por defecto
+
+if (AI_ENABLED) {
+  const provider = AIProviderFactory.create(
+    process.env.AI_PROVIDER || "deepseek",
+    { apiKey: process.env.DEEPSEEK_API_KEY },
+  );
+  aiService = new AIService(provider, aiRepository, ragService);
+  // ... inicializar demás servicios
+}
+
+// Todos los servicios se exportan como null-safe
+export { aiService, ragService, ... };
+```
+
+**Los módulos consumidores SIEMPRE deben hacer null-check:**
+```typescript
+if (config.ai.enabled && aiService) {
+  const result = await aiService.chat(...);
+}
+// vs:
+const result = await aiService?.chat(...) ?? fallback;
+```
+
+### 20.8 Configuración Centralizada
+
+```typescript
+// src/config/config.ts
+ai: {
+  enabled: process.env.AI_ENABLED === 'true',
+  provider: process.env.AI_PROVIDER || 'deepseek',
+  models: {
+    chat: process.env.AI_MODEL_CHAT || 'deepseek-chat',
+    embedding: process.env.AI_MODEL_EMBEDDING || 'deepseek-embedding',
+  },
+  features: {
+    semanticSearch: false,     // ← desactivado por defecto
+    chatbot: false,
+    vision: false,
+    moderation: false,
+    translation: false,
+    forecasting: false,
+    pricing: false,
+  },
+}
+```
+
+### 20.9 Activation Checklist
+
+Para activar el módulo AI:
+
+```bash
+# 1. Configurar variables de entorno
+AI_ENABLED=true
+AI_PROVIDER=deepseek
+DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxxxxxx
+
+# 2. Opcional: habilitar features específicas
+AI_FEATURE_SEMANTIC_SEARCH=true
+AI_FEATURE_CHATBOT=true
+
+# 3. Opcional: instalar dependencias para providers adicionales
+# Para OpenAI: npm install openai
+# Para Ollama: no requiere instalación (API HTTP local)
+```
+
+### 20.10 Provider DeepSeek — Detalles de Implementación
+
+```typescript
+// src/backend/modules/ai/providers/deepseek.ts
+export class DeepSeekProvider implements AIProvider {
+  // Usa fetch() nativo — 0 dependencias externas
+  // API compatible con OpenAI (mismos endpoints /v1/chat/completions, /v1/embeddings)
+
+  async chat(messages, options?) → ChatResponse
+    // POST /v1/chat/completions
+    // Retry con exponential backoff (3 intentos, delay: 1s → 2s → 4s)
+    // Timeout configurable (default 30s)
+    // Logging de tokens consumidos
+
+  async embed(text) → EmbeddingResponse
+    // POST /v1/embeddings
+    // Retorna vector[1536]
+
+  async moderate(content) → ModerationResult
+    // Prompt engineering sobre deepseek-chat
+    // Temperature 0 para consistencia
+    // Parseo JSON con fallback seguro
+
+  async isAvailable() → boolean
+    // GET /v1/models con timeout 5s
+    // Retorna true si response.ok
+}
+```
+
+### 20.11 Conexión con Módulos Existentes (SOLO CUANDO SE INSTRUYA)
+
+La capa AI está diseñada para integrarse mediante feature flags en los servicios existentes:
+
+| Módulo | Punto de integración | Feature Flag |
+|--------|---------------------|--------------|
+| `product.service.ts` | `searchProducts()` → si `semanticSearch`, usar pgvector | `config.ai.features.semanticSearch` |
+| `chat/ChatWidget.tsx` | `handleSend()` → si `chatbot`, llamar `aiChatAction()` | `config.ai.features.chatbot` |
+| `forum.service.ts` | `createPost()` → si `moderation`, llamar `moderationService` | `config.ai.features.moderation` |
+| `forum.service.ts` | `createPost()` con imagen → si `vision`, llamar `visionService` | `config.ai.features.vision` |
+| `notifications.service.ts` | Nuevo handler `onCartAbandoned()` | `config.ai.features.forecasting` |
+| `store/stats.service.ts` | `getSellerDashboard()` → si `forecasting`, agregar predicciones | `config.ai.features.forecasting` |
+| Product form (seller) | Botón "Generar descripción" → `aiGenerateDescriptionAction()` | `config.ai.features.chatbot` |
+
+**IMPORTANTE**: Estas integraciones NO están implementadas. Solo se documentan aquí para referencia futura. No conectarlas sin autorización explícita del desarrollador.
+
+### 20.12 Enlace a Documentación Externa
+
+Para la visión completa de FASE IA, incluyendo el roadmap, casos de uso detallados y ejemplos hipotéticos, consultar:
+
+```text
+README.md — Sección "🚀 FASE IA — Agroecotopia AI-First"
+```
+
+### 20.13 Variables de Entorno
+
+```bash
+# AI Module (desactivado por defecto)
+AI_ENABLED=false
+AI_PROVIDER=deepseek
+DEEPSEEK_API_KEY=
+AI_MODEL_CHAT=deepseek-chat
+AI_MODEL_EMBEDDING=deepseek-embedding
+
+# Feature flags (todos false por defecto)
+AI_FEATURE_SEMANTIC_SEARCH=false
+AI_FEATURE_CHATBOT=false
+AI_FEATURE_VISION=false
+AI_FEATURE_MODERATION=false
+AI_FEATURE_TRANSLATION=false
+AI_FEATURE_FORECASTING=false
+AI_FEATURE_PRICING=false

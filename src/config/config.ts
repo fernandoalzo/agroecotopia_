@@ -87,6 +87,24 @@ export const config = {
     adminDefaultStoreName: "Agroecotopia Oficial",
   },
 
+  ai: {
+    enabled: process.env.AI_ENABLED === 'true',
+    provider: (process.env.AI_PROVIDER || 'deepseek') as 'deepseek' | 'openai' | 'ollama',
+    models: {
+      chat: process.env.AI_MODEL_CHAT || 'deepseek-chat',
+      embedding: process.env.AI_MODEL_EMBEDDING || 'deepseek-embedding',
+    },
+    features: {
+      semanticSearch: false,
+      chatbot: false,
+      vision: false,
+      moderation: false,
+      translation: false,
+      forecasting: false,
+      pricing: false,
+    },
+  },
+
   cache: {
     redisUrl: process.env.REDIS_URL,
     enabled: process.env.CACHE_ENABLED !== 'false',
