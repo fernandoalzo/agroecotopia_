@@ -834,6 +834,282 @@ Para agregar tests, enfocarse en `*.service.ts` (lógica pura) y `*.actions.ts` 
 
 ---
 
+# 🚀 FASE IA — Agroecotopia AI-First
+
+## Visión General — Capa de Inteligencia Artificial Transversal
+
+La plataforma está preparada arquitectónicamente para integrar una **capa de IA transversal** que potencia todos los módulos existentes sin romper la separación de capas. Cada componente de IA se comunica con el backend mediante el mismo patrón definido: `eventBus` para eventos asíncronos, Server Actions para invocación, y Socket.IO para actualizaciones en tiempo real.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    AGROECOTOPIA AI LAYER                         │
+├─────────────────────────────────────────────────────────────────┤
+│  Percepción    │  Razonamiento   │  Predicción    │  Generación │
+│  (visión, NLP) │  (reglas, grafos)│  (ML models)  │  (LLM, img) │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────────┐
+│  Módulos existentes (backend modular + eventBus + Socket.IO)     │
+│  product │ orders │ forum │ chat │ notifications │ payments ...  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 1. Motor de Recomendaciones Inteligente (Product Module)
+
+### 1.1 Recomendación Contextual Multi-factor
+Embeddings vectoriales (`pgvector` en PostgreSQL) de cada producto basado en:
+- Nombre, descripción, categoría, tags
+- Historial de compras del usuario
+- Estación del año / clima (productos de temporada)
+- Región del comprador (productos locales recomendados)
+
+```
+product.repository.ts → getRecommendations(userId, context)
+  → CacheService.getOrSet("ai:recommendations:{userId}:{context}")
+     → fallback: pgvector cosine similarity query
+  → eventBus.emit("recommendations:updated", { userId })
+  → useSocketRefresh escucha y refresca UI
+```
+
+### 1.2 Búsqueda Semántica
+Reemplazar la búsqueda actual por `WHERE nombre ILIKE '%query%'` con embeddings + reranking:
+- `product.service.ts` → `searchProductsAI(query)` llama a un embedding model (Ollama/API)
+- Matching semántico: "abono orgánico para café" → encuentra productos aunque la palabra exacta no esté en el nombre
+
+### 1.3 Pricing Dinámico Asistido
+Sugiere precios óptimos basados en:
+- Historial de ventas del producto
+- Precios de la competencia (web scraping programado)
+- Elasticidad de demanda
+- Estacionalidad
+
+```typescript
+// src/backend/modules/ai/pricing/pricing.service.ts
+export class AIPricingService {
+  async suggestPrice(productId: string): Promise<{
+    suggested: number;
+    confidence: number;
+    reasoning: string;
+  }>;
+}
+```
+
+---
+
+## 2. Asistente Virtual Inteligente (Chat + Chat Widget)
+
+### 2.1 Chatbot Híbrido (Agente + Humano)
+El `ChatWidget` actual se convierte en un **AI Agent** con:
+- **Respuestas automáticas** vía RAG (Retrieval-Augmented Generation) sobre el catálogo completo, políticas de envío, FAQ
+- **Detección de intención**: "Necesito un fertilizante para café" → recomienda productos + enlaza al checkout
+- **Escalamiento inteligente**: si el agente no resuelve, crea ticket para humano con contexto completo
+
+```
+chatAgent.service.ts ← LLM (Ollama/OpenAI API)
+  → chat.repository.ts (mensajes del agente como senderRole="agent")
+  → socketHandler.ts → Socket.IO → ChatWidget
+```
+
+### 2.2 Voz a Texto (Modo Manos Libres)
+Agricultores en campo usan comandos de voz:
+- Speech-to-Text → Búsqueda semántica → Resultado narrado
+- Integrable vía Web Speech API (navegador) o API externa
+
+---
+
+## 3. Visión por Computadora para Productos
+
+### 3.1 Clasificación Automática de Imágenes
+Cuando un vendedor sube una foto de producto, la IA:
+1. Detecta baja calidad (borrosa, mal iluminada)
+2. Sugiere categorías automáticas
+3. Genera tags descriptivos
+4. Extrae texto de etiquetas/envases (OCR)
+
+### 3.2 Búsqueda por Imagen
+El comprador sube una foto → búsqueda inversa → productos similares:
+
+```
+POST /api/ai/vision/search  →  Embedding visual  →  pgvector  →  resultados
+```
+
+### 3.3 Moderación de Imágenes
+Detección automática de contenido inapropiado antes de publicar.
+
+---
+
+## 4. Agricultura de Precisión — Módulo AI Expert
+
+### 4.1 Sistema Experto para el Foro (Forum Module)
+**RAG sobre el foro comunitario:**
+- Cuando un usuario pregunta, el sistema busca en posts/respuestas anteriores y sugiere respuestas
+- Detecta preguntas duplicadas y enlaza a la respuesta existente
+- Clasifica automáticamente posts con labels (plagas, riego, nutrición...)
+
+### 4.2 Diagnóstico de Plagas (Computer Vision)
+Usuario sube foto de planta enferma → modelo identifica plaga/enfermedad → recomienda productos del catálogo:
+
+```
+forum/post/create → AI analiza imagen → detecta plaga
+  → sugiere productos relacionados → enlaza al checkout
+```
+
+---
+
+## 5. Business Intelligence Predictivo
+
+### 5.1 Predicción de Demanda (Stats + Orders Modules)
+Basado en datos históricos + estacionalidad + clima:
+- Predice productos con alta demanda la próxima semana
+- Sugiere a vendedores cuándo reabastecer
+- Recomienda ajustes de stock preventivos
+
+```typescript
+// src/backend/modules/ai/forecasting/demand.service.ts
+eventBus.on("order:confirmed", () => demandService.updateModel());
+```
+
+### 5.2 Customer Lifetime Value (CLV)
+Identifica clientes de alto valor potencial y sugiere:
+- Cupones personalizados
+- Notificaciones específicas
+- Prioridad en atención al cliente
+
+### 5.3 Detección de Abandono de Carrito
+Si un usuario agrega productos al carrito y no compra en 30min:
+1. AI evalúa probabilidad de conversión
+2. Envía notificación push personalizada vía `NotificationProvider`
+3. Ofrece descuento selectivo si el modelo detecta precio como barrera
+
+---
+
+## 6. Automatización Inteligente de Operaciones
+
+### 6.1 AI Agent para Logística (Shipping Module)
+- **Optimización de tarifas**: combinación óptima basada en peso, distancia, velocidad
+- **Estimación precisa de entrega**: predicción usando datos históricos
+
+### 6.2 Moderación del Foro Automática
+- Detecta spam, lenguaje inapropiado, posts duplicados
+- Aprueba automáticamente contenido de bajo riesgo
+- Escala a admin solo lo que requiere revisión humana
+
+### 6.3 Traducción Automática (i18n Dinámico)
+El sistema actual (ES/EN) se expande a **N idiomas** vía traducción automática:
+- Posts del foro, descripciones de productos, notificaciones
+
+---
+
+## 7. AI para Sellers (Store Module)
+
+### 7.1 Generación de Descripciones de Producto
+El vendedor ingresa datos mínimos → AI genera:
+- Descripción completa y atractiva
+- Meta tags para SEO
+- Palabras clave para búsqueda
+- Traducción a EN automática
+
+### 7.2 Score de Calidad del Producto
+Evalúa automáticamente si un producto tiene:
+- Buena descripción ✅
+- Imagen de calidad ✅
+- Precio competitivo ✅
+- Stock suficiente ✅
+- Categoría correcta ✅
+
+Devuelve un score 0-100 y sugerencias de mejora.
+
+### 7.3 Copiloto para Vendedores (Seller Panel)
+Asistente conversacional dentro del panel `mi-tienda`:
+- "¿Cuántas ventas tuve esta semana?"
+- "¿Qué producto se vende más?"
+- "Recomiéndame qué promoción crear"
+
+---
+
+## 8. Integración Técnica — Módulo AI
+
+### 8.1 Estructura Propuesta
+
+```text
+src/backend/modules/ai/
+├── index.ts                       ← IoC: instancia servicios AI
+├── ai.actions.ts                  ← Server Actions ("use server")
+├── ai.service.ts                  ← Orquestador central
+├── embeddings/
+│   ├── embedding.service.ts       ← Generación de embeddings (Ollama/API)
+│   └── vector-store.ts            ← pgvector queries
+├── recommendations/
+│   ├── recommendation.service.ts  ← Motor de recomendaciones
+│   └── recommendation.repository.ts
+├── vision/
+│   ├── vision.service.ts          ← Computer Vision
+│   └── image-classifier.ts        ← Clasificación de imágenes
+├── nlp/
+│   ├── chatbot.service.ts         ← RAG + LLM
+│   ├── intent-classifier.ts       ← Detección de intención
+│   └── translation.service.ts     ← Traducción automática
+├── forecasting/
+│   ├── demand.service.ts          ← Predicción de demanda
+│   └── pricing.service.ts         ← Pricing dinámico
+└── moderation/
+    └── content-moderation.ts      ← Moderación automática
+```
+
+### 8.2 Integración con la Arquitectura Existente
+
+| Componente existente | Cómo lo potencia la IA |
+|----------------------|------------------------|
+| `product.repository.ts` + `CacheKeys` | Embeddings cacheados + vector search |
+| `eventBus` | Eventos `ai:recommendation:ready`, `ai:forecast:updated` |
+| `useSocketRefresh` | Clientes reciben recomendaciones en tiempo real |
+| `NotificationProvider` | Notificaciones inteligentes predictivas |
+| `CartContext` | Abandono de carrito detectado por IA |
+| `ForumService` | RAG sobre el foro + detección de plagas en imágenes |
+| `ChatWidget` | Chatbot híbrido + escalamiento inteligente |
+| `OrdersService` | Predicción de demanda + optimización de stock |
+| `StockGuardian` | Stock predictivo (no solo reactivo) |
+| `ShippingService` | Estimación inteligente de entrega |
+| `StorePaymentSection` | Pricing dinámico sugerido por IA |
+
+### 8.3 Feature Flags para Gradual Rollout
+
+```typescript
+// src/config/config.ts — ampliación propuesta
+ai: {
+  enabled: process.env.AI_ENABLED === 'true',
+  provider: process.env.AI_PROVIDER || 'ollama',
+  features: {
+    semanticSearch: true,
+    visualSearch: false,
+    chatbot: true,
+    demandForecasting: false,
+    autoModeration: true,
+    productDescriptionGenerator: false,
+    pricingAssistant: false,
+    voiceCommands: false,
+  },
+  models: {
+    embedding: 'nomic-embed-text',
+    llm: 'llama3.2',
+    vision: 'llava',
+  },
+}
+```
+
+### 8.4 Roadmap de Implementación
+
+| Fase | Features | Impacto esperado |
+|------|----------|------------------|
+| **1. Inmediata** (semanas) | Búsqueda semántica + Chatbot FAQ + Moderación foro | −40% consultas repetitivas |
+| **2. Corto plazo** (1-2 meses) | Recomendaciones + Descripciones automáticas + Traducción | +25% conversión, alcance EN |
+| **3. Medio plazo** (3-4 meses) | Visión (clasificación + búsqueda por imagen) + Predicción demanda | Reducción overstock, mejor UX |
+| **4. Largo plazo** (6+ meses) | Diagnóstico plagas + Voz + Pricing dinámico + CLV | Diferenciador competitivo total |
+
+---
+
 ## Licencia
 
 Proyecto privado — Agroecotopia.
