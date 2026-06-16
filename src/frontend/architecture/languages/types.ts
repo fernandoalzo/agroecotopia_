@@ -280,6 +280,8 @@ export interface Translations {
       all: string;
       searchPlaceholder: string;
       clearSearch: string;
+      searchTypeSemantic: string;
+      searchTypeTextual: string;
       filterByTags: string;
       activeCommunity: string;
       members: string;
@@ -292,6 +294,7 @@ export interface Translations {
     };
     qaList: {
       results: string;
+      resultsWithTotal: string;
       noResults: string;
       noResultsDesc: string;
       loadMore: string;

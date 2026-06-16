@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronDown, Hash, Check, X, Loader2 } from "lucide-react";
+import { Search, ChevronDown, Hash, Check, X, Loader2, Sparkles, TextSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { config } from "@/config/config";
 import { useLanguage } from "@/context/LanguageContext";
@@ -13,6 +13,7 @@ interface ForumSidebarProps {
   activeFilters: Record<string, string[]>;
   setActiveFilter: (category: string, value: string) => void;
   isSearching?: boolean;
+  searchType?: "semantic" | "textual" | null;
 }
 
 function FilterCategory({
@@ -128,7 +129,8 @@ export default function ForumSidebar({
   setSearchQuery,
   activeFilters,
   setActiveFilter,
-  isSearching
+  isSearching,
+  searchType
 }: ForumSidebarProps) {
   const { t } = useLanguage();
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
@@ -136,7 +138,8 @@ export default function ForumSidebar({
 
   return (
     <div className="w-full lg:col-span-3 lg:sticky lg:top-28 space-y-6 lg:space-y-8">
-      <div className="relative">
+      <div className="flex flex-col gap-2">
+        <div className="relative">
         {isSearching ? (
           <Loader2 className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin" />
         ) : (
@@ -163,6 +166,34 @@ export default function ForumSidebar({
             >
               <X className="w-4 h-4" />
             </motion.button>
+          )}
+        </AnimatePresence>
+        </div>
+
+        <AnimatePresence>
+          {searchQuery.length > 0 && !isSearching && searchType && (
+            <motion.div
+              initial={{ opacity: 0, height: 0, y: -5 }}
+              animate={{ opacity: 1, height: "auto", y: 0 }}
+              exit={{ opacity: 0, height: 0, y: -5 }}
+              className="overflow-hidden"
+            >
+              {searchType === "semantic" ? (
+                <div className="flex items-center gap-2 px-3 py-1.5 mt-1 rounded-md bg-gradient-to-r from-primary/10 to-transparent border border-primary/20 backdrop-blur-sm">
+                  <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
+                  <span className="text-[11px] font-medium text-primary tracking-wide">
+                    {t.forum.sidebar.searchTypeSemantic}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-1.5 mt-1 rounded-md bg-gradient-to-r from-muted to-transparent border border-border/50">
+                  <TextSearch className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-[11px] font-medium text-muted-foreground tracking-wide">
+                    {t.forum.sidebar.searchTypeTextual}
+                  </span>
+                </div>
+              )}
+            </motion.div>
           )}
         </AnimatePresence>
       </div>

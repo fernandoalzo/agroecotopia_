@@ -306,6 +306,8 @@ export const es: Translations = {
       all: "Todos",
       searchPlaceholder: "Buscar discusiones...",
       clearSearch: "Limpiar búsqueda",
+      searchTypeSemantic: "Búsqueda semántica",
+      searchTypeTextual: "Búsqueda textual",
       filterByTags: "Filtrar por etiquetas",
       activeCommunity: "Comunidad Activa",
       members: "Participantes",
@@ -318,6 +320,7 @@ export const es: Translations = {
     },
     qaList: {
       results: "{count} resultados",
+      resultsWithTotal: "{count} / {total} resultados",
       noResults: "No se encontraron resultados",
       noResultsDesc: "Intenta probar con otros términos o ajustar los filtros.",
       loadMore: "Cargar más publicaciones",

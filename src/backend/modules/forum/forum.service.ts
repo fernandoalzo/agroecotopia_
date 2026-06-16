@@ -17,6 +17,8 @@ export class ForumService {
   ) { }
 
   async getPosts(activeFilters?: Record<string, string[]>, searchQuery?: string, limit?: number, cursor?: string, sortBy?: "newest" | "popular") {
+    let searchType: "semantic" | "textual" | null = null;
+
     if (searchQuery && searchQuery.trim() !== "" && this.embeddingService && config.ai.features.semanticSearch) {
       try {
         const labels = activeFilters
@@ -24,6 +26,7 @@ export class ForumService {
           : undefined;
         const similar = await this.embeddingService.searchSimilar(searchQuery, 200, labels);
         if (similar.length > 0) {
+          searchType = "semantic";
           const postIds = similar.map(s => s.id);
           const posts = await this.forumRepository.getPostsByIds(postIds, labels);
           const total = posts.length;
@@ -31,14 +34,19 @@ export class ForumService {
           const startIndex = cursor ? postIds.indexOf(cursor) + 1 : 0;
           const sliced = posts.slice(startIndex, startIndex + pageLimit);
           const nextCursor = sliced.length === pageLimit ? sliced[sliced.length - 1].id : undefined;
-          return { posts: sliced, nextCursor };
+          return { posts: sliced, nextCursor, searchType, totalCount: total };
         }
       } catch (error) {
         log.warn("Búsqueda semántica en foro falló, usando fallback textual:", error);
       }
     }
 
-    return await this.forumRepository.getPosts(activeFilters, searchQuery, limit, cursor, sortBy);
+    if (searchQuery && searchQuery.trim() !== "") {
+      searchType = "textual";
+    }
+
+    const result = await this.forumRepository.getPosts(activeFilters, searchQuery, limit, cursor, sortBy);
+    return { ...result, searchType };
   }
   async createPost(
     data: { title: string; body: string; labels: string[] },

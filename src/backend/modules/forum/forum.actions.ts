@@ -36,8 +36,8 @@ export async function createPostAction(formData: { title: string; body: string; 
 
 export async function getPostsAction(activeFilters?: Record<string, string[]>, searchQuery?: string, limit?: number, cursor?: string, sortBy?: "newest" | "popular") {
   try {
-    const { posts, nextCursor } = await forumService.getPosts(activeFilters, searchQuery, limit, cursor, sortBy);
-    return { success: true, posts, nextCursor };
+    const { posts, nextCursor, searchType, totalCount } = await forumService.getPosts(activeFilters, searchQuery, limit, cursor, sortBy);
+    return { success: true, posts, nextCursor, searchType, totalCount };
   } catch (error: unknown) {
     log.error("Failed to get posts:", error);
     return { success: false, error: getErrorMessage(error) };

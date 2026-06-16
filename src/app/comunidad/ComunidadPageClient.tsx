@@ -81,6 +81,8 @@ export default function ComunidadPageClient({
         pages: [{
           posts: (initialPosts as RawPost[]).map(mapRawPost),
           nextCursor: initialNextCursor as string | undefined,
+          searchType: undefined as "semantic" | "textual" | null | undefined,
+          totalCount: undefined as number | undefined,
         }],
         pageParams: [undefined as string | undefined],
       }
@@ -101,6 +103,8 @@ export default function ComunidadPageClient({
       return {
         posts: rawPosts.map(mapRawPost),
         nextCursor: res.nextCursor as string | undefined,
+        searchType: res.searchType as "semantic" | "textual" | null | undefined,
+        totalCount: res.totalCount as number | undefined,
       };
     },
     placeholderData: initialPageData,
@@ -112,6 +116,16 @@ export default function ComunidadPageClient({
   const questions = useMemo(() => {
     if (!postsPages) return [];
     return postsPages.pages.flatMap((page) => page.posts);
+  }, [postsPages]);
+
+  const currentSearchType = useMemo(() => {
+    if (!postsPages || postsPages.pages.length === 0) return null;
+    return postsPages.pages[0].searchType;
+  }, [postsPages]);
+
+  const currentTotalCount = useMemo(() => {
+    if (!postsPages || postsPages.pages.length === 0) return undefined;
+    return postsPages.pages[0].totalCount;
   }, [postsPages]);
 
   const { data: communityStats, isPending: isStatsPending } = useQuery({
@@ -252,6 +266,8 @@ export default function ComunidadPageClient({
         trendingTags={trendingLabels ?? []}
         sortBy={sortBy}
         setSortBy={setSortBy}
+        searchType={currentSearchType}
+        totalCount={currentTotalCount}
       />
     </main>
   );

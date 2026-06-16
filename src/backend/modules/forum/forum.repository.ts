@@ -50,26 +50,30 @@ export class ForumRepository {
         log.debug("[db] Obteniendo posts del foro:", { filters: activeFilters, searchQuery, limit, cursor, sortBy });
         const where: Prisma.ForumPostWhereInput = {};
 
+        const andConditions: Prisma.ForumPostWhereInput[] = [];
+
         if (searchQuery && searchQuery.trim() !== "") {
           const terms = searchQuery.trim().split(/\s+/);
-          where.OR = terms.map(term => ({
-            OR: [
-              { title: { contains: term, mode: "insensitive" as const } },
-              { body: { contains: term, mode: "insensitive" as const } },
-            ],
-          }));
+          terms.forEach(term => {
+            andConditions.push({
+              OR: [
+                { title: { contains: term, mode: "insensitive" as const } },
+                { body: { contains: term, mode: "insensitive" as const } },
+              ],
+            });
+          });
         }
 
         if (activeFilters && Object.keys(activeFilters).length > 0) {
-          const labelConditions: Prisma.ForumPostWhereInput[] = [];
           for (const [, selectedLabels] of Object.entries(activeFilters)) {
             if (selectedLabels.length > 0) {
-              labelConditions.push({ labels: { hasSome: selectedLabels } });
+              andConditions.push({ labels: { hasSome: selectedLabels } });
             }
           }
-          if (labelConditions.length > 0) {
-            where.AND = labelConditions;
-          }
+        }
+
+        if (andConditions.length > 0) {
+          where.AND = andConditions;
         }
 
         const orderBy: Prisma.ForumPostOrderByWithRelationInput | Prisma.ForumPostOrderByWithRelationInput[] =
@@ -77,16 +81,19 @@ export class ForumRepository {
             ? [{ ratingTotal: "desc" }, { createdAt: "desc" }]
             : { createdAt: "desc" };
 
-        const posts = await prisma.forumPost.findMany({
-          where,
-          take: limit + 1,
-          ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-          orderBy,
-          include: {
-            author: { select: { id: true, name: true, image: true, role: true } },
-            _count: { select: { answers: true } },
-          },
-        });
+        const [posts, totalCount] = await prisma.$transaction([
+          prisma.forumPost.findMany({
+            where,
+            take: limit + 1,
+            ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+            orderBy,
+            include: {
+              author: { select: { id: true, name: true, image: true, role: true } },
+              _count: { select: { answers: true } },
+            },
+          }),
+          prisma.forumPost.count({ where }),
+        ]);
 
         let nextCursor: string | undefined;
         if (posts.length > limit) {
@@ -94,10 +101,10 @@ export class ForumRepository {
           nextCursor = nextItem?.id;
         }
 
-        return { posts, nextCursor };
+        return { posts, nextCursor, totalCount };
       },
       config.cache.ttl.forumPosts,
-    ) ?? { posts: [], nextCursor: undefined };
+    ) ?? { posts: [], nextCursor: undefined, totalCount: 0 };
   }
 
   async getPostById(id: string) {

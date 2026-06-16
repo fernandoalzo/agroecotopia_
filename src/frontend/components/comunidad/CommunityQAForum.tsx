@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { motion } from "framer-motion";
-import { Sparkles, Flame, MessageSquare, Plus, SearchX, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, Flame, MessageSquare, Plus, SearchX, Loader2, Search } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
@@ -35,6 +35,8 @@ type CommunityQAForumProps = {
   trendingTags: string[];
   sortBy: "newest" | "popular";
   setSortBy: (val: "newest" | "popular") => void;
+  searchType?: "semantic" | "textual" | null;
+  totalCount?: number;
 };
 
 export default function CommunityQAForum({
@@ -56,7 +58,9 @@ export default function CommunityQAForum({
   isFetchingNextPage,
   trendingTags,
   sortBy,
-  setSortBy
+  setSortBy,
+  searchType,
+  totalCount
 }: CommunityQAForumProps) {
   const { status } = useSession();
   const { t } = useLanguage();
@@ -81,6 +85,7 @@ export default function CommunityQAForum({
             activeFilters={activeFilters}
             setActiveFilter={setActiveFilter}
             isSearching={isSearching}
+            searchType={searchType}
           />
 
           {/* MIDDLE COLUMN: Feed */}
@@ -119,21 +124,87 @@ export default function CommunityQAForum({
                     <Flame className={cn("w-4 h-4", sortBy === "popular" ? "text-primary animate-pulse" : "text-muted-foreground")} /> {t.forum.sort.popular}
                   </button>
                 </div>
-                <div className="flex items-center gap-2">
-                  {isSearching && questions.length > 0 && (
-                    <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
-                  )}
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    {t.forum.qaList.results.replace("{count}", String(questions.length))}
-                  </span>
+                <div className="flex items-center gap-3">
+                  <AnimatePresence mode="popLayout">
+                    {isSearching && questions.length > 0 ? (
+                      <motion.div
+                        key="loading-badge"
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: "auto" }}
+                        exit={{ opacity: 0, width: 0 }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 relative overflow-hidden"
+                      >
+                        <motion.div
+                          animate={{ x: ["-100%", "200%"] }}
+                          transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                          className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-transparent via-primary/20 to-transparent -skew-x-12"
+                        />
+                        <motion.div
+                          animate={{ rotate: [-15, 15, -15], scale: [1, 1.1, 1] }}
+                          transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
+                        >
+                          <Search className="w-3.5 h-3.5 text-primary drop-shadow-[0_0_2px_rgba(var(--primary),0.5)]" />
+                        </motion.div>
+                        <span className="text-[10px] font-bold text-primary uppercase tracking-widest z-10 relative">
+                          Actualizando...
+                        </span>
+                      </motion.div>
+                    ) : (
+                      <motion.span
+                        key="results-label"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="text-xs font-bold text-muted-foreground uppercase tracking-wider"
+                      >
+                        {totalCount !== undefined 
+                          ? t.forum.qaList.resultsWithTotal.replace("{count}", String(questions.length)).replace("{total}", String(totalCount))
+                          : t.forum.qaList.results.replace("{count}", String(questions.length))
+                        }
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
 
               <div className="space-y-4">
                 {isSearching && questions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-24">
-                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                  </div>
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center justify-center py-32 space-y-8"
+                  >
+                    <div className="relative">
+                      <motion.div
+                        animate={{ scale: [1, 1.5, 1], opacity: [0.2, 0.5, 0.2] }}
+                        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                        className="absolute inset-0 rounded-full bg-primary/20 blur-xl"
+                      />
+                      <div className="relative bg-background border border-primary/20 w-20 h-20 rounded-3xl flex items-center justify-center shadow-2xl shadow-primary/10">
+                        <motion.div
+                          animate={{ rotate: [0, 10, -10, 0] }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                          <Search className="w-10 h-10 text-primary drop-shadow-md" />
+                        </motion.div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center gap-3">
+                      <h3 className="text-sm font-semibold text-foreground/80 tracking-widest uppercase">
+                        Explorando conocimientos
+                      </h3>
+                      <div className="flex gap-1.5">
+                        {[0, 1, 2].map((i) => (
+                          <motion.div
+                            key={i}
+                            animate={{ opacity: [0.2, 1, 0.2], scale: [0.8, 1.2, 0.8] }}
+                            transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+                            className="w-1.5 h-1.5 rounded-full bg-primary/70"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
                 ) : questions.length === 0 ? (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
