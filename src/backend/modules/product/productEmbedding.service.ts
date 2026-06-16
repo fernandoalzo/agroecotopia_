@@ -1,34 +1,16 @@
-import type { Product } from "@prisma/client";
-import { ProductEmbeddingRepository } from "./productEmbedding.repository";
-import { OllamaProvider } from "@/backend/modules/ai/providers/ollama";
+import prisma from "@/backend/db/prisma";
+import { EmbeddingRepository, EmbeddingService } from "@/backend/modules/shared/embedding";
 import { config } from "@/config/config";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/product/productEmbedding.service.ts");
 
-const CHECK_TTL = 60_000;
-
 export class ProductEmbeddingService {
-  private provider: OllamaProvider | null = null;
-  private lastAvailabilityCheck = 0;
-  private availabilityCache: { available: boolean; reason?: string } | null = null;
+  private genericService: EmbeddingService;
 
-  constructor(
-    private repository: ProductEmbeddingRepository,
-  ) {}
-
-  private getProvider(): OllamaProvider {
-    if (!this.provider) {
-      this.provider = new OllamaProvider({
-        apiKey: "",
-        baseUrl: config.ollama.baseUrl,
-        defaultModel: "llama3.2",
-        embeddingModel: config.ollama.embeddingModel,
-        maxRetries: 1,
-        timeout: config.ollama.timeout,
-      });
-    }
-    return this.provider;
+  constructor() {
+    const repository = new EmbeddingRepository('ProductEmbedding', 'productId');
+    this.genericService = new EmbeddingService(repository, { batchSize: config.embedding.batchSize });
   }
 
   buildEmbeddingText(product: { name: string; description: string; tag: string; categories?: Array<{ name: string }> | string[] }): string {
@@ -44,46 +26,7 @@ export class ProductEmbeddingService {
   }
 
   async isSemanticSearchAvailable(): Promise<{ available: boolean; reason?: string }> {
-    const now = Date.now();
-    if (this.availabilityCache && (now - this.lastAvailabilityCheck) < CHECK_TTL) {
-      return this.availabilityCache;
-    }
-
-    try {
-      const provider = this.getProvider();
-      const modelAvailable = await provider.isAvailable();
-      if (!modelAvailable) {
-        this.availabilityCache = {
-          available: false,
-          reason: `Modelo ${config.ollama.embeddingModel} no disponible en Ollama (${config.ollama.baseUrl})`,
-        };
-        log.warn("🤖 [SemanticSearch] " + this.availabilityCache.reason);
-        this.lastAvailabilityCheck = now;
-        return this.availabilityCache;
-      }
-
-      const stats = await this.getStats();
-      if (stats.withEmbedding === 0) {
-        this.availabilityCache = {
-          available: false,
-          reason: "No hay productos con embeddings generados",
-        };
-        log.warn("🤖 [SemanticSearch] " + this.availabilityCache.reason);
-        this.lastAvailabilityCheck = now;
-        return this.availabilityCache;
-      }
-
-      this.availabilityCache = { available: true };
-    } catch (error) {
-      this.availabilityCache = {
-        available: false,
-        reason: `Error verificando disponibilidad: ${error}`,
-      };
-      log.warn("🤖 [SemanticSearch] " + this.availabilityCache.reason);
-    }
-
-    this.lastAvailabilityCheck = now;
-    return this.availabilityCache;
+    return this.genericService.isAvailable();
   }
 
   async generateForProduct(product: {
@@ -93,96 +36,80 @@ export class ProductEmbeddingService {
     tag: string;
     categories?: Array<{ name: string }> | string[];
   }): Promise<number[] | null> {
-    try {
-      const provider = this.getProvider();
-      const available = await provider.isAvailable();
-      if (!available) {
-        log.warn("🤖 [Embedding] Ollama no disponible, embedding será nulo para:", product.id);
-        return null;
-      }
-
-      const text = this.buildEmbeddingText(product);
-      const response = await provider.embed(text);
-
-      if (!response.embedding || response.embedding.length === 0) {
-        log.warn("🤖 [Embedding] Embedding vacío para producto:", product.id);
-        return null;
-      }
-
-      await this.repository.upsert(product.id, response.embedding);
-      log.info("🤖 [Embedding] Embedding generado para:", { productId: product.id, dimensions: response.embedding.length });
-      this.availabilityCache = null;
-      return response.embedding;
-    } catch (error) {
-      log.warn("🤖 [Embedding] Error generando embedding, será nulo:", { productId: product.id, error });
-      return null;
-    }
+    const text = this.buildEmbeddingText(product);
+    return this.genericService.generateForEntity(product.id, text);
   }
 
   async generateAll(): Promise<{ success: number; failed: number; skipped: number }> {
-    const batchSize = config.embedding.batchSize;
-    const total = await this.repository.countTotal();
-    const alreadyDone = await this.repository.countWithEmbedding();
-    const pending = total - alreadyDone;
+    const pending = await this.countTotal() - await this.genericService.countWithEmbedding();
+    if (pending === 0) return { success: 0, failed: 0, skipped: 0 };
 
-    log.info("🤖 [Embedding] Generación masiva:", { total, alreadyDone, pending, batchSize });
-
-    if (pending === 0) return { success: 0, failed: 0, skipped: pending };
-
-    const products = await this.repository.productsWithoutEmbedding(batchSize);
-    let success = 0;
-    let failed = 0;
-
-    for (const product of products) {
-      const result = await this.generateForProduct(product);
-      if (result) success++;
-      else failed++;
-    }
-
-    log.info("🤖 [Embedding] Lote completado:", { success, failed, pending });
-    return { success, failed, skipped: pending - products.length };
+    return this.genericService.generateAll(async (limit) => {
+      const rows = await prisma.$queryRawUnsafe<
+        Array<{ id: string; name: string; description: string; tag: string; categories: Array<{ name: string }> }>
+      >(
+        `SELECT p.id, p.name, p.description, p.tag,
+                COALESCE(
+                  json_agg(json_build_object('name', c.name)) FILTER (WHERE c.name IS NOT NULL),
+                  '[]'::json
+                ) AS categories
+         FROM "Product" p
+         LEFT JOIN "ProductEmbedding" pe ON pe."productId" = p.id
+         LEFT JOIN "_CategoriaToProduct" cp ON cp."A" = p.id
+         LEFT JOIN "Categoria" c ON c.id = cp."B"
+         WHERE pe."productId" IS NULL
+         GROUP BY p.id
+         LIMIT $1`,
+        limit,
+      );
+      return rows.map(r => ({
+        id: r.id,
+        text: this.buildEmbeddingText({
+          name: r.name,
+          description: r.description,
+          tag: r.tag,
+          categories: r.categories ?? [],
+        }),
+      }));
+    });
   }
 
   async searchSimilar(
     query: string,
-    limit: number = 20,
+    limit: number = 200,
     storeId?: string,
     categories?: string[],
-  ): Promise<Array<{
-    id: string;
-    name: string;
-    description: string;
-    price: number;
-    images: string[];
-    tag: string;
-    storeId: string;
-    similarity: number;
-  }>> {
-    const availability = await this.isSemanticSearchAvailable();
-    if (!availability.available) {
-      return [];
+  ): Promise<Array<{ id: string; similarity: number }>> {
+    const results = await this.genericService.searchSimilar(query, limit, 0.6);
+    if (results.length === 0) return [];
+    if (!storeId && !categories?.length) {
+      return results.map(r => ({ id: r.entityId, similarity: r.similarity }));
     }
 
-    try {
-      const provider = this.getProvider();
-      const response = await provider.embed(query);
-      if (!response.embedding) return [];
-
-      return this.repository.searchSimilar(response.embedding, limit, storeId, categories);
-    } catch (error) {
-      log.warn("🤖 [Embedding] Error en búsqueda semántica:", { error });
-      return [];
-    }
+    const ids = results.map(r => r.entityId);
+    const products = await prisma.product.findMany({
+      where: {
+        id: { in: ids },
+        ...(storeId ? { storeId } : {}),
+        ...(categories?.length ? { categories: { some: { name: { in: categories } } } } : {}),
+      },
+      select: { id: true },
+    });
+    const filteredIds = new Set(products.map(p => p.id));
+    return results
+      .filter(r => filteredIds.has(r.entityId))
+      .map(r => ({ id: r.entityId, similarity: r.similarity }));
   }
 
   async getStats(): Promise<{ total: number; withEmbedding: number; pending: number; percentage: number }> {
-    const total = await this.repository.countTotal();
-    const withEmbedding = await this.repository.countWithEmbedding();
-    return {
-      total,
-      withEmbedding,
-      pending: total - withEmbedding,
-      percentage: total > 0 ? Math.round((withEmbedding / total) * 100) : 0,
-    };
+    const total = await this.countTotal();
+    return this.genericService.getStats(total);
+  }
+
+  private async countTotal(): Promise<number> {
+    const rows = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
+      `SELECT COUNT(*) FROM "Product"`,
+    );
+    return Number(rows[0].count);
   }
 }

@@ -1,6 +1,5 @@
 import { ProductRepository } from "./product.repository";
 import { ProductService } from "./product.service";
-import { ProductEmbeddingRepository } from "./productEmbedding.repository";
 import { ProductEmbeddingService } from "./productEmbedding.service";
 import { CacheService } from "@/backend/cache";
 import { config } from "@/config/config";
@@ -11,8 +10,7 @@ const log = logger.child("src/backend/modules/product/index.ts");
 const cacheService = new CacheService();
 
 export const productRepository = new ProductRepository(cacheService);
-export const productEmbeddingRepository = new ProductEmbeddingRepository();
-export const productEmbeddingService = new ProductEmbeddingService(productEmbeddingRepository);
+export const productEmbeddingService = new ProductEmbeddingService();
 export const productService = new ProductService(productRepository, productEmbeddingService);
 
 if (config.ai.features.semanticSearch) {
