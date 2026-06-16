@@ -77,11 +77,6 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
     setIsLoading(false);
   }, [initialData]);
 
-  // Sync internal searchTerm if URL queryParam changes
-  useEffect(() => {
-    setSearchTerm(queryParam);
-  }, [queryParam]);
-
   // Navigation Logic
   const updateUrl = useCallback((newQuery: string, newPage: number, newLimit: number, newCategory?: string) => {
     setIsLoading(true);
@@ -100,7 +95,7 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
     params.set("page", newPage.toString());
     params.set("limit", newLimit.toString());
 
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [searchParams, router, pathname, categoryParam]);
 
   // Search Debounce Logic
@@ -110,7 +105,7 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
 
     const delayDebounceFn = setTimeout(() => {
       updateUrl(query, 1, limitParam);
-    }, 500);
+    }, 300);
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, queryParam, limitParam, updateUrl]);

@@ -1,0 +1,8 @@
+/// Almacena el embedding vectorial del producto para búsqueda semántica (pgvector).
+/// Relación 1:1 con Product. La columna embedding usa vector(1536) compatible con deepseek-embedding.
+model ProductEmbedding {
+  productId String                        @id
+  product   Product                       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  embedding Unsupported("vector(4096)")
+  updatedAt DateTime                      @updatedAt
+}

@@ -200,6 +200,31 @@ export async function deleteStoreProductAction(storeId: string, productId: strin
   });
 }
 
+export async function generateProductEmbeddingsAction() {
+  return withAdmin(async () => {
+    try {
+      const result = await productService.generateAllEmbeddings();
+      const stats = await productService.getEmbeddingStats();
+      log.info("🤖 [Action] Embeddings generados:", result);
+      revalidatePath("/admin/productos");
+      return { success: true, data: { ...result, total: stats?.total ?? 0 } };
+    } catch (error) {
+      log.error("🤖 [Action] Error generando embeddings:", error);
+      return { success: false, error: "Error al generar embeddings" };
+    }
+  });
+}
+
+export async function getEmbeddingStatsAction() {
+  try {
+    const stats = await productService.getEmbeddingStats();
+    return { success: true, data: stats ?? undefined };
+  } catch (error) {
+    log.error("Error obteniendo estadísticas de embeddings:", error);
+    return { success: false, error: "Error al obtener estadísticas" };
+  }
+}
+
 export async function getStoreProductsAction(storeId: string, page: number = 1, limit: number = 20) {
   return withStoreOwner(storeId, async () => {
     log.info(`Action: getStoreProductsAction`, { storeId, page });

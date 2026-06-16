@@ -1,15 +1,17 @@
 import type { Product } from "@prisma/client";
 import { ProductRepository } from "./product.repository";
+import { ProductEmbeddingService } from "./productEmbedding.service";
+import { config } from "@/config/config";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/product/product.service.ts");
 
 export class ProductService {
-  constructor(private productRepository: ProductRepository) {}
+  constructor(
+    private productRepository: ProductRepository,
+    private embeddingService?: ProductEmbeddingService,
+  ) {}
 
-  /**
-   * Obtiene la colección paginada de productos para el catálogo, opcionalmente filtrados por categorías (como string de comas).
-   */
   async getCatalog(page: number = 1, limit: number = 20, category?: string, storeId?: string): Promise<{ products: any[], total: number, totalPages: number }> {
     try {
       const skip = (page - 1) * limit;
@@ -31,14 +33,31 @@ export class ProductService {
     }
   }
 
-  /**
-   * Realiza la búsqueda paginada de productos en la base de datos, opcionalmente filtrados por categorías (como string de comas).
-   */
   async searchProducts(query: string, page: number = 1, limit: number = 20, category?: string, storeId?: string): Promise<{ products: any[], total: number, totalPages: number }> {
     if (!query || query.trim().length === 0) return { products: [], total: 0, totalPages: 0 };
     
-    const skip = (page - 1) * limit;
     const categories = category ? category.split(",").filter(Boolean) : [];
+
+    if (this.embeddingService && config.ai.features.semanticSearch) {
+      try {
+        const similar = await this.embeddingService.searchSimilar(query, 200, storeId, categories.length > 0 ? categories : undefined);
+        if (similar.length > 0) {
+          const productIds = similar.map(s => s.id);
+          const products = await this.productRepository.getProductsByIds(productIds, categories);
+          const total = products.length;
+          const skip = (page - 1) * limit;
+          return {
+            products: products.slice(skip, skip + limit).map(p => this.serializeProduct(p)),
+            total,
+            totalPages: Math.ceil(total / limit),
+          };
+        }
+      } catch (error) {
+        log.warn("Búsqueda semántica falló, usando fallback textual:", error);
+      }
+    }
+
+    const skip = (page - 1) * limit;
 
     const [products, total] = await Promise.all([
       this.productRepository.searchProducts(query, skip, limit, categories, storeId),
@@ -52,12 +71,10 @@ export class ProductService {
     };
   }
 
-  /**
-   * Crea un nuevo producto en la base de datos (Admin).
-   */
   async createProduct(data: Omit<Product, "id" | "createdAt" | "updatedAt">): Promise<any> {
     try {
       const created = await this.productRepository.createProduct(data);
+      this.generateEmbeddingAsync(created);
       return this.serializeProduct(created);
     } catch (error: any) {
       log.error(`Error creating product:`, error);
@@ -65,14 +82,11 @@ export class ProductService {
     }
   }
 
-  /**
-   * Crea un nuevo producto vinculado a una tienda.
-   */
   async createStoreProduct(storeId: string, data: Omit<Product, "id" | "createdAt" | "updatedAt" | "storeId" | "store">): Promise<any> {
     try {
       log.info(`Creando producto para tienda ${storeId}`);
-      // The auth guard ensures the user owns this store or is admin
       const created = await this.productRepository.createProduct({ ...data, storeId });
+      this.generateEmbeddingAsync(created);
       return this.serializeProduct(created);
     } catch (error: any) {
       log.error(`Error creating store product:`, error);
@@ -80,9 +94,6 @@ export class ProductService {
     }
   }
 
-  /**
-   * Obtiene los productos de una tienda paginados.
-   */
   async getStoreProducts(storeId: string, page: number = 1, limit: number = 20): Promise<{ products: any[], total: number, totalPages: number }> {
     try {
       const skip = (page - 1) * limit;
@@ -103,9 +114,6 @@ export class ProductService {
     }
   }
 
-  /**
-   * Obtiene un producto completo por ID.
-   */
   async getProductById(id: string): Promise<any | null> {
     try {
       const product = await this.productRepository.getProductById(id);
@@ -116,9 +124,6 @@ export class ProductService {
     }
   }
 
-  /**
-   * Obtiene todas las categorías únicas de la base de datos.
-   */
   async getCategories(): Promise<string[]> {
     try {
       return await this.productRepository.getCategories();
@@ -128,15 +133,12 @@ export class ProductService {
     }
   }
 
-  /**
-   * Actualiza un producto existente en la base de datos.
-   */
   async updateProduct(id: string, data: Partial<Product>): Promise<any> {
     try {
-      // Data pre-processing if necessary (e.g. converting stock to Decimal if passed as number)
       const updateData = { ...data };
       
       const updated = await this.productRepository.updateProduct(id, updateData);
+      this.generateEmbeddingAsync(updated);
       return this.serializeProduct(updated);
     } catch (error) {
       log.error(`Error updating product ${id}:`, error);
@@ -152,6 +154,7 @@ export class ProductService {
       }
 
       const updated = await this.productRepository.updateStoreProduct(storeId, id, data);
+      this.generateEmbeddingAsync(updated);
       return this.serializeProduct(updated);
     } catch (error) {
       log.error("Error updating store product:", { storeId, id, error });
@@ -159,9 +162,6 @@ export class ProductService {
     }
   }
 
-  /**
-   * Elimina un producto de la base de datos.
-   */
   async deleteProduct(id: string): Promise<boolean> {
     try {
       await this.productRepository.deleteProduct(id);
@@ -186,9 +186,6 @@ export class ProductService {
     }
   }
 
-  /**
-   * Obtiene el conteo de productos por cada categoría.
-   */
   async getCategoryCounts(storeId?: string): Promise<Record<string, number>> {
     try {
       return await this.productRepository.getCategoryCounts(storeId);
@@ -198,9 +195,29 @@ export class ProductService {
     }
   }
 
-  /**
-   * Convierte objetos Decimal de Prisma a numbers para que sean serializables
-   */
+  async getEmbeddingStats() {
+    if (!this.embeddingService) return null;
+    return this.embeddingService.getStats();
+  }
+
+  async generateAllEmbeddings(): Promise<{ success: number; failed: number; skipped: number }> {
+    if (!this.embeddingService) return { success: 0, failed: 0, skipped: 0 };
+    return this.embeddingService.generateAll();
+  }
+
+  private generateEmbeddingAsync(product: any): void {
+    if (!this.embeddingService || !product?.id) return;
+    this.embeddingService.generateForProduct({
+      id: product.id,
+      name: product.name || "",
+      description: product.description || "",
+      tag: product.tag || "",
+      categories: product.categories,
+    }).catch((err) => {
+      log.warn("🤖 [Embedding] Error async al generar embedding (no crítico):", err);
+    });
+  }
+
   private serializeProduct(product: any) {
     return {
       ...product,

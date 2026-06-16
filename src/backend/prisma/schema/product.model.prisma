@@ -16,10 +16,11 @@ model Product {
 
   storeId        String
   detallesPedido DetallePedido[]
-  store          Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  promotions     Promotion[]     @relation("ProductPromotions")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  store          Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  promotions     Promotion[]       @relation("ProductPromotions")
+  embedding      ProductEmbedding?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   @@index([storeId, createdAt])
 }

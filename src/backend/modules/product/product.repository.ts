@@ -45,6 +45,33 @@ export class ProductRepository {
   }
 
   /**
+   * Obtiene productos por array de IDs (para búsqueda semántica donde ya tenemos los IDs ordenados por similitud).
+   */
+  async getProductsByIds(ids: string[], categories?: string[]): Promise<Product[]> {
+    if (ids.length === 0) return [];
+    const products = await prisma.product.findMany({
+      where: {
+        id: { in: ids },
+        ...(categories && categories.length > 0 ? { categories: { some: { name: { in: categories } } } } : {}),
+      },
+      include: {
+        categories: true,
+        promotions: { where: { isActive: true } },
+        store: {
+          select: {
+            id: true, name: true, slug: true, logo: true,
+            promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
+          }
+        }
+      },
+    });
+
+    // Mantener el orden del array original (por similitud)
+    const productMap = new Map(products.map(p => [p.id, p]));
+    return ids.map(id => productMap.get(id)).filter(Boolean) as Product[];
+  }
+
+  /**
    * Obtiene el total de productos en la base de datos, opcionalmente filtrados por una o más categorías.
    */
   async getTotalCount(categories?: string[], storeId?: string): Promise<number> {
@@ -157,6 +184,54 @@ export class ProductRepository {
       },
       config.cache.ttl.searchResults,
     ) ?? [];
+  }
+
+  /**
+   * Búsqueda semántica por similitud coseno usando pgvector.
+   * Recibe un array de embeddings ya resuelto (el service se encarga de llamar a Ollama).
+   */
+  async semanticSearch(
+    embedding: number[],
+    limit: number = 20,
+    categories?: string[],
+    storeId?: string,
+  ): Promise<Product[]> {
+    const vector = `[${embedding.join(",")}]`;
+    const conditions: string[] = [];
+    const params: any[] = [vector, String(limit)];
+    let idx = 3;
+
+    if (storeId) {
+      conditions.push(`p."storeId" = $${idx++}`);
+      params.push(storeId);
+    } else {
+      conditions.push(`s.status = 'ACTIVE'`);
+    }
+
+    if (categories && categories.length > 0) {
+      conditions.push(`EXISTS (
+        SELECT 1 FROM "_CategoriaToProduct" cp
+        JOIN "Categoria" c ON c.id = cp."B"
+        WHERE cp."A" = p.id AND c.name = ANY($${idx}::text[])
+      )`);
+      params.push(categories);
+    }
+
+    const where = conditions.join(" AND ");
+
+    const query = `
+      SELECT p.*
+      FROM "ProductEmbedding" pe
+      JOIN "Product" p ON p.id = pe."productId"
+      JOIN "Store" s ON s.id = p."storeId"
+      WHERE pe.embedding IS NOT NULL AND ${where}
+      ORDER BY pe.embedding <=> $1::vector
+      LIMIT $2
+    `;
+
+    log.debug("[db] Búsqueda semántica:", { categories, storeId, limit });
+
+    return prisma.$queryRawUnsafe<Product[]>(query, ...params);
   }
 
   /**

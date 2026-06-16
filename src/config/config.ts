@@ -95,14 +95,25 @@ export const config = {
       embedding: process.env.AI_MODEL_EMBEDDING || 'deepseek-embedding',
     },
     features: {
-      semanticSearch: false,
-      chatbot: false,
-      vision: false,
-      moderation: false,
-      translation: false,
-      forecasting: false,
-      pricing: false,
+      semanticSearch: process.env.AI_FEATURE_SEMANTIC_SEARCH === 'true',
+      chatbot: process.env.AI_FEATURE_CHATBOT === 'true',
+      vision: process.env.AI_FEATURE_VISION === 'true',
+      moderation: process.env.AI_FEATURE_MODERATION === 'true',
+      translation: process.env.AI_FEATURE_TRANSLATION === 'true',
+      forecasting: process.env.AI_FEATURE_FORECASTING === 'true',
+      pricing: process.env.AI_FEATURE_PRICING === 'true',
     },
+  },
+
+  ollama: {
+    baseUrl: process.env.OLLAMA_BASE_URL || 'http://192.168.1.2:11434',
+    embeddingModel: process.env.OLLAMA_EMBEDDING_MODEL || 'qwen3-embedding:8b',
+    timeout: Number(process.env.OLLAMA_TIMEOUT || 15000),
+  },
+
+  embedding: {
+    dimensions: Number(process.env.EMBEDDING_DIMENSIONS || 4096),
+    batchSize: Number(process.env.EMBEDDING_BATCH_SIZE || 10),
   },
 
   cache: {
