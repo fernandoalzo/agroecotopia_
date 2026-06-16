@@ -1,4 +1,5 @@
 import { ForumRepository } from "./forum.repository";
+import { ForumPostEmbeddingService } from "./forumPostEmbedding.service";
 import { notificationsService } from "@/backend/modules/notifications";
 import type { UserRepository } from "@/backend/modules/user/user.repository";
 import logger from "@/utils/logger";
@@ -12,8 +13,33 @@ export class ForumService {
   constructor(
     private readonly forumRepository: ForumRepository,
     private readonly userRepository: UserRepository,
+    private readonly embeddingService?: ForumPostEmbeddingService,
   ) { }
 
+  async getPosts(activeFilters?: Record<string, string[]>, searchQuery?: string, limit?: number, cursor?: string, sortBy?: "newest" | "popular") {
+    if (searchQuery && searchQuery.trim() !== "" && this.embeddingService && config.ai.features.semanticSearch) {
+      try {
+        const labels = activeFilters
+          ? Object.values(activeFilters).flat().filter(Boolean)
+          : undefined;
+        const similar = await this.embeddingService.searchSimilar(searchQuery, 200, labels);
+        if (similar.length > 0) {
+          const postIds = similar.map(s => s.id);
+          const posts = await this.forumRepository.getPostsByIds(postIds, labels);
+          const total = posts.length;
+          const pageLimit = limit ?? 10;
+          const startIndex = cursor ? postIds.indexOf(cursor) + 1 : 0;
+          const sliced = posts.slice(startIndex, startIndex + pageLimit);
+          const nextCursor = sliced.length === pageLimit ? sliced[sliced.length - 1].id : undefined;
+          return { posts: sliced, nextCursor };
+        }
+      } catch (error) {
+        log.warn("Búsqueda semántica en foro falló, usando fallback textual:", error);
+      }
+    }
+
+    return await this.forumRepository.getPosts(activeFilters, searchQuery, limit, cursor, sortBy);
+  }
   async createPost(
     data: { title: string; body: string; labels: string[] },
     authorId: string,
@@ -31,6 +57,18 @@ export class ForumService {
 
     const post = await this.forumRepository.createPost(data, authorId);
     const nls = getForumNotificationStrings(locale);
+
+    // Generate embedding asynchronously if semantic search is enabled
+    if (this.embeddingService && config.ai.features.semanticSearch) {
+      this.embeddingService.generateForPost({
+        id: post.id,
+        title: post.title,
+        body: post.body,
+        labels: post.labels,
+      }).catch((err) => {
+        log.warn("🤖 [Embedding] Error async al generar embedding para post del foro:", err);
+      });
+    }
 
     // Notify all admins about the new post
     this.userRepository.findAdmins().then(admins => {
@@ -59,10 +97,6 @@ export class ForumService {
     eventBus.emit("forum:post_created", { postId: post.id, post });
 
     return post;
-  }
-
-  async getPosts(activeFilters?: Record<string, string[]>, searchQuery?: string, limit?: number, cursor?: string, sortBy?: "newest" | "popular") {
-    return await this.forumRepository.getPosts(activeFilters, searchQuery, limit, cursor, sortBy);
   }
 
   async getPostById(id: string) {
@@ -239,6 +273,18 @@ export class ForumService {
 
     const updatedPost = await this.forumRepository.updatePost(postId, data);
 
+    // Regenerate embedding asynchronously if semantic search is enabled
+    if (this.embeddingService && config.ai.features.semanticSearch) {
+      this.embeddingService.generateForPost({
+        id: postId,
+        title: updatedPost.title,
+        body: updatedPost.body,
+        labels: updatedPost.labels,
+      }).catch((err) => {
+        log.warn("🤖 [Embedding] Error async al regenerar embedding para post del foro:", err);
+      });
+    }
+
     eventBus.emit("forum:post_updated", { postId, post: updatedPost, _room: `forum:post:${postId}` });
 
     return updatedPost;
@@ -290,5 +336,15 @@ export class ForumService {
 
   async getTrendingLabels() {
     return await this.forumRepository.getTrendingLabels();
+  }
+
+  async getEmbeddingStats() {
+    if (!this.embeddingService) return null;
+    return this.embeddingService.getStats();
+  }
+
+  async generateAllEmbeddings(): Promise<{ success: number; failed: number; skipped: number }> {
+    if (!this.embeddingService) return { success: 0, failed: 0, skipped: 0 };
+    return this.embeddingService.generateAll();
   }
 }

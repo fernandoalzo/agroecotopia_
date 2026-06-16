@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronDown, Hash, Check, X } from "lucide-react";
+import { Search, ChevronDown, Hash, Check, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { config } from "@/config/config";
 import { useLanguage } from "@/context/LanguageContext";
@@ -12,6 +12,7 @@ interface ForumSidebarProps {
   setSearchQuery: (val: string) => void;
   activeFilters: Record<string, string[]>;
   setActiveFilter: (category: string, value: string) => void;
+  isSearching?: boolean;
 }
 
 function FilterCategory({
@@ -126,7 +127,8 @@ export default function ForumSidebar({
   searchQuery,
   setSearchQuery,
   activeFilters,
-  setActiveFilter
+  setActiveFilter,
+  isSearching
 }: ForumSidebarProps) {
   const { t } = useLanguage();
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
@@ -135,7 +137,11 @@ export default function ForumSidebar({
   return (
     <div className="w-full lg:col-span-3 lg:sticky lg:top-28 space-y-6 lg:space-y-8">
       <div className="relative">
-        <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        {isSearching ? (
+          <Loader2 className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-spin" />
+        ) : (
+          <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        )}
         <input
           type="text"
           placeholder={t.forum.sidebar.searchPlaceholder}

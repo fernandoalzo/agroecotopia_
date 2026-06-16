@@ -1,9 +1,10 @@
 "use server";
 
 import { headers } from "next/headers";
-import { forumService } from "./index";
-import { withAuth } from "@/lib/auth-guards";
+import { forumService, forumPostEmbeddingService } from "./index";
+import { withAuth, withAdmin } from "@/lib/auth-guards";
 import logger from "@/utils/logger";
+import { revalidatePath } from "next/cache";
 
 const log = logger.child();
 
@@ -187,5 +188,30 @@ export async function getTrendingLabelsAction() {
   } catch (error: unknown) {
     log.error("Failed to get trending labels:", error);
     return { success: false, error: getErrorMessage(error) };
+  }
+}
+
+export async function generateForumPostEmbeddingsAction() {
+  return withAdmin(async () => {
+    try {
+      const result = await forumPostEmbeddingService.generateAll();
+      const stats = await forumPostEmbeddingService.getStats();
+      log.info("🤖 [Action] Embeddings de foro generados:", result);
+      revalidatePath("/admin/foro");
+      return { success: true, data: { ...result, total: stats?.total ?? 0 } };
+    } catch (error) {
+      log.error("🤖 [Action] Error generando embeddings de foro:", error);
+      return { success: false, error: "Error al generar embeddings" };
+    }
+  });
+}
+
+export async function getForumPostEmbeddingStatsAction() {
+  try {
+    const stats = await forumPostEmbeddingService.getStats();
+    return { success: true, data: stats ?? undefined };
+  } catch (error) {
+    log.error("Error obteniendo estadísticas de embeddings del foro:", error);
+    return { success: false, error: "Error al obtener estadísticas" };
   }
 }

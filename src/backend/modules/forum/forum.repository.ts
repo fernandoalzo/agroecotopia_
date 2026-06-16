@@ -50,11 +50,13 @@ export class ForumRepository {
         const where: Prisma.ForumPostWhereInput = {};
 
         if (searchQuery && searchQuery.trim() !== "") {
-          const formattedQuery = searchQuery.trim().split(/\s+/).join(" | ");
-          where.OR = [
-            { title: { search: formattedQuery } },
-            { body: { search: formattedQuery } },
-          ];
+          const terms = searchQuery.trim().split(/\s+/);
+          where.OR = terms.map(term => ({
+            OR: [
+              { title: { contains: term, mode: "insensitive" as const } },
+              { body: { contains: term, mode: "insensitive" as const } },
+            ],
+          }));
         }
 
         if (activeFilters && Object.keys(activeFilters).length > 0) {
@@ -122,6 +124,23 @@ export class ForumRepository {
       },
       config.cache.ttl.forumPostDetail,
     ) ?? null;
+  }
+
+  async getPostsByIds(ids: string[], labels?: string[]): Promise<any[]> {
+    if (ids.length === 0) return [];
+    const where: Prisma.ForumPostWhereInput = { id: { in: ids } };
+    if (labels?.length) {
+      where.labels = { hasSome: labels };
+    }
+    const posts = await prisma.forumPost.findMany({
+      where,
+      include: {
+        author: { select: { id: true, name: true, image: true, role: true } },
+        _count: { select: { answers: true } },
+      },
+    });
+    const postMap = new Map(posts.map(p => [p.id, p]));
+    return ids.map(id => postMap.get(id)).filter(Boolean);
   }
 
   async deletePost(id: string) {

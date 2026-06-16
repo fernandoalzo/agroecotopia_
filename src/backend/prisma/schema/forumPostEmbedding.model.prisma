@@ -1,0 +1,8 @@
+/// Almacena el embedding vectorial del post del foro para búsqueda semántica (pgvector).
+/// Relación 1:1 con ForumPost. La columna embedding usa vector(4096) compatible con deepseek-embedding.
+model ForumPostEmbedding {
+  postId    String                        @id
+  post      ForumPost                     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  embedding Unsupported("vector(4096)")
+  updatedAt DateTime                      @updatedAt
+}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import { Sparkles, Flame, MessageSquare, Plus, SearchX } from "lucide-react";
+import { Sparkles, Flame, MessageSquare, Plus, SearchX, Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
@@ -22,6 +22,7 @@ type CommunityQAForumProps = {
   isStatsLoading?: boolean;
   isContributorsLoading?: boolean;
   isTrendingLoading?: boolean;
+  isSearching?: boolean;
   crearNuevaPublicacion: (data: { title: string; body: string; labels: string[] }) => Promise<void> | void;
   handleRate: (itemId: string, rating: number) => void;
   searchQuery: string;
@@ -43,6 +44,7 @@ export default function CommunityQAForum({
   isStatsLoading,
   isContributorsLoading,
   isTrendingLoading,
+  isSearching,
   crearNuevaPublicacion,
   handleRate,
   searchQuery,
@@ -78,6 +80,7 @@ export default function CommunityQAForum({
             setSearchQuery={setSearchQuery}
             activeFilters={activeFilters}
             setActiveFilter={setActiveFilter}
+            isSearching={isSearching}
           />
 
           {/* MIDDLE COLUMN: Feed */}
@@ -116,13 +119,22 @@ export default function CommunityQAForum({
                     <Flame className={cn("w-4 h-4", sortBy === "popular" ? "text-primary animate-pulse" : "text-muted-foreground")} /> {t.forum.sort.popular}
                   </button>
                 </div>
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                  {t.forum.qaList.results.replace("{count}", String(questions.length))}
-                </span>
+                <div className="flex items-center gap-2">
+                  {isSearching && questions.length > 0 && (
+                    <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+                  )}
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    {t.forum.qaList.results.replace("{count}", String(questions.length))}
+                  </span>
+                </div>
               </div>
 
               <div className="space-y-4">
-                {questions.length === 0 ? (
+                {isSearching && questions.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-24">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                  </div>
+                ) : questions.length === 0 ? (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}

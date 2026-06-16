@@ -40,9 +40,15 @@ export default function ComunidadPageClient({
 }: ComunidadPageClientProps) {
   const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "popular">("newest");
 
   const { t } = useLanguage();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const queryClient = useQueryClient();
 
@@ -70,7 +76,7 @@ export default function ComunidadPageClient({
     isTrending: p.isTrending,
   });
 
-  const initialData = initialPosts.length > 0
+  const initialPageData = initialPosts.length > 0
     ? {
         pages: [{
           posts: (initialPosts as RawPost[]).map(mapRawPost),
@@ -82,14 +88,14 @@ export default function ComunidadPageClient({
 
   const {
     data: postsPages,
-    isLoading,
+    isFetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ["forumPosts", activeFilters, searchQuery, sortBy],
-    queryFn: async ({ pageParam = undefined }: { pageParam: string | undefined }) => {
-      const res = await getPosts(activeFilters, searchQuery, 10, pageParam, sortBy);
+    queryKey: ["forumPosts", activeFilters, debouncedQuery, sortBy],
+    queryFn: async ({ pageParam }: { pageParam: string | undefined }) => {
+      const res = await getPosts(activeFilters, debouncedQuery, 10, pageParam, sortBy);
       if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
       const rawPosts = res.posts as RawPost[];
       return {
@@ -97,7 +103,7 @@ export default function ComunidadPageClient({
         nextCursor: res.nextCursor as string | undefined,
       };
     },
-    initialData,
+    placeholderData: initialPageData,
     staleTime: 30000,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: undefined as string | undefined,
@@ -233,6 +239,7 @@ export default function ComunidadPageClient({
         isStatsLoading={isStatsPending}
         isContributorsLoading={isContributorsPending}
         isTrendingLoading={isTrendingPending}
+        isSearching={isFetching}
         crearNuevaPublicacion={crearNuevaPublicacion}
         handleRate={handleRate}
         searchQuery={searchQuery}

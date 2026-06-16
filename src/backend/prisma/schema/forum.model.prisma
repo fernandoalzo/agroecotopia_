@@ -10,6 +10,7 @@ model ForumPost {
   author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   answers     ForumAnswer[]
   ratings     ForumRating[]
+  embedding   ForumPostEmbedding?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
