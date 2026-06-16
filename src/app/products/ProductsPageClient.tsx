@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/context/LanguageContext";
 import { cn } from "@/lib/utils";
+import { searchProductsAction, getPaginatedProductsAction } from "@/backend/modules/product/product.actions";
 
 import { ChevronDown, SlidersHorizontal } from "lucide-react";
 
@@ -48,11 +49,9 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
 
   // Hydration state
   const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
-  // URL States
+  // URL States (solo lectura)
   const pageParam = Number(searchParams.get("page")) || 1;
   const limitParam = Number(searchParams.get("limit")) || 20;
   const queryParam = searchParams.get("q") || "";
@@ -63,52 +62,109 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
   const [searchTerm, setSearchTerm] = useState(queryParam);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
-  // Data derived from props
-  const { products: displayedProducts, total: totalCount, totalPages } = initialData;
+  // ── Resultados locales (no dependen de props) ──
+  const [products, setProducts] = useState(initialData.products);
+  const [total, setTotal] = useState(initialData.total);
+  const [totalPages, setTotalPages] = useState(initialData.totalPages);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Inicializar desde props solo en montaje
+  const hydrated = useRef(false);
+  useEffect(() => {
+    if (!hydrated.current) {
+      setProducts(initialData.products);
+      setTotal(initialData.total);
+      setTotalPages(initialData.totalPages);
+      hydrated.current = true;
+    }
+  }, [initialData]);
 
   // Selected categories list
   const selectedCategories = categoryParam ? categoryParam.split(",").filter(Boolean) : [];
 
-  // Loading state
-  const [isLoading, setIsLoading] = useState(false);
+  // ── Helpers compartidos ──
+  const fetchData = useCallback(async (q: string, p: number, l: number, cat: string) => {
+    const cats = cat ? cat.split(",").filter(Boolean) : [];
+    const catStr = cats.length > 0 ? cats.join(",") : undefined;
+    const result = q.trim()
+      ? await searchProductsAction(q.trim(), p, l, catStr)
+      : await getPaginatedProductsAction(p, l, catStr);
+    setProducts(result.products);
+    setTotal(result.total);
+    setTotalPages(result.totalPages);
+  }, []);
 
-  // Stop loading when new data arrives
+  const syncUrl = useCallback((q: string, p: number, l: number, cat: string) => {
+    const params = new URLSearchParams();
+    if (q.trim()) params.set("q", q.trim());
+    if (cat) params.set("category", cat);
+    params.set("page", String(p));
+    params.set("limit", String(l));
+    window.history.replaceState(null, "", `${pathname}?${params.toString()}`);
+  }, [pathname]);
+
+  const doSearch = useCallback(async (q: string, p: number, cat: string) => {
+    setIsSearching(true);
+    try {
+      await fetchData(q, p, limitParam, cat);
+      syncUrl(q, p, limitParam, cat);
+    } finally { setIsSearching(false); }
+  }, [limitParam, fetchData, syncUrl]);
+
+  // ── AbortController para cancelar búsquedas en vuelo ──
+  const abortRef = useRef<AbortController | null>(null);
+  const skipSearchRef = useRef(false);
+
+  // ── Búsqueda local (escribe → fetch + URL silenciosa) ──
   useEffect(() => {
-    setIsLoading(false);
-  }, [initialData]);
-
-  // Navigation Logic
-  const updateUrl = useCallback((newQuery: string, newPage: number, newLimit: number, newCategory?: string) => {
-    setIsLoading(true);
-    const params = new URLSearchParams(searchParams);
-
-    if (newQuery.trim()) params.set("q", newQuery.trim());
-    else params.delete("q");
-
-    if (newCategory !== undefined) {
-      if (newCategory.trim()) params.set("category", newCategory.trim());
-      else params.delete("category");
-    } else if (categoryParam) {
-      params.set("category", categoryParam);
+    if (skipSearchRef.current) {
+      skipSearchRef.current = false;
+      return;
     }
-
-    params.set("page", newPage.toString());
-    params.set("limit", newLimit.toString());
-
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [searchParams, router, pathname, categoryParam]);
-
-  // Search Debounce Logic
-  useEffect(() => {
     const query = searchTerm.trim();
-    if (query === queryParam) return;
+    if (abortRef.current) abortRef.current.abort();
+    const abort = new AbortController();
+    abortRef.current = abort;
 
-    const delayDebounceFn = setTimeout(() => {
-      updateUrl(query, 1, limitParam);
+    const delayFn = setTimeout(() => {
+      if (!abort.signal.aborted) doSearch(query, 1, categoryParam);
     }, 300);
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, queryParam, limitParam, updateUrl]);
+    return () => { clearTimeout(delayFn); abort.abort(); };
+  }, [searchTerm]); // SOLO searchTerm
+
+  // ── Navegación explícita (paginación, categorías, limpiar) ──
+  const navigate = useCallback(async (
+    newQuery: string, newPage: number, newLimit: number, newCategory?: string,
+  ) => {
+    const q = newQuery !== undefined ? newQuery : searchTerm;
+    const cat = newCategory !== undefined ? newCategory : categoryParam;
+    await doSearch(q, newPage, cat);
+  }, [searchTerm, categoryParam, doSearch]);
+
+  // ── Sincronizar desde URL externa (back/forward, link directo) ──
+  useEffect(() => {
+    const onPopState = () => {
+      const p = new URLSearchParams(window.location.search);
+      skipSearchRef.current = true;
+      setSearchTerm(p.get("q") || "");
+      const page = Number(p.get("page")) || 1;
+      const cat = p.get("category") || "";
+      doSearch(p.get("q") || "", page, cat);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [doSearch]);
+
+  // ── Primera carga desde props ──
+  useEffect(() => {
+    if (!hydrated.current) {
+      setProducts(initialData.products);
+      setTotal(initialData.total);
+      setTotalPages(initialData.totalPages);
+      hydrated.current = true;
+    }
+  }, [initialData]);
 
   // Toggle Category selection
   const handleCategoryToggle = (category: string) => {
@@ -119,7 +175,7 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
       nextCategories = [...selectedCategories, category];
     }
     const categoryQuery = nextCategories.join(",");
-    updateUrl(queryParam, 1, limitParam, categoryQuery);
+    navigate(queryParam, 1, limitParam, categoryQuery);
   };
 
   const getCategoryLabel = (category: string) => {
@@ -142,12 +198,12 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
         <ProductsToolbar
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
-          isLoading={isLoading}
-          totalCount={totalCount}
+          isLoading={isSearching}
+          totalCount={total}
           viewMode={viewMode}
           setViewMode={setViewMode}
           limitParam={limitParam}
-          updateUrl={updateUrl}
+          updateUrl={navigate}
           queryParam={queryParam}
           t={t}
           categories={categories}
@@ -183,7 +239,7 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          updateUrl(queryParam, 1, limitParam, "");
+                          navigate(queryParam, 1, limitParam, "");
                         }}
                         className="text-[10px] font-extrabold text-destructive hover:text-destructive/80 transition-colors uppercase tracking-wider cursor-pointer focus:outline-none mr-1"
                         title={language === 'es' ? 'Limpiar todos los filtros' : 'Clear all filters'}
@@ -286,10 +342,10 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
 
             {/* Main Content Column */}
             <div className="flex-1 min-h-[500px]">
-              {displayedProducts.length > 0 ? (
+              {products.length > 0 ? (
                 <>
                   <ProductsGrid
-                    products={displayedProducts as any}
+                    products={products as any}
                     viewMode={viewMode}
                     t={t}
                   />
@@ -298,8 +354,8 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
                     <ProductsPagination
                       pageParam={pageParam}
                       totalPages={totalPages}
-                      updateUrl={updateUrl}
-                      isLoading={isLoading}
+                      updateUrl={navigate}
+                      isLoading={isSearching}
                       queryParam={queryParam}
                       limitParam={limitParam}
                       t={t}
@@ -308,9 +364,9 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
                 </>
               ) : (
                 <ProductsEmptyState
-                  isLoading={isLoading}
+                  isLoading={isSearching}
                   queryParam={queryParam}
-                  onClear={() => { setSearchTerm(""); updateUrl("", 1, 20, ""); }}
+                  onClear={() => { setSearchTerm(""); navigate("", 1, 20, ""); }}
                   t={t}
                 />
               )}
