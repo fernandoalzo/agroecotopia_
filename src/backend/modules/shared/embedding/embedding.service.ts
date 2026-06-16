@@ -157,6 +157,10 @@ export class EmbeddingService {
     };
   }
 
+  async countAll(): Promise<number> {
+    return this.repository.countAll();
+  }
+
   async countWithEmbedding(): Promise<number> {
     return this.repository.countWithEmbedding();
   }

@@ -1,6 +1,7 @@
 import prisma from "@/backend/db/prisma";
 import { Prisma } from "@prisma/client";
 import { CacheService, CacheKeys } from "@/backend/cache";
+import { orderByIds } from "@/backend/modules/shared/embedding";
 import { config } from "@/config/config";
 import logger from "@/utils/logger";
 
@@ -139,8 +140,7 @@ export class ForumRepository {
         _count: { select: { answers: true } },
       },
     });
-    const postMap = new Map(posts.map(p => [p.id, p]));
-    return ids.map(id => postMap.get(id)).filter(Boolean);
+    return orderByIds(posts, ids);
   }
 
   async deletePost(id: string) {

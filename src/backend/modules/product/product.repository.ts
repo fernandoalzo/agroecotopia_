@@ -1,6 +1,7 @@
 import prisma from "@/backend/db/prisma";
 import { Prisma, type Product } from "@prisma/client";
 import { CacheService, CacheKeys } from "@/backend/cache";
+import { orderByIds } from "@/backend/modules/shared/embedding";
 import { config } from "@/config/config";
 import logger from "@/utils/logger";
 
@@ -66,9 +67,7 @@ export class ProductRepository {
       },
     });
 
-    // Mantener el orden del array original (por similitud)
-    const productMap = new Map(products.map(p => [p.id, p]));
-    return ids.map(id => productMap.get(id)).filter(Boolean) as Product[];
+    return orderByIds(products, ids);
   }
 
   /**

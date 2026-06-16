@@ -22,6 +22,7 @@ Plataforma de comercio electrónico B2C y B2B enfocada en productos agroecológi
 | **Encriptación Chat** | TweetNaCl (Curve25519 + XSalsa20-Poly1305) | 1.0.3 |
 | **Server Runtime** | tsx (servidor custom) | 4.22.3 |
 | **Rate Limiting** | rate-limiter-flexible (in-memory) | 11.1.0 |
+| **Embeddings** | Ollama + pgvector (cosine distance) | — |
 
 ---
 
@@ -141,7 +142,8 @@ src/
 │   │   └── types.ts                  # Tipos compartidos
 │   ├── db/
 │   │   └── prisma.ts                 # Singleton PrismaClient (globalThis)
-│   ├── modules/                      # 12 módulos de dominio
+│   ├── modules/                      # 12 módulos de dominio + shared
+│   │   ├── shared/embedding/         # Capa compartida de embedding vectorial (pgvector + Ollama)
 │   │   ├── auth/                     # Autenticación
 │   │   ├── chat/                     # Chat + Socket.IO + E2EE
 │   │   ├── forum/                    # Foro comunitario
@@ -222,6 +224,7 @@ src/
 ### 3. Forum — Foro Comunitario
 - Posts con labels, respuestas anidadas (parentId), votación (upvote/downvote)
 - Búsqueda full-text PostgreSQL + filtro por labels
+- **Búsqueda semántica:** embeddings vectoriales vía Ollama + pgvector cosine distance. Debounce 300ms en frontend, spinner de carga, fallback automático a ILIKE textual.
 - Ordenamiento: newest / popular (rating total)
 - Top contributors vía raw SQL (puntos = posts×10 + answers×5)
 - Caché in-memory: trending labels (5 min), community stats (5 min)
@@ -247,13 +250,14 @@ src/
 - **Webhook con HMAC-SHA256:** verificación de firma antes de procesar
 - **Transiciones:** `approved` → CONFIRMADO, `rejected/cancelled` → CANCELADO
 
-### 7. Product — Productos (con Caché Redis)
+### 7. Product — Productos (con Caché Redis + Búsqueda Semántica)
 - **Único módulo con caché distribuida actualmente**
 - **Cache-Aside Pattern:** `getOrSet(key, fetcher, ttl)` — si Redis disponible, cachea; si no, consulta DB directamente
 - **TTLs:** listas 60s, detalle 120s, categorías 300s, búsquedas 60s
 - **Invalidación:** cada mutación (create/update/delete) invalida todo `cache:product:*`
 - **Catálogo:** paginado, filtrable por categorías y tienda
-- **Búsqueda:** multi-campo (nombre, descripción, tag, tienda, categoría) con case-insensitive contains
+- **Búsqueda textual:** multi-campo (nombre, descripción, tag, tienda, categoría) con case-insensitive contains
+- **Búsqueda semántica:** embeddings vectoriales vía Ollama + pgvector cosine distance. Feature flag `config.ai.features.semanticSearch`. Fallback automático a búsqueda textual si Ollama no disponible o sin resultados.
 - **Serialización:** Prisma Decimal → Number para el cliente
 
 ### 8. Promotion — Promociones
@@ -873,10 +877,13 @@ product.repository.ts → getRecommendations(userId, context)
   → useSocketRefresh escucha y refresca UI
 ```
 
-### 1.2 Búsqueda Semántica
-Reemplazar la búsqueda actual por `WHERE nombre ILIKE '%query%'` con embeddings + reranking:
-- `product.service.ts` → `searchProductsAI(query)` llama a un embedding model (Ollama/API)
-- Matching semántico: "abono orgánico para café" → encuentra productos aunque la palabra exacta no esté en el nombre
+### 1.2 Búsqueda Semántica ✅ Implementada
+Búsqueda vectorial reemplazando parcialmente `ILIKE` con embeddings + pgvector cosine distance para productos y foro:
+- **Shared layer:** `src/backend/modules/shared/embedding/` — `EmbeddingRepository` (SQL pgvector), `EmbeddingService` (Ollama), `orderByIds` utility
+- **Productos:** `ProductEmbeddingService.searchSimilar()` con filtros por storeId y categorías, threshold 0.6
+- **Foro:** `ForumPostEmbeddingService.searchSimilar()` con filtro por labels, threshold 0.48, debounce 300ms + spinner en frontend
+- **Fallback:** si Ollama no disponible o sin resultados → búsqueda textual ILIKE
+- **Config:** `config.ai.features.semanticSearch` (true por defecto), modelo `qwen3-embedding:8b` vía Ollama
 
 ### 1.3 Pricing Dinámico Asistido
 Sugiere precios óptimos basados en:
@@ -1103,7 +1110,7 @@ ai: {
 
 | Fase | Features | Impacto esperado |
 |------|----------|------------------|
-| **1. Inmediata** (semanas) | Búsqueda semántica + Chatbot FAQ + Moderación foro | −40% consultas repetitivas |
+| **1. Inmediata** (semanas) | ~~Búsqueda semántica~~ ✅ + Chatbot FAQ + Moderación foro | −40% consultas repetitivas |
 | **2. Corto plazo** (1-2 meses) | Recomendaciones + Descripciones automáticas + Traducción | +25% conversión, alcance EN |
 | **3. Medio plazo** (3-4 meses) | Visión (clasificación + búsqueda por imagen) + Predicción demanda | Reducción overstock, mejor UX |
 | **4. Largo plazo** (6+ meses) | Diagnóstico plagas + Voz + Pricing dinámico + CLV | Diferenciador competitivo total |

@@ -66,6 +66,13 @@ export class EmbeddingRepository {
     }));
   }
 
+  async countAll(): Promise<number> {
+    const rows = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
+      `SELECT COUNT(*) FROM "${this.tableName}"`,
+    );
+    return Number(rows[0].count);
+  }
+
   async countWithEmbedding(): Promise<number> {
     const rows = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
       `SELECT COUNT(*) FROM "${this.tableName}" WHERE embedding IS NOT NULL`,

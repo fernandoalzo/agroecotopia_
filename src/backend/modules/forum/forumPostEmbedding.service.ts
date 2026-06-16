@@ -36,7 +36,7 @@ export class ForumPostEmbeddingService {
   }
 
   async generateAll(): Promise<{ success: number; failed: number; skipped: number }> {
-    const pending = await this.countTotal() - await this.genericService.countWithEmbedding();
+    const pending = await this.genericService.countAll() - await this.genericService.countWithEmbedding();
     if (pending === 0) return { success: 0, failed: 0, skipped: 0 };
 
     return this.genericService.generateAll(async (limit) => {
@@ -105,14 +105,7 @@ export class ForumPostEmbeddingService {
   }
 
   async getStats(): Promise<{ total: number; withEmbedding: number; pending: number; percentage: number }> {
-    const total = await this.countTotal();
+    const total = await this.genericService.countAll();
     return this.genericService.getStats(total);
-  }
-
-  private async countTotal(): Promise<number> {
-    const rows = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
-      `SELECT COUNT(*) FROM "ForumPost"`,
-    );
-    return Number(rows[0].count);
   }
 }

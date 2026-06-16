@@ -1293,3 +1293,220 @@ AI_FEATURE_MODERATION=false
 AI_FEATURE_TRANSLATION=false
 AI_FEATURE_FORECASTING=false
 AI_FEATURE_PRICING=false
+
+---
+
+## 21. Búsqueda Semántica (Embedding Vectorial — pgvector)
+
+### 21.1 Arquitectura General
+
+La búsqueda semántica se implementa como una **capa compartida** en `src/backend/modules/shared/embedding/` que abstrae pgvector + Ollama. Es consumida por los módulos de **Producto** y **Foro** mediante un patrón de servicio genérico.
+
+```
+src/backend/modules/shared/embedding/
+├── index.ts                    ← Barrel exports
+├── embedding.repository.ts     ← SQL pgvector (upsert, searchSimilar, counts)
+├── embedding.service.ts        ← Ollama + disponibilidad + batch generation
+├── embedding.utils.ts          ← orderByIds<T>()
+└── embedding.types.ts          ← SimilarEntityResult, EmbeddingStats
+```
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│              Capa Compartida — shared/embedding/                 │
+│                                                                │
+│  EmbeddingRepository  ── pgvector SQL (CRUD + cosine search)   │
+│  EmbeddingService     ── Ollama, avail cache, batch generate   │
+│  EmbeddingUtils       ── orderByIds<T>() reordena por IDs      │
+└───────────────────────┬────────────────────────────────────────┘
+                        │
+          ┌─────────────┴──────────────┐
+          ▼                            ▼
+┌──────────────────┐    ┌────────────────────────┐
+│ ProductEmbedding  │    │ ForumPostEmbedding      │
+│ Service           │    │ Service                 │
+│                   │    │                         │
+│ - buildEmbedding  │    │ - buildEmbeddingText()  │
+│   Text(producto)  │    │ - generateAll (SQL fp)  │
+│ - generateAll     │    │ - searchSimilar (label  │
+│   (SQL product)   │    │   filter, threshold     │
+│ - searchSimilar   │    │   0.48)                 │
+│   (storeId/cat,   │    └────────────────────────┘
+│    threshold 0.6) │
+└──────────────────┘
+                    │
+                    ▼
+     ProductRepository / ForumRepository
+          └─ getXByIds() usa orderByIds() shared
+
+       Fallback: ILIKE textual si Ollama no disponible
+```
+
+### 21.2 Modelos de Datos (Prisma)
+
+```prisma
+model ProductEmbedding {
+  productId  String   @unique
+  embedding  Unsupported("vector(4096)")?
+  product    Product  @relation(fields: [productId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@index([productId])
+}
+
+model ForumPostEmbedding {
+  postId    String   @unique
+  embedding Unsupported("vector(4096)")?
+  post      ForumPost @relation(fields: [postId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([postId])
+}
+```
+
+Ambos tienen el mismo schema: tabla de embedding con FK 1:1 y columna `vector(4096)`.
+
+### 21.3 Flujo de Búsqueda Semántica (End-to-End)
+
+```
+Frontend (debounce 300ms)
+  │
+  ▼
+Domain Service (product.service / forum.service)
+  │ llama a embeddingService.searchSimilar(query, limit, minSimilarity)
+  ▼
+EmbeddingService.searchSimilar()
+  │ 1. isAvailable() → verifica Ollama + embeddings existentes (caché 60s)
+  │ 2. provider.embed(query) → Ollama genera vector[4096]
+  │ 3. repository.searchSimilar(embedding, limit, minSimilarity)
+  ▼
+EmbeddingRepository.searchSimilar()
+  │ SELECT entityId, 1 - (embedding <=> $1::vector) AS similarity
+  │ FROM table WHERE embedding IS NOT NULL
+  │   AND similarity > $2
+  │ ORDER BY embedding <=> $1::vector
+  │ LIMIT $3
+  ▼
+¿results.length > 0?
+  ├─ SÍ → Domain Repository.getXByIds(ids)  ← orderByIds() preserva orden
+  │        Devuelve entidades ordenadas por similitud
+  └─ NO → Fallback: ILIKE textual (contains + mode: insensitive)
+```
+
+### 21.4 EmbeddingRepository — API
+
+| Método | SQL | Propósito |
+|--------|-----|-----------|
+| `upsert(entityId, embedding)` | `INSERT ... ON CONFLICT DO UPDATE` | Crear o actualizar embedding |
+| `delete(entityId)` | `DELETE WHERE entityId = $1` | Eliminar embedding |
+| `findByEntityId(entityId)` | `SELECT embedding::text` | Obtener vector existente |
+| `searchSimilar(embedding, limit, minSimilarity)` | `<=> cosine distance + WHERE similarity > $2` | Búsqueda por similitud |
+| `countAll()` | `COUNT(*)` | Total de filas en la tabla |
+| `countWithEmbedding()` | `COUNT(*) WHERE embedding IS NOT NULL` | Total con embedding generado |
+
+**Constructor parametrizado:**
+```typescript
+new EmbeddingRepository('ProductEmbedding', 'productId')
+new EmbeddingRepository('ForumPostEmbedding', 'postId')
+// tableName y entityIdColumn permiten reutilizar la misma clase
+```
+
+### 21.5 EmbeddingService — API
+
+| Método | Descripción |
+|--------|-------------|
+| `isAvailable()` | Verifica Ollama (`isAvailable`) + entidades con embedding (`countWithEmbedding`). Caché 60s. |
+| `generateForEntity(entityId, text)` | Genera embedding vía Ollama + upsert en DB |
+| `generateAll(fetchPending)` | Batch generation: recibe callback `(limit) => [{id, text}]` |
+| `searchSimilar(query, limit = 20, minSimilarity = 0)` | Embed query → pgvector search |
+| `countAll()` | Total de entidades (delega a repository) |
+| `countWithEmbedding()` | Total con embedding (delega a repository) |
+| `getStats(totalEntities)` | `{ total, withEmbedding, pending, percentage }` |
+
+**Constructor:**
+```typescript
+const genericService = new EmbeddingService(repository, { batchSize: 10 });
+```
+
+### 21.6 orderByIds — Utility Compartida
+
+```typescript
+// src/backend/modules/shared/embedding/embedding.utils.ts
+export function orderByIds<T extends { id: string }>(items: T[], ids: string[]): T[] {
+  const map = new Map(items.map(i => [i.id, i]));
+  return ids.map(id => map.get(id)).filter((x): x is T => x !== undefined);
+}
+```
+
+Usada en:
+- `ProductRepository.getProductsByIds()` — mantiene orden de similitud semántica
+- `ForumRepository.getPostsByIds()` — mantiene orden de similitud semántica
+
+### 21.7 Domain Services — Mínimo Código Específico
+
+Cada módulo de dominio implementa solo el código que NO puede ser genérico:
+
+**ProductEmbeddingService** (único: ~30 líneas):
+- `buildEmbeddingText(product)` — texto con nombre, categorías, tipo, descripción
+- Callback de `generateAll` — SQL con join a categorías
+- `searchSimilar` — filtros adicionales por `storeId` y `categories`
+- Threshold: `0.6`
+
+**ForumPostEmbeddingService** (único: ~35 líneas):
+- `buildEmbeddingText(post)` — texto con título, etiquetas, cuerpo
+- Callback de `generateAll` — SQL simple sobre forumPost
+- `searchSimilar` — filtro adicional por `labels`
+- Threshold: `0.48` (modelo qwen3-embedding:8b tiene menor densidad de similitud)
+
+**Wrapper methods (~14 líneas idénticas por módulo):**
+```typescript
+async isSemanticSearchAvailable() { return this.genericService.isAvailable(); }
+async getStats() { return this.genericService.getStats(await this.genericService.countAll()); }
+```
+Estos wrappers existen por encapsulación (no exponer `genericService` al exterior).
+
+### 21.8 Configuración
+
+```typescript
+// src/config/config.ts
+ollama: {
+  baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+  embeddingModel: process.env.OLLAMA_EMBEDDING_MODEL || 'qwen3-embedding:8b',
+  timeout: 30000,
+},
+embedding: {
+  batchSize: 10,
+},
+ai: {
+  features: {
+    semanticSearch: true,  // ← habilitado por defecto
+  },
+}
+```
+
+### 21.9 DRY Score
+
+| Aspecto | Producto | Foro |
+|---|---|---|
+| Infraestructura (pgvector, Ollama, avail cache) | 100% compartido | 100% compartido |
+| `countAll()` / `countWithEmbedding()` | vía `genericService` | vía `genericService` |
+| `orderByIds()` | shared utility | shared utility |
+| Wrappers de conveniencia (~14 líneas) | ⚠️ necesarios para encapsulación | ⚠️ necesarios para encapsulación |
+| Código de dominio único | `buildEmbeddingText`, SQL, filtros storeId/cat | `buildEmbeddingText`, SQL, filtros labels |
+| **Score** | **~85% DRY** | **~85% DRY** |
+
+### 21.10 Variables de Entorno
+
+```bash
+# Ollama (Embeddings)
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_EMBEDDING_MODEL=qwen3-embedding:8b
+```
+
+### 21.11 Seed de Embeddings
+
+```bash
+npx tsx scripts/seed-forum-posts.ts        # Seed posts + embeddings del foro
+```
+
+El script `scripts/seed-forum-posts.ts` genera embeddings para todos los posts sin embedding usando `ForumPostEmbeddingService.generateAll()`.
