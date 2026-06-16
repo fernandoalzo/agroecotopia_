@@ -50,7 +50,7 @@ export class ProductEmbeddingRepository {
     limit: number = 20,
     storeId?: string,
     categories?: string[],
-    minSimilarity: number = 0.5,
+    minSimilarity: number = 0.6,
   ): Promise<SimilarProduct[]> {
     const vector = `[${embedding.join(",")}]`;
     const conditions: string[] = [];
