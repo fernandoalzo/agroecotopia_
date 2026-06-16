@@ -129,32 +129,31 @@ export default function CommunityQAForum({
                     {isSearching && questions.length > 0 ? (
                       <motion.div
                         key="loading-badge"
-                        initial={{ opacity: 0, width: 0 }}
-                        animate={{ opacity: 1, width: "auto" }}
-                        exit={{ opacity: 0, width: 0 }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 relative overflow-hidden"
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
+                        className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
                       >
                         <motion.div
-                          animate={{ x: ["-100%", "200%"] }}
-                          transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-                          className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-transparent via-primary/20 to-transparent -skew-x-12"
-                        />
-                        <motion.div
-                          animate={{ rotate: [-15, 15, -15], scale: [1, 1.1, 1] }}
-                          transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
+                          animate={{ x: [-2, 2, -2], rotate: [-10, 10, -10] }}
+                          transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
                         >
                           <Search className="w-3.5 h-3.5 text-primary drop-shadow-[0_0_2px_rgba(var(--primary),0.5)]" />
                         </motion.div>
-                        <span className="text-[10px] font-bold text-primary uppercase tracking-widest z-10 relative">
+                        <motion.span
+                          animate={{ opacity: [0.5, 1, 0.5] }}
+                          transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                          className="text-primary"
+                        >
                           Actualizando...
-                        </span>
+                        </motion.span>
                       </motion.div>
                     ) : (
                       <motion.span
                         key="results-label"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
                         className="text-xs font-bold text-muted-foreground uppercase tracking-wider"
                       >
                         {totalCount !== undefined 
