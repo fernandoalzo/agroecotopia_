@@ -1,6 +1,7 @@
 "use client";
 
-import { ShoppingCart, Star, StarHalf, Tag, ShieldCheck, Truck, ArrowRight, Store } from "lucide-react";
+import { useState } from "react";
+import { ShoppingCart, Star, StarHalf, ShieldCheck, Truck, ArrowRight, Store } from "lucide-react";
 import { Product } from "@/types";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -19,6 +20,13 @@ interface ProductCardProps {
 const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps) => {
   const router = useRouter();
   const { t, language } = useLanguage();
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  const handleNavigate = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setIsNavigating(true);
+    router.push(`/products/${p.id}`);
+  };
 
   const productTranslation = t.products.items[p.id!] || {
     name: p.name,
@@ -45,13 +53,24 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
   const isList = variant === 'list';
   const isCompact = variant === 'compact';
 
+  // ── Loading overlay (shown while navigating to product detail) ──
+  const LoadingOverlay = isNavigating ? (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-xl">
+      <div className="relative flex items-center justify-center">
+        <div className="absolute h-10 w-10 rounded-full border-t-2 border-r-2 border-primary animate-spin opacity-20" />
+        <div className="absolute h-6 w-6 rounded-full border-b-2 border-l-2 border-primary animate-spin shadow-lg shadow-primary/20" />
+      </div>
+    </div>
+  ) : null;
+
   if (isList) {
     return (
       <>
         <div
-          onClick={() => router.push(`/products/${p.id}`)}
+          onClick={handleNavigate}
           className="group relative flex flex-col md:flex-row w-full bg-card border border-border shadow-sm hover:shadow-md transition-all duration-300 rounded-lg overflow-hidden cursor-pointer p-4 gap-6"
         >
+          {LoadingOverlay}
           {hasDiscount && (
             <div className="absolute top-0 left-0 z-10 pointer-events-none">
               <div className="bg-red-500 text-white text-[10px] font-black uppercase tracking-widest py-1 px-8 -translate-x-[25%] translate-y-4 -rotate-45 shadow-sm shadow-red-500/20">
@@ -184,9 +203,10 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
     return (
       <>
         <div
-          onClick={() => router.push(`/products/${p.id}`)}
+          onClick={handleNavigate}
           className="group relative flex flex-col w-full bg-card border border-border shadow-card hover:shadow-card-hover hover:scale-[1.03] hover:-translate-y-2 hover:border-primary transition-all duration-500 rounded-xl overflow-hidden cursor-pointer"
         >
+          {LoadingOverlay}
           {hasDiscount && (
             <div className="absolute top-0 right-0 z-20 pointer-events-none">
               <div className="bg-red-500 text-white text-[8px] font-black uppercase tracking-widest py-0.5 px-6 translate-x-[30%] translate-y-2 rotate-45 shadow-sm shadow-red-500/20">
@@ -279,9 +299,10 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
   return (
     <>
       <div
-        onClick={() => router.push(`/products/${p.id}`)}
+        onClick={handleNavigate}
         className="group relative flex flex-col w-full h-full bg-card border border-border shadow-card hover:shadow-card-hover hover:scale-[1.03] hover:-translate-y-2 hover:border-primary transition-all duration-500 rounded-xl overflow-hidden cursor-pointer"
       >
+        {LoadingOverlay}
         {hasDiscount && (
           <div className="absolute top-0 right-0 z-30 pointer-events-none">
             <div className="bg-red-500 text-white text-[10px] font-black uppercase tracking-widest py-1 px-8 translate-x-[25%] translate-y-4 rotate-45 shadow-sm shadow-red-500/20">
@@ -422,7 +443,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                router.push(`/products/${p.id}`);
+                handleNavigate();
               }}
               className={`w-full mt-4 flex items-center justify-center gap-2 py-2 px-4 rounded-full font-bold text-xs transition-all shadow-sm
                 ${p.stock === 0
