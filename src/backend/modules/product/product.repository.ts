@@ -136,6 +136,52 @@ export class ProductRepository {
   }
 
   /**
+   * Obtiene productos por categoría, excluyendo opcionalmente un ID (ej: el producto actual en relacionados).
+   */
+  async getProductsByCategories(categories: string[], take: number, excludeId?: string): Promise<Product[]> {
+    if (categories.length === 0) return [];
+    return prisma.product.findMany({
+      where: {
+        categories: { some: { name: { in: categories } } },
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+      take,
+      include: {
+        categories: true,
+        promotions: { where: { isActive: true } },
+        store: {
+          select: {
+            id: true, name: true, slug: true, logo: true,
+            promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  /**
+   * Obtiene los productos más recientes, excluyendo opcionalmente un ID.
+   */
+  async getLatestProducts(take: number, excludeId?: string): Promise<Product[]> {
+    return prisma.product.findMany({
+      where: excludeId ? { id: { not: excludeId } } : {},
+      take,
+      include: {
+        categories: true,
+        promotions: { where: { isActive: true } },
+        store: {
+          select: {
+            id: true, name: true, slug: true, logo: true,
+            promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  /**
    * Busca productos por coincidencia parcial o total en múltiples campos con paginación, opcionalmente filtrados por una o más categorías.
    */
   async searchProducts(query: string, skip: number = 0, take: number = 20, categories?: string[], storeId?: string): Promise<Product[]> {
@@ -464,6 +510,10 @@ export class ProductRepository {
       },
       config.cache.ttl.productList,
     ) ?? 0;
+  }
+
+  async getOrSetIds(key: string, fetcher: () => Promise<string[]>): Promise<string[]> {
+    return this.cacheService?.getOrSet(key, fetcher, config.cache.ttl.productRelated) ?? fetcher();
   }
 
   async getCategories(): Promise<string[]> {

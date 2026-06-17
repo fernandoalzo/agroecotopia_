@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { ShoppingCart, Star, StarHalf, Tag, ShieldCheck, Truck, ArrowRight, Store } from "lucide-react";
 import { Product } from "@/types";
-import ProductModal from "./ProductModal";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
 import { getDeterministicImage } from "@/lib/image-utils";
@@ -18,7 +17,7 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
   const { t, language } = useLanguage();
 
   const productTranslation = t.products.items[p.id!] || {
@@ -50,7 +49,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
     return (
       <>
         <div
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => router.push(`/products/${p.id}`)}
           className="group relative flex flex-col md:flex-row w-full bg-card border border-border shadow-sm hover:shadow-md transition-all duration-300 rounded-lg overflow-hidden cursor-pointer p-4 gap-6"
         >
           {hasDiscount && (
@@ -177,7 +176,6 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
           </div>
         </div>
 
-        <ProductModal product={p} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       </>
     );
   }
@@ -186,7 +184,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
     return (
       <>
         <div
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => router.push(`/products/${p.id}`)}
           className="group relative flex flex-col w-full bg-card border border-border shadow-card hover:shadow-card-hover hover:scale-[1.03] hover:-translate-y-2 hover:border-primary transition-all duration-500 rounded-xl overflow-hidden cursor-pointer"
         >
           {hasDiscount && (
@@ -273,7 +271,6 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
           </div>
         </div>
 
-        <ProductModal product={p} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       </>
     );
   }
@@ -282,7 +279,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
   return (
     <>
       <div
-        onClick={() => setIsModalOpen(true)}
+        onClick={() => router.push(`/products/${p.id}`)}
         className="group relative flex flex-col w-full h-full bg-card border border-border shadow-card hover:shadow-card-hover hover:scale-[1.03] hover:-translate-y-2 hover:border-primary transition-all duration-500 rounded-xl overflow-hidden cursor-pointer"
       >
         {hasDiscount && (
@@ -425,7 +422,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setIsModalOpen(true);
+                router.push(`/products/${p.id}`);
               }}
               className={`w-full mt-4 flex items-center justify-center gap-2 py-2 px-4 rounded-full font-bold text-xs transition-all shadow-sm
                 ${p.stock === 0
@@ -438,12 +435,6 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
           </div>
         </div>
       </div>
-
-      <ProductModal
-        product={p}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
     </>
   );
 };

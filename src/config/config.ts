@@ -126,6 +126,7 @@ export const config = {
       categories: 300,
       categoryCounts: 120,
       searchResults: 60,
+      productRelated: 120,
       forumPosts: 60,
       forumPostDetail: 30,
       forumAnswerDetail: 30,

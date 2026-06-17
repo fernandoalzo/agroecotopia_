@@ -1,6 +1,7 @@
 import type { Product } from "@prisma/client";
 import { ProductRepository } from "./product.repository";
 import { ProductEmbeddingService } from "./productEmbedding.service";
+import { CacheKeys } from "@/backend/cache";
 import { config } from "@/config/config";
 import logger from "@/utils/logger";
 
@@ -121,6 +122,60 @@ export class ProductService {
     } catch (error) {
       log.error(`Error in getProductById ${id}:`, error);
       return null;
+    }
+  }
+
+  async getRelatedProducts(productId: string, limit: number = 6): Promise<any[]> {
+    try {
+      const product = await this.productRepository.getProductById(productId);
+      if (!product) return [];
+
+      const categories = ((product as any).categories as Array<{ name: string }> | undefined)?.map(c => c.name) || [];
+
+      const relatedIds = await this.productRepository.getOrSetIds(
+        CacheKeys.product.related(productId),
+        async () => {
+          // Tier 1: embedding-based semantic search
+          if (this.embeddingService) {
+            try {
+              const queryText = [
+                `Producto: ${product.name}`,
+                categories.length ? `Categorías: ${categories.join(", ")}` : "",
+                `Tipo: ${product.tag}`,
+                `Descripción: ${product.description}`,
+              ].filter(Boolean).join("\n");
+
+              const similar = await this.embeddingService.searchSimilar(
+                queryText, limit + 1, undefined,
+                categories.length > 0 ? categories : undefined,
+              );
+              const ids = similar.filter(r => r.id !== productId).slice(0, limit).map(r => r.id);
+              if (ids.length > 0) return ids;
+              log.warn("Embedding search returned 0 results, falling back");
+            } catch (error) {
+              log.warn("Embedding search failed, falling back to categories:", error);
+            }
+          }
+
+          // Tier 2: category-based
+          if (categories.length > 0) {
+            const catProducts = await this.productRepository.getProductsByCategories(categories, limit + 1, productId);
+            const ids = catProducts.map(p => p.id).slice(0, limit);
+            if (ids.length > 0) return ids;
+          }
+
+          // Tier 3: latest products
+          const latest = await this.productRepository.getLatestProducts(limit, productId);
+          return latest.map(p => p.id);
+        },
+      );
+
+      if (relatedIds.length === 0) return [];
+      const products = await this.productRepository.getProductsByIds(relatedIds);
+      return products.map(p => this.serializeProduct(p));
+    } catch (error) {
+      log.warn("🤖 [Related] Error obteniendo productos relacionados:", { productId, error });
+      return [];
     }
   }
 

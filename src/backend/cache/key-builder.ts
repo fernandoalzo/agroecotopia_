@@ -38,6 +38,8 @@ export const CacheKeys = {
     categoryCounts: (storeId?: string) =>
       `${NAMESPACE}:product:category-counts:${storeId || ""}`,
 
+    related: (id: string) => `${NAMESPACE}:product:related:${id}`,
+
     allPattern: `${NAMESPACE}:product:*`,
   },
 

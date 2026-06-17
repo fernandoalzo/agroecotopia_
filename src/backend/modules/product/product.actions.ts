@@ -85,6 +85,20 @@ export async function getProductByIdAction(productId: string) {
 }
 
 /**
+ * Server Action para obtener productos relacionados a un producto dado.
+ * Usa búsqueda semántica vía embeddings (Ollama + pgvector).
+ */
+export async function getRelatedProductsAction(productId: string, limit?: number) {
+  try {
+    if (!productId) return [];
+    return await productService.getRelatedProducts(productId, limit);
+  } catch (error) {
+    log.error("Error getting related products:", error);
+    return [];
+  }
+}
+
+/**
  * Server Action: Create a product (ADMIN ONLY)
  */
 export async function createProductAction(data: any) {

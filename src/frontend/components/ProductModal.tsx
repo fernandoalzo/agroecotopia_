@@ -1,7 +1,7 @@
 "use client";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Info, Minus, Plus, ShoppingCart, Store, Tag, X } from "lucide-react";
 import Image from "next/image";
@@ -15,6 +15,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { formatPrice } from "@/lib/utils";
 import { getDeterministicImage } from "@/lib/image-utils";
 import { calculateDiscountedPrice } from "@/utils/promotions";
+import { getRelatedProductsAction } from "@/backend/modules/product/product.actions";
 
 interface ProductModalProps {
   product: Product;
@@ -31,7 +32,13 @@ const ProductModal = ({ product, isOpen, onClose, viewOnly = false, resolvedProd
   const [added, setAdded] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const currentProduct = resolvedProduct || product;
+
+  useEffect(() => {
+    if (!isOpen || !currentProduct.id) return;
+    getRelatedProductsAction(currentProduct.id, 6).then(setRelatedProducts);
+  }, [isOpen, currentProduct.id]);
 
   const discountedPrice = calculateDiscountedPrice(
     currentProduct.price,
@@ -278,6 +285,25 @@ const ProductModal = ({ product, isOpen, onClose, viewOnly = false, resolvedProd
                 </div>
               </div>
             </div>
+
+            {relatedProducts.length > 0 && (
+              <div className="border-t border-border/50 px-5 md:px-7 py-5">
+                <h3 className="font-display text-sm font-black uppercase tracking-wider text-muted-foreground mb-3">
+                  Productos relacionados
+                </h3>
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {relatedProducts.map(rp => (
+                    <div key={rp.id} className="min-w-[160px] md:min-w-[180px] shrink-0">
+                      <div className="bg-secondary/40 rounded-xl p-3 border border-border/40">
+                        <div className="text-3xl mb-2">{rp.emoji || "📦"}</div>
+                        <p className="text-xs font-bold truncate">{rp.name}</p>
+                        <p className="text-xs font-black text-primary mt-1">{formatPrice(Number(rp.price))}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
         </DialogContent>
       </Dialog>
 
