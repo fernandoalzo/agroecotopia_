@@ -122,6 +122,79 @@ export class OllamaProvider implements AIProvider {
     }
   }
 
+  async *streamChat(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<string, void, unknown> {
+    log.debug("🤖 [Ollama] Iniciando stream chat...", {
+      model: options?.model || this.chatModel,
+    });
+
+    const model = options?.model || this.chatModel;
+    const body: OllamaChatRequest = {
+      model,
+      messages: messages.map(m => ({
+        role: m.role,
+        content: m.content,
+      })),
+      stream: true,
+      options: {
+        temperature: options?.temperature ?? 0.7,
+        num_predict: options?.maxTokens ?? 2048,
+      },
+    };
+
+    const controller = new AbortController();
+    let timer = setTimeout(() => controller.abort(), this.timeout);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const errBody = await response.text().catch(() => "");
+        throw new Error(`Ollama API error ${response.status}: ${errBody}`);
+      }
+
+      if (!response.body) {
+        throw new Error("No response body available for streaming");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        clearTimeout(timer);
+        timer = setTimeout(() => controller.abort(), this.timeout);
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n').filter(Boolean);
+
+        for (const line of lines) {
+          try {
+            const data: OllamaChatResponse = JSON.parse(line);
+            if (data.message?.content) {
+              yield data.message.content;
+            }
+          } catch (e) {
+            log.warn("🤖 [Ollama] Error al parsear chunk JSON:", e);
+          }
+        }
+      }
+    } catch (error: any) {
+      if (error.name === "AbortError") {
+        throw new Error(`Ollama chat timeout después de ${this.timeout}ms`);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async embed(text: string): Promise<EmbeddingResponse> {
     log.debug("🤖 [Ollama] Generando embedding...", { model: this.embeddingModel, textLength: text.length });
 

@@ -58,6 +58,56 @@ export class AIService {
     return this.chat(messages, options);
   }
 
+  async *streamChat(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<string, void, unknown> {
+    if (!this.provider.streamChat) {
+      throw new Error(`Streaming is not supported by the current AI provider: ${this.provider.name}`);
+    }
+
+    yield* this.provider.streamChat(messages, {
+      model: options?.model || this.options.defaultModel,
+      temperature: options?.temperature ?? this.options.defaultTemperature ?? 0.7,
+      maxTokens: options?.maxTokens ?? this.options.maxTokens ?? 2048,
+    });
+  }
+
+  async *ragStreamChat(
+    messages: ChatMessage[],
+    options?: ChatOptions & { rag?: RAGOptions },
+  ): AsyncGenerator<string, void, unknown> {
+    if (!this.provider.streamChat) {
+      throw new Error(`Streaming is not supported by the current AI provider: ${this.provider.name}`);
+    }
+
+    if (this.rag) {
+      const lastUserMsg = [...messages].reverse().find(m => m.role === "user");
+      let systemPrompt = "Eres un asistente amigable de Agroecotopia.";
+      
+      if (lastUserMsg) {
+        const context = await this.rag.retrieve(lastUserMsg.content, options?.rag);
+        systemPrompt = this.rag.buildSystemPrompt(context);
+      }
+
+      const augmentedMessages: ChatMessage[] = [
+        { role: "system", content: systemPrompt },
+        ...messages,
+      ];
+
+      log.debug("🤖 [ai] RAG Stream: Iniciando con contexto", {
+        systemPromptLength: systemPrompt.length,
+      });
+
+      yield* this.provider.streamChat(augmentedMessages, {
+        model: options?.model || this.options.defaultModel,
+        temperature: options?.temperature ?? this.options.defaultTemperature ?? 0.7,
+        maxTokens: options?.maxTokens ?? this.options.maxTokens ?? 2048,
+      });
+      return;
+    }
+
+    log.debug("🤖 [ai] RAG no disponible, usando streamChat sin RAG");
+    yield* this.streamChat(messages, options);
+  }
+
   async embed(text: string): Promise<number[]> {
     const startTime = Date.now();
 

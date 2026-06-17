@@ -58,6 +58,45 @@ export async function aiChatAction(
   });
 }
 
+export async function* aiStreamChatAction(
+  message: string,
+  history?: Array<{ role: "user" | "assistant"; content: string }>,
+) {
+  if (!message || message.trim().length === 0) {
+    yield JSON.stringify({ error: "El mensaje no puede estar vacío." });
+    return;
+  }
+
+  try {
+    const { aiService } = await import("@/backend/modules/ai");
+
+    if (!aiService) {
+      log.warn("🤖 [Action] aiStreamChatAction: Módulo AI no activo");
+      yield JSON.stringify({ error: "El módulo de IA no está activo." });
+      return;
+    }
+
+    const messages: ChatMessage[] = [
+      ...(history ?? []).map(h => ({
+        role: h.role as "user" | "assistant",
+        content: h.content,
+      })),
+      { role: "user", content: message.trim() },
+    ];
+
+    const stream = aiService.ragStreamChat(messages);
+    for await (const chunk of stream) {
+      // Usar yield simple para enviar el texto crudo. 
+      // Next.js serializará esto al cliente.
+      yield chunk;
+    }
+
+  } catch (error) {
+    log.error("🤖 [Action] Error en aiStreamChatAction:", error);
+    yield JSON.stringify({ error: error instanceof Error ? error.message : "Error al procesar la consulta." });
+  }
+}
+
 export async function aiSemanticSearchAction(_query: string) {
   return withAuth(async () => {
     return { results: [], error: "Búsqueda semántica disponible vía los módulos de producto/foro." };

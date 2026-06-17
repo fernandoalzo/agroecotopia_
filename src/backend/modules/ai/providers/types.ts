@@ -80,6 +80,7 @@ export interface AIProvider {
   readonly availableFeatures: AIFeature[];
 
   chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse>;
+  streamChat?(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<string, void, unknown>;
   embed(text: string): Promise<EmbeddingResponse>;
 
   moderate?(content: string, options?: ModerationOptions): Promise<ModerationResult>;

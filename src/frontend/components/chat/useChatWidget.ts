@@ -435,34 +435,64 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
             const userMsg = createAIMessage(content, conversation?.id ?? "ai", true);
             setMessages(prev => [...prev, userMsg]);
 
-                try {
-                    const history = aiConversationHistory;
-                const result = await aiChatAction(content, history);
-
-                if (result && "error" in result && result.error) {
-                    const errMsg = createAIMessage(
-                        t.aiError,
-                        conversation?.id ?? "ai",
-                        false,
-                    );
-                    errMsg.senderRole = "ai";
-                    setMessages(prev => [...prev, errMsg]);
-                    log.error("🤖 AI Chat error:", result.error);
-                } else if (result && "content" in result && result.content) {
-                    const aiContent: string = result.content;
-                    const aiMsg = createAIMessage(
-                        aiContent,
-                        conversation?.id ?? "ai",
-                        false,
-                    );
-                    aiMsg.senderRole = "ai";
-                    setMessages(prev => [...prev, aiMsg]);
-                    setAiConversationHistory(prev => [
-                        ...prev,
-                        { role: "user", content },
-                        { role: "assistant", content: aiContent },
-                    ]);
+            try {
+                const history = aiConversationHistory;
+                const { aiStreamChatAction } = await import("@/backend/modules/ai/ai.actions");
+                
+                const stream = await aiStreamChatAction(content, history);
+                
+                const aiMsgId = `ai_${Date.now()}_${++aiIdCounter}`;
+                const initialAiMsg: Message = {
+                    id: aiMsgId,
+                    content: "",
+                    senderId: "ai",
+                    senderRole: "ai",
+                    conversationId: conversation?.id ?? "ai",
+                    isRead: true,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                };
+                
+                let fullContent = "";
+                let isFirstChunk = true;
+                
+                for await (const chunk of stream) {
+                    if (typeof chunk === 'string') {
+                        if (chunk.startsWith('{"error"')) {
+                            try {
+                                const parsed = JSON.parse(chunk);
+                                if (parsed.error) {
+                                    fullContent = parsed.error;
+                                    break;
+                                }
+                            } catch (e) {}
+                        } else {
+                            fullContent += chunk;
+                        }
+                    }
+                    
+                    if (isFirstChunk) {
+                        setIsAIResponding(false);
+                        setMessages(prev => [...prev, { ...initialAiMsg, content: fullContent }]);
+                        isFirstChunk = false;
+                    } else {
+                        setMessages(prev => prev.map(m => 
+                            m.id === aiMsgId ? { ...m, content: fullContent } : m
+                        ));
+                    }
                 }
+
+                if (isFirstChunk) {
+                    // Si el stream terminó sin chunks, ocultamos el thinking igual
+                    setIsAIResponding(false);
+                }
+
+                setAiConversationHistory(prev => [
+                    ...prev,
+                    { role: "user", content },
+                    { role: "assistant", content: fullContent },
+                ]);
+
             } catch (err) {
                 const errMsg = createAIMessage(
                     t.aiError,

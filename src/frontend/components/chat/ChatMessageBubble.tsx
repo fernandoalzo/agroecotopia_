@@ -57,6 +57,8 @@ const ReplyIconSm = () => (
     </svg>
 );
 
+import { Bot } from "lucide-react";
+
 export const ChatMessageBubble = ({
     msg,
     isMe,
@@ -94,10 +96,7 @@ export const ChatMessageBubble = ({
             >
                 {isAIMessage && (
                     <div className="flex items-center gap-1.5 mb-1.5 text-[10px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wider">
-                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="3" y="11" width="18" height="11" rx="2" />
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                        </svg>
+                        <Bot className="w-3.5 h-3.5" />
                         Agroecotopia IA
                     </div>
                 )}

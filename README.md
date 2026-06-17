@@ -907,16 +907,17 @@ export class AIPricingService {
 
 ## 2. Asistente Virtual Inteligente (Chat + Chat Widget)
 
-### 2.1 Chatbot Híbrido (Agente + Humano)
-El `ChatWidget` actual se convierte en un **AI Agent** con:
-- **Respuestas automáticas** vía RAG (Retrieval-Augmented Generation) sobre el catálogo completo, políticas de envío, FAQ
-- **Detección de intención**: "Necesito un fertilizante para café" → recomienda productos + enlaza al checkout
-- **Escalamiento inteligente**: si el agente no resuelve, crea ticket para humano con contexto completo
+### 2.1 Chatbot Híbrido (Agente IA) ✅ Implementado
+El `ChatWidget` integra un **AI Agent** con capacidades de streaming:
+- **Respuestas en Tiempo Real (Streaming)**: Generación progresiva de texto usando `async function*` (soportado nativamente por React 19 en Server Actions).
+- **RAG (Retrieval-Augmented Generation)**: 3 Retrievers activos que inyectan contexto sobre la plataforma, foro (pgvector) y productos (pgvector).
+- **Arquitectura Multimodelo**: Soporte intercambiable para Ollama (Local) y DeepSeek (Cloud) mediante el patrón `AIProviderFactory`.
 
 ```
-chatAgent.service.ts ← LLM (Ollama/OpenAI API)
-  → chat.repository.ts (mensajes del agente como senderRole="agent")
-  → socketHandler.ts → Socket.IO → ChatWidget
+ChatWidget (UI) → aiStreamChatAction (Server Action)
+  → AIService.ragStreamChat()
+    → RAGService.retrieve() [Platform + Forum + Products]
+    → OllamaProvider.streamChat() → chunk yield
 ```
 
 ### 2.2 Voz a Texto (Modo Manos Libres)
@@ -1042,27 +1043,26 @@ Asistente conversacional dentro del panel `mi-tienda`:
 
 ```text
 src/backend/modules/ai/
-├── index.ts                       ← IoC: instancia servicios AI
-├── ai.actions.ts                  ← Server Actions ("use server")
-├── ai.service.ts                  ← Orquestador central
-├── embeddings/
-│   ├── embedding.service.ts       ← Generación de embeddings (Ollama/API)
-│   └── vector-store.ts            ← pgvector queries
-├── recommendations/
-│   ├── recommendation.service.ts  ← Motor de recomendaciones
-│   └── recommendation.repository.ts
-├── vision/
-│   ├── vision.service.ts          ← Computer Vision
-│   └── image-classifier.ts        ← Clasificación de imágenes
+├── index.ts                       ← IoC: Instancia condicional de servicios AI (AI_ENABLED)
+├── ai.actions.ts                  ← Server Actions (incluye aiStreamChatAction)
+├── ai.service.ts                  ← Orquestador central (Chat, Streaming, Embeddings)
+├── ai.repository.ts               ← Caché de respuestas LLM (Redis)
+├── providers/
+│   ├── factory.ts                 ← Factory Pattern para proveedores
+│   ├── ollama.ts                  ← Proveedor Ollama (streaming soportado)
+│   ├── deepseek.ts                ← Proveedor DeepSeek
+│   └── openai.ts                  ← Proveedor OpenAI (stub)
 ├── nlp/
-│   ├── chatbot.service.ts         ← RAG + LLM
-│   ├── intent-classifier.ts       ← Detección de intención
-│   └── translation.service.ts     ← Traducción automática
+│   ├── rag.service.ts             ← Retrieval-Augmented Generation (RAG)
+│   ├── platform-content.ts        ← Base de conocimientos estática
+│   └── translation.service.ts     ← Traducción automática (stub)
+├── moderation/
+│   └── content-moderation.service.ts ← Moderación automática
 ├── forecasting/
-│   ├── demand.service.ts          ← Predicción de demanda
-│   └── pricing.service.ts         ← Pricing dinámico
-└── moderation/
-    └── content-moderation.ts      ← Moderación automática
+│   ├── demand.service.ts          ← Predicción de demanda (stub)
+│   └── pricing.service.ts         ← Pricing dinámico (stub)
+└── vision/
+    └── vision.service.ts          ← Computer Vision (stub)
 ```
 
 ### 8.2 Integración con la Arquitectura Existente
@@ -1110,7 +1110,7 @@ ai: {
 
 | Fase | Features | Impacto esperado |
 |------|----------|------------------|
-| **1. Inmediata** (semanas) | ~~Búsqueda semántica~~ ✅ + Chatbot FAQ + Moderación foro | −40% consultas repetitivas |
+| **1. Inmediata** (semanas) | ✅ **Búsqueda semántica** + ✅ **Chatbot RAG c/ Streaming** + Moderación foro | −40% consultas repetitivas |
 | **2. Corto plazo** (1-2 meses) | Recomendaciones + Descripciones automáticas + Traducción | +25% conversión, alcance EN |
 | **3. Medio plazo** (3-4 meses) | Visión (clasificación + búsqueda por imagen) + Predicción demanda | Reducción overstock, mejor UX |
 | **4. Largo plazo** (6+ meses) | Diagnóstico plagas + Voz + Pricing dinámico + CLV | Diferenciador competitivo total |
