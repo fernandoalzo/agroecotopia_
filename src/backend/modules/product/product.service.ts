@@ -34,42 +34,58 @@ export class ProductService {
     }
   }
 
-  async searchProducts(query: string, page: number = 1, limit: number = 20, category?: string, storeId?: string): Promise<{ products: any[], total: number, totalPages: number }> {
-    if (!query || query.trim().length === 0) return { products: [], total: 0, totalPages: 0 };
-    
-    const categories = category ? category.split(",").filter(Boolean) : [];
-
-    if (this.embeddingService && config.ai.features.semanticSearch) {
-      try {
-        const similar = await this.embeddingService.searchSimilar(query, 200, storeId, categories.length > 0 ? categories : undefined);
-        if (similar.length > 0) {
-          const productIds = similar.map(s => s.id);
-          const products = await this.productRepository.getProductsByIds(productIds, categories);
-          const total = products.length;
-          const skip = (page - 1) * limit;
-          return {
-            products: products.slice(skip, skip + limit).map(p => this.serializeProduct(p)),
-            total,
-            totalPages: Math.ceil(total / limit),
-          };
-        }
-      } catch (error) {
-        log.warn("Búsqueda semántica falló, usando fallback textual:", error);
-      }
+  groupByCategory(products: any[]): Array<{ label: string; products: any[] }> {
+    const groups = new Map<string, any[]>();
+    for (const p of products) {
+      const cats = ((p.categories || []) as Array<{ name: string }>).map((c: any) => c?.name).filter(Boolean);
+      const key = cats.length > 0 ? cats[0] : "Otros";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(p);
     }
+    return Array.from(groups.entries()).map(([label, prods]) => ({ label, products: prods }));
+  }
 
-    const skip = (page - 1) * limit;
+  async searchProducts(query: string, page: number = 1, limit: number = 20, category?: string, storeId?: string): Promise<{ products: any[], total: number, totalPages: number }> {
+    try {
+      if (!query || query.trim().length === 0) return { products: [], total: 0, totalPages: 0 };
+      
+      const categories = category ? category.split(",").filter(Boolean) : [];
 
-    const [products, total] = await Promise.all([
-      this.productRepository.searchProducts(query, skip, limit, categories, storeId),
-      this.productRepository.getSearchCount(query, categories, storeId)
-    ]);
+      if (this.embeddingService && config.ai.features.semanticSearch) {
+        try {
+          const similar = await this.embeddingService.searchSimilar(query, 200, storeId, categories.length > 0 ? categories : undefined);
+          if (similar.length > 0) {
+            const productIds = similar.map(s => s.id);
+            const products = await this.productRepository.getProductsByIds(productIds, categories);
+            const total = products.length;
+            const skip = (page - 1) * limit;
+            return {
+              products: products.slice(skip, skip + limit).map(p => this.serializeProduct(p)),
+              total,
+              totalPages: Math.ceil(total / limit),
+            };
+          }
+        } catch (error) {
+          log.warn("Búsqueda semántica falló, usando fallback textual:", error);
+        }
+      }
 
-    return {
-      products: products.map(p => this.serializeProduct(p)),
-      total,
-      totalPages: Math.ceil(total / limit)
-    };
+      const skip = (page - 1) * limit;
+
+      const [products, total] = await Promise.all([
+        this.productRepository.searchProducts(query, skip, limit, categories, storeId),
+        this.productRepository.getSearchCount(query, categories, storeId)
+      ]);
+
+      return {
+        products: products.map(p => this.serializeProduct(p)),
+        total,
+        totalPages: Math.ceil(total / limit)
+      };
+    } catch (error) {
+      log.error("Error en búsqueda de productos, retornando vacío:", error);
+      return { products: [], total: 0, totalPages: 0 };
+    }
   }
 
   async createProduct(data: Omit<Product, "id" | "createdAt" | "updatedAt">): Promise<any> {
@@ -159,14 +175,14 @@ export class ProductService {
 
           // Tier 2: category-based
           if (categories.length > 0) {
-            const catProducts = await this.productRepository.getProductsByCategories(categories, limit + 1, productId);
-            const ids = catProducts.map(p => p.id).slice(0, limit);
+            const allWithCategory = await this.productRepository.getAllProducts(0, limit + 1, categories);
+            const ids = allWithCategory.filter(p => p.id !== productId).slice(0, limit).map(p => p.id);
             if (ids.length > 0) return ids;
           }
 
           // Tier 3: latest products
-          const latest = await this.productRepository.getLatestProducts(limit, productId);
-          return latest.map(p => p.id);
+          const latest = await this.productRepository.getAllProducts(0, limit);
+          return latest.filter(p => p.id !== productId).slice(0, limit).map(p => p.id);
         },
       );
 

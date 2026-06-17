@@ -17,6 +17,17 @@ import { ProductsGrid } from "@/components/products/ProductsGrid";
 import { ProductsPagination } from "@/components/products/ProductsPagination";
 import { ProductsEmptyState } from "@/components/products/ProductsEmptyState";
 
+function groupProductsByCategory(products: any[]): ProductGroup[] {
+  const groups = new Map<string, any[]>();
+  for (const p of products) {
+    const cats = (p.categories || []).map((c: any) => c?.name).filter(Boolean);
+    const key = cats.length > 0 ? cats[0] : "Otros";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(p);
+  }
+  return Array.from(groups.entries()).map(([label, prods]) => ({ label, products: prods }));
+}
+
 const categoryTranslations: Record<string, { es: string; en: string }> = {
   fertilizantes: { es: "Fertilizantes", en: "Fertizers" },
   semillas: { es: "Semillas", en: "Seeds" },
@@ -29,6 +40,11 @@ const categoryTranslations: Record<string, { es: string; en: string }> = {
   herramientas: { es: "Herramientas", en: "Tools" },
   sustratos: { es: "Sustratos", en: "Substrates" },
 };
+
+interface ProductGroup {
+  label: string;
+  products: any[];
+}
 
 interface ProductsPageClientProps {
   initialData: {
@@ -59,6 +75,7 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
 
   // View & UI state
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
+  const [groupByCategory, setGroupByCategory] = useState(false);
   const [searchTerm, setSearchTerm] = useState(queryParam);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
@@ -67,6 +84,11 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
   const [total, setTotal] = useState(initialData.total);
   const [totalPages, setTotalPages] = useState(initialData.totalPages);
   const [isSearching, setIsSearching] = useState(false);
+
+  // Derived groups for category grouping
+  const groups = groupByCategory && viewMode === 'grid'
+    ? groupProductsByCategory(products)
+    : undefined;
 
   // Inicializar desde props solo en montaje
   const hydrated = useRef(false);
@@ -84,14 +106,26 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
 
   // ── Helpers compartidos ──
   const fetchData = useCallback(async (q: string, p: number, l: number, cat: string) => {
-    const cats = cat ? cat.split(",").filter(Boolean) : [];
-    const catStr = cats.length > 0 ? cats.join(",") : undefined;
-    const result = q.trim()
-      ? await searchProductsAction(q.trim(), p, l, catStr)
-      : await getPaginatedProductsAction(p, l, catStr);
-    setProducts(result.products);
-    setTotal(result.total);
-    setTotalPages(result.totalPages);
+    try {
+      const cats = cat ? cat.split(",").filter(Boolean) : [];
+      const catStr = cats.length > 0 ? cats.join(",") : undefined;
+
+      if (q.trim()) {
+        const result = await searchProductsAction(q.trim(), p, l, catStr);
+        setProducts(result.products);
+        setTotal(result.total);
+        setTotalPages(result.totalPages);
+      } else {
+        const result = await getPaginatedProductsAction(p, l, catStr);
+        setProducts(result.products);
+        setTotal(result.total);
+        setTotalPages(result.totalPages);
+      }
+    } catch (error) {
+      setProducts([]);
+      setTotal(0);
+      setTotalPages(0);
+    }
   }, []);
 
   const syncUrl = useCallback((q: string, p: number, l: number, cat: string) => {
@@ -209,6 +243,8 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
           categories={categories}
           categoryCounts={categoryCounts}
           categoryParam={categoryParam}
+          groupByCategory={groupByCategory}
+          setGroupByCategory={setGroupByCategory}
         />
 
         <div className="container mx-auto px-4 md:px-6">
@@ -342,10 +378,11 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
 
             {/* Main Content Column */}
             <div className="flex-1 min-h-[500px]">
-              {products.length > 0 ? (
+              {(products.length > 0 || (groups && groups.length > 0)) ? (
                 <>
                   <ProductsGrid
-                    products={products as any}
+                    products={groups ? undefined : products}
+                    groups={groups}
                     viewMode={viewMode}
                     t={t}
                   />

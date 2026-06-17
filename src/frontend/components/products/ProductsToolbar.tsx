@@ -35,6 +35,8 @@ interface ProductsToolbarProps {
   categories: string[];
   categoryCounts?: Record<string, number>;
   categoryParam: string;
+  groupByCategory?: boolean;
+  setGroupByCategory?: (val: boolean) => void;
 }
 
 export function ProductsToolbar({
@@ -51,6 +53,8 @@ export function ProductsToolbar({
   categories,
   categoryCounts = {},
   categoryParam,
+  groupByCategory = false,
+  setGroupByCategory,
 }: ProductsToolbarProps) {
   const { language } = useLanguage();
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
@@ -371,6 +375,24 @@ export function ProductsToolbar({
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
+
+            {setGroupByCategory && (
+              <button
+                onClick={() => setGroupByCategory(!groupByCategory)}
+                disabled={viewMode !== 'grid'}
+                className={cn(
+                  "relative rounded-xl px-3 py-2 transition-all active:scale-95 text-xs font-semibold border",
+                  groupByCategory && viewMode === 'grid'
+                    ? "text-primary-foreground bg-[#a68953] border-[#a68953] shadow-[0_2px_12px_rgba(166,137,83,0.5)]"
+                    : "text-muted-foreground hover:text-foreground border-border/60",
+                  viewMode !== 'grid' && "opacity-40 cursor-not-allowed"
+                )}
+                title={language === 'es' ? 'Agrupar por categoría' : 'Group by category'}
+              >
+                <SlidersHorizontal className="h-4 w-4 inline mr-1" />
+                {language === 'es' ? 'Agrupar' : 'Group'}
+              </button>
+            )}
           </div>
         </div>
       </div>
