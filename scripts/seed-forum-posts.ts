@@ -201,8 +201,23 @@ async function main() {
 
   // Generar embeddings para los posts creados (si Ollama está disponible)
   console.log(`\nGenerando embeddings vectoriales...`);
+  const { OllamaProvider } = await import('@/backend/modules/ai/providers/ollama');
+  const { EmbeddingRepository, EmbeddingService } = await import('@/backend/modules/shared/embedding');
+  const { config } = await import('@/config/config');
   const { ForumPostEmbeddingService } = await import('@/backend/modules/forum/forumPostEmbedding.service');
-  const embeddingService = new ForumPostEmbeddingService();
+
+  const provider = new OllamaProvider({
+    apiKey: "",
+    baseUrl: config.ollama.baseUrl,
+    defaultModel: "llama3.2",
+    embeddingModel: config.ollama.embeddingModel,
+    maxRetries: 1,
+    timeout: config.ollama.timeout,
+  });
+
+  const repository = new EmbeddingRepository('ForumPostEmbedding', 'postId');
+  const genericService = new EmbeddingService(repository, provider, { batchSize: config.embedding.batchSize });
+  const embeddingService = new ForumPostEmbeddingService(genericService);
   const result = await embeddingService.generateAll();
   console.log(`  Embeddings generados: ${result.success}`);
   console.log(`  Fallos: ${result.failed}`);

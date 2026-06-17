@@ -1,17 +1,11 @@
 import prisma from "@/backend/db/prisma";
-import { EmbeddingRepository, EmbeddingService } from "@/backend/modules/shared/embedding";
-import { config } from "@/config/config";
+import type { EmbeddingService } from "@/backend/modules/shared/embedding";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/product/productEmbedding.service.ts");
 
 export class ProductEmbeddingService {
-  private genericService: EmbeddingService;
-
-  constructor() {
-    const repository = new EmbeddingRepository('ProductEmbedding', 'productId');
-    this.genericService = new EmbeddingService(repository, { batchSize: config.embedding.batchSize });
-  }
+  constructor(private genericService: EmbeddingService) {}
 
   buildEmbeddingText(product: { name: string; description: string; tag: string; categories?: Array<{ name: string }> | string[] }): string {
     const categories = product.categories

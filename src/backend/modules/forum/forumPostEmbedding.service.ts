@@ -1,17 +1,11 @@
 import prisma from "@/backend/db/prisma";
-import { EmbeddingRepository, EmbeddingService } from "@/backend/modules/shared/embedding";
-import { config } from "@/config/config";
+import type { EmbeddingService } from "@/backend/modules/shared/embedding";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/forum/forumPostEmbedding.service.ts");
 
 export class ForumPostEmbeddingService {
-  private genericService: EmbeddingService;
-
-  constructor() {
-    const repository = new EmbeddingRepository('ForumPostEmbedding', 'postId');
-    this.genericService = new EmbeddingService(repository, { batchSize: config.embedding.batchSize });
-  }
+  constructor(private genericService: EmbeddingService) {}
 
   buildEmbeddingText(post: { title: string; body: string; labels: string[] }): string {
     return [

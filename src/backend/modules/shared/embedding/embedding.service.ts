@@ -1,5 +1,4 @@
-import { OllamaProvider } from "@/backend/modules/ai/providers/ollama";
-import { config } from "@/config/config";
+import type { AIProvider } from "@/backend/modules/ai/providers/types";
 import logger from "@/utils/logger";
 import { EmbeddingRepository } from "./embedding.repository";
 import type { EmbeddingStats, SimilarEntityResult } from "./embedding.types";
@@ -13,28 +12,14 @@ export interface EmbeddingServiceOptions {
 }
 
 export class EmbeddingService {
-  private provider: OllamaProvider | null = null;
   private lastAvailabilityCheck = 0;
   private availabilityCache: { available: boolean; reason?: string } | null = null;
 
   constructor(
     private repository: EmbeddingRepository,
+    private provider: AIProvider,
     private options: EmbeddingServiceOptions = {},
   ) {}
-
-  private getProvider(): OllamaProvider {
-    if (!this.provider) {
-      this.provider = new OllamaProvider({
-        apiKey: "",
-        baseUrl: config.ollama.baseUrl,
-        defaultModel: "llama3.2",
-        embeddingModel: config.ollama.embeddingModel,
-        maxRetries: 1,
-        timeout: config.ollama.timeout,
-      });
-    }
-    return this.provider;
-  }
 
   async isAvailable(): Promise<{ available: boolean; reason?: string }> {
     const now = Date.now();
@@ -43,12 +28,11 @@ export class EmbeddingService {
     }
 
     try {
-      const provider = this.getProvider();
-      const modelAvailable = await provider.isAvailable();
+      const modelAvailable = await this.provider.isAvailable();
       if (!modelAvailable) {
         this.availabilityCache = {
           available: false,
-          reason: `Modelo ${config.ollama.embeddingModel} no disponible en Ollama (${config.ollama.baseUrl})`,
+          reason: "Modelo de embeddings no disponible",
         };
         log.warn("🤖 [SemanticSearch] " + this.availabilityCache.reason);
         this.lastAvailabilityCheck = now;
@@ -81,14 +65,13 @@ export class EmbeddingService {
 
   async generateForEntity(entityId: string, text: string): Promise<number[] | null> {
     try {
-      const provider = this.getProvider();
-      const available = await provider.isAvailable();
+      const available = await this.provider.isAvailable();
       if (!available) {
-        log.warn("🤖 [Embedding] Ollama no disponible, embedding será nulo para:", entityId);
+        log.warn("🤖 [Embedding] Provider no disponible, embedding será nulo para:", entityId);
         return null;
       }
 
-      const response = await provider.embed(text);
+      const response = await this.provider.embed(text);
 
       if (!response.embedding || response.embedding.length === 0) {
         log.warn("🤖 [Embedding] Embedding vacío para entidad:", entityId);
@@ -108,7 +91,7 @@ export class EmbeddingService {
   async generateAll(
     fetchPending: (limit: number) => Promise<Array<{ id: string; text: string }>>,
   ): Promise<{ success: number; failed: number; skipped: number }> {
-    const batchSize = this.options.batchSize ?? config.embedding.batchSize;
+    const batchSize = this.options.batchSize ?? 10;
     const entities = await fetchPending(batchSize);
 
     if (entities.length === 0) return { success: 0, failed: 0, skipped: 0 };
@@ -136,8 +119,7 @@ export class EmbeddingService {
     if (!availability.available) return [];
 
     try {
-      const provider = this.getProvider();
-      const response = await provider.embed(query);
+      const response = await this.provider.embed(query);
       if (!response.embedding) return [];
 
       return this.repository.searchSimilar(response.embedding, limit, minSimilarity);
