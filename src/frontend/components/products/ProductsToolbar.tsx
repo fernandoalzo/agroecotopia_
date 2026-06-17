@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Loader2, XCircle, Hash, LayoutGrid, Grid2X2, List, ChevronDown, SlidersHorizontal } from "lucide-react";
+import { Search, Loader2, X, Hash, LayoutGrid, Grid2X2, List, ChevronDown, SlidersHorizontal } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
@@ -86,28 +86,35 @@ export function ProductsToolbar({
       {/* 📱 MOBILE VIEW LAYOUT (md:hidden) */}
       <div className="md:hidden flex flex-col gap-4">
         {/* 1. Search Input */}
-        <div className="relative w-full group">
-          <div className="relative flex items-center">
-            <div className="absolute left-4 z-10">
-              {isLoading ? (
-                <Loader2 className="h-5 w-5 text-primary animate-spin" />
-              ) : (
-                <Search className="h-5 w-5 text-muted-foreground" />
-              )}
-            </div>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={t.products.searchPlaceholder}
-              className="w-full h-14 pl-12 pr-14 rounded-2xl border-2 border-border/60 bg-card/40 backdrop-blur-xl font-body text-base"
-            />
-            {searchTerm && (
-              <button onClick={() => setSearchTerm("")} className="absolute right-4 p-1">
-                <XCircle className="h-5 w-5 text-muted-foreground" />
-              </button>
+        <div className="relative">
+          {isLoading ? (
+            <Loader2 className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin" />
+          ) : (
+            <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          )}
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={t.products.searchPlaceholder}
+            className="w-full pl-10 pr-10 py-3 bg-transparent border-b-2 border-border/50 focus:border-primary focus:outline-none text-base text-foreground placeholder:text-muted-foreground/60 transition-all rounded-none"
+          />
+          <AnimatePresence>
+            {searchTerm.length > 0 && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.5 }}
+                transition={{ duration: 0.15 }}
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="absolute right-0 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                aria-label={language === 'es' ? 'Limpiar búsqueda' : 'Clear search'}
+              >
+                <X className="w-5 h-5" />
+              </motion.button>
             )}
-          </div>
+          </AnimatePresence>
         </div>
 
         {/* 2. Categories Accordion (Under Search Input) */}
@@ -263,69 +270,35 @@ export function ProductsToolbar({
 
       {/* 🖥️ DESKTOP VIEW LAYOUT (hidden md:flex) */}
       <div className="hidden md:flex flex-row gap-8 justify-between items-center border-b border-border/80 pb-10">
-        <div className="relative w-full md:w-[450px] group">
-          {/* Decorative Glow Effect */}
-          <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/5 to-transparent rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
-          <div className="relative flex items-center">
-            <div className="absolute left-4 z-10">
-              <AnimatePresence mode="wait">
-                {isLoading ? (
-                  <motion.div
-                    key="loader"
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.5 }}
-                  >
-                    <Loader2 className="h-5 w-5 text-primary animate-spin" />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="search-icon"
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.5 }}
-                  >
-                    <Search className="h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={t.products.searchPlaceholder}
-              className={cn(
-                "w-full h-14 pl-12 pr-14 rounded-2xl border-2 border-border/60 bg-card/40 backdrop-blur-xl",
-                "font-body text-base placeholder:text-muted-foreground/60 transition-all duration-300",
-                "focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/60 focus:bg-card/80",
-                "hover:border-border group-hover:bg-card/60 shadow-sm"
-              )}
-            />
-
-            <AnimatePresence>
-              {searchTerm && (
-                <motion.button
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  onClick={() => setSearchTerm("")}
-                  className="absolute right-4 p-1 rounded-full hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-all active:scale-90"
-                  title="Limpiar búsqueda"
-                >
-                  <XCircle className="h-5 w-5 fill-muted-foreground/10" />
-                </motion.button>
-              )}
-            </AnimatePresence>
-
-            {!searchTerm && (
-              <div className="absolute right-5 hidden sm:flex items-center gap-1 px-2 py-1 rounded-md border border-border/50 bg-background/50 text-[10px] font-bold text-muted-foreground/50 pointer-events-none">
-                <span>BUSCAR</span>
-              </div>
+        <div className="relative w-full md:w-[350px]">
+          {isLoading ? (
+            <Loader2 className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin" />
+          ) : (
+            <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          )}
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={t.products.searchPlaceholder}
+            className="w-full pl-10 pr-10 py-3 bg-transparent border-b-2 border-border/50 focus:border-primary focus:outline-none text-base text-foreground placeholder:text-muted-foreground/60 transition-all rounded-none"
+          />
+          <AnimatePresence>
+            {searchTerm.length > 0 && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.5 }}
+                transition={{ duration: 0.15 }}
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="absolute right-0 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                aria-label={language === 'es' ? 'Limpiar búsqueda' : 'Clear search'}
+              >
+                <X className="w-5 h-5" />
+              </motion.button>
             )}
-          </div>
+          </AnimatePresence>
         </div>
 
         <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-between md:justify-end">
