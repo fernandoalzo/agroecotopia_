@@ -247,9 +247,6 @@ export default function ForumAnswerCard({ answer, onRate, onEdit, onDelete, onAd
                     {t.forum.cancel}
                   </button>
                 </div>
-                <span className="text-[10px] text-muted-foreground/60">
-                  {t.forum.post.keyboardHint}
-                </span>
               </div>
             </div>
           ) : (

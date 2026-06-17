@@ -389,7 +389,6 @@ export default function ForumQuestionDetail({ question, onBack, onRate, onAddAns
             <div className="flex items-center justify-between mt-3">
               <span className="text-[10px] text-muted-foreground/60">{replyContent.length}/{ANSWER_MAX}</span>
               <div className="flex items-center gap-3">
-                <span className="text-[10px] text-muted-foreground/60 hidden sm:block">{t.forum.post.keyboardHint}</span>
                 <button
                   type="submit"
                   disabled={isSubmitting}

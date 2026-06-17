@@ -63,6 +63,16 @@ export class ForumService {
       throw new Error("You must select at least one label.");
     }
 
+    // --- AI Content Moderation ---
+    const { aiService } = await import("@/backend/modules/ai");
+    if (aiService) {
+      const moderation = await aiService.moderateForumPost(data.title, data.body);
+      if (moderation.isSpam || moderation.isOffensive || moderation.isHarmful) {
+        log.warn("🛡️ [Moderation] Post bloqueado:", { title: data.title, reason: moderation.reason });
+        throw new Error(`El contenido no cumple con las políticas de la comunidad: ${moderation.reason}`);
+      }
+    }
+
     const post = await this.forumRepository.createPost(data, authorId);
     const nls = getForumNotificationStrings(locale);
 
@@ -139,6 +149,16 @@ export class ForumService {
   ) {
     if (!data.content || data.content.length < config.forum.validation.answer.contentMin) {
       throw new Error(`Answer must be at least ${config.forum.validation.answer.contentMin} characters long.`);
+    }
+
+    // --- AI Content Moderation ---
+    const { aiService } = await import("@/backend/modules/ai");
+    if (aiService) {
+      const moderation = await aiService.moderateForumPost("Respuesta a post", data.content);
+      if (moderation.isSpam || moderation.isOffensive || moderation.isHarmful) {
+        log.warn("🛡️ [Moderation] Respuesta bloqueada:", { reason: moderation.reason });
+        throw new Error(`El contenido no cumple con las políticas de la comunidad: ${moderation.reason}`);
+      }
     }
 
     // Verify post exists and check business rules

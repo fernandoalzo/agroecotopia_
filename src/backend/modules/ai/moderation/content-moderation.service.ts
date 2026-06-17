@@ -21,25 +21,23 @@ export class ContentModerationService {
     return this.provider.moderate(content, options);
   }
 
-  async moderateProductDescription(_description: string): Promise<ModerationResult> {
-    log.info("🤖 [Moderation] moderateProductDescription placeholder.");
-    return {
-      isSpam: false,
-      isOffensive: false,
-      isHarmful: false,
-      confidence: 1,
-      reason: "Moderación no implementada — modo placeholder.",
-    };
+  async moderateProductDescription(description: string): Promise<ModerationResult> {
+    return this.moderate(description);
   }
 
-  async moderateForumPost(_title: string, _body: string): Promise<ModerationResult> {
-    log.info("🤖 [Moderation] moderateForumPost placeholder.");
-    return {
-      isSpam: false,
-      isOffensive: false,
-      isHarmful: false,
-      confidence: 1,
-      reason: "Moderación no implementada — modo placeholder.",
-    };
+  async moderateForumPost(title: string, body: string): Promise<ModerationResult> {
+    const contentToModerate = `Título: ${title}\nCuerpo: ${body}`;
+    try {
+      return await this.moderate(contentToModerate);
+    } catch (error) {
+      log.error("🤖 [Moderation] Error en moderateForumPost, activando fallback:", error);
+      return {
+        isSpam: false,
+        isOffensive: false,
+        isHarmful: false,
+        confidence: 0,
+        reason: "Fallback activado por error en el servicio de moderación.",
+      };
+    }
   }
 }

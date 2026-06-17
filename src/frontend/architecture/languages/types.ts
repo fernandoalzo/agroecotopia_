@@ -239,7 +239,7 @@ export interface Translations {
       answer: string;
       yourAnswer: string;
       answerPlaceholder: string;
-      keyboardHint: string;
+
       publishAnswer: string;
       loginToParticipate: string;
       login: string;

@@ -265,7 +265,7 @@ export const en: Translations = {
       answer: "Answer",
       yourAnswer: "Your answer",
       answerPlaceholder: "Write your answer here to help the community...",
-      keyboardHint: "⌘Enter to send",
+
       publishAnswer: "Publish answer",
       loginToParticipate: "Sign in to participate in the conversation.",
       login: "Sign In",

@@ -298,16 +298,18 @@ export default function PostPageClient({
 
   const createAnswerMutation = useMutation({
     mutationFn: async (data: { content: string; parentId?: string | null }) => {
-      const res = await createAnswer({ content: data.content, postId: id, parentId: data.parentId ?? null });
-      if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
-      return res.answer as RawAnswer;
+      return await createAnswer({ content: data.content, postId: id, parentId: data.parentId ?? null });
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
+      if (!res.success) {
+        toast.error((res.error as string | undefined) ?? t.forum.toasts.answerCreateError);
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
-      toast.success(t.forum.toasts.answerSent);
+      toast.success(t.forum.toasts.answerCreated);
     },
     onError: (err: Error) => {
-      toast.error(err.message ?? t.forum.toasts.answerSendError);
+      toast.error(err.message || t.forum.toasts.answerCreateError);
     },
   });
 

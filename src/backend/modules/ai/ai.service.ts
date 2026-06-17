@@ -23,6 +23,22 @@ export class AIService {
     return this.provider;
   }
 
+  async moderateForumPost(title: string, body: string) {
+    const { moderationService } = await import("@/backend/modules/ai");
+    const { config } = await import("@/config/config");
+    
+    if (!config.ai.features.moderation || !moderationService) {
+      return {
+        isSpam: false,
+        isOffensive: false,
+        isHarmful: false,
+        confidence: 1,
+        reason: "Moderation disabled"
+      };
+    }
+    return moderationService.moderateForumPost(title, body);
+  }
+
   async chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse> {
     const startTime = Date.now();
 

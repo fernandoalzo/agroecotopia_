@@ -243,8 +243,61 @@ export class OllamaProvider implements AIProvider {
     }
   }
 
-  async moderate(_content: string, _options?: ModerationOptions): Promise<ModerationResult> {
-    throw new Error("OllamaProvider.moderate() no implementado.");
+  async moderate(content: string, options?: ModerationOptions): Promise<ModerationResult> {
+    log.debug("🤖 [Ollama] Evaluando moderación de contenido...", { textLength: content.length });
+
+    const systemPrompt = `Eres un moderador estricto de una plataforma de agricultura (Agroecotopia). 
+Debes evaluar el siguiente contenido y responder ÚNICAMENTE con un objeto JSON válido con este esquema exacto:
+{
+  "isSpam": boolean,
+  "isOffensive": boolean,
+  "isHarmful": boolean,
+  "confidence": number (de 0.0 a 1.0),
+  "reason": "breve explicación en español de la decisión"
+}
+
+Reglas:
+- isSpam: true si es publicidad no deseada, enlaces maliciosos, estafas, o contenido sin sentido.
+- isOffensive: true si contiene insultos, lenguaje de odio, o faltas de respeto.
+- isHarmful: true si promueve actividades ilegales o peligrosas.
+- NO agregues texto antes ni después del JSON. Sólo devuelve el objeto JSON.`;
+
+    const messages: ChatMessage[] = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Analiza este texto:\n\n${content}` }
+    ];
+
+    try {
+      const response = await this.chat(messages, {
+        model: this.chatModel,
+        temperature: 0.1, // Baja temperatura para mayor consistencia
+        stream: false
+      });
+
+      // Intentamos extraer el JSON de la respuesta
+      const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+      const jsonString = jsonMatch ? jsonMatch[0] : response.content;
+      
+      const parsed = JSON.parse(jsonString) as ModerationResult;
+      
+      // Validamos que tenga las propiedades básicas
+      if (typeof parsed.isSpam !== 'boolean' || typeof parsed.isOffensive !== 'boolean') {
+        throw new Error("El modelo no devolvió un JSON con el formato correcto.");
+      }
+
+      log.debug("🤖 [Ollama] Resultado de moderación:", parsed);
+      return parsed;
+    } catch (error) {
+      log.error("🤖 [Ollama] Error al moderar contenido:", error);
+      // Fallback a nivel de proveedor si falla el parsing, devolviendo aprobación
+      return {
+        isSpam: false,
+        isOffensive: false,
+        isHarmful: false,
+        confidence: 0,
+        reason: "Error al evaluar con LLM, se aprueba por defecto."
+      };
+    }
   }
 
   async isAvailable(): Promise<boolean> {

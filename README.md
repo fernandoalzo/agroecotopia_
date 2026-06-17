@@ -999,10 +999,10 @@ Si un usuario agrega productos al carrito y no compra en 30min:
 - **Optimización de tarifas**: combinación óptima basada en peso, distancia, velocidad
 - **Estimación precisa de entrega**: predicción usando datos históricos
 
-### 6.2 Moderación del Foro Automática
-- Detecta spam, lenguaje inapropiado, posts duplicados
-- Aprueba automáticamente contenido de bajo riesgo
-- Escala a admin solo lo que requiere revisión humana
+### 6.2 Moderación del Foro Automática ✅ Implementada
+- **Análisis en tiempo real**: LLM analiza el texto antes de persistir en BD exigiendo respuesta en JSON estricto.
+- **Detección proactiva**: Detecta spam, lenguaje de odio, intentos de fraude y contenido peligroso.
+- **Degradación Elegante**: Si el modelo falla, permite la publicación pasivamente para no interrumpir el servicio.
 
 ### 6.3 Traducción Automática (i18n Dinámico)
 El sistema actual (ES/EN) se expande a **N idiomas** vía traducción automática:
@@ -1110,7 +1110,7 @@ ai: {
 
 | Fase | Features | Impacto esperado |
 |------|----------|------------------|
-| **1. Inmediata** (semanas) | ✅ **Búsqueda semántica** + ✅ **Chatbot RAG c/ Streaming** + Moderación foro | −40% consultas repetitivas |
+| **1. Inmediata** (semanas) | ✅ **Búsqueda semántica** + ✅ **Chatbot RAG c/ Streaming** + ✅ **Moderación foro** | −40% consultas repetitivas |
 | **2. Corto plazo** (1-2 meses) | Recomendaciones + Descripciones automáticas + Traducción | +25% conversión, alcance EN |
 | **3. Medio plazo** (3-4 meses) | Visión (clasificación + búsqueda por imagen) + Predicción demanda | Reducción overstock, mejor UX |
 | **4. Largo plazo** (6+ meses) | Diagnóstico plagas + Voz + Pricing dinámico + CLV | Diferenciador competitivo total |

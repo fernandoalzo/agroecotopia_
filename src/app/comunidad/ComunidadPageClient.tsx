@@ -183,11 +183,13 @@ export default function ComunidadPageClient({
 
   const createPostMutation = useMutation({
     mutationFn: async (postData: { title: string; body: string; labels: string[] }) => {
-      const res = await createPost(postData);
-      if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
-      return res.post as RawPost;
+      return await createPost(postData);
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
+      if (!res.success) {
+        toast.error((res.error as string | undefined) ?? t.forum.toasts.postCreateError);
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["forumPosts"] });
       toast.success(t.forum.toasts.postCreated);
     },
