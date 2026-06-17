@@ -62,12 +62,15 @@ export async function* aiStreamChatAction(
   message: string,
   history?: Array<{ role: "user" | "assistant"; content: string }>,
 ) {
-  if (!message || message.trim().length === 0) {
-    yield JSON.stringify({ error: "El mensaje no puede estar vacío." });
-    return;
-  }
-
   try {
+    const { authService } = await import("@/backend/modules/auth");
+    const session = await authService.ensureAuthenticated();
+
+    if (!message || message.trim().length === 0) {
+      yield JSON.stringify({ error: "El mensaje no puede estar vacío." });
+      return;
+    }
+
     const { aiService } = await import("@/backend/modules/ai");
 
     if (!aiService) {
