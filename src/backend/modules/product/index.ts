@@ -15,7 +15,7 @@ const cacheService = new CacheService();
 const embeddingProvider: AIProvider = new OllamaProvider({
   apiKey: "",
   baseUrl: config.ollama.baseUrl,
-  defaultModel: "llama3.2",
+  defaultModel: "llama3.2:3b",
   embeddingModel: config.ollama.embeddingModel,
   maxRetries: 1,
   timeout: config.ollama.timeout,

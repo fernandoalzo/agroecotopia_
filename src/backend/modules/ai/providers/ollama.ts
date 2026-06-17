@@ -13,6 +13,25 @@ import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/ai/providers/ollama.ts");
 
+interface OllamaChatRequest {
+  model: string;
+  messages: Array<{ role: string; content: string }>;
+  stream?: boolean;
+  options?: {
+    temperature?: number;
+    num_predict?: number;
+  };
+}
+
+interface OllamaChatResponse {
+  model: string;
+  message: { role: string; content: string };
+  done: boolean;
+  total_duration?: number;
+  prompt_eval_count?: number;
+  eval_count?: number;
+}
+
 interface OllamaEmbeddingResponse {
   embedding: number[];
 }
@@ -29,18 +48,78 @@ export class OllamaProvider implements AIProvider {
   ];
 
   private baseUrl: string;
+  private chatModel: string;
   private embeddingModel: string;
   private timeout: number;
 
   constructor(config: AIProviderConfig) {
     this.baseUrl = config.baseUrl.replace(/\/$/, "");
+    this.chatModel = config.defaultModel;
     this.embeddingModel = config.embeddingModel;
     this.timeout = config.timeout;
   }
 
-  async chat(_messages: ChatMessage[], _options?: ChatOptions): Promise<ChatResponse> {
-    log.warn("🤖 [Ollama] Chat no implementado en este provider.");
-    throw new Error("OllamaProvider.chat() no implementado — use para embeddings únicamente.");
+  async chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse> {
+    log.debug("🤖 [Ollama] Chat completado...", {
+      model: options?.model || this.chatModel,
+      messagesCount: messages.length,
+    });
+
+    const model = options?.model || this.chatModel;
+
+    const body: OllamaChatRequest = {
+      model,
+      messages: messages.map(m => ({
+        role: m.role,
+        content: m.content,
+      })),
+      stream: false,
+      options: {
+        temperature: options?.temperature ?? 0.7,
+        num_predict: options?.maxTokens ?? 2048,
+      },
+    };
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeout);
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const errBody = await response.text().catch(() => "");
+        throw new Error(`Ollama API error ${response.status}: ${errBody}`);
+      }
+
+      const data: OllamaChatResponse = await response.json();
+
+      log.debug("🤖 [Ollama] Chat completado:", {
+        model: data.model,
+        inputTokens: data.prompt_eval_count ?? 0,
+        outputTokens: data.eval_count ?? 0,
+      });
+
+      return {
+        content: data.message.content,
+        tokens: {
+          input: data.prompt_eval_count ?? 0,
+          output: data.eval_count ?? 0,
+        },
+        model: data.model,
+      };
+    } catch (error: any) {
+      if (error.name === "AbortError") {
+        throw new Error(`Ollama chat timeout después de ${this.timeout}ms`);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   async embed(text: string): Promise<EmbeddingResponse> {
@@ -109,11 +188,16 @@ export class OllamaProvider implements AIProvider {
       if (!response.ok) return false;
 
       const data: OllamaTagsResponse = await response.json();
-      const modelExists = data.models?.some(m => m.name === this.embeddingModel);
+      const models = data.models?.map(m => m.name) ?? [];
+      const embeddingOk = models.some(m => m === this.embeddingModel);
+      const chatOk = models.some(m => m === this.chatModel);
 
-      log.debug("🤖 [Ollama] Servidor disponible" + (modelExists ? "" : `, modelo ${this.embeddingModel} no encontrado`));
+      log.debug("🤖 [Ollama] Servidor disponible", {
+        embeddingModel: embeddingOk ? "✅" : "❌",
+        chatModel: chatOk ? "✅" : "❌",
+      });
 
-      return modelExists;
+      return embeddingOk && chatOk;
     } catch {
       log.warn("🤖 [Ollama] Servidor no disponible en", { baseUrl: this.baseUrl });
       return false;

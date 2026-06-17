@@ -123,8 +123,12 @@ export default function ChatWidget({ forceShow = false, targetUserId, chatDeps }
                 onlineLabel={chat.t.online}
                 offlineLabel={chat.t.offline}
                 tooltipClear={chat.t.tooltipClear}
+                isAIMode={chat.isAIMode}
+                aiTitle={chat.t.aiTitle}
+                aiSubtitle={chat.t.aiSubtitle}
                 onClose={() => chat.setIsOpen(false)}
                 onDeleteClick={() => chat.setShowDeleteConfirm(true)}
+                onToggleAIMode={chat.handleToggleAIMode}
               />
 
               <ChatMessageList
@@ -141,6 +145,10 @@ export default function ChatWidget({ forceShow = false, targetUserId, chatDeps }
                 messagesScrollRef={chat.messagesScrollRef}
                 messagesEndRef={chat.messagesEndRef}
                 firstUnreadRef={chat.firstUnreadRef}
+                isAIMode={chat.isAIMode}
+                isAIResponding={chat.isAIResponding}
+                aiNoMessagesText={chat.t.aiNoMessages}
+                aiThinkingText={chat.t.aiThinking}
                 onCopy={chat.handleCopy}
                 onReply={(msg) => {
                   chat.setReplyingTo(msg);
@@ -164,6 +172,10 @@ export default function ChatWidget({ forceShow = false, targetUserId, chatDeps }
                 disconnectedWarning={chat.t.disconnectedWarning}
                 replyingToLabel={chat.t.replyingTo}
                 inputRef={chat.inputRef}
+                isAIMode={chat.isAIMode}
+                isAIResponding={chat.isAIResponding}
+                aiPlaceholder={chat.t.placeholder}
+                aiWarning={chat.t.disconnectedWarning}
                 onInputChange={chat.handleInputChange}
                 onSubmit={chat.handleSendMessage}
                 onCancelReply={() => chat.setReplyingTo(null)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Send, X } from "lucide-react";
+import { Bot, Send, X } from "lucide-react";
 import { config } from "@/config/config";
 import type { Message } from "./ChatWidget";
 
@@ -18,6 +18,11 @@ interface ChatInputProps {
 
     // ✅ FIXED
     inputRef: React.RefObject<HTMLInputElement | null>;
+
+    isAIMode: boolean;
+    isAIResponding: boolean;
+    aiPlaceholder: string;
+    aiWarning: string;
 
     onInputChange: (
         e: React.ChangeEvent<HTMLInputElement>
@@ -42,25 +47,37 @@ export const ChatInput = ({
     disconnectedWarning,
     replyingToLabel,
     inputRef,
+    isAIMode,
+    isAIResponding,
+    aiPlaceholder,
+    aiWarning,
     onInputChange,
     onSubmit,
     onCancelReply,
 }: ChatInputProps) => {
-    const isSendDisabled =
+    const isAiDisabled = isAIMode && isAIResponding;
+    const isHumanDisabled = !isAIMode && (
         !inputMessage.trim() ||
         !isConnected ||
-        (
-            config.chat.enableE2EE &&
-            !isE2EEReady
-        );
+        (config.chat.enableE2EE && !isE2EEReady)
+    );
+    const isSendDisabled = isAIMode ? isAiDisabled : isHumanDisabled;
 
     return (
         <div className="border-t border-border bg-background">
-            {/* Disconnected warning banner */}
-            {!isConnected && (
+            {/* Disconnected warning banner (human mode only) */}
+            {!isAIMode && !isConnected && (
                 <div className="px-3 py-1 bg-amber-500/10 border-b border-amber-500/15 text-amber-500 text-[10px] font-medium flex items-center gap-1.5 animate-pulse">
                     <span className="w-1 h-1 bg-amber-500 rounded-full" />
                     {disconnectedWarning}
+                </div>
+            )}
+
+            {/* AI mode indicator */}
+            {isAIMode && (
+                <div className="px-3 py-1 bg-violet-500/10 border-b border-violet-500/15 text-violet-600 dark:text-violet-400 text-[10px] font-medium flex items-center gap-1.5">
+                    <Bot className="w-3 h-3" />
+                    Modo IA — pregúntame sobre productos, cultivos, plagas o la plataforma
                 </div>
             )}
 
@@ -99,20 +116,28 @@ export const ChatInput = ({
                     type="text"
                     value={inputMessage}
                     onChange={onInputChange}
-                    disabled={!isConnected}
+                    disabled={isAIMode ? isAIResponding : !isConnected}
                     placeholder={
-                        isConnected
-                            ? placeholder
-                            : disconnectedPlaceholder
+                        isAIMode
+                            ? aiPlaceholder
+                            : isConnected
+                                ? placeholder
+                                : disconnectedPlaceholder
                     }
-                    className="flex-1 h-10 px-3 border border-border hover:border-border/80 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm outline-none bg-secondary/10 transition-all disabled:opacity-50"
+                    className={`flex-1 h-10 px-3 border rounded-xl text-sm outline-none bg-secondary/10 transition-all disabled:opacity-50 ${isAIMode
+                            ? "border-violet-300 dark:border-violet-700 hover:border-violet-400 focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                            : "border-border hover:border-border/80 focus:border-primary focus:ring-1 focus:ring-primary"
+                        }`}
                 />
 
                 <button
                     type="submit"
                     onMouseDown={(e) => e.preventDefault()}
                     disabled={isSendDisabled}
-                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground disabled:opacity-40 disabled:hover:bg-primary shadow-sm transition-all cursor-pointer"
+                    className={`h-10 w-10 flex items-center justify-center rounded-xl shadow-sm transition-all cursor-pointer ${isAIMode
+                            ? "bg-violet-600 hover:bg-violet-700 text-white disabled:opacity-40 disabled:hover:bg-violet-600"
+                            : "bg-primary hover:bg-primary/95 text-primary-foreground disabled:opacity-40 disabled:hover:bg-primary"
+                        }`}
                 >
                     <Send className="w-4 h-4" />
                 </button>

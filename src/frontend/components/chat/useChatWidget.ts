@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -10,6 +10,7 @@ import { config } from "@/config/config";
 import logger from "@/utils/logger";
 import type { Message } from "./ChatWidget";
 import { getUnreadMessageCountForUser, isUnreadMessageForUser } from "@/frontend/lib/chatUnread";
+import { aiChatAction } from "@/backend/modules/ai/ai.actions";
 
 const log = logger.child("src/frontend/components/chat/useChatWidget.ts");
 
@@ -20,6 +21,20 @@ type ChatWidgetDeps = {
     deleteConversationAction: (conversationId: string) => Promise<any>;
     getOrCreateConversationForAdmin: (targetUserId: string) => Promise<any>;
 };
+
+let aiIdCounter = 0;
+function createAIMessage(content: string, conversationId: string, isUser: boolean): Message {
+    return {
+        id: `ai_${Date.now()}_${++aiIdCounter}`,
+        content,
+        senderId: isUser ? "user" : "ai",
+        senderRole: isUser ? "user" : "ai",
+        conversationId,
+        isRead: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+    };
+}
 
 export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled = true, deps?: Partial<ChatWidgetDeps>) {
     const {
@@ -51,6 +66,11 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
     const [viewportHeight, setViewportHeight] = useState("100vh");
     const [targetUserName, setTargetUserName] = useState<string | null>(null);
     const [isClient, setIsClient] = useState(false);
+    const [isAIMode, setIsAIMode] = useState(false);
+    const [isAIResponding, setIsAIResponding] = useState(false);
+    const [aiConversationHistory, setAiConversationHistory] = useState<
+        Array<{ role: "user" | "assistant"; content: string }>
+    >([]);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const firstUnreadRef = useRef<HTMLDivElement>(null);
@@ -81,6 +101,13 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
             disconnectedWarning: "Servidor de chat desconectado. Reconectando...",
             disconnectedPlaceholder: "Desconectado...",
             replyingTo: "Respondiendo a",
+            aiTitle: "Asistente Agroecotopia",
+            aiSubtitle: "Asistente con IA",
+            aiThinking: "El asistente está pensando...",
+            aiNoMessages: "¡Hola! Soy el asistente IA de Agroecotopia. Pregúntame sobre productos, cultivos, plagas o cómo funciona la plataforma.",
+            aiSwitchToAI: "Asistente IA",
+            aiSwitchToHuman: "Soporte Humano",
+            aiError: "Lo siento, ocurrió un error al procesar tu consulta. Por favor intenta de nuevo o cambia a soporte humano.",
         },
         en: {
             title: `${config.app.name} Support`,
@@ -99,6 +126,13 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
             disconnectedWarning: "Chat server disconnected. Reconnecting...",
             disconnectedPlaceholder: "Disconnected...",
             replyingTo: "Replying to",
+            aiTitle: "Agroecotopia AI",
+            aiSubtitle: "AI Assistant",
+            aiThinking: "The assistant is thinking...",
+            aiNoMessages: "Hi! I'm the Agroecotopia AI assistant. Ask me about products, crops, pests, or how the platform works.",
+            aiSwitchToAI: "AI Assistant",
+            aiSwitchToHuman: "Human Support",
+            aiError: "Sorry, an error occurred while processing your query. Please try again or switch to human support.",
         },
     }[language === "es" ? "es" : "en"];
 
@@ -387,14 +421,72 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!inputMessage.trim() || !socket || !conversation?.id || !session?.user?.id) {
+        if (!inputMessage.trim()) {
+            inputRef.current?.focus();
+            return;
+        }
+
+        const content = inputMessage.trim();
+        setInputMessage("");
+        setReplyingTo(null);
+
+        if (isAIMode) {
+            setIsAIResponding(true);
+            const userMsg = createAIMessage(content, conversation?.id ?? "ai", true);
+            setMessages(prev => [...prev, userMsg]);
+
+                try {
+                    const history = aiConversationHistory;
+                const result = await aiChatAction(content, history);
+
+                if (result && "error" in result && result.error) {
+                    const errMsg = createAIMessage(
+                        t.aiError,
+                        conversation?.id ?? "ai",
+                        false,
+                    );
+                    errMsg.senderRole = "ai";
+                    setMessages(prev => [...prev, errMsg]);
+                    log.error("🤖 AI Chat error:", result.error);
+                } else if (result && "content" in result && result.content) {
+                    const aiContent: string = result.content;
+                    const aiMsg = createAIMessage(
+                        aiContent,
+                        conversation?.id ?? "ai",
+                        false,
+                    );
+                    aiMsg.senderRole = "ai";
+                    setMessages(prev => [...prev, aiMsg]);
+                    setAiConversationHistory(prev => [
+                        ...prev,
+                        { role: "user", content },
+                        { role: "assistant", content: aiContent },
+                    ]);
+                }
+            } catch (err) {
+                const errMsg = createAIMessage(
+                    t.aiError,
+                    conversation?.id ?? "ai",
+                    false,
+                );
+                errMsg.senderRole = "ai";
+                setMessages(prev => [...prev, errMsg]);
+                log.error("🤖 AI Chat error:", err);
+            } finally {
+                setIsAIResponding(false);
+                setTimeout(() => inputRef.current?.focus(), 50);
+            }
+            return;
+        }
+
+        if (!socket || !conversation?.id || !session?.user?.id) {
             inputRef.current?.focus();
             return;
         }
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         socket.emit("typing", { conversationId: conversation.id, senderId: session.user.id, isTyping: false });
 
-        let finalContent = inputMessage.trim();
+        let finalContent = content;
         let isEncrypted = false;
         let encryptionType = 0;
 
@@ -423,10 +515,19 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
             ...(replyingTo ? { replyToId: replyingTo.id } : {}),
         });
 
-        setInputMessage("");
-        setReplyingTo(null);
         setTimeout(() => inputRef.current?.focus(), 50);
     };
+
+    const handleToggleAIMode = useCallback(() => {
+        setIsAIMode(prev => {
+            if (prev) {
+                // Switching to human — clear AI messages from view
+                setMessages(prevMsgs => prevMsgs.filter(m => m.senderRole !== "ai" && m.senderId !== "user"));
+                setAiConversationHistory([]);
+            }
+            return !prev;
+        });
+    }, []);
 
     const handleDeleteConversation = async () => {
         if (!conversation?.id || !socket) return;
@@ -481,6 +582,11 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
         isE2EEReady,
         isConnected,
         targetUserName,
+        // AI mode
+        isAIMode,
+        setIsAIMode,
+        isAIResponding,
+        aiConversationHistory,
         // Refs
         inputRef,
         chatContainerRef,
@@ -492,6 +598,7 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
         handleInputChange,
         handleSendMessage,
         handleDeleteConversation,
+        handleToggleAIMode,
         // Translations
         t,
     };

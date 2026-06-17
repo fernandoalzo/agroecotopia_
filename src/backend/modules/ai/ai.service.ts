@@ -1,6 +1,6 @@
 import type { AIProvider, ChatMessage, ChatOptions, ChatResponse } from "./providers/types";
 import { AIRepository } from "./ai.repository";
-import type { RAGService } from "./nlp/rag.service";
+import type { RAGService, RAGOptions } from "./nlp/rag.service";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/ai/ai.service.ts");
@@ -40,6 +40,22 @@ export class AIService {
     });
 
     return response;
+  }
+
+  async ragChat(
+    messages: ChatMessage[],
+    options?: ChatOptions & { rag?: RAGOptions },
+  ): Promise<ChatResponse> {
+    if (this.rag) {
+      return this.rag.chat(messages, {
+        model: options?.model || this.options.defaultModel,
+        temperature: options?.temperature ?? this.options.defaultTemperature ?? 0.7,
+        maxTokens: options?.maxTokens ?? this.options.maxTokens ?? 2048,
+      });
+    }
+
+    log.debug("🤖 [ai] RAG no disponible, usando chat sin RAG");
+    return this.chat(messages, options);
   }
 
   async embed(text: string): Promise<number[]> {

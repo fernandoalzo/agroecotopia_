@@ -1,23 +1,66 @@
 "use server";
 
 import { withAuth } from "@/lib/auth-guards";
+import type { ChatMessage } from "./providers/types";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/ai/ai.actions.ts");
 
-export async function aiChatAction(_conversationId: string, _message: string) {
-  return withAuth(async () => {
-    log.info("🤖 [Action] aiChatAction — NO IMPLEMENTADO. Active el módulo AI para usar esta función.");
-    return {
-      error: "El módulo de IA no está activo. Consulte la documentación de FASE IA para más información.",
-    };
+export async function aiChatAction(
+  message: string,
+  history?: Array<{ role: "user" | "assistant"; content: string }>,
+) {
+  return withAuth(async (session) => {
+    if (!message || message.trim().length === 0) {
+      return { error: "El mensaje no puede estar vacío." };
+    }
+
+    try {
+      const startTime = Date.now();
+
+      const { aiService } = await import("@/backend/modules/ai");
+
+      if (!aiService) {
+        log.warn("🤖 [Action] aiChatAction: Módulo AI no activo");
+        return {
+          error: "El módulo de IA no está activo. Configure AI_ENABLED=true para activarlo.",
+        };
+      }
+
+      const messages: ChatMessage[] = [
+        ...(history ?? []).map(h => ({
+          role: h.role as "user" | "assistant",
+          content: h.content,
+        })),
+        { role: "user", content: message.trim() },
+      ];
+
+      const response = await aiService.ragChat(messages);
+
+      const elapsed = Date.now() - startTime;
+      log.info("🤖 [Action] aiChatAction completado:", {
+        userId: session.user.id,
+        tokens: response.tokens,
+        elapsed: `${elapsed}ms`,
+      });
+
+      return {
+        content: response.content,
+        tokens: response.tokens,
+        model: response.model,
+      };
+    } catch (error) {
+      log.error("🤖 [Action] Error en aiChatAction:", error);
+      return {
+        error: error instanceof Error ? error.message : "Error al procesar la consulta con IA.",
+      };
+    }
   });
 }
 
 export async function aiSemanticSearchAction(_query: string) {
   return withAuth(async () => {
-    log.info("🤖 [Action] aiSemanticSearchAction — NO IMPLEMENTADO.");
-    return { results: [], error: "Búsqueda semántica no activa." };
+    return { results: [], error: "Búsqueda semántica disponible vía los módulos de producto/foro." };
   });
 }
 
@@ -25,14 +68,12 @@ export async function aiGenerateDescriptionAction(
   _data: { name: string; category: string; tags: string[] },
 ) {
   return withAuth(async () => {
-    log.info("🤖 [Action] aiGenerateDescriptionAction — NO IMPLEMENTADO.");
-    return { error: "Generación de descripciones no activa." };
+    return { error: "Generación de descripciones no implementada aún." };
   });
 }
 
 export async function aiModerateContentAction(_content: string) {
   return withAuth(async () => {
-    log.info("🤖 [Action] aiModerateContentAction — NO IMPLEMENTADO.");
     return {
       isSpam: false,
       isOffensive: false,
@@ -44,11 +85,31 @@ export async function aiModerateContentAction(_content: string) {
 }
 
 export async function aiCheckHealthAction() {
-  return withAuth(async () => {
+  try {
+    const { aiService } = await import("@/backend/modules/ai");
+
+    if (!aiService) {
+      return {
+        moduleActive: false,
+        provider: null,
+        message: "Módulo AI presente pero no activo. Configure AI_ENABLED=true para activarlo.",
+      };
+    }
+
+    const available = await aiService.isAvailable();
+    return {
+      moduleActive: true,
+      provider: process.env.AI_PROVIDER || "deepseek",
+      available,
+      message: available
+        ? "🤖 Módulo AI activo y disponible."
+        : "🤖 Módulo AI activo pero el proveedor no está disponible.",
+    };
+  } catch (error) {
     return {
       moduleActive: false,
       provider: null,
-      message: "Módulo AI presente pero no activo. Configure AI_ENABLED=true para activarlo.",
+      message: `🤖 Módulo AI: error al verificar salud: ${error}`,
     };
-  });
+  }
 }

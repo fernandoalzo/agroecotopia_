@@ -16,6 +16,8 @@ interface ChatMessageBubbleProps {
     // ✅ FIXED
     firstUnreadRef: React.RefObject<HTMLDivElement | null>;
 
+    isAIMessage?: boolean;
+
     onCopy: (id: string, content: string) => void;
     onReply: (msg: Message) => void;
     onToggleActive: (id: string) => void;
@@ -64,6 +66,7 @@ export const ChatMessageBubble = ({
     sessionUserId,
     chatTitle,
     firstUnreadRef,
+    isAIMessage,
     onCopy,
     onReply,
     onToggleActive,
@@ -81,12 +84,24 @@ export const ChatMessageBubble = ({
         >
             <div
                 onClick={() => onToggleActive(msg.id)}
-                className={`p-3 rounded-2xl text-sm shadow-sm relative group/msg ${isMe
-                    ? "bg-primary text-primary-foreground rounded-tr-none"
-                    : "bg-card text-card-foreground border border-border/60 rounded-tl-none"
+                className={`p-3 rounded-2xl text-sm shadow-sm relative group/msg ${isAIMessage
+                    ? "bg-gradient-to-br from-violet-500/10 to-violet-600/5 text-foreground border border-violet-500/20 rounded-tl-none"
+                    : isMe
+                        ? "bg-primary text-primary-foreground rounded-tr-none"
+                        : "bg-card text-card-foreground border border-border/60 rounded-tl-none"
                     } md:cursor-default cursor-pointer`}
-                style={{ width: "100%", maxWidth: "100%", minWidth: 0, overflowWrap: "anywhere", wordBreak: "break-word", whiteSpace: "pre-line" }}
+                style={{ width: "fit-content", maxWidth: "100%", minWidth: 0, overflowWrap: "anywhere", wordBreak: "break-word", whiteSpace: "pre-line" }}
             >
+                {isAIMessage && (
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[10px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wider">
+                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        Agroecotopia IA
+                    </div>
+                )}
+
                 {/* Reply preview */}
                 {msg.replyTo && (
                     <div
