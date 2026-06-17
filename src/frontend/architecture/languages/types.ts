@@ -245,11 +245,12 @@ export interface Translations {
       login: string;
       noAnswers: string;
       noAnswersDesc: string;
-    scrollToTop: string;
-    inReplyTo: string;
-    labelCount: string;
-    errorTitle: string;
-    retry: string;
+      scrollToTop: string;
+      inReplyTo: string;
+      labelCount: string;
+      errorTitle: string;
+      retry: string;
+      relatedPosts: string;
     };
     answer: {
       minLengthError: string;

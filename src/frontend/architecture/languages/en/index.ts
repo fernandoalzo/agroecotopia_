@@ -276,6 +276,7 @@ export const en: Translations = {
       labelCount: "{count} / 5 selected",
       errorTitle: "Something went wrong",
       retry: "Try again",
+      relatedPosts: "Related Posts",
     },
     answer: {
       minLengthError: "The answer must be at least 10 characters long.",

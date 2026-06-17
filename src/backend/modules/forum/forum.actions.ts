@@ -54,6 +54,16 @@ export async function getPostByIdAction(id: string) {
   }
 }
 
+export async function getRelatedPostsAction(postId: string, limit?: number) {
+  try {
+    const posts = await forumService.getRelatedPosts(postId, limit);
+    return { success: true, posts };
+  } catch (error: unknown) {
+    log.error(`Failed to get related posts for id ${postId}:`, error);
+    return { success: false, error: getErrorMessage(error) };
+  }
+}
+
 export async function deletePostAction(postId: string) {
   return withAuth(async (session) => {
     try {

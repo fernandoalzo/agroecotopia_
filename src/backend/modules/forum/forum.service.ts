@@ -6,6 +6,7 @@ import logger from "@/utils/logger";
 import { getForumNotificationStrings } from "./forum-notification-strings";
 import { config } from "@/config/config";
 import eventBus from "@/utils/eventBus";
+import { CacheKeys } from "@/backend/cache";
 
 const log = logger.child("src/backend/modules/forum/forum.service.ts");
 
@@ -123,6 +124,54 @@ export class ForumService {
       throw new Error("Post not found.");
     }
     return post;
+  }
+
+  async getRelatedPosts(postId: string, limit: number = 6) {
+    try {
+      const post = await this.forumRepository.getPostById(postId);
+      if (!post) return [];
+
+      const labels = post.labels || [];
+
+      const relatedIds = await this.forumRepository.getOrSetIds(
+        CacheKeys.forum.related(postId),
+        async () => {
+          // Tier 1: embedding-based semantic search
+          if (this.embeddingService) {
+            try {
+              const similar = await this.embeddingService.searchSimilar(
+                post.title + "\n" + post.body, 
+                limit + 1, 
+                labels.length > 0 ? labels : undefined
+              );
+              const ids = similar.filter(r => r.id !== postId).slice(0, limit).map(r => r.id);
+              if (ids.length > 0) return ids;
+              log.warn("🤖 [RelatedPosts] Embedding search returned 0 results, falling back");
+            } catch (error) {
+              log.warn("🤖 [RelatedPosts] Embedding search failed, falling back to labels:", error);
+            }
+          }
+
+          // Tier 2: label-based fallback
+          if (labels.length > 0) {
+            const allWithLabels = await this.forumRepository.getAllPosts(0, limit + 1, labels);
+            const ids = allWithLabels.filter(p => p.id !== postId).slice(0, limit).map(p => p.id);
+            if (ids.length > 0) return ids;
+          }
+
+          // Tier 3: latest posts fallback
+          const latest = await this.forumRepository.getAllPosts(0, limit + 1);
+          return latest.filter(p => p.id !== postId).slice(0, limit).map(p => p.id);
+        },
+      );
+
+      if (relatedIds.length === 0) return [];
+      const posts = await this.forumRepository.getPostsByIds(relatedIds);
+      return posts;
+    } catch (error) {
+      log.warn("🤖 [RelatedPosts] Error obteniendo posts relacionados:", { postId, error });
+      return [];
+    }
   }
 
   async deletePost(postId: string, userId: string, role: string) {

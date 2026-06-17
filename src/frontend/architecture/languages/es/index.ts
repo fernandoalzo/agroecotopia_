@@ -276,6 +276,7 @@ export const es: Translations = {
       labelCount: "{count} / 5 seleccionadas",
       errorTitle: "Algo salió mal",
       retry: "Reintentar",
+      relatedPosts: "Publicaciones relacionadas",
     },
     answer: {
       minLengthError: "La respuesta debe tener al menos 10 caracteres.",

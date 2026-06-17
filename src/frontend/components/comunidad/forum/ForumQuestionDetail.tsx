@@ -14,6 +14,7 @@ import remarkGfm from "remark-gfm";
 
 import { Question } from "./forum.types";
 import ForumAnswerCard from "./ForumAnswerCard";
+import ForumQuestionCard from "./ForumQuestionCard";
 import { createAnswerSchema } from "./schemas/answer.schema";
 import type { AnswerFormData } from "./schemas/answer.schema";
 import { createPostSchema } from "./schemas/post.schema";

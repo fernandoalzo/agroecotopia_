@@ -10,6 +10,7 @@ import {
   deletePostAction,
   acceptAnswerAction,
   editPostAction,
+  getRelatedPostsAction,
 } from "@/backend/modules/forum/forum.actions";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -37,6 +38,7 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
       deletePost={deletePostAction}
       acceptAnswer={acceptAnswerAction}
       editPost={editPostAction}
+      getRelatedPosts={getRelatedPostsAction}
     />
   );
 }

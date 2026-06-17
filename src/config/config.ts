@@ -133,6 +133,7 @@ export const config = {
       forumCommunityStats: 300,
       forumTopContributors: 300,
       forumTrendingLabels: 300,
+      forumRelated: 120,
       stockLock: 5,
       orderList: 60,
       orderDetail: 120,

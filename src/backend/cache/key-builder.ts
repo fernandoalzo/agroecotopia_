@@ -92,6 +92,8 @@ export const CacheKeys = {
 
     trendingLabels: `${NAMESPACE}:forum:trending-labels`,
 
+    related: (id: string) => `${NAMESPACE}:forum:related:${id}`,
+
     allPattern: `${NAMESPACE}:forum:*`,
   },
 };

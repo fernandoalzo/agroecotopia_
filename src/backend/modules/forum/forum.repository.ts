@@ -415,4 +415,36 @@ export class ForumRepository {
       config.cache.ttl.forumTrendingLabels,
     ) ?? [];
   }
+
+  async getAllPosts(skip: number = 0, take: number = 20, labels?: string[]): Promise<any[]> {
+    const filtersStr = this.serializeFilters(labels ? { labels } : undefined);
+    const key = CacheKeys.forum.posts(filtersStr, "", take, undefined, "newest") + `:fallback:${skip}`;
+    
+    return this.cacheService?.getOrSet(
+      key,
+      async () => {
+        log.debug("[db] Obteniendo posts fallback:", { skip, take, labels });
+        const where: Prisma.ForumPostWhereInput = {};
+        if (labels && labels.length > 0) {
+          where.labels = { hasSome: labels };
+        }
+        
+        return prisma.forumPost.findMany({
+          where,
+          skip,
+          take,
+          include: {
+            author: { select: { id: true, name: true, image: true, role: true } },
+            _count: { select: { answers: true } },
+          },
+          orderBy: { createdAt: "desc" },
+        });
+      },
+      config.cache.ttl.forumPosts,
+    ) ?? [];
+  }
+
+  async getOrSetIds(key: string, fetcher: () => Promise<string[]>): Promise<string[]> {
+    return this.cacheService?.getOrSet(key, fetcher, config.cache.ttl.forumRelated) ?? fetcher();
+  }
 }

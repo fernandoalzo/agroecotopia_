@@ -27,6 +27,7 @@ interface PostPageClientProps {
   deletePost: (postId: string) => Promise<ActionResult>;
   acceptAnswer: (data: { answerId: string; postId: string }) => Promise<ActionResult>;
   editPost: (data: { postId: string; title?: string; body?: string; labels?: string[] }) => Promise<ActionResult>;
+  getRelatedPosts: (postId: string, limit?: number) => Promise<ActionResult>;
 }
 
 class ErrorBoundary extends Component<{ children: ReactNode; title: string; retry: string }, { hasError: boolean; error: Error | null }> {
@@ -170,6 +171,7 @@ export default function PostPageClient({
   deletePost,
   acceptAnswer,
   editPost,
+  getRelatedPosts,
 }: PostPageClientProps) {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -209,6 +211,31 @@ export default function PostPageClient({
       return res.post as RawPost & { answers: RawAnswer[] };
     },
     staleTime: 30000,
+  });
+
+  const { data: relatedPosts } = useQuery({
+    queryKey: ["forumRelated", id],
+    queryFn: async () => {
+      const res = await getRelatedPosts(id, 4);
+      if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
+      const raw = (res.posts as any[]) ?? [];
+      return raw.map(p => ({
+        id: p.id,
+        title: p.title,
+        body: p.body,
+        author: p.author?.name || t.forum.fallbackAuthorName,
+        authorId: p.authorId || p.author?.id,
+        authorImage: p.author?.image,
+        labels: p.labels || [],
+        ratingTotal: p.ratingTotal ?? 0,
+        ratingCount: p.ratingCount ?? 0,
+        createdAt: p.createdAt,
+        answers: [],
+        _count: p._count,
+        isTrending: p.isTrending ?? false,
+      }));
+    },
+    staleTime: 60000,
   });
 
   const question: Question | null = useMemo(() => {
@@ -302,14 +329,14 @@ export default function PostPageClient({
     },
     onSuccess: (res) => {
       if (!res.success) {
-        toast.error((res.error as string | undefined) ?? t.forum.toasts.answerCreateError);
+        toast.error((res.error as string | undefined) ?? t.forum.toasts.answerSendError);
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["forumPost", id] });
-      toast.success(t.forum.toasts.answerCreated);
+      toast.success(t.forum.toasts.answerSent);
     },
     onError: (err: Error) => {
-      toast.error(err.message || t.forum.toasts.answerCreateError);
+      toast.error(err.message || t.forum.toasts.answerSendError);
     },
   });
 
@@ -509,6 +536,43 @@ export default function PostPageClient({
                     })}
                   </div>
                 </div>
+
+                {/* Related Posts — newspaper clippings */}
+                {relatedPosts && relatedPosts.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-5 flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
+                      {t.forum.post.relatedPosts}
+                    </h3>
+                    <div className="space-y-0 divide-y divide-dashed divide-border/50">
+                      {relatedPosts.map((post, idx) => (
+                        <div
+                          key={post.id}
+                          onClick={() => router.push(`/comunidad/post/${post.id}`)}
+                          className="group cursor-pointer py-3 first:pt-0 last:pb-0 transition-all duration-200 hover:pl-1"
+                        >
+                          <h4 className="text-[13px] font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-tight mb-1" style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
+                            {post.title}
+                          </h4>
+                          <p className="text-[11px] text-muted-foreground/70 line-clamp-1 leading-snug italic mb-1.5">
+                            {post.body}
+                          </p>
+                          <div className="flex items-center gap-1.5">
+                            {post.labels?.slice(0, 2).map((label: string) => (
+                              <span key={label} className="text-[8px] font-black uppercase tracking-[0.15em] text-muted-foreground/50">
+                                {label}
+                              </span>
+                            ))}
+                            {post.labels?.length > 2 && (
+                              <span className="text-[8px] text-muted-foreground/30">+{post.labels.length - 2}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
               </div>
             </div>
 
