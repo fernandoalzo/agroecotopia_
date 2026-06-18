@@ -160,7 +160,8 @@ src/
 │   └── prisma/schema/                # 12 archivos .prisma (multi-schema)
 │
 ├── frontend/                         # Frontend encapsulado
-│   ├── components/                   # 69+ componentes UI
+│   ├── components/                   # 70+ componentes UI
+│   │   ├── ai/                       # AI components (RelatedPosts, RelatedProducts)
 │   │   ├── ui/                       # shadcn/ui primitives
 │   │   ├── auth/, chat/, checkout/,  # Feature components
 │   │   ├── home/sections/            # Landing page (WelcomeStage, ProductsStage, etc.)

@@ -100,6 +100,7 @@ src/
 ├── frontend/                     ← Encapsulated Frontend Architecture
 │   ├── components/               ← UI (Shared & Feature Components)
 │   │   ├── ui/                   ← shadcn / primitives
+│   │   ├── ai/                   ← AI components (RelatedPosts, RelatedProducts, etc.)
 │   │   └── [domain]/             ← Domain specific UI (auth, products, checkout)
 │   ├── context/                  ← React Context providers (sync state)
 │   ├── hooks/                    ← Custom React hooks
@@ -361,16 +362,30 @@ The project uses the `prismaSchemaFolder` preview feature to split schemas into 
 
 ```
 src/backend/prisma/schema/
-├── schema.prisma          ← Generator + Datasource config (PostgreSQL)
-├── auth.model.prisma      ← User, Account, Role enum
-├── product.model.prisma   ← Product
-├── order.model.prisma     ← Pedido, DetallePedido, PedidoEstado enum
-└── chat.model.prisma      ← Conversation, Message
+├── schema.prisma              ← Generator + Datasource config (PostgreSQL)
+├── auth.model.prisma          ← User, Account, Role enum
+├── product.model.prisma       ← Product
+├── productEmbedding.model.prisma ← vector(4096) para búsqueda semántica de productos
+├── forumPostEmbedding.model.prisma ← vector(4096) para búsqueda semántica del foro
+├── order.model.prisma         ← Pedido, DetallePedido, PedidoEstado enum
+└── chat.model.prisma          ← Conversation, Message
 ```
 
 **Key enums:**
 - `Role`: `admin | user`
 - `PedidoEstado`: `PENDIENTE | CONFIRMADO | EN_PREPARACION | EN_CAMINO | ENTREGADO | CANCELADO`
+
+**Vector embeddings (pgvector):**
+```prisma
+model ProductEmbedding {
+  productId String   @unique
+  embedding Unsupported("vector(4096)")?
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([productId])
+}
+```
 
 **Prisma singleton** (`src/backend/db/prisma.ts`):
 - Uses `globalThis` pattern to prevent multiple instances in development.
@@ -407,13 +422,16 @@ export const domainService = new DomainService(domainRepository);
 **Active domain modules and their layers:**
 
 | Module | Repository | Service | Actions | Socket Handler | IoC (`index.ts`) | Cache |
-|---|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|---|
 | `auth` | ✗ (uses `user.repository`) | `auth.service.ts` | `auth.actions.ts` | ✗ | ✓ | ✗ |
 | `user` | `user.repository.ts` | ✗ | ✗ | ✗ | ✓ | ✗ |
-| `product` | `product.repository.ts` | `product.service.ts` | `product.actions.ts` | ✗ | ✓ | ✅ |
+| `product` | `product.repository.ts` | `product.service.ts` + `productEmbedding.service.ts` | `product.actions.ts` | ✗ | ✓ | ✅ |
 | `orders` | `orders.repository.ts` | `orders.service.ts` | `orders.actions.ts` | ✗ | ✓ | ✗ |
 | `payments` | ✗ | `payments.service.ts` | `payments.actions.ts` | ✗ | ✓ | ✗ |
 | `chat` | `chat.repository.ts` | `chat.service.ts` | `chat.actions.ts` | `socketHandler.ts` | ✓ | ✗ |
+| `ai` | `ai.repository.ts` | `ai.service.ts` + `rag.service.ts` + `content-moderation.service.ts` | `ai.actions.ts` | ✗ | ✓ | ✅ |
+| `shared/embedding` | `embedding.repository.ts` | `embedding.service.ts` | ✗ | ✗ | ✓ | ✗ (usa cache interno 60s) |
+| `forum` | `forum.repository.ts` | `forum.service.ts` + `forumPostEmbedding.service.ts` | `forum.actions.ts` | ✗ | ✓ | ✗ |
 | `stockGuardian` | ✗ | `stockGuardian.service.ts` | `stockGuardian.actions.ts` | ✗ | ✓ | ✗ (usa Redis directo vía ioredis) |
 
 ---
@@ -1021,14 +1039,12 @@ Cada `getAvailableStock(productId)` también sincroniza lazy si la key no existe
 
 ---
 
-## 20. ⚠️ FASE IA — Artificial Intelligence Layer (DESACTIVADO POR DEFECTO)
+## 20. 🧠 FASE IA — Artificial Intelligence Layer
 
-> [!CAUTION]
-> **IMPORTANTE: Este módulo NO está activo por defecto.**
-> La capa AI es una base estructural para futuras implementaciones inteligentes.
-> **SOLO debe implementarse o activarse por instrucciones explícitas y precisas del desarrollador.**
-> No asumir que debe estar operativa — toda funcionalidad de IA requiere configuración expresa
-> mediante variables de entorno (`AI_ENABLED=true`) y orquestación manual.
+> [!NOTE]
+> La capa IA está **activa en producción** con las features de búsqueda semántica y moderación de contenido habilitadas.
+> Otras features (chatbot, visión, forecasting, pricing, traducción) están desactivadas por defecto y se activan mediante
+> variables de entorno individuales (`AI_FEATURE_*`).
 
 ### 20.1 Propósito
 
@@ -1042,20 +1058,21 @@ de inteligencia artificial en la plataforma. Sigue los mismos patrones del resto
 ```
 src/backend/modules/ai/
 ├── index.ts                          ← IoC: inicializa condicionalmente (AI_ENABLED)
-├── ai.actions.ts                     ← Server Actions placeholder (retornan error "no activo")
-├── ai.service.ts                     ← Orquestador central (chat, embed, isAvailable)
-├── ai.repository.ts                  ← Data access con CacheService inyectado
+├── ai.actions.ts                     ← Server Actions (chat, streaming, semantic search, moderación, generación)
+├── ai.service.ts                     ← Orquestador central (chat, streamChat, ragChat, embed, moderate)
+├── ai.repository.ts                  ← Caché de respuestas LLM + embeddings (Redis, TTL 1h/24h)
 ├── providers/
 │   ├── types.ts                      ← AIProvider interface + tipos compartidos
 │   ├── factory.ts                    ← AIProviderFactory (Factory Pattern)
-│   ├── deepseek.ts                   ← ✅ Provider DeepSeek (implementado, usa fetch nativo)
-│   ├── openai.ts                     ← ⏳ Placeholder (estructura lista)
-│   └── ollama.ts                     ← ⏳ Placeholder (estructura lista)
+│   ├── deepseek.ts                   ← ✅ Provider DeepSeek (chat, embed, moderate, isAvailable)
+│   ├── openai.ts                     ← ⏳ Placeholder (estructura lista, lanza error)
+│   └── ollama.ts                     ← ✅ Provider Ollama (chat, streamChat, embed, moderate vía prompt, isAvailable)
 ├── nlp/
-│   ├── rag.service.ts                ← ⏳ Placeholder RAG
+│   ├── rag.service.ts                ← ✅ RAG completo (3 retrievers: Platform, Forum, Product)
+│   ├── platform-content.ts           ← Base de conocimientos estática (15 documentos)
 │   └── translation.service.ts        ← ⏳ Placeholder traducción
 ├── moderation/
-│   └── content-moderation.service.ts ← ⏳ Placeholder moderación
+│   └── content-moderation.service.ts ← ✅ Moderación foro/productos (delega a provider.moderate())
 ├── forecasting/
 │   ├── demand.service.ts             ← ⏳ Placeholder predicción demanda
 │   └── pricing.service.ts            ← ⏳ Placeholder pricing dinámico
@@ -1063,20 +1080,67 @@ src/backend/modules/ai/
     └── vision.service.ts             ← ⏳ Placeholder visión
 ```
 
-- **✅ Implementado completamente**: Provider interface, Factory, DeepSeek provider (chat + embeddings + moderación con retry y exponential backoff), Repository con CacheService, AIService orquestador, IoC condicional
-- **⏳ Placeholder (estructura vacía)**: OpenAI provider, Ollama provider, RAG, traducción, moderación, forecasting, pricing, visión — todos lanzan error "no implementado"
-- **❌ No integrado con la aplicación**: Ningún módulo existente importa de `@/backend/modules/ai`
+**✅ Implementado y activo en producción:**
+- Provider Ollama (chat, streaming, embeddings, moderación vía prompt, health check)
+- Provider DeepSeek (chat, embeddings, moderación, con retry y exponential backoff)
+- RAG Service con 3 retrievers: PlatformContent (keyword), Forum (pgvector), Product (pgvector)
+- Content Moderation integrada en `forum.service.ts` (posts y respuestas)
+- Semantic Search integrada en `product.service.ts` y `forum.service.ts`
+- Búsqueda semántica en comunidad (foro) con debounce 300ms + spinner + fallback ILIKE
+- Caché de respuestas LLM (Redis, TTL 1h) y embeddings (TTL 24h)
+- AI Chatbot con streaming en el ChatWidget (backend completo, frontend gated por `AI_FEATURE_CHATBOT`)
+
+**⏳ Placeholder:** OpenAI provider, traducción, forecasting, pricing, visión — todos lanzan error "no implementado"
+
+**✅ Integración con módulos existentes:**
+- `product/index.ts` y `forum/index.ts` importan `OllamaProvider` y `AIProvider` de `@/backend/modules/ai/providers/` para generar embeddings
+- `forum.service.ts` llama a `AIService.moderateForumPost()` en creación de posts y respuestas
+- `product.service.ts` y `forum.service.ts` usan `EmbeddingService` (shared) para búsqueda semántica
 
 ### 20.3 Reglas de Arquitectura (STRICT LAW)
 
 > [!CAUTION]
-> **LA CAPA AI SOLO SE ACTIVA BAJO INSTRUCCIÓN EXPLÍCITA DEL DESARROLLADOR.**
-> - No implementar funcionalidad AI sin que el desarrollador lo solicite.
-> - No integrar la capa AI con módulos existentes sin autorización.
-> - No asumir que `aiService`, `ragService` u otros servicios están disponibles — siempre verificar con `if (config.ai.enabled)` o null-check.
-> - Todo código AI debe respetar las mismas reglas de capas: `UI → CTRL → SVC → REPO → CACHE → DB`.
+> **TODO componente UI relacionado con IA DEBE ubicarse en `src/frontend/components/ai/`.**
+> - Los componentes de IA son Dumb Components (reciben data y callbacks por props).
+> - Nunca importan Server Actions, Prisma, o lógica de backend directamente.
+> - Siguen el mismo patrón que el resto de componentes UI del proyecto.
+> - El fetching de datos y estado se maneja desde el Page Padre (`page.tsx`).
+> - La excepción son componentes legacy como `ProductModal` que ya existían antes de esta regla.
 
-### 20.3.1 Logging Convention — 🤖 Emoji Mandatory (STRICT LAW)
+### 20.3.1 Frontend AI Components — Directorio y Patrón
+
+```
+src/frontend/components/ai/
+├── index.ts                   ← Barrel exports
+├── RelatedPosts.tsx           ← Posts relacionados del foro (sidebar, estilo newspaper clippings)
+├── RelatedProducts.tsx        ← Productos relacionados (modal, scroll horizontal con emojis)
+└── ... (nuevos componentes aquí)
+```
+
+**Reglas de creación:**
+- Cada componente de IA debe ser un archivo independiente con su propia interfaz de props.
+- Usar `"use client"` cuando sea necesario (eventos, estado local).
+- Exportar como función nombrada desde el barrel (`index.ts`).
+- Nombrar con el patrón `PascalCase.tsx`.
+- No incluir lógica de fetching, solo renderizado de datos recibidos por props.
+
+**Ejemplo de uso:**
+```tsx
+// page.tsx — el Page Padre maneja el fetching
+const { data: relatedPosts } = useQuery({
+  queryKey: ["forumRelated", id],
+  queryFn: () => getRelatedPosts(id, 4),
+});
+
+// Template — pasa data como props al componente IA
+<RelatedPosts
+  posts={relatedPosts ?? []}
+  title={t.forum.post.relatedPosts}
+  onPostClick={(postId) => router.push(`/comunidad/post/${postId}`)}
+/>
+```
+
+### 20.3.2 Logging Convention — 🤖 Emoji Mandatory (STRICT LAW)
 
 > [!CAUTION]
 > **TODO mensaje de log dentro del módulo AI DEBE comenzar con el emoji `🤖`.**
@@ -1087,7 +1151,7 @@ src/backend/modules/ai/
 - Todo `log.info()`, `log.debug()`, `log.warn()`, `log.error()` en cualquier archivo dentro de `src/backend/modules/ai/` debe tener el string `"🤖"` al inicio del mensaje.
 - El emoji va **antes** del tag contextual, ej: `log.info("🤖 [DeepSeek] Chat completado", ...)`
 - Esto aplica a: `ai.service.ts`, `ai.repository.ts`, `ai.actions.ts`, `index.ts`, todos los providers, y todos los stubs de dominio (`nlp/`, `moderation/`, `forecasting/`, `vision/`).
-- Cualquier nuevvo archivo agregado al módulo AI debe seguir esta misma convención.
+- Cualquier nuevo archivo agregado al módulo AI debe seguir esta misma convención.
 
 **Ejemplos correctos:**
 ```typescript
@@ -1106,13 +1170,14 @@ log.info("[AI] Módulo AI inicializado correctamente");  // ❌ Falta 🤖
 
 | Aspecto | Decisión |
 |---------|----------|
-| **Provider default** | DeepSeek (API OpenAI-compatible, `fetch()` nativo — 0 dependencias externas) |
-| **Embeddings** | DeepSeek Embedding → pgvector en PostgreSQL |
-| **Cache** | `CacheService` existente (Redis) con TTLs específicos para respuestas AI |
+| **Provider default** | Ollama (local, vía API HTTP) para embeddings + chat. DeepSeek como alternativa cloud |
+| **Embeddings** | Ollama `qwen3-embedding:8b` → pgvector `vector(4096)` en PostgreSQL |
+| **Modelo Chat** | Ollama (modelo configurable vía `OLLAMA_MODEL`) |
+| **RAG** | 3 retrievers: Platform docs (keyword), Forum posts (pgvector), Products (pgvector) |
+| **Cache** | `CacheService` existente (Redis) con TTLs específicos para respuestas AI (1h) y embeddings (24h) |
 | **Eventos** | `eventBus` + Socket.IO bridge (mismo patrón que notificaciones) |
 | **Factory Pattern** | `AIProviderFactory` — registrar providers y crear instancias por nombre |
-| **Feature Flags** | `config.ai.features.*` — cada feature se habilita individualmente |
-| **Provider Swap** | Cambiar de DeepSeek a OpenAI/Ollama sin modificar lógica de negocio |
+| **Feature Flags** | `config.ai.features.*` — cada feature se habilita individualmente vía `AI_FEATURE_*` |
 
 ### 20.5 AIProvider Interface
 
@@ -1123,6 +1188,7 @@ interface AIProvider {
   readonly availableFeatures: AIFeature[];
 
   chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse>;
+  streamChat?(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<ChatResponse>;
   embed(text: string): Promise<EmbeddingResponse>;
   moderate?(content: string, options?: ModerationOptions): Promise<ModerationResult>;
   isAvailable(): Promise<boolean>;
@@ -1130,20 +1196,26 @@ interface AIProvider {
 ```
 
 **Provider implementations disponibles:**
-| Provider | Chat | Embeddings | Moderación | Visión | Dependencias |
-|----------|------|------------|------------|--------|-------------|
-| `deepseek` | ✅ | ✅ | ✅ (vía prompt) | ❌ | `fetch()` nativo |
-| `openai` | ⏳ | ⏳ | ⏳ | ⏳ | Ninguna instalada |
-| `ollama` | ⏳ | ⏳ | ❌ | ❌ | Ninguna instalada |
+| Provider | Chat | Streaming | Embeddings | Moderación | Visión | Dependencias |
+|----------|------|-----------|------------|------------|--------|-------------|
+| `ollama` | ✅ | ✅ | ✅ (vía `/api/embeddings`) | ✅ (vía prompt) | ❌ | `fetch()` nativo |
+| `deepseek` | ✅ | ❌ | ✅ | ✅ (vía prompt) | ❌ | `fetch()` nativo |
+| `openai` | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | Ninguna instalada |
 
 ### 20.6 Factory Pattern
 
 ```typescript
 // src/backend/modules/ai/providers/factory.ts
-const provider = AIProviderFactory.create("deepseek", {
+const provider = AIProviderFactory.create("ollama", {
+  baseUrl: config.ollama.baseUrl,
+  model: config.ollama.chatModel,
+});
+// → Devuelve OllamaProvider configurado con timeout
+
+// Para cambiar a DeepSeek:
+AIProviderFactory.create("deepseek", {
   apiKey: process.env.DEEPSEEK_API_KEY,
 });
-// → Devuelve DeepSeekProvider configurado con retry + timeout + logging
 
 // Para extender con un provider custom:
 AIProviderFactory.registerProvider("miProvider", MiProviderClass);
@@ -1160,8 +1232,8 @@ let aiService: AIService | null = null;
 
 if (AI_ENABLED) {
   const provider = AIProviderFactory.create(
-    process.env.AI_PROVIDER || "deepseek",
-    { apiKey: process.env.DEEPSEEK_API_KEY },
+    process.env.AI_PROVIDER || "ollama",
+    { baseUrl: config.ollama.baseUrl },
   );
   aiService = new AIService(provider, aiRepository, ragService);
   // ... inicializar demás servicios
@@ -1180,49 +1252,97 @@ if (config.ai.enabled && aiService) {
 const result = await aiService?.chat(...) ?? fallback;
 ```
 
+**NOTA**: Los módulos `product` y `forum` NO usan `aiService` para embeddings — tienen su propia instancia directa de `OllamaProvider` + `EmbeddingService` (shared). Esto es intencional para mantener el pipeline de embeddings desacoplado del módulo AI general.
+
 ### 20.8 Configuración Centralizada
 
 ```typescript
 // src/config/config.ts
 ai: {
   enabled: process.env.AI_ENABLED === 'true',
-  provider: process.env.AI_PROVIDER || 'deepseek',
+  provider: process.env.AI_PROVIDER || 'ollama',
   models: {
     chat: process.env.AI_MODEL_CHAT || 'deepseek-chat',
     embedding: process.env.AI_MODEL_EMBEDDING || 'deepseek-embedding',
   },
   features: {
-    semanticSearch: false,     // ← desactivado por defecto
-    chatbot: false,
-    vision: false,
-    moderation: false,
-    translation: false,
-    forecasting: false,
-    pricing: false,
+    semanticSearch: process.env.AI_FEATURE_SEMANTIC_SEARCH === 'true' || false,
+    chatbot: process.env.AI_FEATURE_CHATBOT === 'true' || false,
+    vision: process.env.AI_FEATURE_VISION === 'true' || false,
+    moderation: process.env.AI_FEATURE_MODERATION === 'true' || false,
+    translation: process.env.AI_FEATURE_TRANSLATION === 'true' || false,
+    forecasting: process.env.AI_FEATURE_FORECASTING === 'true' || false,
+    pricing: process.env.AI_FEATURE_PRICING === 'true' || false,
   },
+},
+ollama: {
+  baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+  embeddingModel: process.env.OLLAMA_EMBEDDING_MODEL || 'qwen3-embedding:8b',
+  timeout: Number(process.env.OLLAMA_TIMEOUT) || 30000,
+},
+embedding: {
+  batchSize: Number(process.env.EMBEDDING_BATCH_SIZE) || 10,
+  dimensions: Number(process.env.EMBEDDING_DIMENSIONS) || 4096,
 }
 ```
 
 ### 20.9 Activation Checklist
 
-Para activar el módulo AI:
-
 ```bash
-# 1. Configurar variables de entorno
+# 1. Configurar variables de entorno mínimas para Ollama
 AI_ENABLED=true
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_EMBEDDING_MODEL=qwen3-embedding:8b
+
+# 2. Habilitar features específicas
+AI_FEATURE_SEMANTIC_SEARCH=true   # Búsqueda semántica en foro + productos
+AI_FEATURE_MODERATION=true         # Moderación de contenido en foro
+AI_FEATURE_CHATBOT=true           # Chatbot IA en ChatWidget
+
+# 3. Opcional: cambiar a DeepSeek
 AI_PROVIDER=deepseek
 DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxxxxxx
 
-# 2. Opcional: habilitar features específicas
-AI_FEATURE_SEMANTIC_SEARCH=true
-AI_FEATURE_CHATBOT=true
-
-# 3. Opcional: instalar dependencias para providers adicionales
-# Para OpenAI: npm install openai
-# Para Ollama: no requiere instalación (API HTTP local)
+# 4. Opcional: ajustar dimensiones de embedding
+EMBEDDING_DIMENSIONS=4096
+EMBEDDING_BATCH_SIZE=10
 ```
 
-### 20.10 Provider DeepSeek — Detalles de Implementación
+### 20.10 Provider Ollama — Detalles de Implementación
+
+```typescript
+// src/backend/modules/ai/providers/ollama.ts
+export class OllamaProvider implements AIProvider {
+  // Usa fetch() nativo — 0 dependencias externas
+  // API HTTP de Ollama (localhost:11434)
+
+  async chat(messages, options?) → ChatResponse
+    // POST /api/chat
+    // Soporta todos los modelos de Ollama (llama3, qwen, deepseek local, etc.)
+    // Timeout configurable vía OLLAMA_TIMEOUT
+
+  async streamChat(messages, options?) → AsyncGenerator<ChatResponse>
+    // POST /api/chat con stream: true
+    // Yield chunks progresivos para streaming UI
+
+  async embed(text) → EmbeddingResponse
+    // POST /api/embeddings
+    // Modelo configurable vía OLLAMA_EMBEDDING_MODEL (default: qwen3-embedding:8b)
+    // Retorna vector[4096] (configurable vía EMBEDDING_DIMENSIONS)
+
+  async moderate(content) → ModerationResult
+    // Prompt engineering sobre modelo de chat
+    // Solicita JSON: { "flagged": boolean, "reason": string }
+    // Temperature 0 para consistencia
+    // Fallback: permite publicación si el parseo falla
+
+  async isAvailable() → boolean
+    // GET /api/tags con timeout 5s
+    // Cachea resultado 60s
+}
+```
+
+### 20.11 Provider DeepSeek — Detalles de Implementación
 
 ```typescript
 // src/backend/modules/ai/providers/deepseek.ts
@@ -1238,7 +1358,7 @@ export class DeepSeekProvider implements AIProvider {
 
   async embed(text) → EmbeddingResponse
     // POST /v1/embeddings
-    // Retorna vector[1536]
+    // Retorna vector[1536] (deepseek-embedding)
 
   async moderate(content) → ModerationResult
     // Prompt engineering sobre deepseek-chat
@@ -1251,48 +1371,84 @@ export class DeepSeekProvider implements AIProvider {
 }
 ```
 
-### 20.11 Conexión con Módulos Existentes (SOLO CUANDO SE INSTRUYA)
+### 20.12 Integración con Módulos Existentes (ACTIVA)
 
-La capa AI está diseñada para integrarse mediante feature flags en los servicios existentes:
+| Módulo | Integración | Estado |
+|--------|-------------|--------|
+| `product.service.ts` | `searchProducts()` → si `semanticSearch`, usa pgvector + fallback ILIKE | ✅ Activo |
+| `product.service.ts` | `getRelatedProducts()` → Tier 1: embeddings, Tier 2: labels, Tier 3: latest | ✅ Activo |
+| `product.service.ts` | `createProduct()`, `updateProduct()` → genera embedding asíncrono | ✅ Activo |
+| `forum.service.ts` | `getPosts()` → si `semanticSearch`, usa pgvector + fallback ILIKE | ✅ Activo |
+| `forum.service.ts` | `getRelatedPosts()` → Tier 1: embeddings, Tier 2: labels, Tier 3: latest | ✅ Activo |
+| `forum.service.ts` | `createPost()`, `editPost()` → genera embedding asíncrono | ✅ Activo |
+| `forum.service.ts` | `createPost()`, `createAnswer()` → moderación vía `AIService` | ✅ Activo |
+| `chat/ChatWidget.tsx` | Modo AI chatbot con streaming + RAG (gated por `AI_FEATURE_CHATBOT`) | ✅ Backend listo, frontend gated |
+| `ProductModal` | `getRelatedProductsAction()` → productos relacionados vía embeddings | ✅ Activo |
+| `PostPageClient` | `getRelatedPosts()` → posts relacionados vía embeddings | ✅ Activo |
 
-| Módulo | Punto de integración | Feature Flag |
-|--------|---------------------|--------------|
-| `product.service.ts` | `searchProducts()` → si `semanticSearch`, usar pgvector | `config.ai.features.semanticSearch` |
-| `chat/ChatWidget.tsx` | `handleSend()` → si `chatbot`, llamar `aiChatAction()` | `config.ai.features.chatbot` |
-| `forum.service.ts` | `createPost()` → si `moderation`, llamar `moderationService` | `config.ai.features.moderation` |
-| `forum.service.ts` | `createPost()` con imagen → si `vision`, llamar `visionService` | `config.ai.features.vision` |
-| `notifications.service.ts` | Nuevo handler `onCartAbandoned()` | `config.ai.features.forecasting` |
-| `store/stats.service.ts` | `getSellerDashboard()` → si `forecasting`, agregar predicciones | `config.ai.features.forecasting` |
-| Product form (seller) | Botón "Generar descripción" → `aiGenerateDescriptionAction()` | `config.ai.features.chatbot` |
+### 20.13 Frontend AI Components — Consumo desde Pages
 
-**IMPORTANTE**: Estas integraciones NO están implementadas. Solo se documentan aquí para referencia futura. No conectarlas sin autorización explícita del desarrollador.
+Los componentes de IA en `src/frontend/components/ai/` son consumidos por los Page Parents:
 
-### 20.12 Enlace a Documentación Externa
+```
+Page Parent (page.tsx / page client)
+  │
+  ├── fetch data via Server Action + React Query
+  │
+  └── <RelatedPosts
+        posts={data}
+        title={translated_title}
+        onPostClick={handleNavigation}
+      />
+```
+
+**Patrón estricto:** El Page Parent siempre maneja:
+1. Fetching de datos (Server Action + React Query)
+2. Traducciones (vía `useLanguage()`)
+3. Handlers de navegación
+4. Estados de loading/error
+5. Renderizado condicional
+
+El componente IA solo recibe props y renderiza.
+
+### 20.14 Variables de Entorno
+
+```bash
+# AI Module (activado por defecto en producción)
+AI_ENABLED=true
+AI_PROVIDER=ollama
+
+# Ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_EMBEDDING_MODEL=qwen3-embedding:8b
+OLLAMA_TIMEOUT=15000
+
+# Embeddings
+EMBEDDING_DIMENSIONS=4096
+EMBEDDING_BATCH_SIZE=10
+
+# Feature flags (false por defecto)
+AI_FEATURE_SEMANTIC_SEARCH=true
+AI_FEATURE_MODERATION=true
+AI_FEATURE_CHATBOT=false
+AI_FEATURE_VISION=false
+AI_FEATURE_TRANSLATION=false
+AI_FEATURE_FORECASTING=false
+AI_FEATURE_PRICING=false
+
+# DeepSeek (alternativa cloud a Ollama)
+DEEPSEEK_API_KEY=
+AI_MODEL_CHAT=deepseek-chat
+AI_MODEL_EMBEDDING=deepseek-embedding
+```
+
+### 20.15 Enlace a Documentación Externa
 
 Para la visión completa de FASE IA, incluyendo el roadmap, casos de uso detallados y ejemplos hipotéticos, consultar:
 
 ```text
 README.md — Sección "🚀 FASE IA — Agroecotopia AI-First"
 ```
-
-### 20.13 Variables de Entorno
-
-```bash
-# AI Module (desactivado por defecto)
-AI_ENABLED=false
-AI_PROVIDER=deepseek
-DEEPSEEK_API_KEY=
-AI_MODEL_CHAT=deepseek-chat
-AI_MODEL_EMBEDDING=deepseek-embedding
-
-# Feature flags (todos false por defecto)
-AI_FEATURE_SEMANTIC_SEARCH=false
-AI_FEATURE_CHATBOT=false
-AI_FEATURE_VISION=false
-AI_FEATURE_MODERATION=false
-AI_FEATURE_TRANSLATION=false
-AI_FEATURE_FORECASTING=false
-AI_FEATURE_PRICING=false
 
 ---
 
