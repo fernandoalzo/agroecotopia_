@@ -62,6 +62,7 @@ import {
   updateEnvioEstadoAction,
   getEnvioDetailAction,
 } from "@/backend/modules/envio/envio.actions";
+import { aiGenerateDescriptionAction } from "@/backend/modules/ai/ai.actions";
 import MiTiendaPage from "./MiTiendaPageClient";
 
 export default function Page() {
@@ -88,6 +89,7 @@ export default function Page() {
         deleteStoreProduct: deleteStoreProductAction,
         getCategories: getCategoriesAction,
         getProductsPageData: getProductsPageDataAction,
+        generateDescription: aiGenerateDescriptionAction,
         getStoreOrders: getStoreOrdersAction,
         getStoreOrderStatusCounts: getStoreOrderStatusCountsAction,
         getStoreOrdersWithCounts: getStoreOrdersWithCountsAction,

@@ -107,10 +107,39 @@ export async function aiSemanticSearchAction(_query: string) {
 }
 
 export async function aiGenerateDescriptionAction(
-  _data: { name: string; category: string; tags: string[] },
+  name: string,
+  categories: string[],
+  tags: string,
 ) {
   return withAuth(async () => {
-    return { error: "Generación de descripciones no implementada aún." };
+    if (!name?.trim()) {
+      return { error: "El nombre del producto es obligatorio." };
+    }
+
+    try {
+      const { aiService } = await import("@/backend/modules/ai");
+
+      if (!aiService) {
+        log.warn("🤖 [Action] aiGenerateDescriptionAction: Módulo AI no activo");
+        return {
+          error: "El módulo de IA no está activo. Configure AI_ENABLED=true para activarlo.",
+        };
+      }
+
+      const description = await aiService.generateProductDescription({ name, categories, tags });
+
+      log.info("🤖 [Action] Descripción generada exitosamente", {
+        productName: name,
+        descriptionLength: description.length,
+      });
+
+      return { description };
+    } catch (error) {
+      log.error("🤖 [Action] Error generando descripción:", error);
+      return {
+        error: error instanceof Error ? error.message : "Error al generar la descripción.",
+      };
+    }
   });
 }
 

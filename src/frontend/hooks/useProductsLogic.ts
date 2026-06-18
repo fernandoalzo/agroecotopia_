@@ -24,6 +24,7 @@ type ProductLogicDependencies = {
   updateStoreProductAction: (storeId: string, productId: string, payload: any) => Promise<any>;
   deleteProductAction: (productId: string) => Promise<any>;
   deleteStoreProductAction: (storeId: string, productId: string) => Promise<any>;
+  generateDescriptionAction?: (name: string, categories: string[], tags: string) => Promise<any>;
 };
 
 export function useProductsLogic(
@@ -44,6 +45,7 @@ export function useProductsLogic(
     updateStoreProductAction,
     deleteProductAction,
     deleteStoreProductAction,
+    generateDescriptionAction,
   } = deps || {};
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -213,6 +215,17 @@ export function useProductsLogic(
     }
   };
 
+  const handleGenerateDescription = async (name: string, categories: string[], tags: string) => {
+    if (!generateDescriptionAction) {
+      throw new Error("Generación de descripciones no disponible.");
+    }
+    const result = await generateDescriptionAction(name, categories, tags);
+    if (result && "error" in result) {
+      throw new Error(result.error);
+    }
+    return result.description as string;
+  };
+
   const handleDeleteProduct = async (productId: string) => {
     try {
       let result;
@@ -264,6 +277,7 @@ export function useProductsLogic(
       handleCreateProduct,
       handleUpdateProduct,
       handleDeleteProduct,
+      handleGenerateDescription,
       reload
     }
   };

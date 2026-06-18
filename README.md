@@ -161,7 +161,7 @@ src/
 │
 ├── frontend/                         # Frontend encapsulado
 │   ├── components/                   # 70+ componentes UI
-│   │   ├── ai/                       # AI components (RelatedPosts, RelatedProducts)
+│   │   ├── ai/                       # AI components (RelatedPosts, RelatedProducts, GenerateDescriptionButton)
 │   │   ├── ui/                       # shadcn/ui primitives
 │   │   ├── auth/, chat/, checkout/,  # Feature components
 │   │   ├── home/sections/            # Landing page (WelcomeStage, ProductsStage, etc.)
@@ -1013,12 +1013,14 @@ El sistema actual (ES/EN) se expande a **N idiomas** vía traducción automátic
 
 ## 7. AI para Sellers (Store Module)
 
-### 7.1 Generación de Descripciones de Producto
-El vendedor ingresa datos mínimos → AI genera:
-- Descripción completa y atractiva
-- Meta tags para SEO
-- Palabras clave para búsqueda
-- Traducción a EN automática
+### 7.1 Generación de Descripciones de Producto ✅ Implementada
+Botón "Generar con IA" en los modales de creación y edición de productos (`ProductCreateModal`, `ProductEditModal`, `ProductDetailPanel`).
+- **Input:** nombre, categorías y tag del producto (tomados del formulario en tiempo real)
+- **Output:** descripción profesional en español generada por LLM (Ollama/DeepSeek)
+- **UX:** spinner de carga + feedback de error; el texto generado se inyecta directamente en el textarea
+- **Backend:** `AIService.generateProductDescription()` construye un system prompt + user prompt y llama al provider activo
+- **Server Action:** `aiGenerateDescriptionAction` (validación `withAuth`, gated por módulo AI activo)
+- **Componente Dumb:** `GenerateDescriptionButton` en `src/frontend/components/ai/` — recibe `onGenerate`/`onGenerated` como props, no importa Server Actions directamente
 
 ### 7.2 Score de Calidad del Producto
 Evalúa automáticamente si un producto tiene:
@@ -1085,34 +1087,35 @@ src/backend/modules/ai/
 ### 8.3 Feature Flags para Gradual Rollout
 
 ```typescript
-// src/config/config.ts — ampliación propuesta
+// src/config/config.ts — feature flags activos
 ai: {
   enabled: process.env.AI_ENABLED === 'true',
   provider: process.env.AI_PROVIDER || 'ollama',
   features: {
-    semanticSearch: true,
+    semanticSearch: true,          // ✅ Búsqueda vectorial (productos + foro)
     visualSearch: false,
-    chatbot: true,
+    chatbot: true,                 // ✅ Chatbot híbrido con RAG + streaming
     demandForecasting: false,
-    autoModeration: true,
-    productDescriptionGenerator: false,
-    pricingAssistant: false,
-    voiceCommands: false,
+    moderation: true,              // ✅ Moderación automática del foro
+    translation: false,
+    forecasting: false,
+    pricing: false,
   },
   models: {
-    embedding: 'nomic-embed-text',
-    llm: 'llama3.2',
-    vision: 'llava',
+    embedding: 'deepseek-embedding',
+    chat: 'deepseek-chat',
   },
 }
 ```
+
+La generación de descripciones no tiene feature flag propio; se activa automáticamente cuando el módulo AI está habilitado (`AI_ENABLED=true`) y el provider responde.
 
 ### 8.4 Roadmap de Implementación
 
 | Fase | Features | Impacto esperado |
 |------|----------|------------------|
-| **1. Inmediata** (semanas) | ✅ **Búsqueda semántica** + ✅ **Chatbot RAG c/ Streaming** + ✅ **Moderación foro** | −40% consultas repetitivas |
-| **2. Corto plazo** (1-2 meses) | Recomendaciones + Descripciones automáticas + Traducción | +25% conversión, alcance EN |
+| **1. Inmediata** (semanas) | ✅ **Búsqueda semántica** + ✅ **Chatbot RAG c/ Streaming** + ✅ **Moderación foro** + ✅ **Descripciones automáticas** | −40% consultas repetitivas, +eficiencia vendedores |
+| **2. Corto plazo** (1-2 meses) | Recomendaciones + Traducción | +25% conversión, alcance EN |
 | **3. Medio plazo** (3-4 meses) | Visión (clasificación + búsqueda por imagen) + Predicción demanda | Reducción overstock, mejor UX |
 | **4. Largo plazo** (6+ meses) | Diagnóstico plagas + Voz + Pricing dinámico + CLV | Diferenciador competitivo total |
 

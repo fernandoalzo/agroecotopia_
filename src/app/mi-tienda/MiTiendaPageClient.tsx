@@ -62,6 +62,7 @@ interface MiTiendaActions {
   deleteStoreProduct: (...args: any[]) => Promise<any>;
   updateStoreConfig: (storeId: string, paymentMethods: any) => Promise<any>;
   getCategories: () => Promise<any>;
+  generateDescription: (name: string, categories: string[], tags: string) => Promise<any>;
   getStoreOrders: (...args: any[]) => Promise<any>;
   getStoreOrderStatusCounts: (storeId: string) => Promise<any>;
   getStoreOrdersWithCounts: (storeId: string, params: { page: number; limit: number; estado?: any; search?: string }) => Promise<any>;
@@ -174,6 +175,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     updateStoreProductAction: actions.updateStoreProduct,
     deleteProductAction: actions.deleteProduct,
     deleteStoreProductAction: actions.deleteStoreProduct,
+    generateDescriptionAction: actions.generateDescription,
   });
 
   // Protect route
@@ -831,6 +833,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                     onSubmitCreate={productActions.handleCreateProduct}
                     onSubmitUpdate={productActions.handleUpdateProduct}
                     onDeleteProduct={productActions.handleDeleteProduct}
+                    onGenerateDescription={productActions.handleGenerateDescription}
                   />
                 )}
                 {activeTab === "promotions" && activeStore && (

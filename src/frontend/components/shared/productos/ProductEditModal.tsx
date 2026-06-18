@@ -6,6 +6,7 @@ import { X, Save, AlertCircle, ImageIcon, Plus, Trash2, Search, Check } from "lu
 import { Product } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import logger from "@/utils/logger";
+import { GenerateDescriptionButton } from "@/frontend/components/ai";
 
 const log = logger.child("src/frontend/components/shared/productos/ProductEditModal.tsx");
 
@@ -16,6 +17,7 @@ interface ProductEditModalProps {
   availableCategories: string[];
   onSubmitForm: (productId: string, payload: any) => Promise<boolean>;
   onDeleteProduct: (productId: string) => Promise<boolean>;
+  onGenerateDescription?: (name: string, categories: string[], tags: string) => Promise<string>;
 }
 
 export const ProductEditModal = ({
@@ -24,7 +26,8 @@ export const ProductEditModal = ({
   storeId,
   availableCategories,
   onSubmitForm,
-  onDeleteProduct
+  onDeleteProduct,
+  onGenerateDescription,
 }: ProductEditModalProps) => {
   const [loading, setLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -421,14 +424,25 @@ export const ProductEditModal = ({
             {/* Description (Full Width) */}
             <div>
               <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Descripción</label>
-              <textarea
-                name="description"
-                value={formData.description || ""}
-                onChange={handleChange}
-                rows={3}
-                className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none custom-scrollbar"
-                placeholder="Descripción detallada del producto..."
-              />
+              <div className="space-y-1.5">
+                <textarea
+                  name="description"
+                  value={formData.description || ""}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none custom-scrollbar"
+                  placeholder="Descripción detallada del producto..."
+                />
+                {onGenerateDescription && (
+                  <GenerateDescriptionButton
+                    name={formData.name || ""}
+                    categories={categoriesList}
+                    tags={formData.tag || ""}
+                    onGenerate={onGenerateDescription}
+                    onGenerated={(text) => setFormData((prev: any) => ({ ...prev, description: text }))}
+                  />
+                )}
+              </div>
             </div>
 
             <div className="flex items-start gap-3 p-4 rounded-xl bg-primary/5 border border-primary/10">

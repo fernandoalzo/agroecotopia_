@@ -11,6 +11,7 @@ import { Store } from "lucide-react";
 import { useLanguage } from "@/frontend/context/LanguageContext";
 import logger from "@/utils/logger";
 import { PRODUCT_FIELDS, FieldConfig } from "./productFields.config";
+import { GenerateDescriptionButton } from "@/frontend/components/ai";
 
 const log = logger.child("src/frontend/components/shared/productos/ProductCreateModal.tsx");
 
@@ -20,6 +21,7 @@ interface ProductCreateModalProps {
   availableCategories: string[];
   storesList?: {id: string, name: string}[];
   onSubmitForm: (payload: any, targetStoreId?: string) => Promise<boolean>;
+  onGenerateDescription?: (name: string, categories: string[], tags: string) => Promise<string>;
 }
 
 export const ProductCreateModal = ({
@@ -28,6 +30,7 @@ export const ProductCreateModal = ({
   availableCategories,
   storesList = [],
   onSubmitForm,
+  onGenerateDescription,
 }: ProductCreateModalProps) => {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
@@ -99,6 +102,7 @@ export const ProductCreateModal = ({
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<any>({
     resolver: zodResolver(getProductSchema(t)),
@@ -386,12 +390,23 @@ export const ProductCreateModal = ({
                         {field.editLabelIcon}{field.editLabel || field.label} {isRequired && <span className="text-red-500">*</span>}
                       </label>
                       {field.type === "textarea" ? (
-                        <textarea
-                          {...register(field.name)}
-                          rows={3}
-                          className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none custom-scrollbar"
-                          placeholder={field.placeholder}
-                        />
+                        <div className="space-y-1.5">
+                          <textarea
+                            {...register(field.name)}
+                            rows={3}
+                            className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none custom-scrollbar"
+                            placeholder={field.placeholder}
+                          />
+                          {field.name === "description" && onGenerateDescription && (
+                            <GenerateDescriptionButton
+                              name={watch("name") || ""}
+                              categories={categoriesList}
+                              tags={watch("tag") || ""}
+                              onGenerate={onGenerateDescription}
+                              onGenerated={(text) => setValue("description", text, { shouldValidate: true })}
+                            />
+                          )}
+                        </div>
                       ) : (
                         <input
                           type={field.type}

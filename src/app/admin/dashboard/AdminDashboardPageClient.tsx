@@ -50,6 +50,7 @@ interface AdminDashboardActions {
   deleteProduct: (...args: any[]) => Promise<any>;
   deleteStoreProduct: (...args: any[]) => Promise<any>;
   getCategories: () => Promise<any>;
+  generateDescription: (name: string, categories: string[], tags: string) => Promise<any>;
   getAllRequests: (page?: number, search?: string) => Promise<any>;
   getRequestById: (requestId: string) => Promise<any>;
   approveRequest: (requestId: string) => Promise<any>;
@@ -115,6 +116,7 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
     updateStoreProductAction: actions.updateStoreProduct,
     deleteProductAction: actions.deleteProduct,
     deleteStoreProductAction: actions.deleteStoreProduct,
+    generateDescriptionAction: actions.generateDescription,
   });
   const loadStoreRequests = React.useCallback(async (page: number, search?: string): Promise<StoreRequestsResponse> => {
     const result = await actions.getAllRequests(page, search);
@@ -606,6 +608,7 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                   onSubmitCreate={productActions.handleCreateProduct}
                   onSubmitUpdate={productActions.handleUpdateProduct}
                   onDeleteProduct={productActions.handleDeleteProduct}
+                  onGenerateDescription={productActions.handleGenerateDescription}
                 />
               </motion.div>
             )}

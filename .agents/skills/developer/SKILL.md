@@ -100,7 +100,7 @@ src/
 ├── frontend/                     ← Encapsulated Frontend Architecture
 │   ├── components/               ← UI (Shared & Feature Components)
 │   │   ├── ui/                   ← shadcn / primitives
-│   │   ├── ai/                   ← AI components (RelatedPosts, RelatedProducts, etc.)
+│   │   ├── ai/                   ← AI components (RelatedPosts, RelatedProducts, GenerateDescriptionButton)
 │   │   └── [domain]/             ← Domain specific UI (auth, products, checkout)
 │   ├── context/                  ← React Context providers (sync state)
 │   ├── hooks/                    ← Custom React hooks
@@ -1114,6 +1114,7 @@ src/frontend/components/ai/
 ├── index.ts                   ← Barrel exports
 ├── RelatedPosts.tsx           ← Posts relacionados del foro (sidebar, estilo newspaper clippings)
 ├── RelatedProducts.tsx        ← Productos relacionados (modal, scroll horizontal con emojis)
+├── GenerateDescriptionButton.tsx ← Generación de descripciones con IA (botón + spinner)
 └── ... (nuevos componentes aquí)
 ```
 
@@ -1122,7 +1123,8 @@ src/frontend/components/ai/
 - Usar `"use client"` cuando sea necesario (eventos, estado local).
 - Exportar como función nombrada desde el barrel (`index.ts`).
 - Nombrar con el patrón `PascalCase.tsx`.
-- No incluir lógica de fetching, solo renderizado de datos recibidos por props.
+- No incluir lógica de fetching ni importar Server Actions directamente.
+- Para componentes que ejecutan acciones (no solo display), recibir callbacks `onGenerate`/`onGenerated` como props — el Page Padre inyecta la Server Action.
 
 **Ejemplo de uso:**
 ```tsx
@@ -1385,6 +1387,9 @@ export class DeepSeekProvider implements AIProvider {
 | `chat/ChatWidget.tsx` | Modo AI chatbot con streaming + RAG (gated por `AI_FEATURE_CHATBOT`) | ✅ Backend listo, frontend gated |
 | `ProductModal` | `getRelatedProductsAction()` → productos relacionados vía embeddings | ✅ Activo |
 | `PostPageClient` | `getRelatedPosts()` → posts relacionados vía embeddings | ✅ Activo |
+| `ProductCreateModal` | `GenerateDescriptionButton` → descripciones vía `aiGenerateDescriptionAction` | ✅ Activo |
+| `ProductEditModal` | `GenerateDescriptionButton` → descripciones vía `aiGenerateDescriptionAction` | ✅ Activo |
+| `ProductDetailPanel` | `GenerateDescriptionButton` → descripciones vía `aiGenerateDescriptionAction` | ✅ Activo |
 
 ### 20.13 Frontend AI Components — Consumo desde Pages
 
@@ -1402,9 +1407,28 @@ Page Parent (page.tsx / page client)
       />
 ```
 
+**Variante con acciones (GenerateDescriptionButton):**
+```
+Page Parent (page.tsx)
+  │
+  ├── define Server Action wrapper:
+  │     handleGenerate = async (name, categories, tags) => {
+  │       const res = await aiGenerateDescriptionAction(name, categories, tags);
+  │       if (res.error) throw new Error(res.error);
+  │       return res.description;
+  │     }
+  │
+  └── pasa el callback al modal/componente hijo:
+        <ProductCreateModal
+          onGenerateDescription={handleGenerate}
+          ...
+        />
+```
+
 **Patrón estricto:** El Page Parent siempre maneja:
 1. Fetching de datos (Server Action + React Query)
 2. Traducciones (vía `useLanguage()`)
+3. Para componentes de acción: define el callback que envuelve la Server Action y lo pasa como prop
 3. Handlers de navegación
 4. Estados de loading/error
 5. Renderizado condicional

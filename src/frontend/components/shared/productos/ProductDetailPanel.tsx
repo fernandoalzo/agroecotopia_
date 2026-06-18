@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import logger from "@/utils/logger";
+import { GenerateDescriptionButton } from "@/frontend/components/ai";
 
 const log = logger.child("src/frontend/components/shared/productos/ProductDetailPanel.tsx");
 
@@ -23,6 +24,7 @@ interface ProductDetailPanelProps {
   availableCategories?: string[];
   onSubmitUpdate?: (productId: string, payload: any) => Promise<boolean>;
   onDeleteProduct?: (productId: string) => Promise<boolean>;
+  onGenerateDescription?: (name: string, categories: string[], tags: string) => Promise<string>;
 }
 
 export function ProductDetailPanel({ 
@@ -30,7 +32,8 @@ export function ProductDetailPanel({
   onClose,
   availableCategories = [],
   onSubmitUpdate,
-  onDeleteProduct
+  onDeleteProduct,
+  onGenerateDescription,
 }: ProductDetailPanelProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -395,14 +398,25 @@ export function ProductDetailPanel({
                           {field.editLabelIcon}{field.editLabel || field.label}
                         </label>
                         {field.type === "textarea" ? (
-                          <textarea
-                            name={field.name}
-                            value={formData[field.name] || ""}
-                            onChange={handleChange}
-                            rows={3}
-                            className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none custom-scrollbar"
-                            placeholder={field.placeholder}
-                          />
+                          <div className="space-y-1.5">
+                            <textarea
+                              name={field.name}
+                              value={formData[field.name] || ""}
+                              onChange={handleChange}
+                              rows={3}
+                              className="w-full rounded-xl border border-border/50 bg-background px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none custom-scrollbar"
+                              placeholder={field.placeholder}
+                            />
+                            {field.name === "description" && onGenerateDescription && (
+                              <GenerateDescriptionButton
+                                name={formData.name || ""}
+                                categories={categoriesList}
+                                tags={formData.tag || ""}
+                                onGenerate={onGenerateDescription}
+                                onGenerated={(text) => setFormData((prev: any) => ({ ...prev, description: text }))}
+                              />
+                            )}
+                          </div>
                         ) : (
                           <input
                             name={field.name}

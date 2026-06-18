@@ -43,6 +43,7 @@ interface ProductsListProps {
   onSubmitCreate: (payload: Record<string, unknown>, storeId?: string) => Promise<boolean>;
   onSubmitUpdate: (productId: string, payload: Record<string, unknown>) => Promise<boolean>;
   onDeleteProduct: (productId: string) => Promise<boolean>;
+  onGenerateDescription?: (name: string, categories: string[], tags: string) => Promise<string>;
 }
 
 export const ProductsList = ({
@@ -64,7 +65,8 @@ export const ProductsList = ({
   setLimit,
   onSubmitCreate,
   onSubmitUpdate,
-  onDeleteProduct
+  onDeleteProduct,
+  onGenerateDescription,
 }: ProductsListProps) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -329,6 +331,7 @@ export const ProductsList = ({
           availableCategories={availableCategories}
           onSubmitUpdate={onSubmitUpdate}
           onDeleteProduct={onDeleteProduct}
+          onGenerateDescription={onGenerateDescription}
         />
       )}
 
@@ -339,6 +342,7 @@ export const ProductsList = ({
           availableCategories={availableCategories}
           storesList={storesList}
           onSubmitForm={onSubmitCreate}
+          onGenerateDescription={onGenerateDescription}
         />
       )}
     </div>

@@ -36,6 +36,7 @@ import {
   adminGetAllEnviosAction,
   adminGetEnvioCountsAction,
 } from "@/backend/modules/envio/envio.actions";
+import { aiGenerateDescriptionAction } from "@/backend/modules/ai/ai.actions";
 import AdminDashboardPage from "./AdminDashboardPageClient";
 
 export default function Page() {
@@ -52,6 +53,7 @@ export default function Page() {
         deleteProduct: deleteProductAction,
         deleteStoreProduct: deleteStoreProductAction,
         getCategories: getCategoriesAction,
+        generateDescription: aiGenerateDescriptionAction,
         getAllRequests: getAllRequestsAction,
         getRequestById: getRequestByIdAction,
         approveRequest: approveRequestAction,

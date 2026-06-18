@@ -139,6 +139,35 @@ export class AIService {
     return response.embedding;
   }
 
+  async generateProductDescription(data: {
+    name: string;
+    categories: string[];
+    tags: string;
+  }): Promise<string> {
+    const systemPrompt = `Eres un redactor experto en productos agroecológicos y sostenibles. 
+Genera descripciones de producto profesionales, persuasivas y bien estructuradas en español.
+La descripción debe:
+- Ser concisa pero informativa (3-5 párrafos breves)
+- Destacar los beneficios del producto
+- Usar un tono profesional pero cercano
+- Incluir palabras clave relevantes para SEO
+- NO incluir precios ni información de envío
+- NO usar placeholders como "[nombre del producto]"
+- Responder SOLO con la descripción, sin introducciones ni comentarios adicionales`;
+
+    const userPrompt = `Genera una descripción atractiva para un producto agroecológico con estos datos:
+- Nombre: ${data.name}
+- Categorías: ${data.categories.join(", ") || "Sin categoría"}
+- Etiquetas: ${data.tags || "Sin etiquetas"}`;
+
+    const response = await this.chat([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ]);
+
+    return response.content.trim();
+  }
+
   async isAvailable(): Promise<boolean> {
     return this.provider.isAvailable();
   }
