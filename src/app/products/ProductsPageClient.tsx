@@ -86,7 +86,7 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
   const [isSearching, setIsSearching] = useState(false);
 
   // Derived groups for category grouping
-  const groups = groupByCategory && viewMode === 'grid'
+  const groups = groupByCategory
     ? groupProductsByCategory(products)
     : undefined;
 

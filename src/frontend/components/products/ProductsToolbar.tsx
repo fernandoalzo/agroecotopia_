@@ -352,13 +352,11 @@ export function ProductsToolbar({
             {setGroupByCategory && (
               <button
                 onClick={() => setGroupByCategory(!groupByCategory)}
-                disabled={viewMode !== 'grid'}
                 className={cn(
                   "relative rounded-xl px-3 py-2 transition-all active:scale-95 text-xs font-semibold border",
-                  groupByCategory && viewMode === 'grid'
+                  groupByCategory
                     ? "text-primary-foreground bg-[#a68953] border-[#a68953] shadow-[0_2px_12px_rgba(166,137,83,0.5)]"
-                    : "text-muted-foreground hover:text-foreground border-border/60",
-                  viewMode !== 'grid' && "opacity-40 cursor-not-allowed"
+                    : "text-muted-foreground hover:text-foreground border-border/60"
                 )}
                 title={language === 'es' ? 'Agrupar por categoría' : 'Group by category'}
               >
