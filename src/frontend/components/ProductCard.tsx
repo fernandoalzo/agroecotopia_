@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ShoppingCart, Star, StarHalf, ShieldCheck, Truck, ArrowRight, Store } from "lucide-react";
+import { ShoppingCart, Star, StarHalf, ShieldCheck, Truck, ArrowRight, Store, Minus, Plus } from "lucide-react";
 import { Product } from "@/types";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
+import { useCart } from "@/context/CartContext";
 import { getDeterministicImage } from "@/lib/image-utils";
 import { config } from "@/config/config";
 import { calculateDiscountedPrice } from "@/utils/promotions";
@@ -20,7 +21,9 @@ interface ProductCardProps {
 const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps) => {
   const router = useRouter();
   const { t, language } = useLanguage();
+  const { addToCart: addToCartCtx } = useCart();
   const [isNavigating, setIsNavigating] = useState(false);
+  const [qty, setQty] = useState(1);
 
   const handleNavigate = (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -179,16 +182,32 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
             </div>
 
             <div className="mt-auto flex flex-wrap gap-4">
-              <button
-                className={`flex items-center justify-center gap-2 py-2 px-8 rounded-full font-bold text-sm transition-all shadow-sm
-                  ${p.stock === 0
-                    ? "bg-muted text-muted-foreground cursor-not-allowed"
-                    : "bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] active:shadow-inner border border-[#fcd200]"}`}
-              >
-                <ShoppingCart className="w-4 h-4" />
-                {p.stock === 0 ? t.products.noStock : t.products.addToCart}
-              </button>
-              <button className="text-sm font-bold text-[#007185] hover:text-[#c45500] flex items-center gap-1 transition-colors px-4">
+              {p.stock > 0 ? (
+                <>
+                  <div onClick={(e) => e.stopPropagation()} className="flex items-center border border-border rounded-full">
+                    <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-2.5 py-1.5 text-sm font-bold hover:bg-muted rounded-l-full leading-none transition-colors">
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="px-2 py-1.5 text-sm font-bold min-w-[24px] text-center leading-none tabular-nums">{qty}</span>
+                    <button onClick={() => setQty(qty + 1)} className="px-2.5 py-1.5 text-sm font-bold hover:bg-muted rounded-r-full leading-none transition-colors">
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); addToCartCtx(p, qty); setQty(1); }}
+                    className="flex items-center justify-center gap-2 py-2 px-8 rounded-full font-bold text-sm transition-all shadow-sm bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] active:shadow-inner border border-[#fcd200]"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    {t.products.addToCart}
+                  </button>
+                </>
+              ) : (
+                <button disabled className="flex items-center justify-center gap-2 py-2 px-8 rounded-full font-bold text-sm bg-muted text-muted-foreground cursor-not-allowed">
+                  <ShoppingCart className="w-4 h-4" />
+                  {t.products.noStock}
+                </button>
+              )}
+              <button onClick={(e) => { e.stopPropagation(); handleNavigate(); }} className="text-sm font-bold text-[#007185] hover:text-[#c45500] flex items-center gap-1 transition-colors px-4">
                 {t.products.viewDetails} <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -282,10 +301,29 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
               {p.stock === 0 ? (
                 <p className="text-[10px] font-bold text-red-600 uppercase mt-1">{t.products.outOfStock}</p>
               ) : (
-                <div className="flex items-center gap-1 text-[9px] text-[#007600] font-bold mt-1">
-                  <Truck className="w-2.5 h-2.5" />
-                  {language === 'es' ? 'Recíbelo pronto' : 'Get it soon'}
-                </div>
+                <>
+                  <div className="flex items-center gap-1 text-[9px] text-[#007600] font-bold mt-1">
+                    <Truck className="w-2.5 h-2.5" />
+                    {language === 'es' ? 'Recíbelo pronto' : 'Get it soon'}
+                  </div>
+                  <div onClick={(e) => e.stopPropagation()} className="flex items-center justify-between gap-2 mt-1.5 pt-1.5 border-t border-border/50">
+                    <div className="flex items-center gap-0.5">
+                      <button onClick={() => setQty(Math.max(1, qty - 1))} className="p-1 hover:bg-muted rounded-md transition-colors">
+                        <Minus className="w-3 h-3 text-muted-foreground" />
+                      </button>
+                      <span className="w-[18px] text-xs font-bold text-center tabular-nums text-foreground">{qty}</span>
+                      <button onClick={() => setQty(qty + 1)} className="p-1 hover:bg-muted rounded-md transition-colors">
+                        <Plus className="w-3 h-3 text-muted-foreground" />
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => { addToCartCtx(p, qty); setQty(1); }}
+                      className="flex items-center justify-center bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] p-1.5 rounded-lg transition-all shadow-sm"
+                    >
+                      <ShoppingCart className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -439,20 +477,32 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
               )}
             </div>
 
-            {/* Amazon-style Button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleNavigate();
-              }}
-              className={`w-full mt-4 flex items-center justify-center gap-2 py-2 px-4 rounded-full font-bold text-xs transition-all shadow-sm
-                ${p.stock === 0
-                  ? "bg-muted text-muted-foreground cursor-not-allowed"
-                  : "bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] active:shadow-inner border border-[#fcd200]"}`}
-            >
-              <ShoppingCart className="w-3.5 h-3.5" />
-              {p.stock === 0 ? t.products.noStock : t.products.viewDetails}
-            </button>
+            {/* Add to Cart */}
+            {p.stock > 0 ? (
+              <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
+                <div className="flex items-center border border-border rounded-full">
+                  <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-2 py-1 text-xs font-bold hover:bg-muted rounded-l-full leading-none transition-colors">
+                    <Minus className="w-3 h-3" />
+                  </button>
+                  <span className="px-2 py-1 text-xs font-bold min-w-[24px] text-center leading-none tabular-nums">{qty}</span>
+                  <button onClick={() => setQty(qty + 1)} className="px-2 py-1 text-xs font-bold hover:bg-muted rounded-r-full leading-none transition-colors">
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+                <button
+                  onClick={() => { addToCartCtx(p, qty); setQty(1); }}
+                  className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-full font-bold text-xs transition-all shadow-sm bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] active:shadow-inner border border-[#fcd200]"
+                >
+                  <ShoppingCart className="w-3.5 h-3.5" />
+                  {t.products.addToCart}
+                </button>
+              </div>
+            ) : (
+              <button disabled className="w-full mt-3 pt-3 border-t border-border/50 flex items-center justify-center gap-2 py-2 px-4 rounded-full font-bold text-xs bg-muted text-muted-foreground cursor-not-allowed">
+                <ShoppingCart className="w-3.5 h-3.5" />
+                {t.products.noStock}
+              </button>
+            )}
           </div>
         </div>
       </div>
