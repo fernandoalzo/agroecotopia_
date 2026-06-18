@@ -3,10 +3,10 @@
 import React, { useState } from "react";
 import { useCart } from "@/context/CartContext";
 import { useLanguage } from "@/context/LanguageContext";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Leaf, ShoppingBag, CreditCard, Clock, CheckCircle2 } from "lucide-react";
+import { Leaf, ShoppingBag, CreditCard, Clock, CheckCircle2, Bitcoin } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { config } from "@/config/config";
@@ -16,9 +16,10 @@ interface OrderSummaryProps {
   isSubmitting?: boolean;
   destinationCity?: string;
   tipoEntrega?: string;
+  isConfirmDisabled?: boolean;
 }
 
-export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destinationCity, tipoEntrega }) => {
+export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destinationCity, tipoEntrega, isConfirmDisabled }) => {
   const { cart, totalPrice } = useCart();
   const { t, language } = useLanguage();
   const [showConfirm, setShowConfirm] = useState(false);
@@ -282,6 +283,15 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
           {t.products.taxesIncluded}
         </p>
 
+        {isConfirmDisabled && !isSubmitting && (
+          <div className="mb-4 p-3 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <Bitcoin className="w-4 h-4 text-orange-500 shrink-0" />
+            <p className="text-xs font-medium text-orange-600 dark:text-orange-400">
+              Ingresa un ID de transacción válido para completar tu pedido con criptomonedas.
+            </p>
+          </div>
+        )}
+
         {showConfirm ? (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <p className="text-sm font-bold text-center text-foreground px-4">
@@ -300,8 +310,13 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
               <Button
                 type="submit"
                 form="checkout-form"
-                disabled={isSubmitting}
-                className="flex-1 h-12 rounded-xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20"
+                disabled={isSubmitting || isConfirmDisabled}
+                className={cn(
+                  "flex-1 h-12 rounded-xl font-bold shadow-lg shadow-primary/20 transition-all",
+                  isConfirmDisabled
+                    ? "bg-muted text-muted-foreground cursor-not-allowed opacity-60"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                )}
               >
                 {isSubmitting ? (
                   <Clock className="w-5 h-5 animate-spin mx-auto" />
@@ -315,10 +330,17 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
           <Button
             type="button"
             onClick={() => setShowConfirm(true)}
-            disabled={isSubmitting}
-            className="w-full h-14 rounded-2xl font-display font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all group relative overflow-hidden bg-primary text-primary-foreground hover:bg-primary/90"
+            disabled={isSubmitting || isConfirmDisabled}
+            className={cn(
+              "w-full h-14 rounded-2xl font-display font-black text-lg shadow-xl transition-all group relative overflow-hidden",
+              isConfirmDisabled
+                ? "bg-muted text-muted-foreground cursor-not-allowed opacity-60"
+                : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20 hover:scale-[1.02] active:scale-[0.98]"
+            )}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:animate-shimmer" />
+            {!isConfirmDisabled && (
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:animate-shimmer" />
+            )}
             <div className="flex items-center gap-3">
               <CheckCircle2 className="w-6 h-6" />
               <span>{t.checkout.confirmOrder}</span>

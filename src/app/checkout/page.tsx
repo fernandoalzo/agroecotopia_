@@ -33,6 +33,8 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [destinationCity, setDestinationCity] = useState("");
   const [tipoEntrega, setTipoEntrega] = useState<string>("ENVIO");
+  const [paymentMethod, setPaymentMethod] = useState<string>("advisor");
+  const [transactionId, setTransactionId] = useState<string>("");
 
   const { data: cityZones, isLoading: isCitiesLoading } = useQuery({
     queryKey: ["checkoutCities"],
@@ -158,6 +160,8 @@ export default function CheckoutPage() {
     }
   };
 
+  const isConfirmDisabled = isSubmitting || (paymentMethod === "crypto" && (!transactionId || transactionId.trim() === ""));
+
   return (
     <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
 
@@ -180,6 +184,8 @@ export default function CheckoutPage() {
                 }}
                 onCityChange={setDestinationCity}
                 onTipoEntregaChange={setTipoEntrega}
+                onPaymentMethodChange={setPaymentMethod}
+                onTransactionIdChange={setTransactionId}
                 cityZones={cityZones ?? []}
                 bodegas={bodegas}
                 isLoadingBodegas={isLoadingBodegas}
@@ -195,7 +201,12 @@ export default function CheckoutPage() {
               transition={{ delay: 0.4 }}
               className="lg:col-span-5 lg:sticky lg:top-24"
             >
-              <OrderSummary isSubmitting={isSubmitting} destinationCity={destinationCity} tipoEntrega={tipoEntrega} />
+              <OrderSummary 
+                isSubmitting={isSubmitting} 
+                destinationCity={destinationCity} 
+                tipoEntrega={tipoEntrega}
+                isConfirmDisabled={isConfirmDisabled}
+              />
             </motion.div>
           </div>
         </div>

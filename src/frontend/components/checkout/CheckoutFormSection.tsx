@@ -13,6 +13,8 @@ interface CheckoutFormSectionProps {
   defaultValues?: Partial<CheckoutValues>;
   onCityChange?: (city: string) => void;
   onTipoEntregaChange?: (tipoEntrega: string) => void;
+  onPaymentMethodChange?: (method: string) => void;
+  onTransactionIdChange?: (txId: string) => void;
   cityZones: { name: string; cities: string[] }[];
   bodegas: any[];
   isLoadingBodegas: boolean;
@@ -26,6 +28,8 @@ export const CheckoutFormSection: React.FC<CheckoutFormSectionProps> = ({
   defaultValues,
   onCityChange,
   onTipoEntregaChange,
+  onPaymentMethodChange,
+  onTransactionIdChange,
   cityZones,
   bodegas,
   isLoadingBodegas,
@@ -53,6 +57,8 @@ export const CheckoutFormSection: React.FC<CheckoutFormSectionProps> = ({
         defaultValues={defaultValues}
         onCityChange={onCityChange}
         onTipoEntregaChange={onTipoEntregaChange}
+        onPaymentMethodChange={onPaymentMethodChange}
+        onTransactionIdChange={onTransactionIdChange}
         cityZones={cityZones}
         bodegas={bodegas}
         isLoadingBodegas={isLoadingBodegas}

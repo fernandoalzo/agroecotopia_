@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ShoppingCart, Star, StarHalf, ShieldCheck, Truck, ArrowRight, Store, Minus, Plus } from "lucide-react";
+import { ShoppingCart, Star, StarHalf, ShieldCheck, Truck, ArrowRight, Store, Minus, Plus, Check } from "lucide-react";
 import { Product } from "@/types";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -24,6 +24,16 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
   const { addToCart: addToCartCtx } = useCart();
   const [isNavigating, setIsNavigating] = useState(false);
   const [qty, setQty] = useState(1);
+  const [addedToCart, setAddedToCart] = useState(false);
+
+  const handleAddToCart = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (addedToCart) return;
+    addToCartCtx(p, qty);
+    setQty(1);
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 1500);
+  };
 
   const handleNavigate = (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -194,11 +204,18 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
                     </button>
                   </div>
                   <button
-                    onClick={(e) => { e.stopPropagation(); addToCartCtx(p, qty); setQty(1); }}
-                    className="flex items-center justify-center gap-2 py-2 px-8 rounded-full font-bold text-sm transition-all shadow-sm bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] active:shadow-inner border border-[#fcd200]"
+                    onClick={(e) => handleAddToCart(e)}
+                    className="flex items-center justify-center gap-2 py-2 px-8 rounded-full font-bold text-sm transition-all shadow-sm bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] active:shadow-inner border border-[#fcd200] disabled:opacity-80"
+                    disabled={addedToCart}
                   >
-                    <ShoppingCart className="w-4 h-4" />
-                    {t.products.addToCart}
+                    {addedToCart ? (
+                      <Check className="w-4 h-4 text-green-700" />
+                    ) : (
+                      <ShoppingCart className="w-4 h-4" />
+                    )}
+                    {addedToCart
+                      ? (language === 'es' ? '¡Agregado!' : 'Added!')
+                      : t.products.addToCart}
                   </button>
                 </>
               ) : (
@@ -317,10 +334,15 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
                       </button>
                     </div>
                     <button
-                      onClick={() => { addToCartCtx(p, qty); setQty(1); }}
-                      className="flex items-center justify-center bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] p-1.5 rounded-lg transition-all shadow-sm"
+                      onClick={(e) => { e.stopPropagation(); handleAddToCart(); }}
+                      className="flex items-center justify-center bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] p-1.5 rounded-lg transition-all shadow-sm disabled:opacity-80"
+                      disabled={addedToCart}
                     >
-                      <ShoppingCart className="w-3.5 h-3.5" />
+                      {addedToCart ? (
+                        <Check className="w-3.5 h-3.5 text-green-700" />
+                      ) : (
+                        <ShoppingCart className="w-3.5 h-3.5" />
+                      )}
                     </button>
                   </div>
                 </>
@@ -490,11 +512,18 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
                   </button>
                 </div>
                 <button
-                  onClick={() => { addToCartCtx(p, qty); setQty(1); }}
-                  className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-full font-bold text-xs transition-all shadow-sm bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] active:shadow-inner border border-[#fcd200]"
+                  onClick={(e) => handleAddToCart(e)}
+                  className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-full font-bold text-xs transition-all shadow-sm bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] active:shadow-inner border border-[#fcd200] disabled:opacity-80"
+                  disabled={addedToCart}
                 >
-                  <ShoppingCart className="w-3.5 h-3.5" />
-                  {t.products.addToCart}
+                  {addedToCart ? (
+                    <Check className="w-3.5 h-3.5 text-green-700" />
+                  ) : (
+                    <ShoppingCart className="w-3.5 h-3.5" />
+                  )}
+                  {addedToCart
+                    ? (language === 'es' ? '¡Agregado!' : 'Added!')
+                    : t.products.addToCart}
                 </button>
               </div>
             ) : (

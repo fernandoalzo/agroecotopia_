@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useLanguage } from "@/context/LanguageContext";
-import { User, Mail, Phone, MapPin, Building2, FileText, Truck, Warehouse, Bitcoin } from "lucide-react";
+import { User, Mail, Phone, MapPin, Building2, FileText, Truck, Warehouse, Bitcoin, X } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { PAYMENT_METHODS } from "@/utils/PaymentsMethods";
@@ -27,6 +27,8 @@ interface CheckoutFormProps {
   defaultValues?: Partial<CheckoutValues>;
   onCityChange?: (city: string) => void;
   onTipoEntregaChange?: (tipoEntrega: string) => void;
+  onPaymentMethodChange?: (method: string) => void;
+  onTransactionIdChange?: (txId: string) => void;
   cityZones: { name: string; cities: string[] }[];
   bodegas: any[];
   isLoadingBodegas: boolean;
@@ -34,7 +36,7 @@ interface CheckoutFormProps {
   isLoadingStoreConfigs?: boolean;
 }
 
-export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultValues, onCityChange, onTipoEntregaChange, cityZones, bodegas, isLoadingBodegas, storeConfigs, isLoadingStoreConfigs }) => {
+export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultValues, onCityChange, onTipoEntregaChange, onPaymentMethodChange, onTransactionIdChange, cityZones, bodegas, isLoadingBodegas, storeConfigs, isLoadingStoreConfigs }) => {
   const { t } = useLanguage();
 
   const form = useForm<CheckoutValues>({
@@ -55,6 +57,8 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
 
   const watchCity = form.watch("city");
   const watchTipoEntrega = form.watch("tipoEntrega");
+  const watchPaymentMethod = form.watch("paymentMethod");
+  const watchTransactionId = form.watch("transactionId");
 
   React.useEffect(() => {
     if (onCityChange) {
@@ -67,6 +71,18 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
       onTipoEntregaChange(watchTipoEntrega);
     }
   }, [watchTipoEntrega, onTipoEntregaChange]);
+
+  React.useEffect(() => {
+    if (onPaymentMethodChange) {
+      onPaymentMethodChange(watchPaymentMethod || "");
+    }
+  }, [watchPaymentMethod, onPaymentMethodChange]);
+
+  React.useEffect(() => {
+    if (onTransactionIdChange) {
+      onTransactionIdChange(watchTransactionId || "");
+    }
+  }, [watchTransactionId, onTransactionIdChange]);
 
   // Reset bodegaId when city or tipoEntrega changes
   React.useEffect(() => {
@@ -421,11 +437,23 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
                     ID de Transacción (TXID)
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="0x... o el TXID de tu transacción blockchain"
-                      className="bg-background/50 border-border/50 focus:border-orange-500/50 focus:ring-orange-500/20 rounded-xl h-12 transition-all font-mono text-sm"
-                      {...field}
-                    />
+                    <div className="relative">
+                      <Input
+                        placeholder="0x... o el TXID de tu transacción blockchain"
+                        className="bg-background/50 border-border/50 focus:border-orange-500/50 focus:ring-orange-500/20 rounded-xl h-12 transition-all font-mono text-sm pr-10"
+                        {...field}
+                      />
+                      {field.value && (
+                        <button
+                          type="button"
+                          onClick={() => form.setValue("transactionId", "", { shouldValidate: true })}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                          aria-label="Limpiar TXID"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </FormControl>
                   <p className="text-[10px] text-muted-foreground">
                     Ingresa el TXID de tu pago con criptomonedas para que el asesor lo verifique.
