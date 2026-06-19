@@ -37,6 +37,12 @@ import {
   adminGetEnvioCountsAction,
 } from "@/backend/modules/envio/envio.actions";
 import { aiGenerateDescriptionAction } from "@/backend/modules/ai/ai.actions";
+import {
+  getWafRules,
+  createWafRule,
+  deleteWafRule,
+  toggleWafRule,
+} from "@/backend/modules/waf/waf.actions";
 import AdminDashboardPage from "./AdminDashboardPageClient";
 
 export default function Page() {
@@ -74,6 +80,12 @@ export default function Page() {
           deleteConversation: deleteConversationAction,
           getAdminUsersList,
           getOrCreateConversationForAdmin,
+        },
+        waf: {
+          list: getWafRules,
+          create: createWafRule,
+          delete: deleteWafRule,
+          toggle: toggleWafRule,
         },
       }}
     />

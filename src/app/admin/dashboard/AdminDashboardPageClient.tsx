@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Package,
   MessageSquare,
+  Shield,
   ShieldAlert,
   ArrowLeft,
   ChevronRight,
@@ -30,10 +31,12 @@ import logger from "@/utils/logger";
 import { toast } from "sonner";
 import { Store } from "lucide-react";
 import { getConversationUnreadCount } from "@/frontend/lib/chatUnread";
+import { SeguridadPageClient } from "@/app/admin/seguridad/SeguridadPageClient";
+import type { WafRuleRow } from "@/backend/modules/waf";
 
 const log = logger.child();
 
-type DashboardTab = "orders" | "products" | "chat" | "store_requests" | "envios";
+type DashboardTab = "orders" | "products" | "chat" | "store_requests" | "envios" | "seguridad";
 type StoreRequestsResponse = any;
 
 interface AdminDashboardActions {
@@ -63,6 +66,12 @@ interface AdminDashboardActions {
   deleteOrder?: (pedidoId: string) => Promise<any>;
   getAdminConversations: () => Promise<any>;
   chat: React.ComponentProps<typeof AdminChatPageContent>["actions"];
+  waf: {
+    list: () => Promise<any>;
+    create: (data: any) => Promise<any>;
+    delete: (id: string) => Promise<any>;
+    toggle: (id: string) => Promise<any>;
+  };
 }
 
 const SIDEBAR_ITEMS: { id: DashboardTab; labelEs: string; labelEn: string; icon: any }[] = [
@@ -104,6 +113,7 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
   const [adminEnviosTotalPages, setAdminEnviosTotalPages] = useState(1);
   const [adminEnviosTotalCount, setAdminEnviosTotalCount] = useState(0);
   const [adminEnviosRefresh, setAdminEnviosRefresh] = useState(0);
+  const [wafRules, setWafRules] = useState<WafRuleRow[]>([]);
 
   const { state: productState, actions: productActions } = useProductsLogic(undefined, true, {
     getCategoriesAction: actions.getCategories,
@@ -217,6 +227,18 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
     refresh: () => productActions.reload(),
     events: ["product:stock_updated"],
   });
+
+  const loadWafRules = useCallback(async () => {
+    if (!isAdmin) return;
+    try {
+      const res = await actions.waf.list();
+      if (res && !("error" in res) && "rules" in res) setWafRules(res.rules as WafRuleRow[]);
+    } catch {}
+  }, [actions, isAdmin]);
+
+  useEffect(() => {
+    if (activeTab === "seguridad") loadWafRules();
+  }, [activeTab, loadWafRules]);
 
   const refreshOrdersList = useCallback(async () => {
     const result = await actions.getPaginatedOrders({
@@ -414,7 +436,7 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
 
             return (
               <React.Fragment key={item.id}>
-                {isChat && (
+                {item.id === "chat" && (
                   <div className="my-3 border-t border-border/40 mx-2" />
                 )}
                 {(item.id === "products" || item.id === "store_requests") && (
@@ -424,9 +446,11 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                   onClick={() => handleTabChange(item.id)}
                   className={cn(
                     "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/15"
-                      : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                    isActive && item.id === "seguridad"
+                      ? "bg-amber-500 text-white shadow-md shadow-amber-500/30"
+                      : isActive
+                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/15"
+                        : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
                   )}
                 >
                   <Icon className={cn("w-5 h-5 shrink-0 transition-transform duration-200", isActive && "scale-110")} />
@@ -466,6 +490,29 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
             );
           })}
         </nav>
+
+        {/* Seguridad WAF — bottom section */}
+        <div className="px-3 pb-2">
+          <div className="border-t border-border/40 mx-2 mb-2" />
+          <button
+            onClick={() => handleTabChange("seguridad")}
+            className={cn(
+              "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group relative",
+              activeTab === "seguridad"
+                ? "bg-amber-500 text-white shadow-md shadow-amber-500/30"
+                : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+            )}
+          >
+            <Shield className="w-5 h-5 shrink-0" />
+            <span className="flex-1 text-left">Seguridad WAF</span>
+            <ChevronRight
+              className={cn(
+                "w-4 h-4 shrink-0 transition-all duration-200",
+                activeTab === "seguridad" ? "opacity-80" : "opacity-0 group-hover:opacity-50"
+              )}
+            />
+          </button>
+        </div>
 
         {/* Sidebar footer */}
         <div className="p-4 border-t border-border/30">
@@ -644,6 +691,26 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
               </motion.div>
             )}
 
+            {activeTab === "seguridad" && (
+              <motion.div
+                key="seguridad"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2 }}
+                className="h-full overflow-auto"
+              >
+                <SeguridadPageClient
+                  initialRules={wafRules}
+                  actions={{
+                    list: actions.waf.list,
+                    create: actions.waf.create,
+                    delete: actions.waf.delete,
+                    toggle: actions.waf.toggle,
+                  }}
+                />
+              </motion.div>
+            )}
 
           </AnimatePresence>
         </div>

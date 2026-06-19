@@ -25,7 +25,7 @@ const existing = getGlobalStorage();
 if (existing) {
   prisma = existing[PRISMA_GLOBAL_KEY];
   // Si el schema cambió (ej: nuevo modelo Bodega), forzar recreación
-  if (!("storeConfig" in (prisma as any)) || !("cryptocurrency" in (prisma as any))) {
+  if (!("storeConfig" in (prisma as any)) || !("cryptocurrency" in (prisma as any)) || !("wafRule" in (prisma as any))) {
     log.warn("Schema desactualizado en PrismaClient singleton — forzando recreación.");
     delete (process as any)[PRISMA_GLOBAL_KEY];
     delete (globalThis as any)[PRISMA_GLOBAL_KEY];

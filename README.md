@@ -39,6 +39,7 @@ Plataforma de comercio electrónico B2C y B2B enfocada en productos agroecológi
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  Security Layer (transversal)                                │   │
 │  │  ├─ Security Headers (CSP, HSTS, COOP, XFO, etc.)           │   │
+│  │  ├─ WAF (IP blocklist, bot detect, geoblock, attacks)       │   │
 │  │  ├─ Rate Limiter (global 200/min + auth 5/min)               │   │
 │  │  └─ Anomaly Detection (login behaviour analysis)             │   │
 │  └──────────────────────────────────────────────────────────────┘   │
@@ -98,6 +99,7 @@ Plataforma de comercio electrónico B2C y B2B enfocada en productos agroecológi
 │  SEC │  Security Layer (transversal)         │  → Headers, Rate Limit, Anomaly Detect
 │       │  server.ts + security-headers.ts     │  → Se aplica a TODAS las respuestas
 │       │  + rate-limit.ts + anomaly-detector  │
+│       │  + waf/                              │  → WAF: IP blocklist, bot detect, geoblock
 ├───────┼──────────────────────────────────────┤
 │  UI   │  Pages y Componentes React           │
 ├───────┼──────────────────────────────────────┤
@@ -199,6 +201,13 @@ src/
 │   ├── admin-init.ts                # Bootstrap admin + tienda default
 │   ├── rate-limit.ts                # Rate limiters (Redis + fallback memoria)
 │   ├── security-headers.ts          # CSP, HSTS, COOP, etc. + applySecurityHeaders()
+│   ├── waf/                         # WAF — Web Application Firewall
+│   │   ├── types.ts                 # Tipos del WAF
+│   │   ├── geoblock.ts              # Bloqueo geográfico (ISO 3166-1 alpha-2)
+│   │   ├── ip-blocklist.ts          # Bloqueo por IP/CIDR
+│   │   ├── bot-detection.ts         # Detección de bots, scanners, patrones de ataque
+│   │   ├── rules-engine.ts          # Motor de evaluación de reglas
+│   │   └── index.ts                 # WAF singleton + applyWafMiddleware()
 │   ├── anomaly-detector/            # Login anomaly detection engine
 │   │   ├── types.ts                 # Tipos del motor
 │   │   ├── redis.ts                 # Cliente Redis dedicado (fast-fail)
@@ -771,6 +780,24 @@ ANOMALY_ALERT_ADMIN=true             # Registrar en stream admin de Redis
 # ── Crypto ────────────────────────────────────────
 BCRYPT_SALT_ROUNDS=10                # 10=~80ms, 12=~320ms, 14=~1.2s
 
+# ── WAF (Web Application Firewall) ────────────────
+WAF_MODE=monitor                     # disabled | monitor | enforce
+WAF_GEO_ENABLED=true                 # Geo-IP para geoblocking
+WAF_GEO_BLOCKED_COUNTRIES=""         # Países bloqueados (ISO 3166-1, comma-separated)
+WAF_GEO_ALLOWLIST=""                 # Solo estos países permitidos (comma-separated)
+WAF_IP_BLOCKLIST_ENABLED=true
+WAF_IP_BLOCKLIST_CIDRS=""            # CIDRs bloqueados (comma-separated, ej: "1.2.3.4/32,5.6.0.0/16")
+WAF_BOT_DETECTION_ENABLED=true
+WAF_BOT_BLOCK_KNOWN=true             # Bloquear scanners conocidos
+WAF_BOT_BLOCK_EMPTY_UA=true          # Bloquear User-Agent vacío
+WAF_BOT_THRESHOLD=80                 # Threshold para detección ML (reservado)
+WAF_RATE_LIMIT_ENABLED=true
+WAF_RATE_LIMIT_POINTS=100            # Requests por ventana
+WAF_RATE_LIMIT_DURATION=60            # Ventana en segundos
+WAF_RULES_ENABLED=true
+WAF_BLOCK_SENSITIVE_PATHS=true       # Bloquear /.env, /admin, etc.
+WAF_BLOCK_ATTACK_PATTERNS=true       # Bloquear SQLi, XSS, path traversal
+
 # ── AI / Embeddings ───────────────────────────────
 AI_ENABLED=false
 AI_PROVIDER=deepseek                 # deepseek | openai | ollama
@@ -951,6 +978,27 @@ Sistema de detección de login anomalo en `src/lib/anomaly-detector/` que evalú
 **Fail-open:** si Redis no está disponible, el motor se desactiva silenciosamente y permite todos los logins (mejor bloquear un ataque perdido que denegar acceso a un usuario legítimo por fallo de infraestructura).
 
 Geolocalización vía ip-api.com (free tier, sin API key, 45 req/min) con caché local en Map.
+
+### WAF (Web Application Firewall)
+
+Capa de seguridad perimetral en `src/lib/waf/` que evalúa cada request HTTP contra 5 grupos de reglas configurables, antes de que llegue al handler de Next.js. Se ejecuta en `server.ts` como middleware, leyendo la configuración directamente de la base de datos.
+
+| Regla | Dependencia | Velocidad | Qué bloquea |
+|-------|-------------|-----------|-------------|
+| **IP Blocklist** | Ninguna | O(n) CIDR match | IPs/CIDRs en lista negra configurable |
+| **Bot Detection** | Ninguna | Solo headers | Scanners (nmap, sqlmap, nikto), bots desconocidos, User-Agent vacío |
+| **Sensitive Paths** | Ninguna | Path prefix | `/.env`, `/.git`, `/admin`, `/wp-admin`, `/actuator`, `/vendor`, etc. |
+| **Attack Patterns** | Ninguna | Regex | SQLi, XSS, path traversal, LFI, command injection en path y query string |
+| **Geoblock** | ip-api.com | I/O (cacheado) | Países bloqueados o no permitidos (ISO 3166-1 alpha-2) |
+
+**Tres modos de operación** (configurable vía `WAF_MODE`):
+- `disabled` → WAF no se inicializa, cero overhead
+- `monitor` → evalúa todas las reglas, logea bloques, setea header `X-WAF-Monitor`, NUNCA deniega
+- `enforce` → evalúa + logea + BLOQUEA requests que matchean reglas
+
+**Orden de evaluación** (más rápido primero): IP Blocklist → Bot Detection → Sensitive Paths → Attack Patterns → Geoblock. Las primeras 4 no requieren I/O. Geoblock (la única con I/O) se evalúa al final y cachea resultados por IP.
+
+**Custom Server Middleware**: En el servidor custom (`server.ts`) las reglas se ejecutan via `applyWafMiddleware()`, asegurando que toda la protección provenga exclusivamente de la base de datos sin depender de variables de entorno duras.
 
 ### Otras Medidas
 

@@ -409,6 +409,49 @@ export const config = {
         adminStream: process.env.ANOMALY_ALERT_ADMIN !== 'false',
       },
     },
+
+    // ── WAF (Web Application Firewall) ────────────────────
+    //
+    //  Transversal security layer that evaluates every HTTP
+    //  request against a configurable set of rules before
+    //  it reaches the application. Runs in server.ts as a
+    //  middleware and (optionally) as an Edge middleware.
+    //
+    //  THREE OPERATION MODES:
+    //    disabled → WAF not initialized, zero overhead.
+    //    monitor  → evaluates all rules, logs blocks but
+    //               NEVER denies access. Sets X-WAF-Monitor
+    //               header with triggered rule IDs.
+    //    enforce  → evaluates all rules AND blocks requests
+    //               that match blocking criteria.
+    //
+    //  RULE EVALUATION ORDER (fastest first):
+    //    1. IP Blocklist      — O(n) CIDR match, no I/O
+    //    2. Bot Detection     — headers only, no I/O
+    //    3. Sensitive Paths   — path prefix check, no I/O
+    //    4. Attack Patterns   — regex on path + query, no I/O
+    //    5. Geoblock          — requires IP geo resolution API
+    //
+    //  DESIGN PRINCIPLES:
+    //    - Fail-open: if geo resolution fails, geo rules
+    //      are skipped (country = null → no match).
+    //    - Memory-safe: geo results cached in local Map
+    //      to avoid repeated API calls for same IP.
+    //    - Observable: all blocks logged with ip, path,
+    //      rule, and elapsed time.
+    //    - Config-driven: every rule toggleable via env var.
+    // ──────────────────────────────────────────────────────
+
+    waf: {
+      /**
+       * Operation mode.
+       *   "disabled" — WAF off, zero overhead.
+       *   "monitor"  — evaluate + log, NEVER block.
+       *   "enforce"  — evaluate + log + block.
+       * @default "monitor"
+       */
+      mode: (process.env.WAF_MODE || 'monitor') as 'disabled' | 'monitor' | 'enforce',
+    },
   },
 
   // ─────────────────────────────────────────────────────────

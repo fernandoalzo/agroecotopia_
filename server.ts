@@ -9,6 +9,7 @@ import { applyRateLimitMiddleware } from "./src/backend/middlewares/rateLimiter"
 import { config } from "./src/config/config";
 import { initializeStockMaster } from "./src/backend/modules/stockGuardian/init";
 import { applySecurityHeaders } from "./src/lib/security-headers";
+import { applyWafMiddleware } from "./src/lib/waf";
 
 const log = logger.child();
 
@@ -38,6 +39,10 @@ const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse
   if (!isStaticAsset) {
     log.debug(`${req.method} ${url}`);
   }
+
+  // ── WAF: evalúa reglas de seguridad antes de cualquier procesamiento ──
+  const isWafBlocked = await applyWafMiddleware(req, res);
+  if (isWafBlocked) return;
 
   const isRateLimited = await applyRateLimitMiddleware(req, res, url, isStaticAsset);
   if (isRateLimited) {
