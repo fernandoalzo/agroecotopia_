@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { auth } from "@/utils/auth";
 import { shippingService } from "@/backend/modules/shipping";
 import logger from "@/utils/logger";
 
@@ -6,6 +7,11 @@ const log = logger.child("src/app/api/calculate-shipping/route.ts");
 
 export async function POST(request: Request) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Se requiere autenticación para calcular envío." }, { status: 401 });
+    }
+
     const { cartItems, destinationCity } = await request.json();
 
     if (!Array.isArray(cartItems) || cartItems.length === 0) {
