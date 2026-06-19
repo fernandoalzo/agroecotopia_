@@ -7,6 +7,7 @@ import { LoginSchema, RegisterSchema } from "@/lib/validations/auth.schema";
 import logger from "@/utils/logger";
 import { headers } from "next/headers";
 import { authRateLimiter } from "@/lib/rate-limit";
+import { anomalyDetector } from "@/lib/anomaly-detector";
 
 const log = logger.child("src/backend/modules/auth/auth.actions.ts");
 
@@ -53,6 +54,41 @@ export async function credentialsSignInAction(formData: FormData) {
   }
 
   const { email, password } = validatedFields.data;
+
+  // ── Anomaly detection ────────────────────────────────
+  const headersList = await headers();
+  const clientIp = headersList.get("x-forwarded-for") || "unknown_ip";
+  const userAgent = headersList.get("user-agent") || "";
+
+  const user = await authService.verifyCredentials(email, password);
+  if (!user) {
+    log.warn("Credenciales inválidas para:", { email });
+    return { error: "Credenciales inválidas" };
+  }
+
+  const assessment = await anomalyDetector.assess(user.id, email, {
+    ip: clientIp,
+    userAgent,
+    timestamp: Date.now(),
+  });
+
+  if (assessment.action === "BLOCK") {
+    log.warn("Login bloqueado por anomalía:", {
+      email,
+      score: assessment.score.toFixed(3),
+      signals: assessment.signals.filter((s) => s.score > 0).length,
+    });
+    return { error: "Acceso bloqueado por seguridad. Revisa tu correo electrónico." };
+  }
+
+  if (assessment.action === "SUSPECT") {
+    log.warn("Login sospechoso — permitido (monitoreo):", {
+      email,
+      score: assessment.score.toFixed(3),
+      ip: clientIp,
+    });
+  }
+  // ─────────────────────────────────────────────────────
 
   try {
     log.info("Intentando inicio de sesión con credenciales para:", { email });

@@ -339,6 +339,76 @@ export const config = {
        */
       bcryptSaltRounds: Number(process.env.BCRYPT_SALT_ROUNDS || 10),
     },
+
+    // ── Anomaly Detection ────────────────────────────────
+    //
+    //  Login behaviour analysis engine. Tracks IPs, geolocation,
+    //  time-of-day patterns, and device fingerprints per user to
+    //  detect account takeover attempts.
+    //
+    //  THREE OPERATION MODES:
+    //    disabled → engine not initialized (no Redis, no memory)
+    //    monitor  → scores + stores + notifies, NEVER blocks access
+    //    enforce  → scores + stores + notifies + BLOCKS high-risk logins
+    //
+    //  DEPENDENCY: Redis must be available. If Redis is down the
+    //  engine silently disables itself (fail-open) and logs a warning.
+    // ──────────────────────────────────────────────────────
+
+    anomalyDetection: {
+      /**
+       * Operation mode.
+       *   "disabled" — engine off, zero overhead.
+       *   "monitor"  — detect + log + notify, but never block.
+       *   "enforce"  — detect + log + notify + block when score > blockThreshold.
+       * @default "monitor"
+       */
+      mode: (process.env.ANOMALY_DETECTION_MODE || 'monitor') as 'disabled' | 'monitor' | 'enforce',
+
+      /**
+       * Scoring thresholds (0.0 – 1.0).
+       *   score > suspectThreshold → SUSPECT (user notified)
+       *   score > blockThreshold  → BLOCK  (login denied in enforce mode)
+       */
+      thresholds: {
+        suspect: Number(process.env.ANOMALY_SUSPECT_THRESHOLD || 0.4),
+        block: Number(process.env.ANOMALY_BLOCK_THRESHOLD || 0.7),
+      },
+
+      /**
+       * Signal weights. Must sum to 1.0.
+       * Each weight represents the relative importance of a signal
+       * in the final risk score. Adjust based on real-world false
+       * positive rates.
+       */
+      weights: {
+        unknownIp: Number(process.env.ANOMALY_WT_UNKNOWN_IP || 0.30),
+        geoAnomaly: Number(process.env.ANOMALY_WT_GEO || 0.25),
+        timeAnomaly: Number(process.env.ANOMALY_WT_TIME || 0.15),
+        deviceAnomaly: Number(process.env.ANOMALY_WT_DEVICE || 0.10),
+        ipReputation: Number(process.env.ANOMALY_WT_IP_REP || 0.10),
+        velocity: Number(process.env.ANOMALY_WT_VELOCITY || 0.10),
+      },
+
+      /**
+       * Geo-IP resolution for geographic anomaly detection.
+       * Uses ip-api.com free tier (no API key required, 45 req/min limit).
+       * Set enabled=false to skip geo lookups entirely.
+       */
+      geoIp: {
+        enabled: process.env.ANOMALY_GEO_ENABLED === 'true',
+      },
+
+      /**
+       * Alert channels for SUSPECT / BLOCK events.
+       */
+      alerts: {
+        /** Send notification email to the affected user on SUSPECT events. */
+        emailUser: process.env.ANOMALY_ALERT_USER !== 'false',
+        /** Log to the internal admin anomalies stream (Redis list). */
+        adminStream: process.env.ANOMALY_ALERT_ADMIN !== 'false',
+      },
+    },
   },
 
   // ─────────────────────────────────────────────────────────

@@ -21,7 +21,7 @@ Plataforma de comercio electrónico B2C y B2B enfocada en productos agroecológi
 | **State (Cliente)** | TanStack React Query (async) + Context API (sync) | 5.95.2 |
 | **Encriptación Chat** | TweetNaCl (Curve25519 + XSalsa20-Poly1305) | 1.0.3 |
 | **Server Runtime** | tsx (servidor custom) | 4.22.3 |
-| **Rate Limiting** | rate-limiter-flexible (in-memory) | 11.1.0 |
+| **Rate Limiting** | rate-limiter-flexible (Redis + in-memory fallback) | 11.1.0 |
 | **Embeddings** | Ollama + pgvector (cosine distance) | — |
 
 ---
@@ -37,6 +37,12 @@ Plataforma de comercio electrónico B2C y B2B enfocada en productos agroecológi
 ┌──────────────────▼─────────────────────────────────────────────────┐
 │                  Custom Server (server.ts)                          │
 │  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  Security Layer (transversal)                                │   │
+│  │  ├─ Security Headers (CSP, HSTS, COOP, XFO, etc.)           │   │
+│  │  ├─ Rate Limiter (global 200/min + auth 5/min)               │   │
+│  │  └─ Anomaly Detection (login behaviour analysis)             │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  Next.js 16 Request Handler (App Router)                     │   │
 │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────────────┐ │   │
 │  │  │  Pages   │ │ API Rut.│ │ S. Actions│ │ Middleware      │ │   │
@@ -44,10 +50,8 @@ Plataforma de comercio electrónico B2C y B2B enfocada en productos agroecológi
 │  └──────────────────────────────────────────────────────────────┘   │
 │  ┌──────────────────────────────────────────────────────────────┐   │
 │  │  Socket.IO Server (mismo proceso, mismo puerto)               │   │
+│  │  → CORS restringido a config.app.url                          │   │
 │  │  → Chat en tiempo real + Notificaciones push                  │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │  Rate Limiter Middleware (global 200/min + auth 5/min)        │   │
 │  └──────────────────────────────────────────────────────────────┘   │
 └───────────────────┬─────────────────────────────────────────────────┘
                     │
@@ -91,6 +95,10 @@ Plataforma de comercio electrónico B2C y B2B enfocada en productos agroecológi
 
 ```
 ┌──────────────────────────────────────────────┐
+│  SEC │  Security Layer (transversal)         │  → Headers, Rate Limit, Anomaly Detect
+│       │  server.ts + security-headers.ts     │  → Se aplica a TODAS las respuestas
+│       │  + rate-limit.ts + anomaly-detector  │
+├───────┼──────────────────────────────────────┤
 │  UI   │  Pages y Componentes React           │
 ├───────┼──────────────────────────────────────┤
 │  CTRL │  Server Actions (".actions.ts")      │  → Capa de transporte
@@ -109,6 +117,7 @@ Plataforma de comercio electrónico B2C y B2B enfocada en productos agroecológi
 
 **Reglas de dependencia (estrictas):**
 - `UI → CTRL → SVC → REPO → CACHE → LOCK → DB`
+- La **Security Layer** (SEC) es transversal — se aplica en `server.ts` antes de que cualquier request toque la app.
 - Un componente/página NUNCA importa Prisma, repositorios o servicios directamente.
 - Los Server Actions son la única puerta de entrada al backend desde UI.
 - Los Servicios no saben que existe caché. Solo los Repositorios usan `CacheService`.
@@ -188,7 +197,15 @@ src/
 ├── lib/
 │   ├── auth-guards.ts               # 5 HOCs RBAC (withAuth, withAdmin, etc.)
 │   ├── admin-init.ts                # Bootstrap admin + tienda default
-│   ├── rate-limit.ts                # Rate limiters singleton
+│   ├── rate-limit.ts                # Rate limiters (Redis + fallback memoria)
+│   ├── security-headers.ts          # CSP, HSTS, COOP, etc. + applySecurityHeaders()
+│   ├── anomaly-detector/            # Login anomaly detection engine
+│   │   ├── types.ts                 # Tipos del motor
+│   │   ├── redis.ts                 # Cliente Redis dedicado (fast-fail)
+│   │   ├── geo.ts                   # Geo-IP resolver (ip-api.com)
+│   │   ├── scorer.ts                # Evaluación de 6 señales de riesgo
+│   │   ├── store.ts                 # Persistencia de perfiles en Redis
+│   │   └── index.ts                 # AnomalyDetector singleton
 │   ├── validations/                 # Schemas Zod (auth, checkout)
 │   └── utils.ts                     # cn(), formatPrice()
 ├── types/                           # Tipos TypeScript centralizados
@@ -600,13 +617,15 @@ Si deshabilitado: mensajes en texto plano, sin registro de dispositivo, sin hand
 
 ## Rate Limiting
 
-Tres capas independientes usando `rate-limiter-flexible` con almacenamiento en memoria:
+Arquitectura de doble capa: **Redis como primario** con **fallback automático a memoria** cuando Redis no está disponible. Cada request reintenta Redis de forma optimista; si Redis falla, degrada silenciosamente a memoria sin interrumpir el servicio.
 
 | Capa | Límite | PREFIX | Propósito |
 |------|--------|--------|-----------|
 | Global HTTP | 200 requests/minuto/IP | `rateLimitGlobal` | Anti-DDoS general |
 | Auth | 5 requests/minuto/IP | `rateLimitAuth` | Protección brute force |
 | Socket | 2 mensajes/segundo/socket | — | Anti-spam en chat |
+
+**Cliente Redis dedicado** (`src/lib/rate-limit.ts`): lazyConnect, 2s timeout, sin retry automático. Si Redis no contesta en 2s, la request se procesa con el limiter en memoria. En la siguiente request se reintenta Redis (optimistic retry).
 
 ---
 
@@ -650,14 +669,28 @@ export const config = {
   auth: { secret, trustHost, google: { clientId, clientSecret }, admin: { email, password } },
   database: { url, directUrl },
   mercadopago: { accessToken, webhookSecret },
+  security: {                              // ← Seguridad centralizada
+    headersEnabled,                         // Master switch
+    csp: { scriptSrc, styleSrc, connectSrc, frameSrc, imgSrc, fontSrc, formAction, extra* },
+    hsts: { maxAge, includeSubDomains, preload },
+    xFrameOptions, xContentTypeOptions, referrerPolicy, xXSSProtection,
+    crossOriginOpenerPolicy, crossOriginResourcePolicy,
+    permissionsPolicy: { camera, microphone, geolocation, payment },
+    rateLimit: { global: { points, duration }, auth: {...}, socket: {...} },
+    crypto: { bcryptSaltRounds },
+    anomalyDetection: { mode, thresholds, weights, geoIp, alerts },
+  },
   chat: { enableE2EE },
   cache: { redisUrl, enabled, defaultTTL, ttl: { productList, productDetail, categories, ... } },
+  ai: { enabled, provider, models, apiKeys, features },  // ← Secrets centralizados
   forum: { rules, labels, validation },
   marketplace: { maxProductsPerStore, maxStoresPerUser, adminDefaultStoreName },
+  embedding: { dimensions, batchSize },
+  ollama: { baseUrl, embeddingModel, timeout },
 } as const;
 ```
 
-**Regla:** `process.env.X` NUNCA se usa directamente. Siempre `config.*`.
+**Regla:** `process.env.X` NUNCA se usa directamente. Siempre `config.*`. El objeto completo es `as const` (deeply readonly) para prevenir mutaciones accidentales.
 
 ---
 
@@ -692,6 +725,62 @@ MERCADOPAGO_WEBHOOK_SECRET="..."
 # Redis (opcional — sin Redis la app funciona igual)
 REDIS_URL="redis://default:password@host:6379"
 CACHE_ENABLED="true"
+
+# ── Security Headers ──────────────────────────────
+SECURITY_HEADERS_ENABLED=true                          # Master switch headers de seguridad
+CSP_SCRIPT_SRC="'self' 'unsafe-inline' 'unsafe-eval'"  # Orígenes permitidos para scripts
+CSP_STYLE_SRC="'self' 'unsafe-inline'"                 # Orígenes permitidos para estilos
+CSP_CONNECT_SRC="'self' https: wss:"                   # Orígenes para fetch/XHR/WS
+CSP_FRAME_SRC="'self'"                                 # Orígenes permitidos en iframes
+CSP_IMG_SRC="'self' data: blob: https: http:"          # Orígenes para imágenes
+CSP_FONT_SRC="'self' data:"                            # Orígenes para fuentes
+CSP_FORM_ACTION="'self'"                               # Destinos permitidos en forms
+CSP_EXTRA_SCRIPT_SRC=""                                # Scripts extra (comma-separated)
+CSP_EXTRA_CONNECT_SRC=""                               # Conexiones extra (comma-separated)
+CSP_EXTRA_FRAME_SRC=""                                 # Frames extra (comma-separated)
+HSTS_MAX_AGE=63072000                                  # 2 años en segundos
+HSTS_INCLUDE_SUBDOMAINS=true
+HSTS_PRELOAD=true
+X_FRAME_OPTIONS=DENY
+X_CONTENT_TYPE_OPTIONS=nosniff
+REFERRER_POLICY=strict-origin-when-cross-origin
+X_XSS_PROTECTION=0
+COOP_POLICY=same-origin
+CORP_POLICY=same-origin
+PERMISSIONS_CAMERA=()
+PERMISSIONS_MICROPHONE=()
+PERMISSIONS_GEOLOCATION=()
+PERMISSIONS_PAYMENT=(self)
+
+# ── Rate Limiting ─────────────────────────────────
+RATE_LIMIT_GLOBAL_POINTS=200
+RATE_LIMIT_GLOBAL_DURATION=60
+RATE_LIMIT_AUTH_POINTS=5
+RATE_LIMIT_AUTH_DURATION=60
+RATE_LIMIT_SOCKET_POINTS=2
+RATE_LIMIT_SOCKET_DURATION=1
+
+# ── Anomaly Detection ─────────────────────────────
+ANOMALY_DETECTION_MODE=monitor       # disabled | monitor | enforce
+ANOMALY_SUSPECT_THRESHOLD=0.4
+ANOMALY_BLOCK_THRESHOLD=0.7
+ANOMALY_GEO_ENABLED=true             # Geo-IP vía ip-api.com
+ANOMALY_ALERT_USER=true              # Notificar al usuario en eventos SUSPECT
+ANOMALY_ALERT_ADMIN=true             # Registrar en stream admin de Redis
+
+# ── Crypto ────────────────────────────────────────
+BCRYPT_SALT_ROUNDS=10                # 10=~80ms, 12=~320ms, 14=~1.2s
+
+# ── AI / Embeddings ───────────────────────────────
+AI_ENABLED=false
+AI_PROVIDER=deepseek                 # deepseek | openai | ollama
+DEEPSEEK_API_KEY="..."
+OPENAI_API_KEY="..."
+OLLAMA_API_KEY="..."
+AI_MODEL_CHAT=deepseek-chat
+AI_MODEL_EMBEDDING=deepseek-embedding
+EMBEDDING_DIMENSIONS=4096
+EMBEDDING_BATCH_SIZE=10
 ```
 
 ---
@@ -811,17 +900,80 @@ SessionProvider (next-auth)
 
 ## Seguridad
 
+Todas las políticas de seguridad se centralizan en `src/config/config.ts` → `config.security.*`. Ningún valor está hardcodeado; el 100% es sobreescribible vía variables de entorno.
+
+### HTTP Security Headers
+
+Aplicados en **todas las respuestas** (incluyendo 429, 401, 500) mediante `res.writeHead` wrapper en `server.ts`. First-writer-wins: si Next.js ya seteó un header, no se sobreescribe.
+
+| Header | Valor | Efecto |
+|--------|-------|--------|
+| **Content-Security-Policy** | `default-src 'self'` + directivas detalladas | Control granular de recursos (scripts, estilos, conexiones, frames) |
+| **Strict-Transport-Security** | `max-age=63072000; includeSubDomains; preload` | HTTPS forzado 2 años, todos los subdominios, preload list |
+| **X-Frame-Options** | `DENY` | Bloquea clickjacking — la página no se puede incrustar en iframes |
+| **X-Content-Type-Options** | `nosniff` | Evita MIME-type sniffing |
+| **Referrer-Policy** | `strict-origin-when-cross-origin` | Controla información enviada en headers Referer |
+| **Permissions-Policy** | `camera=(), microphone=(), geolocation=(), payment=(self)` | Restringe APIs del navegador (reduce fingerprinting) |
+| **Cross-Origin-Opener-Policy** | `same-origin` | Aísla la ventana contra ataques Spectre via cross-origin opens |
+| **Cross-Origin-Resource-Policy** | `same-origin` | Bloquea carga cross-origin de recursos estáticos |
+| **X-XSS-Protection** | `0` | Desactiva el legacy XSS Auditor (obsoleto) |
+
+CSP permite `'unsafe-inline'` para scripts (requerido por Next.js RSC payload inline scripts) y `'unsafe-eval'` (para Webpack HMR en desarrollo). En producción eliminar `'unsafe-eval'` si no se usa.
+
+### Rate Limiting (Redis + Memoria)
+
+| Capa | Redis | Fallback | Límite |
+|------|-------|----------|--------|
+| Global HTTP | RateLimiterRedis | RateLimiterMemory | 200 req/min/IP |
+| Auth | RateLimiterRedis | RateLimiterMemory | 5 req/min/IP |
+| Socket | RateLimiterRedis | RateLimiterMemory | 2 msg/s/socket |
+
+Cliente Redis dedicado con `lazyConnect`, timeout 2s, sin retry automático. En cada request reintenta Redis (optimistic retry).
+
+### Anomaly Detection Engine
+
+Sistema de detección de login anomalo en `src/lib/anomaly-detector/` que evalúa 6 señales en cada inicio de sesión:
+
+| Señal | Peso | Qué detecta |
+|-------|------|-------------|
+| **IP desconocida** | 30% | IP nunca antes vista para este usuario |
+| **Anomalía geográfica** | 25% | Distancia >1000km desde el último login (haversine) |
+| **Horario atípico** | 15% | Hora del día fuera del rango habitual del usuario |
+| **Dispositivo no registrado** | 10% | User-Agent fingerprint no reconocido |
+| **Reputación de IP** | 10% | Ratio de intentos fallidos vs exitosos |
+| **Velocidad** | 10% | Múltiples fallos antes del éxito (≥3 intentos fallidos) |
+
+**Tres modos de operación** (configurable vía `ANOMALY_DETECTION_MODE`):
+- `disabled` → motor apagado, cero overhead
+- `monitor` → detecta, registra, notifica — NUNCA bloquea
+- `enforce` → detecta, registra, notifica — BLOQUEA logins con score >0.7
+
+**Fail-open:** si Redis no está disponible, el motor se desactiva silenciosamente y permite todos los logins (mejor bloquear un ataque perdido que denegar acceso a un usuario legítimo por fallo de infraestructura).
+
+Geolocalización vía ip-api.com (free tier, sin API key, 45 req/min) con caché local en Map.
+
+### Otras Medidas
+
 | Aspecto | Implementación |
 |---------|---------------|
-| **Autenticación** | JWT stateless + bcrypt (10 rounds) |
-| **Autorización** | 5 HOCs RBAC (withAuth, withAdmin, etc.) |
-| **Validación** | Zod en todos los boundaries cliente-servidor |
-| **Rate Limiting** | 3 capas: global (200/m), auth (5/m), socket (2/s) |
-| **Headers HTTP** | HSTS, X-Frame-Options DENY, X-Content-Type-Options, etc. |
-| **Webhooks** | HMAC-SHA256 signature verification |
-| **Chat** | E2EE opcional (Signal Protocol) |
-| **ESLint** | Reglas que previenen violaciones de arquitectura |
-| **Server Actions** | Siempre en `"use server"` + auth guard |
+| **Autenticación** | JWT stateless + bcrypt (10-12 rounds, configurable via `BCRYPT_SALT_ROUNDS`) |
+| **Autorización** | 5 HOCs RBAC (withAuth, withAdmin, withSeller, withAdminOrSeller, withStoreOwner) |
+| **Validación** | Zod en todos los boundaries cliente-servidor, esquemas standalone en `schemas/` |
+| **Webhooks** | HMAC-SHA256 signature verification (MercadoPago) |
+| **Chat** | E2EE opcional (Curve25519 + XSalsa20-Poly1305 via TweetNaCl) |
+| **Stored XSS** | `rehype-sanitize` en ReactMarkdown del foro (`ForumQuestionDetail`, `ForumAnswerCard`) |
+| **API Routes** | Autenticación `auth()` requerida en endpoints sensibles (`calculate-shipping`, `calculate-taxes`) |
+| **Socket.IO CORS** | Restringido a `config.app.url` (origen único), `credentials: true` |
+| **Server Actions** | Siempre `"use server"` + auth guard + rate limit + doble-submit prevention |
+| **AI Secrets** | Centralizados en `config.ai.apiKeys` — cero `process.env` en módulos AI |
+| **Logger** | Prohibido `console.log` — usar `logger.child()` con data source tagging (`[cache]`, `[db]`, `🤖`) |
+
+### Referencias
+
+- OWASP Secure Headers Project
+- Mozilla Observatory
+- PCI DSS v4.0 Requirement 6.6
+- AWS Well-Architected Framework — Security Pillar
 
 ---
 
