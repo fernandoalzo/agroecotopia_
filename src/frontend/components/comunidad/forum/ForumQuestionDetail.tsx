@@ -11,6 +11,7 @@ import { formatDistanceToNow } from "date-fns";
 import { es, enUS } from "date-fns/locale";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeSanitize from "rehype-sanitize";
 
 import { Question } from "./forum.types";
 import ForumAnswerCard from "./ForumAnswerCard";
@@ -42,7 +43,7 @@ type SortMode = "votes" | "newest" | "oldest";
 function MarkdownRenderer({ content }: { content: string }) {
   return (
     <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-code:bg-secondary/50 prose-code:px-1 prose-code:rounded prose-a:text-primary prose-pre:bg-secondary/50 prose-pre:border prose-pre:border-border/30 [&_pre>code]:bg-transparent [&_pre>code]:p-0">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
         {content}
       </ReactMarkdown>
     </div>
