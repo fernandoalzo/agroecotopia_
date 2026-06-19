@@ -8,6 +8,7 @@ import logger from "./src/utils/logger";
 import { applyRateLimitMiddleware } from "./src/backend/middlewares/rateLimiter";
 import { config } from "./src/config/config";
 import { initializeStockMaster } from "./src/backend/modules/stockGuardian/init";
+import { applySecurityHeaders } from "./src/lib/security-headers";
 
 const log = logger.child();
 
@@ -21,6 +22,9 @@ const handle = app.getRequestHandler();
 // to eliminate the race window where Server Actions could run without Socket.IO.
 const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
   const parsedUrl = parse(req.url!, true);
+
+  // Inyectar security headers en TODAS las respuestas (CSP, HSTS, XFO, etc.)
+  applySecurityHeaders(res);
 
   // Skip logging for static assets and Next.js internals (noisy, no observability value)
   const url = req.url || "";

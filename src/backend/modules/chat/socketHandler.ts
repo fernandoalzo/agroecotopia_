@@ -6,6 +6,7 @@ import logger from "@/utils/logger";
 import { socketRateLimiter } from "@/lib/rate-limit";
 import { chatService } from "./index";
 import eventBus from "@/utils/eventBus";
+import { config } from "@/config/config";
 const log = logger.child("src/backend/modules/chat/socketHandler.ts");
 
 function getSocketChatErrorMessage(error: unknown) {
@@ -31,8 +32,9 @@ function getSocketChatErrorMessage(error: unknown) {
 export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient): Server {
   const io = new Server(httpServer, {
     cors: {
-      origin: "*",
+      origin: config.app.url,
       methods: ["GET", "POST"],
+      credentials: true,
     },
   });
 
