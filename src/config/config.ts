@@ -456,6 +456,17 @@ export const config = {
       embedding: process.env.AI_MODEL_EMBEDDING || 'deepseek-embedding',
     },
 
+    /**
+     * API keys for each supported provider.
+     * Access via config (not process.env) — guarantees a single source of truth,
+     * prevents accidental exposure in stack traces, and enables centralized auditing.
+     */
+    apiKeys: {
+      deepseek: process.env.DEEPSEEK_API_KEY || '',
+      openai: process.env.OPENAI_API_KEY || '',
+      ollama: process.env.OLLAMA_API_KEY || '',
+    },
+
     /** Individual feature toggles. Disabled features skip provider initialisation and reduce cold-start time. */
     features: {
       /** Semantic search over forum posts and products via pgvector cosine similarity. */

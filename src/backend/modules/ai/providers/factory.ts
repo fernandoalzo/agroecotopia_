@@ -4,6 +4,7 @@ import { DeepSeekProvider } from "./deepseek";
 import { OpenAIProvider } from "./openai";
 import { OllamaProvider } from "./ollama";
 import logger from "@/utils/logger";
+import { config } from "@/config/config";
 
 const log = logger.child("src/backend/modules/ai/providers/factory.ts");
 
@@ -36,9 +37,9 @@ export class AIProviderFactory {
       );
     }
 
-    const apiKey = overrides?.apiKey || process.env[`${name.toUpperCase()}_API_KEY`] || "";
+    const apiKey = overrides?.apiKey || config.ai.apiKeys[name] || "";
 
-    const config: AIProviderConfig = {
+    const resolvedConfig: AIProviderConfig = {
       apiKey,
       baseUrl: overrides?.baseUrl || defaults.baseUrl || "",
       defaultModel: overrides?.defaultModel || defaults.defaultModel || "",
@@ -49,11 +50,11 @@ export class AIProviderFactory {
 
     log.info("🤖 Creando proveedor AI:", {
       provider: name,
-      baseUrl: config.baseUrl,
-      model: config.defaultModel,
+      baseUrl: resolvedConfig.baseUrl,
+      model: resolvedConfig.defaultModel,
     });
 
-    return new ProviderClass(config);
+    return new ProviderClass(resolvedConfig);
   }
 
   static registerProvider(

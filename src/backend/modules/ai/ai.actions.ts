@@ -3,6 +3,7 @@
 import { withAuth } from "@/lib/auth-guards";
 import type { ChatMessage } from "./providers/types";
 import logger from "@/utils/logger";
+import { config } from "@/config/config";
 
 const log = logger.child("src/backend/modules/ai/ai.actions.ts");
 
@@ -170,7 +171,7 @@ export async function aiCheckHealthAction() {
     const available = await aiService.isAvailable();
     return {
       moduleActive: true,
-      provider: process.env.AI_PROVIDER || "deepseek",
+      provider: config.ai.provider,
       available,
       message: available
         ? "🤖 Módulo AI activo y disponible."

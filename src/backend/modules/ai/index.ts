@@ -29,7 +29,7 @@ const aiRepository = new AIRepository(cacheService, {
 });
 
 // ─── Provider ──────────────────────────────────────────────────
-const AI_ENABLED = process.env.AI_ENABLED === 'true';
+const AI_ENABLED = config.ai.enabled;
 
 let aiService: AIService | null = null;
 let ragService: RAGService | null = null;
@@ -46,9 +46,9 @@ let visionService: VisionService | null = null;
 if (AI_ENABLED) {
   try {
     const provider = AIProviderFactory.create(
-      (process.env.AI_PROVIDER as "deepseek" | "openai" | "ollama") || "ollama",
+      config.ai.provider,
       {
-        apiKey: process.env.DEEPSEEK_API_KEY,
+        apiKey: config.ai.apiKeys.deepseek,
         baseUrl: config.ollama.baseUrl,
         defaultModel: "llama3.2:3b",
         embeddingModel: config.ollama.embeddingModel,
@@ -147,7 +147,7 @@ if (AI_ENABLED) {
 }
 
 const aiStatus = AI_ENABLED
-  ? `🤖 [AI] ESTADO: ✅ ACTIVO (proveedor: ${process.env.AI_PROVIDER || "ollama"})`
+  ? `🤖 [AI] ESTADO: ✅ ACTIVO (proveedor: ${config.ai.provider})`
   : "🤖 [AI] ESTADO: ⛔ INACTIVO — módulo presente, esperando AI_ENABLED=true";
 
 log.info(aiStatus);
