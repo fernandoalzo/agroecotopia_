@@ -3,36 +3,32 @@ import { config } from "@/config/config";
 type HeaderRecord = Record<string, string>;
 
 /**
- * Builds a Content-Security-Policy string based on the runtime environment.
- * Strict in production, relaxed in development (allows HMR WebSocket connections).
+ * Builds a Content-Security-Policy string from the centralized config.
+ * Dynamically appends extra origins for payment providers, CDNs, etc.
  */
 function buildCSP(): string {
+  const csp = config.security.csp;
+
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
     "script-src": [
-      "'self'",
-      "'unsafe-inline'",
-      "'unsafe-eval'",
-      "https://challenges.cloudflare.com",
+      ...csp.scriptSrc,
+      ...csp.extraScriptSrc,
     ],
-    "style-src": ["'self'", "'unsafe-inline'"],
-    "img-src": ["'self'", "data:", "blob:", "https:", "http:"],
-    "font-src": ["'self'", "data:"],
+    "style-src": csp.styleSrc,
+    "img-src": csp.imgSrc,
+    "font-src": csp.fontSrc,
     "connect-src": [
-      "'self'",
-      "https:",
-      "wss:",
-      "https://api.mercadopago.com",
-      "https://*.mercadopago.com.co",
+      ...csp.connectSrc,
+      ...csp.extraConnectSrc,
     ],
     "frame-src": [
-      "'self'",
-      "https://*.mercadopago.com.co",
-      "https://challenges.cloudflare.com",
+      ...csp.frameSrc,
+      ...csp.extraFrameSrc,
     ],
     "frame-ancestors": ["'none'"],
     "base-uri": ["'self'"],
-    "form-action": ["'self'"],
+    "form-action": csp.formAction,
     "upgrade-insecure-requests": [],
   };
 
@@ -48,7 +44,31 @@ function buildCSP(): string {
 }
 
 /**
+ * Builds the Strict-Transport-Security value from config.
+ */
+function buildHSTS(): string {
+  const hsts = config.security.hsts;
+  const parts = [`max-age=${hsts.maxAge}`];
+  if (hsts.includeSubDomains) parts.push("includeSubDomains");
+  if (hsts.preload) parts.push("preload");
+  return parts.join("; ");
+}
+
+/**
+ * Builds the Permissions-Policy value from config.
+ */
+function buildPermissionsPolicy(): string {
+  const pp = config.security.permissionsPolicy;
+  return Object.entries(pp)
+    .map(([feature, value]) => `${feature}=${value}`)
+    .join(", ");
+}
+
+/**
  * Security headers aligned with Amazon and AliExpress production standards.
+ *
+ * All values are read from src/config/config.ts → config.security.*.
+ * Change the security posture from a single file.
  *
  * Reference:
  *   - OWASP Secure Headers Project
@@ -58,16 +78,14 @@ function buildCSP(): string {
  */
 export const SECURITY_HEADERS: HeaderRecord = {
   "Content-Security-Policy": buildCSP(),
-  "Strict-Transport-Security":
-    "max-age=63072000; includeSubDomains; preload",
-  "X-Content-Type-Options": "nosniff",
-  "X-Frame-Options": "DENY",
-  "Referrer-Policy": "strict-origin-when-cross-origin",
-  "Permissions-Policy":
-    "camera=(), microphone=(), geolocation=(), payment=(self)",
-  "Cross-Origin-Opener-Policy": "same-origin",
-  "Cross-Origin-Resource-Policy": "same-origin",
-  "X-XSS-Protection": "0",
+  "Strict-Transport-Security": buildHSTS(),
+  "X-Content-Type-Options": config.security.xContentTypeOptions,
+  "X-Frame-Options": config.security.xFrameOptions,
+  "Referrer-Policy": config.security.referrerPolicy,
+  "Permissions-Policy": buildPermissionsPolicy(),
+  "Cross-Origin-Opener-Policy": config.security.crossOriginOpenerPolicy,
+  "Cross-Origin-Resource-Policy": config.security.crossOriginResourcePolicy,
+  "X-XSS-Protection": config.security.xXSSProtection,
 };
 
 /**
@@ -81,6 +99,8 @@ export const SECURITY_HEADERS: HeaderRecord = {
 export function applySecurityHeaders(
   res: import("http").ServerResponse,
 ): void {
+  if (!config.security.headersEnabled) return;
+
   const originalWriteHead = res.writeHead.bind(res);
 
   res.writeHead = function (

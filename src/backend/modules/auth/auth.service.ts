@@ -2,6 +2,7 @@ import { auth } from "@/utils/auth";
 import { UserRepository } from "@/backend/modules/user/user.repository";
 import bcrypt from "bcryptjs";
 import logger from "@/utils/logger";
+import { config } from "@/config/config";
 
 const log = logger.child("src/backend/modules/auth/auth.service.ts");
 
@@ -58,7 +59,7 @@ export class AuthService {
       throw new Error("User already exists");
     }
 
-    const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
+    const hashedPassword = password ? await bcrypt.hash(password, config.security.crypto.bcryptSaltRounds) : undefined;
 
     const user = await this.userRepository.createUser({
       name,

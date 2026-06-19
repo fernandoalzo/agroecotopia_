@@ -81,7 +81,7 @@ export async function ensureAdminExists(prisma: PrismaClient) {
       // STAGE 3: Initial Admin Creation
       // ============================================================================
       log.info(`Admin user not found. Creating initial admin user: ${adminEmail}`);
-      const hashedPassword = await bcrypt.hash(adminPassword, 10);
+      const hashedPassword = await bcrypt.hash(adminPassword, config.security.crypto.bcryptSaltRounds);
 
       // Bootstrap the complete admin profile in a single transaction-like structure
       await prisma.user.create({
