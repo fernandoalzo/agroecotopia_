@@ -40,7 +40,6 @@ export interface WafConfig {
   mode: WafMode;
   ipBlocklist: string[];
   geoBlocked: string[];
-  geoAllowlist: string[];
   sensitivePaths: string[];
   blockedMethods: string[];
   botBlock: string[];
@@ -52,7 +51,6 @@ export interface WafConfig {
 export interface DbRules {
   ipBlocklist: string[];
   geoBlocked: string[];
-  geoAllowlist: string[];
   sensitivePaths: string[];
   blockedMethods: string[];
   botBlock: string[];

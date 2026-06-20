@@ -49,21 +49,11 @@ export async function resolveGeo(ip: string): Promise<GeoIpResult | null> {
 export function evaluateGeoblock(
   req: WafRequest,
   blockedCountries: string[],
-  allowlistCountries: string[],
   country: string | null,
 ): WafRuleResult | null {
   if (!country || blockedCountries.length === 0) return null;
 
-  if (allowlistCountries.length > 0 && !allowlistCountries.includes(country)) {
-    return {
-      ruleId: "waf:geo:allowlist",
-      ruleName: "Geoblock — Allowlist",
-      action: "BLOCK",
-      severity: "high",
-      blocked: true,
-      reason: `País ${country} no está en la lista de permitidos`,
-    };
-  }
+
 
   if (blockedCountries.includes(country)) {
     return {

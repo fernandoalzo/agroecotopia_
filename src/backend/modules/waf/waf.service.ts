@@ -6,7 +6,7 @@ import { waf } from "@/lib/waf";
 const log = logger.child("src/backend/modules/waf/waf.service.ts");
 
 const VALID_TYPES: WafRuleType[] = [
-  "IP_BLOCKLIST", "GEO_BLOCK", "GEO_ALLOWLIST",
+  "IP_BLOCKLIST", "GEO_BLOCK",
   "SENSITIVE_PATH", "METHOD_BLOCK", "BOT_BLOCK",
   "BOT_KNOWN", "BOT_EMPTY_UA", "ATTACK_PATTERN",
 ];
@@ -63,7 +63,6 @@ export class WafService {
     const db: Parameters<typeof waf.updateDbRules>[0] = {
       ipBlocklist: rules.filter((r) => r.type === "IP_BLOCKLIST").map((r) => r.value),
       geoBlocked: rules.filter((r) => r.type === "GEO_BLOCK").map((r) => r.value),
-      geoAllowlist: rules.filter((r) => r.type === "GEO_ALLOWLIST").map((r) => r.value),
       sensitivePaths: rules.filter((r) => r.type === "SENSITIVE_PATH").map((r) => r.value),
       blockedMethods: rules.filter((r) => r.type === "METHOD_BLOCK").map((r) => r.value.toUpperCase()),
       botBlock: rules.filter((r) => r.type === "BOT_BLOCK").map((r) => r.value),
@@ -77,7 +76,6 @@ export class WafService {
     log.info("🛡️ [waf] Reglas de seguridad sincronizadas en memoria:", {
       ipBlocklist: db.ipBlocklist.length,
       geoBlocked: db.geoBlocked.length,
-      geoAllowlist: db.geoAllowlist.length,
       sensitivePaths: db.sensitivePaths.length,
       blockedMethods: db.blockedMethods.length,
       botBlock: db.botBlock.length,

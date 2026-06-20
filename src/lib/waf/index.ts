@@ -20,7 +20,6 @@ function getDbOverrides(): DbRules {
   const fresh: DbRules = {
     ipBlocklist: [],
     geoBlocked: [],
-    geoAllowlist: [],
     sensitivePaths: [],
     blockedMethods: [],
     botBlock: [],
@@ -40,7 +39,6 @@ function resolveWafConfig(): WafConfig {
     mode: config.security.waf.mode,
     ipBlocklist: dbOverrides.ipBlocklist,
     geoBlocked: dbOverrides.geoBlocked,
-    geoAllowlist: dbOverrides.geoAllowlist,
     sensitivePaths: dbOverrides.sensitivePaths,
     blockedMethods: dbOverrides.blockedMethods,
     botBlock: dbOverrides.botBlock,
@@ -153,6 +151,8 @@ function getOrCreateWaf(): Waf {
 
 export const waf = getOrCreateWaf();
 
+import { getWafBlockHtml } from "./templates";
+
 export async function applyWafMiddleware(
   req: IncomingMessage,
   res: ServerResponse,
@@ -164,14 +164,24 @@ export async function applyWafMiddleware(
 
   if (result.blocked) {
     res.statusCode = 403;
-    res.setHeader("Content-Type", "application/json");
-    res.setHeader("X-WAF-Blocked", "true");
-    res.setHeader("X-WAF-Reason", result.reason);
-    res.end(JSON.stringify({
-      error: "Forbidden",
-      message: "La solicitud fue bloqueada por el firewall de aplicación (WAF).",
-      reference: result.ruleResults[0]?.ruleId || "waf:generic",
-    }));
+    const referenceId = result.ruleResults[0]?.ruleId || "waf:generic";
+    const isHtml = req.headers.accept?.includes("text/html");
+
+    if (isHtml) {
+      const ip = extractRequest(req).ip || "Desconocida";
+      const path = extractRequest(req).path;
+      const incidentId = `${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 10000)}`;
+
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.end(getWafBlockHtml({ referenceId, ip, path, incidentId }));
+    } else {
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({
+        error: "Forbidden",
+        message: "La solicitud fue bloqueada por el firewall de aplicación (WAF).",
+        reference: referenceId,
+      }));
+    }
     log.warn("[waf] BLOQUEADO", {
       ip: extractRequest(req).ip,
       path: extractRequest(req).path,

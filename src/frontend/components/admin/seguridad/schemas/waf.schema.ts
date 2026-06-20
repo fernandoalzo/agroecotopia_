@@ -3,7 +3,6 @@ import { z } from "zod";
 export const WAF_RULE_TYPES = [
   "IP_BLOCKLIST",
   "GEO_BLOCK",
-  "GEO_ALLOWLIST",
   "SENSITIVE_PATH",
   "METHOD_BLOCK",
   "BOT_BLOCK",

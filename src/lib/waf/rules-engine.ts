@@ -90,11 +90,11 @@ export async function evaluateWafRules(
   }
 
   // 5. Geoblock
-  if (cfg.geoBlocked.length > 0 || cfg.geoAllowlist.length > 0) {
+  if (cfg.geoBlocked.length > 0) {
     const geo = await resolveGeo(req.ip);
     const countryCode = geo?.country || req.country || null;
 
-    const result = evaluateGeoblock(req, cfg.geoBlocked, cfg.geoAllowlist, countryCode);
+    const result = evaluateGeoblock(req, cfg.geoBlocked, countryCode);
     if (result) {
       ruleResults.push(result);
       const elapsed = performance.now() - start;
