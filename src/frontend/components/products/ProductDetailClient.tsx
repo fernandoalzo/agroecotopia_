@@ -34,6 +34,8 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
   const [isImageHovered, setIsImageHovered] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const DESCRIPTION_MAX_LENGTH = 250;
 
   const discountedPrice = calculateDiscountedPrice(
     product.price,
@@ -79,7 +81,7 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
             {/* Product Detail Grid */}
             <div className="grid md:grid-cols-2 gap-8 md:gap-12">
               {/* Image Section */}
-              <div className="bg-secondary/30 dark:bg-[#121212] p-4 md:p-8 flex items-center justify-center min-h-[300px] md:min-h-[500px] relative overflow-hidden rounded-3xl transition-all duration-500">
+              <div className="bg-secondary/30 dark:bg-[#121212] p-4 md:p-8 flex items-center justify-center h-[400px] md:h-[500px] relative overflow-hidden rounded-3xl transition-all duration-500">
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/25 dark:bg-primary/20 rounded-full blur-[80px] animate-pulse" />
 
@@ -227,8 +229,20 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
                 {/* Description */}
                 <div className="mb-6">
                   <p className="font-body text-muted-foreground leading-relaxed text-sm md:text-base">
-                    {productTranslation.description}
+                    {isDescriptionExpanded || !productTranslation.description || productTranslation.description.length <= DESCRIPTION_MAX_LENGTH
+                      ? productTranslation.description
+                      : `${productTranslation.description.slice(0, DESCRIPTION_MAX_LENGTH)}...`}
                   </p>
+                  {productTranslation.description && productTranslation.description.length > DESCRIPTION_MAX_LENGTH && (
+                    <button
+                      onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                      className="text-primary font-bold text-xs mt-1 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded"
+                    >
+                      {isDescriptionExpanded
+                        ? (language === "es" ? "Ver menos" : "Show less")
+                        : (language === "es" ? "Ver más" : "See more")}
+                    </button>
+                  )}
                   {product.tag && (
                     <div className="mt-4 flex items-center gap-2 text-[10px] md:text-xs text-muted-foreground bg-secondary/50 p-3 rounded-lg border border-border/50">
                       <Info className="w-4 h-4 text-primary" />
