@@ -10,6 +10,7 @@ import { config } from "./src/config/config";
 import { initializeStockMaster } from "./src/backend/modules/stockGuardian/init";
 import { applySecurityHeaders } from "./src/lib/security-headers";
 import { applyWafMiddleware } from "./src/lib/waf";
+import { wafService } from "./src/backend/modules/waf";
 
 const log = logger.child();
 
@@ -63,6 +64,15 @@ app.prepare()
     ensureAdminExists(prisma).catch((err) => {
       log.error("Failed to verify default admin exists on server boot:", err);
     });
+
+    // Cargar reglas iniciales del WAF desde PostgreSQL
+    wafService.reloadWaf()
+      .then(() => {
+        log.info("🛡️ WAF (Web Application Firewall) inicializado y protegiendo el servidor.");
+      })
+      .catch((err) => {
+        log.error("🛡️ ❌ Error crítico: No se pudieron cargar las reglas del WAF desde la DB en el inicio:", err);
+      });
 
     // Sincronizar stock maestro en Redis desde PostgreSQL (no bloqueante)
     initializeStockMaster(prisma).catch((err) => {

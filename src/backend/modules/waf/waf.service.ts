@@ -58,7 +58,7 @@ export class WafService {
     return rule;
   }
 
-  private async reloadWaf(): Promise<void> {
+  public async reloadWaf(): Promise<void> {
     const rules = await this.repository.findActiveRules();
     const db: Parameters<typeof waf.updateDbRules>[0] = {
       ipBlocklist: rules.filter((r) => r.type === "IP_BLOCKLIST").map((r) => r.value),
@@ -74,7 +74,7 @@ export class WafService {
 
     waf.updateDbRules(db);
 
-    log.info("[waf] Reglas DB sincronizadas con el engine:", {
+    log.info("🛡️ [waf] Reglas de seguridad sincronizadas en memoria:", {
       ipBlocklist: db.ipBlocklist.length,
       geoBlocked: db.geoBlocked.length,
       geoAllowlist: db.geoAllowlist.length,
