@@ -15,7 +15,31 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   try {
     const product = await getProductByIdAction(id);
     if (product) {
-      return { title: `${product.name} | ${config.app.name}` };
+      const description = product.description?.length > 200
+        ? `${product.description.slice(0, 200)}...`
+        : product.description || "";
+      const firstImage = product.images?.[0]?.trim() || undefined;
+      const url = `${config.app.url}/products/${id}`;
+
+      return {
+        title: `${product.name} | ${config.app.name}`,
+        description,
+        openGraph: {
+          title: product.name,
+          description,
+          url,
+          siteName: config.app.name,
+          type: "website",
+          ...(firstImage ? { images: [{ url: firstImage, width: 800, height: 800 }] } : {}),
+        },
+        twitter: {
+          card: "summary_large_image",
+          title: product.name,
+          description,
+          ...(firstImage ? { images: [firstImage] } : {}),
+        },
+        alternates: { canonical: url },
+      };
     }
   } catch {}
   return { title: `Producto | ${config.app.name}` };

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, CheckCircle2, Info, Minus, Plus, ShoppingCart, Store, Tag, Truck, ShieldCheck, Star, StarHalf, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Info, Minus, Plus, ShoppingCart, Store, Tag, Truck, ShieldCheck, Star, StarHalf, X, Share2, Check } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import Image from "next/image";
 import Link from "next/link";
@@ -35,7 +35,9 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
   const [isImageHovered, setIsImageHovered] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const DESCRIPTION_MAX_LENGTH = 250;
+  const productUrl = typeof window !== "undefined" ? window.location.href : "";
 
   const discountedPrice = calculateDiscountedPrice(
     product.price,
@@ -249,6 +251,29 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
                       <span>{t.products.productInfo.replace("{tag}", product.tag.toLowerCase())}</span>
                     </div>
                   )}
+                </div>
+
+                {/* Share */}
+                <div className="mb-6">
+                  <button
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(productUrl);
+                        setCopiedLink(true);
+                        setTimeout(() => setCopiedLink(false), 2000);
+                      } catch {}
+                    }}
+                    className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded"
+                  >
+                    {copiedLink ? (
+                      <Check className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <Share2 className="w-4 h-4" />
+                    )}
+                    {copiedLink
+                      ? (language === "es" ? "Enlace copiado" : "Link copied")
+                      : (language === "es" ? "Copiar enlace" : "Copy link")}
+                  </button>
                 </div>
 
                 {/* Quantity & Add to Cart */}
