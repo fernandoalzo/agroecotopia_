@@ -19,10 +19,8 @@ import { Button } from "@/frontend/components/ui/button";
 import { Badge } from "@/frontend/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const MAX_VISIBLE = 200;
-
 interface WafMonitorActions {
-  getLog: (count?: number) => Promise<{ success: boolean; entries: WafRequestEntry[] }>;
+  getLog: (count?: number) => Promise<{ success: boolean; entries: WafRequestEntry[]; maxVisible?: number }>;
   clearLog: () => Promise<{ success: boolean }>;
 }
 
@@ -74,6 +72,7 @@ export function WafMonitor({ actions }: { actions: WafMonitorActions }) {
   const [paused, setPaused] = useState(false);
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
+  const [maxVisible, setMaxVisible] = useState(200);
   const { socket } = useSocket();
   const pauseBuffer = useRef<WafRequestEntry[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -84,9 +83,9 @@ export function WafMonitor({ actions }: { actions: WafMonitorActions }) {
         pauseBuffer.current.push(entry);
         return;
       }
-      setEntries((prev) => [entry, ...prev].slice(0, MAX_VISIBLE));
+      setEntries((prev) => [entry, ...prev].slice(0, maxVisible));
     },
-    [paused],
+    [paused, maxVisible],
   );
 
   useEffect(() => {
@@ -105,15 +104,18 @@ export function WafMonitor({ actions }: { actions: WafMonitorActions }) {
     if (!paused && pauseBuffer.current.length > 0) {
       const batched = pauseBuffer.current;
       pauseBuffer.current = [];
-      setEntries((prev) => [...batched.reverse(), ...prev].slice(0, MAX_VISIBLE));
+      setEntries((prev) => [...batched.reverse(), ...prev].slice(0, maxVisible));
     }
-  }, [paused]);
+  }, [paused, maxVisible]);
 
   useEffect(() => {
     const load = async () => {
       try {
         const res = await actions.getLog(100);
-        if (res.success) setEntries(res.entries);
+        if (res.success) {
+          setEntries(res.entries);
+          if (res.maxVisible) setMaxVisible(res.maxVisible);
+        }
       } catch { /* noop */ } finally {
         setLoading(false);
       }

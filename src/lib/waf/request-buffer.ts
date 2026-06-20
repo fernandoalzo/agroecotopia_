@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import logger from "@/utils/logger";
+import { config } from "@/config/config";
 
 const log = logger.child("src/lib/waf/request-buffer.ts");
 
@@ -17,7 +18,7 @@ export interface WafRequestEntry {
   country?: string;
 }
 
-const MAX_ENTRIES = 200;
+const MAX_ENTRIES = config.security.waf.monitor.bufferSize;
 
 const BUFFER_KEY = "__wafRequestBuffer";
 

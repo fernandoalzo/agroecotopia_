@@ -6,13 +6,18 @@ import type { WafRuleData, WafRuleType } from "./waf.repository";
 import { revalidatePath } from "next/cache";
 import logger from "@/utils/logger";
 import { getEntries, clear } from "@/lib/waf/request-buffer";
+import { config } from "@/config/config";
 
 const log = logger.child("src/backend/modules/waf/waf.actions.ts");
 
 export async function getWafRequestLog(count?: number) {
   return withAdmin(async () => {
     const entries = getEntries(count);
-    return { success: true, entries };
+    return {
+      success: true,
+      entries,
+      maxVisible: config.security.waf.monitor.maxVisible,
+    };
   });
 }
 

@@ -451,6 +451,22 @@ export const config = {
        * @default "monitor"
        */
       mode: (process.env.WAF_MODE || 'monitor') as 'disabled' | 'monitor' | 'enforce',
+
+      /** Live request monitor configuration */
+      monitor: {
+        /**
+         * Maximum entries in the in-memory ring buffer.
+         * Higher values retain more history at the cost of memory.
+         * @default 1500
+         */
+        bufferSize: parseInt(process.env.WAF_MONITOR_BUFFER_SIZE || '1500', 10),
+
+        /**
+         * Maximum entries displayed in the admin UI.
+         * @default 200
+         */
+        maxVisible: parseInt(process.env.WAF_MONITOR_MAX_VISIBLE || '200', 10),
+      },
     },
   },
 
