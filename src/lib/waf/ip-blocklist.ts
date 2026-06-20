@@ -6,16 +6,20 @@ function ipToLong(ip: string): number {
 }
 
 export function parseCidr(cidr: string): { network: number; mask: number } | null {
-  const parts = cidr.split("/");
-  if (parts.length !== 2) return null;
+  let ip = cidr;
+  let bits = 32;
 
-  const ip = parts[0]!;
-  const bits = parseInt(parts[1]!, 10);
+  if (cidr.includes("/")) {
+    const parts = cidr.split("/");
+    if (parts.length !== 2) return null;
+    ip = parts[0]!;
+    bits = parseInt(parts[1]!, 10);
+  }
 
   if (isNaN(bits) || bits < 0 || bits > 32) return null;
 
   const network = ipToLong(ip);
-  const mask = ~(2 ** (32 - bits) - 1);
+  const mask = bits === 0 ? 0 : ~(2 ** (32 - bits) - 1);
 
   return { network: network & mask, mask };
 }
@@ -51,5 +55,5 @@ export function evaluateIpBlocklist(
 }
 
 export function formatCidrList(cidrs: string[]): string[] {
-  return cidrs.map((c) => c.trim()).filter((c) => c.length > 0 && c.includes("/"));
+  return cidrs.map((c) => c.trim()).filter((c) => c.length > 0);
 }
