@@ -54,7 +54,7 @@ function getRedisClient(): Redis | null {
     });
 
     // Suppress connection errors - handled gracefully by the fallback
-    client.on("error", () => {});
+    client.on("error", () => { });
 
     if (config.isDevelopment) {
       globalThis._rateLimitRedisClient = client;
@@ -81,6 +81,7 @@ class FallbackRateLimiter {
   private redis: RateLimiterRedis | null = null;
   private memory: RateLimiterMemory;
   private name: string;
+  private hasLoggedWarning = false;
 
   constructor(name: string) {
     this.name = name;
@@ -108,9 +109,12 @@ class FallbackRateLimiter {
         return await this.redis.consume(key);
       } catch (rejRes: unknown) {
         if (rejRes instanceof Error) {
-          log.warn(
-            `[RateLimiter] Redis "${this.name}" no disponible — usando fallback en memoria`,
-          );
+          if (!this.hasLoggedWarning) {
+            log.warn(
+              `[RateLimiter] Redis "${this.name}" no disponible — usando fallback en memoria`,
+            );
+            this.hasLoggedWarning = true;
+          }
         } else {
           throw rejRes; // Rate limited by Redis
         }

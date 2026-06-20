@@ -201,7 +201,7 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
   eventBus.removeAllListeners("notification_dispatched");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   eventBus.on("notification_dispatched", (payload: { userIds: string[]; notification: any }) => {
-    log.info("Broadcasting notification_dispatched to private channels", { recipientCount: payload.userIds.length });
+    log.debug("Broadcasting notification_dispatched to private channels", { recipientCount: payload.userIds.length });
     for (const userId of payload.userIds) {
       io.to(`user:${userId}:notifications`).emit("new_notification", payload.notification);
     }
@@ -211,7 +211,7 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
   eventBus.removeAllListeners("notification_broadcast");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   eventBus.on("notification_broadcast", (payload: { notification: any }) => {
-    log.info("Broadcasting notification_broadcast globally");
+    log.debug("Broadcasting notification_broadcast globally");
     io.emit("new_notification", payload.notification);
   });
 
@@ -251,10 +251,10 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
     eventBus.on(eventName as string, (payload: any) => {
       const room = payload?._room as string | undefined;
       if (room) {
-        log.info(`Bridging ${eventName} to room ${room}`);
+        log.debug(`Bridging ${eventName} to room ${room}`);
         io.to(room).emit(eventName, payload);
       } else {
-        log.info(`Bridging ${eventName} globally`);
+        log.debug(`Bridging ${eventName} globally`);
         io.emit(eventName, payload);
       }
     });
