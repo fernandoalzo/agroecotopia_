@@ -5,8 +5,23 @@ import { withAdmin } from "@/lib/auth-guards";
 import type { WafRuleData, WafRuleType } from "./waf.repository";
 import { revalidatePath } from "next/cache";
 import logger from "@/utils/logger";
+import { getEntries, clear } from "@/lib/waf/request-buffer";
 
 const log = logger.child("src/backend/modules/waf/waf.actions.ts");
+
+export async function getWafRequestLog(count?: number) {
+  return withAdmin(async () => {
+    const entries = getEntries(count);
+    return { success: true, entries };
+  });
+}
+
+export async function clearWafRequestLog() {
+  return withAdmin(async () => {
+    clear();
+    return { success: true };
+  });
+}
 
 export async function getWafRules() {
   return withAdmin(async () => {

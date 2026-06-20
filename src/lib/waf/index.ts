@@ -5,6 +5,8 @@ import { evaluateWafRules } from "./rules-engine";
 import { clearGeoCache } from "./geoblock";
 import { config } from "@/config/config";
 import logger from "@/utils/logger";
+import eventBus from "@/utils/eventBus";
+import { pushEntry, maskLastOctet, isStaticAsset } from "./request-buffer";
 
 const log = logger.child("src/lib/waf/index.ts");
 
@@ -161,6 +163,25 @@ export async function applyWafMiddleware(
   if (wafConfig.mode === "disabled") return false;
 
   const result = await waf.evaluate(req);
+
+  const url = req.url || "";
+  if (!isStaticAsset(url)) {
+    const wafReq = extractRequest(req);
+    const queryIdx = url.indexOf("?");
+    const entry = pushEntry({
+      timestamp: new Date().toISOString(),
+      method: wafReq.method,
+      path: wafReq.path,
+      query: queryIdx >= 0 ? url.slice(queryIdx + 1) : "",
+      ip: maskLastOctet(wafReq.ip),
+      userAgent: (wafReq.userAgent || "").slice(0, 120),
+      wafAction: result.blocked ? "BLOCK" : wafConfig.mode === "monitor" ? "MONITOR" : "ALLOW",
+      wafRules: result.ruleResults.map((r) => r.ruleId),
+      elapsedMs: result.elapsedMs,
+      country: wafReq.country,
+    });
+    eventBus.emit("waf:request_live", { ...entry, _room: "waf:monitor" });
+  }
 
   if (result.blocked) {
     res.statusCode = 403;

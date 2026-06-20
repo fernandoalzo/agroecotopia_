@@ -3,8 +3,10 @@
 import { useState, useCallback, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Plus, Trash2, ToggleLeft, ToggleRight, Globe, Network, FileCode, Braces, Bot, Bug, CheckCircle, AlertTriangle, X } from "lucide-react";
+import { Shield, Plus, Trash2, ToggleLeft, ToggleRight, Globe, Network, FileCode, Braces, Bot, Bug, CheckCircle, AlertTriangle, X, Radio } from "lucide-react";
 import type { WafRuleData, WafRuleRow, WafRuleType } from "@/backend/modules/waf";
+import { WafMonitor } from "@/frontend/components/admin/seguridad/WafMonitor";
+import type { WafRequestEntry } from "@/lib/waf/request-buffer";
 import { Button } from "@/frontend/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/frontend/components/ui/card";
 import { Input } from "@/frontend/components/ui/input";
@@ -29,6 +31,8 @@ type ActionSet = {
   delete: (id: string) => Promise<{ success?: boolean; error?: string }>;
   toggle: (id: string) => Promise<{ success?: boolean; rule?: WafRuleRow; error?: string }>;
   list?: () => Promise<{ success?: boolean; rules?: WafRuleRow[]; error?: string }>;
+  getLog?: (count?: number) => Promise<{ success: boolean; entries: WafRequestEntry[] }>;
+  clearLog?: () => Promise<{ success: boolean }>;
 };
 
 interface TypeConfigEntry {
@@ -469,6 +473,7 @@ export function SeguridadPageClient({
       label: TYPE_CONFIG[type]?.label || type,
       count: grouped.get(type)?.length || 0,
     })),
+    { id: "monitor", label: "Monitor", count: null as number | null },
   ];
 
   return (
@@ -487,20 +492,26 @@ export function SeguridadPageClient({
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
               activeTab === tab.id
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {tab.label} ({tab.count})
+            {tab.id === "monitor" && <Radio className="h-3 w-3" />}
+            {tab.label}
+            {tab.count !== null && <span>({tab.count})</span>}
           </button>
         ))}
       </div>
 
       {/* Cards */}
       <div className="space-y-4">
-        {activeTab === "all" ? (
+        {activeTab === "monitor" ? (
+          actions.getLog && actions.clearLog ? (
+            <WafMonitor actions={{ getLog: actions.getLog, clearLog: actions.clearLog }} />
+          ) : null
+        ) : activeTab === "all" ? (
           TYPE_ORDER.map((type) => (
             <RuleTypeSection
               key={type}
@@ -522,9 +533,9 @@ export function SeguridadPageClient({
         )}
       </div>
 
-      {/* FAB */}
+      {/* FAB — hidden on monitor tab */}
       <AnimatePresence>
-        {!addPanelOpen && (
+        {!addPanelOpen && activeTab !== "monitor" && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -545,12 +556,14 @@ export function SeguridadPageClient({
       </AnimatePresence>
 
       {/* Side Panel */}
-      <AddRulePanel
-        open={addPanelOpen}
-        onClose={() => setAddPanelOpen(false)}
-        onCreate={(data) => createMutation.mutate(data)} 
-        type={activeTab === "all" ? "IP_BLOCKLIST" : activeTab as WafRuleType} 
-      />
+      {activeTab !== "monitor" && (
+        <AddRulePanel
+          open={addPanelOpen}
+          onClose={() => setAddPanelOpen(false)}
+          onCreate={(data) => createMutation.mutate(data)} 
+          type={activeTab === "all" ? "IP_BLOCKLIST" : activeTab as WafRuleType} 
+        />
+      )}
     </div>
   );
 }

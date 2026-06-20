@@ -71,6 +71,8 @@ interface AdminDashboardActions {
     create: (data: any) => Promise<any>;
     delete: (id: string) => Promise<any>;
     toggle: (id: string) => Promise<any>;
+    getLog: (count?: number) => Promise<any>;
+    clearLog: () => Promise<any>;
   };
 }
 
@@ -707,6 +709,8 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                     create: actions.waf.create,
                     delete: actions.waf.delete,
                     toggle: actions.waf.toggle,
+                    getLog: actions.waf.getLog,
+                    clearLog: actions.waf.clearLog,
                   }}
                 />
               </motion.div>

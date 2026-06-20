@@ -42,6 +42,8 @@ import {
   createWafRule,
   deleteWafRule,
   toggleWafRule,
+  getWafRequestLog,
+  clearWafRequestLog,
 } from "@/backend/modules/waf/waf.actions";
 import AdminDashboardPage from "./AdminDashboardPageClient";
 
@@ -86,6 +88,8 @@ export default function Page() {
           create: createWafRule,
           delete: deleteWafRule,
           toggle: toggleWafRule,
+          getLog: getWafRequestLog,
+          clearLog: clearWafRequestLog,
         },
       }}
     />

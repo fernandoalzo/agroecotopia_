@@ -179,6 +179,17 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
       }
     });
 
+    // ─── WAF Monitor room ───
+    socket.on("join_waf_monitor", () => {
+      socket.join("waf:monitor");
+      log.debug(`Socket ${socket.id} joined WAF monitor room`);
+    });
+
+    socket.on("leave_waf_monitor", () => {
+      socket.leave("waf:monitor");
+      log.debug(`Socket ${socket.id} left WAF monitor room`);
+    });
+
     socket.on("disconnect", () => {
       log.info("Socket disconnected:", socket.id);
     });
@@ -230,6 +241,7 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
     "envio:created",
     "envio:status_updated",
     "notification_read_state_changed",
+    "waf:request_live",
   ] as const;
 
   for (const eventName of BRIDGE_EVENTS) {
