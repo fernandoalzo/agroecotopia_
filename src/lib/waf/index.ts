@@ -173,7 +173,7 @@ export async function applyWafMiddleware(
       method: wafReq.method,
       path: wafReq.path,
       query: queryIdx >= 0 ? url.slice(queryIdx + 1) : "",
-      ip: maskLastOctet(wafReq.ip),
+      ip: config.security.waf.anonymizeIp ? maskLastOctet(wafReq.ip) : wafReq.ip,
       userAgent: (wafReq.userAgent || "").slice(0, 120),
       wafAction: result.blocked ? "BLOCK" : wafConfig.mode === "monitor" ? "MONITOR" : "ALLOW",
       wafRules: result.ruleResults.map((r) => r.ruleId),

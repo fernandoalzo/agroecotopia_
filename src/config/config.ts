@@ -452,6 +452,12 @@ export const config = {
        */
       mode: (process.env.WAF_MODE || 'monitor') as 'disabled' | 'monitor' | 'enforce',
 
+      /** 
+       * Anonymize IPs in the WAF monitor buffer by masking the last octet.
+       * Default is false (show real IPs).
+       */
+      anonymizeIp: process.env.WAF_ANONYMIZE_IP === 'true',
+
       /** Live request monitor configuration */
       monitor: {
         /**
