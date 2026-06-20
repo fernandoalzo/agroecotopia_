@@ -179,6 +179,7 @@ export async function applyWafMiddleware(
       wafRules: result.ruleResults.map((r) => r.ruleId),
       elapsedMs: result.elapsedMs,
       country: wafReq.country,
+      headers: wafReq.headers,
     });
     eventBus.emit("waf:request_live", { ...entry, _room: "waf:monitor" });
   }

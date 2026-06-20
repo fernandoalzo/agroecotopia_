@@ -16,6 +16,7 @@ export interface WafRequestEntry {
   wafRules: string[];
   elapsedMs: number;
   country?: string;
+  headers?: Record<string, string | string[] | undefined>;
 }
 
 const MAX_ENTRIES = config.security.waf.monitor.bufferSize;
