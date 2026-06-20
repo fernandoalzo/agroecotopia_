@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity,
@@ -12,6 +12,9 @@ import {
   ShieldAlert,
   ShieldCheck,
   Globe,
+  Copy,
+  Check,
+  Search,
 } from "lucide-react";
 import type { WafRequestEntry } from "@/lib/waf/request-buffer";
 import { useSocket } from "@/frontend/context/SocketContext";
@@ -49,6 +52,33 @@ function WafActionBadge({ action }: { action: WafRequestEntry["wafAction"] }) {
   );
 }
 
+function CopyBtn({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch { /* noop */ }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-foreground text-muted-foreground/40 shrink-0"
+      title={`Copiar: ${value}`}
+    >
+      {copied ? (
+        <Check className="h-3 w-3 text-emerald-500" />
+      ) : (
+        <Copy className="h-3 w-3" />
+      )}
+    </button>
+  );
+}
+
 function MethodBadge({ method }: { method: string }) {
   const colors: Record<string, string> = {
     GET: "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20",
@@ -73,6 +103,7 @@ export function WafMonitor({ actions }: { actions: WafMonitorActions }) {
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
   const [maxVisible, setMaxVisible] = useState(200);
+  const [searchQuery, setSearchQuery] = useState("");
   const { socket } = useSocket();
   const pauseBuffer = useRef<WafRequestEntry[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -108,10 +139,13 @@ export function WafMonitor({ actions }: { actions: WafMonitorActions }) {
     }
   }, [paused, maxVisible]);
 
+  const getLogRef = useRef(actions.getLog);
+  useEffect(() => { getLogRef.current = actions.getLog; });
+
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await actions.getLog(100);
+        const res = await getLogRef.current(100);
         if (res.success) {
           setEntries(res.entries);
           if (res.maxVisible) setMaxVisible(res.maxVisible);
@@ -121,7 +155,7 @@ export function WafMonitor({ actions }: { actions: WafMonitorActions }) {
       }
     };
     load();
-  }, [actions]);
+  }, []);
 
   const handleClear = async () => {
     try {
@@ -132,6 +166,18 @@ export function WafMonitor({ actions }: { actions: WafMonitorActions }) {
   };
 
   const togglePause = () => setPaused((p) => !p);
+
+  const filteredEntries = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return entries;
+    return entries.filter((e) => {
+      const method = e.method.toLowerCase();
+      const path = (e.path + (e.query ? `?${e.query}` : "")).toLowerCase();
+      const ip = e.ip.toLowerCase();
+      const status = e.wafAction.toLowerCase();
+      return method.includes(q) || path.includes(q) || ip.includes(q) || status.includes(q);
+    });
+  }, [entries, searchQuery]);
 
   const blockedCount = entries.filter((e) => e.wafAction === "BLOCK").length;
   const monitorCount = entries.filter((e) => e.wafAction === "MONITOR").length;
@@ -150,6 +196,17 @@ export function WafMonitor({ actions }: { actions: WafMonitorActions }) {
             <span className={cn("h-2 w-2 rounded-full", connected ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/40")} />
             <span className="text-[11px] text-muted-foreground font-mono">{entries.length} requests</span>
           </div>
+        </div>
+
+        <div className="relative flex-1 max-w-xs">
+          <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Filtrar por IP, ruta, método o estado…"
+            className="w-full h-8 pl-8 pr-3 rounded-xl border border-border/50 bg-background/50 text-xs font-mono placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/30 transition-all"
+          />
         </div>
 
         <div className="flex items-center gap-2">
@@ -213,6 +270,14 @@ export function WafMonitor({ actions }: { actions: WafMonitorActions }) {
                 Las solicitudes aparecerán aquí en tiempo real cuando el WAF esté activo.
               </p>
             </div>
+          ) : filteredEntries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Search className="h-8 w-8 text-muted-foreground/30 mb-3" />
+              <p className="text-sm font-semibold text-muted-foreground">Sin resultados</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">
+                No hay solicitudes que coincidan con <span className="font-mono text-foreground/70">&quot;{searchQuery}&quot;</span>
+              </p>
+            </div>
           ) : (
             <>
               <div className="grid grid-cols-[82px_58px_1fr_130px_auto_72px] gap-2 px-4 py-1.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/50 border-b border-border/20 bg-muted/10">
@@ -224,14 +289,14 @@ export function WafMonitor({ actions }: { actions: WafMonitorActions }) {
                 <span className="text-right">Hora</span>
               </div>
               <AnimatePresence initial={false}>
-                {entries.map((entry, i) => (
+                {filteredEntries.map((entry, i) => (
                   <motion.div
                     key={entry.id}
                     initial={i === 0 ? { opacity: 0, y: -12, scale: 0.98 } : undefined}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.15, ease: "easeOut" }}
                     className={cn(
-                      "grid grid-cols-[82px_58px_1fr_130px_auto_72px] gap-2 px-4 py-2.5 border-b border-border/20 text-xs items-center transition-colors",
+                      "group grid grid-cols-[82px_58px_1fr_130px_auto_72px] gap-2 px-4 py-2.5 border-b border-border/20 text-xs items-center transition-colors",
                       entry.wafAction === "BLOCK" && "bg-red-500/[0.04]",
                       entry.wafAction === "MONITOR" && "bg-amber-500/[0.04]",
                       i === 0 && "bg-primary/[0.03]",
@@ -241,16 +306,18 @@ export function WafMonitor({ actions }: { actions: WafMonitorActions }) {
 
                     <MethodBadge method={entry.method} />
 
-                    <div className="min-w-0 font-mono text-[12px] truncate" title={entry.path + (entry.query ? `?${entry.query}` : "")}>
-                      <span className="text-foreground/90">{entry.path}</span>
+                    <div className="flex items-center gap-1 min-w-0 font-mono text-[12px]" title={entry.path + (entry.query ? `?${entry.query}` : "")}>
+                      <span className="truncate text-foreground/90">{entry.path}</span>
                       {entry.query && (
-                        <span className="text-muted-foreground/50">?{entry.query.slice(0, 40)}{entry.query.length > 40 ? "…" : ""}</span>
+                        <span className="text-muted-foreground/50 truncate">?{entry.query.slice(0, 40)}{entry.query.length > 40 ? "…" : ""}</span>
                       )}
+                      <CopyBtn value={entry.path} />
                     </div>
 
-                    <div className="text-muted-foreground hidden md:block truncate" title={entry.ip}>
+                    <div className="flex items-center gap-1 text-muted-foreground hidden md:flex truncate" title={entry.ip}>
                       <Globe className="h-3 w-3 inline mr-1 align-middle shrink-0" />
-                      <span className="font-mono text-[11px]">{entry.ip}</span>
+                      <span className="font-mono text-[11px] truncate">{entry.ip}</span>
+                      <CopyBtn value={entry.ip} />
                     </div>
 
                     <div className="hidden lg:flex items-center gap-1 min-w-0">
@@ -286,7 +353,12 @@ export function WafMonitor({ actions }: { actions: WafMonitorActions }) {
 
         <div className="border-t border-border/30 px-4 py-2 flex items-center justify-between text-[10px] text-muted-foreground bg-card/50">
           <span>
-            Mostrando {entries.length} solicitudes &middot; WAF:{" "}
+            {searchQuery ? (
+              <>{filteredEntries.length} / {entries.length} solicitudes &middot;</>
+            ) : (
+              <>Mostrando {entries.length} solicitudes &middot;</>
+            )}{" "}
+            WAF:{" "}
             {blockedCount > 0 ? (
               <span className="text-red-500 font-semibold">{blockedCount} bloqueadas</span>
             ) : (
