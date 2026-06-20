@@ -25,7 +25,7 @@ export function ProductsGrid({
 }: ProductsGridProps) {
   if (groups && groups.length > 0) {
     return (
-      <motion.div layout className="transition-all duration-500 w-full space-y-12 md:space-y-16">
+      <motion.div layout className="transition-all duration-500 w-full space-y-8 md:space-y-10">
         <AnimatePresence mode="popLayout">
           {groups.map((group, groupIndex) => (
             <motion.section
@@ -35,7 +35,7 @@ export function ProductsGrid({
               transition={{ delay: groupIndex * 0.1, duration: 0.6 }}
               className="relative w-full"
             >
-              <h2 className="font-display text-lg md:text-xl font-black text-foreground mb-4 md:mb-5 flex items-center gap-3">
+              <h2 className="font-display text-lg md:text-xl font-black text-foreground mb-3 md:mb-4 flex items-center gap-3">
                 <span className="w-1 h-6 md:h-7 bg-primary rounded-full" />
                 {group.label}
                 <span className="text-sm font-bold text-muted-foreground/60">
@@ -51,7 +51,7 @@ export function ProductsGrid({
                     rows.push(group.products.slice(i, i + 5));
                   }
                   return rows.map((row, rowIndex) => (
-                    <div key={`row-${rowIndex}`} className="flex overflow-x-auto snap-x snap-mandatory pb-6 hide-scrollbar gap-6 md:gap-8 px-1">
+                    <div key={`row-${rowIndex}`} className="flex overflow-x-auto snap-x snap-mandatory pb-2 hide-scrollbar gap-6 md:gap-8 px-1">
                       {row.map((p, index) => (
                         <motion.div
                           layout
@@ -101,7 +101,7 @@ export function ProductsGrid({
   }
 
   return (
-    <motion.div layout className="transition-all duration-500 w-full space-y-16 md:space-y-24">
+    <motion.div layout className="transition-all duration-500 w-full space-y-8 md:space-y-10">
       <AnimatePresence mode="popLayout">
         {viewMode === 'grid' ? (
           chunkedProducts.map((row, rowIndex) => (
@@ -112,7 +112,7 @@ export function ProductsGrid({
               transition={{ delay: rowIndex * 0.1, duration: 0.8 }}
               className="relative group w-full"
             >
-              <div className="flex overflow-x-auto snap-x snap-mandatory pb-8 hide-scrollbar gap-6 md:gap-8 px-1">
+              <div className="flex overflow-x-auto snap-x snap-mandatory pb-3 hide-scrollbar gap-6 md:gap-8 px-1">
                 {row.map((p, index) => (
                   <motion.div
                     layout
