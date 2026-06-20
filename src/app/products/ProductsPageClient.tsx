@@ -1,14 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { useSearchParams, usePathname } from "next/navigation";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/context/LanguageContext";
-import { cn } from "@/lib/utils";
 import { searchProductsAction, getPaginatedProductsAction } from "@/backend/modules/product/product.actions";
-
-import { ChevronDown, SlidersHorizontal } from "lucide-react";
 
 // Modular Components
 import { ProductsHeader } from "@/components/products/ProductsHeader";
@@ -59,7 +55,6 @@ interface ProductsPageClientProps {
 
 export default function ProductsPageClient({ initialData, categories, categoryCounts = {}, selectedCategory }: ProductsPageClientProps) {
   const { t, language } = useLanguage();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
@@ -77,7 +72,6 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
   const [groupByCategory, setGroupByCategory] = useState(false);
   const [searchTerm, setSearchTerm] = useState(queryParam);
-  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
   // ── Resultados locales (no dependen de props) ──
   const [products, setProducts] = useState(initialData.products);
@@ -248,136 +242,7 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
         />
 
         <div className="container mx-auto px-4 md:px-6">
-          <div className="flex flex-col md:flex-row gap-10">
-            {/* Sidebar Column */}
-            <aside className="w-full md:w-64 shrink-0 md:sticky md:top-28 h-fit hidden md:block">
-              <div className="border-b border-border/80 pb-6 mb-6">
-                <div className="flex items-center justify-between w-full py-2 group">
-                  <button
-                    onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                    className="flex items-center gap-3 font-display text-lg font-extrabold text-foreground cursor-pointer hover:text-primary transition-colors focus:outline-none"
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
-                      <SlidersHorizontal className="h-4 w-4 text-primary" />
-                    </div>
-                    <span className="tracking-wide">
-                      {language === 'es' ? 'Categorías' : 'Categories'}
-                    </span>
-                    {selectedCategories.length > 0 && (
-                      <span className="bg-[#a68953]/20 text-[#a68953] text-[10px] px-2.5 py-0.5 rounded-full font-black shadow-sm transition-all animate-pulse">
-                        {selectedCategories.length}
-                      </span>
-                    )}
-                  </button>
-
-                  <div className="flex items-center gap-3">
-                    {selectedCategories.length > 0 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(queryParam, 1, limitParam, "");
-                        }}
-                        className="text-[10px] font-extrabold text-destructive hover:text-destructive/80 transition-colors uppercase tracking-wider cursor-pointer focus:outline-none mr-1"
-                        title={language === 'es' ? 'Limpiar todos los filtros' : 'Clear all filters'}
-                      >
-                        {language === 'es' ? 'Limpiar' : 'Clear'}
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                      className={cn(
-                        "w-7 h-7 rounded-full border border-border/80 flex items-center justify-center bg-card/40 text-muted-foreground",
-                        "group-hover:border-primary/40 group-hover:text-primary transition-all duration-300 focus:outline-none"
-                      )}
-                    >
-                      <ChevronDown className={cn(
-                        "h-4 w-4 transition-transform duration-300",
-                        isCategoryOpen ? "rotate-180 text-primary" : "rotate-0"
-                      )} />
-                    </button>
-                  </div>
-                </div>
-
-                <AnimatePresence initial={false}>
-                  {isCategoryOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2, ease: "easeInOut" }}
-                      className="overflow-hidden mt-4"
-                    >
-                      <div className="flex flex-col gap-2.5 pl-1">
-                        {categories.map((cat) => {
-                          const isChecked = selectedCategories.includes(cat);
-                          const count = categoryCounts[cat] || 0;
-                          return (
-                            <button
-                              key={cat}
-                              onClick={() => handleCategoryToggle(cat)}
-                              className={cn(
-                                "flex items-center justify-between w-full px-4 py-3 rounded-2xl border transition-all duration-300 group cursor-pointer focus:outline-none",
-                                isChecked
-                                  ? "bg-primary/10 border-primary/40 text-primary shadow-[0_4px_20px_rgba(166,137,83,0.12)]"
-                                  : "bg-card/25 border-border/50 hover:border-primary/25 hover:bg-card/60 text-muted-foreground hover:text-foreground"
-                              )}
-                            >
-                              <div className="flex items-center gap-3.5">
-                                <div className="relative flex items-center justify-center shrink-0">
-                                  {/* Custom Checkbox Ring */}
-                                  <div className={cn(
-                                    "w-5 h-5 rounded-full border-2 transition-all duration-300 flex items-center justify-center",
-                                    isChecked
-                                      ? "border-primary bg-primary text-primary-foreground scale-110 shadow-sm"
-                                      : "border-border/80 group-hover:border-primary/40 bg-background/60"
-                                  )}>
-                                    {isChecked && (
-                                      <motion.svg
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        className="w-3.5 h-3.5 stroke-current stroke-[3.5] text-primary-foreground"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                      >
-                                        <polyline points="20 6 9 17 4 12" />
-                                      </motion.svg>
-                                    )}
-                                  </div>
-                                </div>
-                                <span className="text-sm font-semibold capitalize tracking-wide transition-colors duration-200">
-                                  {getCategoryLabel(cat)}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                <span className={cn(
-                                  "text-xs px-2 py-0.5 rounded-full font-semibold transition-colors duration-350",
-                                  isChecked
-                                    ? "bg-primary/20 text-primary"
-                                    : "bg-muted text-muted-foreground/70 group-hover:bg-primary/10 group-hover:text-primary"
-                                )}>
-                                  {count}
-                                </span>
-                                {/* Elegant micro-arrow indicator that slides on hover */}
-                                <div className={cn(
-                                  "text-xs font-semibold select-none transition-all duration-300 opacity-0 group-hover:opacity-100 group-hover:translate-x-1",
-                                  isChecked ? "text-primary/70" : "text-muted-foreground/50"
-                                )}>
-                                  →
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </aside>
-
-            {/* Main Content Column */}
-            <div className="flex-1 min-h-[500px]">
+          <div className="min-h-[500px]">
               {(products.length > 0 || (groups && groups.length > 0)) ? (
                 <>
                   <ProductsGrid
@@ -408,7 +273,6 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
                 />
               )}
             </div>
-          </div>
         </div>
       </main>
 

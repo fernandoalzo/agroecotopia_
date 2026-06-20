@@ -58,6 +58,7 @@ export function ProductsToolbar({
 }: ProductsToolbarProps) {
   const { language } = useLanguage();
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [isDesktopCatOpen, setIsDesktopCatOpen] = useState(false);
 
   const selectedCategories = categoryParam ? categoryParam.split(",").filter(Boolean) : [];
 
@@ -269,103 +270,206 @@ export function ProductsToolbar({
       </div>
 
       {/* 🖥️ DESKTOP VIEW LAYOUT (hidden md:flex) */}
-      <div className="hidden md:flex flex-row gap-8 justify-between items-center border-b border-border/80 pb-10">
-        <div className="relative w-full md:w-[350px]">
-          {isLoading ? (
-            <Loader2 className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin" />
-          ) : (
-            <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          )}
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={t.products.searchPlaceholder}
-            className="w-full pl-10 pr-10 py-3 bg-transparent border-b-2 border-border/50 focus:border-primary focus:outline-none text-base text-foreground placeholder:text-muted-foreground/60 transition-all rounded-none"
-          />
-          <AnimatePresence>
-            {searchTerm.length > 0 && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.5 }}
-                transition={{ duration: 0.15 }}
-                type="button"
-                onClick={() => setSearchTerm("")}
-                className="absolute right-0 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-                aria-label={language === 'es' ? 'Limpiar búsqueda' : 'Clear search'}
-              >
-                <X className="w-5 h-5" />
-              </motion.button>
+      <div className="hidden md:flex flex-col border-b border-border/80 pb-10">
+        <div className="flex flex-row gap-8 justify-between items-center">
+          <div className="relative w-full md:w-[350px]">
+            {isLoading ? (
+              <Loader2 className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-primary animate-spin" />
+            ) : (
+              <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             )}
-          </AnimatePresence>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-          <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground font-body">
-            {t.products.showingResults.replace('{count}', totalCount.toString()).split(totalCount.toString())[0]}
-            <span className="font-bold text-foreground">{totalCount}</span>
-            {t.products.showingResults.replace('{count}', totalCount.toString()).split(totalCount.toString())[1]}
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={t.products.searchPlaceholder}
+              className="w-full pl-10 pr-10 py-3 bg-transparent border-b-2 border-border/50 focus:border-primary focus:outline-none text-base text-foreground placeholder:text-muted-foreground/60 transition-all rounded-none"
+            />
+            <AnimatePresence>
+              {searchTerm.length > 0 && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.15 }}
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                  aria-label={language === 'es' ? 'Limpiar búsqueda' : 'Clear search'}
+                >
+                  <X className="w-5 h-5" />
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
 
-          <div className="flex items-center gap-3 bg-card/30 backdrop-blur-md border border-border/60 p-1.5 rounded-2xl">
-            <div className="flex items-center gap-2 px-3 border-r border-border/60">
-              <Hash className="h-4 w-4 text-muted-foreground" />
-              <Select
-                value={limitParam.toString()}
-                onValueChange={(val) => updateUrl(queryParam, 1, Number(val))}
-              >
-                <SelectTrigger className="w-20 bg-transparent border-none focus:ring-0 shadow-none h-8 font-bold">
-                  <SelectValue placeholder="20" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+            <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground font-body">
+              {t.products.showingResults.replace('{count}', totalCount.toString()).split(totalCount.toString())[0]}
+              <span className="font-bold text-foreground">{totalCount}</span>
+              {t.products.showingResults.replace('{count}', totalCount.toString()).split(totalCount.toString())[1]}
             </div>
 
-            <ToggleGroup
-              type="single"
-              value={viewMode}
-              onValueChange={(value) => value && setViewMode(value as any)}
-              className="gap-1"
-            >
-              {[
-                { val: 'grid', icon: LayoutGrid },
-                { val: 'compact', icon: Grid2X2 }
-              ].map(({ val, icon: Icon }) => (
-                <ToggleGroupItem
-                  key={val}
-                  value={val}
-                  className={cn(
-                    "relative rounded-xl px-4 py-2 transition-all active:scale-95",
-                    viewMode === val ? "text-primary-foreground bg-[#a68953] shadow-[0_2px_12px_rgba(166,137,83,0.5)]" : "text-muted-foreground hover:text-foreground"
-                  )}
+            <div className="flex items-center gap-3 bg-card/30 backdrop-blur-md border border-border/60 p-1.5 rounded-2xl">
+              <div className="flex items-center gap-2 px-3 border-r border-border/60">
+                <Hash className="h-4 w-4 text-muted-foreground" />
+                <Select
+                  value={limitParam.toString()}
+                  onValueChange={(val) => updateUrl(queryParam, 1, Number(val))}
                 >
-                  <Icon className="h-5 w-5" />
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+                  <SelectTrigger className="w-20 bg-transparent border-none focus:ring-0 shadow-none h-8 font-bold">
+                    <SelectValue placeholder="20" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {setGroupByCategory && (
-              <button
-                onClick={() => setGroupByCategory(!groupByCategory)}
-                className={cn(
-                  "relative rounded-xl px-3 py-2 transition-all active:scale-95 text-xs font-semibold border",
-                  groupByCategory
-                    ? "text-primary-foreground bg-[#a68953] border-[#a68953] shadow-[0_2px_12px_rgba(166,137,83,0.5)]"
-                    : "text-muted-foreground hover:text-foreground border-border/60"
-                )}
-                title={language === 'es' ? 'Agrupar por categoría' : 'Group by category'}
+              <ToggleGroup
+                type="single"
+                value={viewMode}
+                onValueChange={(value) => value && setViewMode(value as any)}
+                className="gap-1"
               >
-                <SlidersHorizontal className="h-4 w-4 inline mr-1" />
-                {language === 'es' ? 'Agrupar' : 'Group'}
-              </button>
-            )}
+                {[
+                  { val: 'grid', icon: LayoutGrid },
+                  { val: 'compact', icon: Grid2X2 }
+                ].map(({ val, icon: Icon }) => (
+                  <ToggleGroupItem
+                    key={val}
+                    value={val}
+                    className={cn(
+                      "relative rounded-xl px-4 py-2 transition-all active:scale-95",
+                      viewMode === val ? "text-primary-foreground bg-[#a68953] shadow-[0_2px_12px_rgba(166,137,83,0.5)]" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+
+              {setGroupByCategory && (
+                <button
+                  onClick={() => setGroupByCategory(!groupByCategory)}
+                  className={cn(
+                    "relative rounded-xl px-3 py-2 transition-all active:scale-95 text-xs font-semibold border",
+                    groupByCategory
+                      ? "text-primary-foreground bg-[#a68953] border-[#a68953] shadow-[0_2px_12px_rgba(166,137,83,0.5)]"
+                      : "text-muted-foreground hover:text-foreground border-border/60"
+                  )}
+                  title={language === 'es' ? 'Agrupar por categoría' : 'Group by category'}
+                >
+                  <SlidersHorizontal className="h-4 w-4 inline mr-1" />
+                  {language === 'es' ? 'Agrupar' : 'Group'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Premium Retractable Categories — editorial divider + elevated pills */}
+        {categories && categories.length > 0 && (
+          <div className="mt-6">
+            <button
+              onClick={() => setIsDesktopCatOpen(!isDesktopCatOpen)}
+              className="flex items-center gap-4 w-full group cursor-pointer focus:outline-none"
+            >
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+              <div className="flex items-center gap-2.5 shrink-0">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors duration-300">
+                  {language === 'es' ? 'Categorías' : 'Categories'}
+                </span>
+                {selectedCategories.length > 0 && (
+                  <span className="bg-primary/15 text-primary text-[9px] px-1.5 py-0.5 rounded-full font-extrabold leading-none">
+                    {selectedCategories.length}
+                  </span>
+                )}
+                <ChevronDown className={cn(
+                  "h-3 w-3 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-all duration-300",
+                  isDesktopCatOpen && "rotate-180"
+                )} />
+              </div>
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+            </button>
+
+            <AnimatePresence initial={false}>
+              {isDesktopCatOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex flex-wrap items-center gap-2.5 pt-5">
+                    {/* "All" chip — active when no filter is applied */}
+                    <button
+                      onClick={() => selectedCategories.length > 0 && updateUrl(queryParam, 1, limitParam, "")}
+                      className={cn(
+                        "inline-flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-semibold transition-all duration-300 cursor-pointer focus:outline-none",
+                        selectedCategories.length === 0
+                          ? "bg-primary/10 border-primary/30 text-primary shadow-sm"
+                          : "bg-background/60 border-border/40 text-muted-foreground/50 hover:border-border/70 hover:text-muted-foreground/80"
+                      )}
+                    >
+                      {language === 'es' ? 'Todas' : 'All'}
+                    </button>
+
+                    {categories.map((cat) => {
+                      const isChecked = selectedCategories.includes(cat);
+                      const count = categoryCounts[cat] || 0;
+                      return (
+                        <motion.button
+                          key={cat}
+                          onClick={() => handleCategoryToggle(cat)}
+                          whileTap={{ scale: 0.95 }}
+                          className={cn(
+                            "relative inline-flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-semibold transition-all duration-300 cursor-pointer focus:outline-none overflow-hidden",
+                            isChecked
+                              ? "bg-primary text-primary-foreground border-primary shadow-[0_4px_14px_rgba(166,137,83,0.3)]"
+                              : "bg-backdrop border border-border/40 text-muted-foreground/70 hover:border-primary/30 hover:text-foreground hover:shadow-sm hover:bg-backdrop/80"
+                          )}
+                        >
+                          {/* Active background indicator */}
+                          <span className={cn(
+                            "relative w-1.5 h-1.5 rounded-full transition-all duration-300 shrink-0",
+                            isChecked ? "bg-primary-foreground" : "bg-border group-hover:bg-primary/40"
+                          )} />
+                          <span className="relative">{getCategoryLabel(cat)}</span>
+                          {count > 0 && (
+                            <span className={cn(
+                              "relative text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none",
+                              isChecked
+                                ? "bg-primary-foreground/15 text-primary-foreground"
+                                : "bg-muted/50 text-muted-foreground/60"
+                            )}>
+                              {count}
+                            </span>
+                          )}
+                        </motion.button>
+                      );
+                    })}
+
+                    {selectedCategories.length > 0 && (
+                      <motion.button
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        onClick={() => updateUrl(queryParam, 1, limitParam, "")}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-destructive/20 text-destructive/60 hover:text-destructive hover:border-destructive/40 hover:bg-destructive/5 text-[10px] font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer"
+                      >
+                        <X className="h-3 w-3" />
+                        {language === 'es' ? 'Limpiar' : 'Clear'}
+                      </motion.button>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
     </div>
   );
