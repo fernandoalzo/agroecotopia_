@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { IncomingMessage, ServerResponse } from "http";
-import type { WafRequest, WafResult, WafConfig, DbRules } from "./types";
+import type { WafRequest, WafResult, CompiledWafConfig, DbRules, ParsedCidr } from "./types";
 import { evaluateWafRules } from "./rules-engine";
 import { clearGeoCache } from "./geoblock";
+import { parseCidr } from "./ip-blocklist";
 import { config } from "@/config/config";
 import logger from "@/utils/logger";
 import eventBus from "@/utils/eventBus";
@@ -36,7 +37,7 @@ function getDbOverrides(): DbRules {
 
 let dbOverrides: DbRules = getDbOverrides();
 
-function resolveWafConfig(): WafConfig {
+function resolveWafConfig(): CompiledWafConfig {
   return {
     mode: config.security.waf.mode,
     ipBlocklist: dbOverrides.ipBlocklist,
@@ -47,6 +48,15 @@ function resolveWafConfig(): WafConfig {
     botKnown: dbOverrides.botKnown,
     blockEmptyUserAgent: dbOverrides.blockEmptyUserAgent,
     attackPatterns: dbOverrides.attackPatterns,
+
+    compiledIpBlocklist: dbOverrides.ipBlocklist.map(parseCidr).filter((c): c is ParsedCidr => c !== null),
+    botBlockSet: new Set(dbOverrides.botBlock.map(s => s.toLowerCase())),
+    botKnownSet: new Set(dbOverrides.botKnown.map(s => s.toLowerCase())),
+    blockedMethodsSet: new Set(dbOverrides.blockedMethods.map(s => s.toUpperCase())),
+    sensitivePathsLower: dbOverrides.sensitivePaths.map(s => s.toLowerCase()),
+    compiledAttackPatterns: dbOverrides.attackPatterns
+      .map(p => { try { return new RegExp(p, 'i'); } catch { return null; } })
+      .filter((r): r is RegExp => r !== null),
   };
 }
 
@@ -70,7 +80,7 @@ function extractRequest(
 }
 
 export class Waf {
-  private config: WafConfig;
+  private config: CompiledWafConfig;
 
   constructor() {
     this.config = resolveWafConfig();
@@ -79,7 +89,7 @@ export class Waf {
     }
   }
 
-  async evaluate(req: IncomingMessage): Promise<WafResult> {
+  async evaluate(req: IncomingMessage, preExtractedReq?: WafRequest): Promise<WafResult> {
     if (this.config.mode === "disabled") {
       return {
         action: "ALLOW",
@@ -90,7 +100,7 @@ export class Waf {
       };
     }
 
-    const wafReq = extractRequest(req);
+    const wafReq = preExtractedReq || extractRequest(req);
 
     if (this.config.mode === "monitor") {
       const result = await evaluateWafRules(wafReq, this.config);
@@ -114,7 +124,7 @@ export class Waf {
     return evaluateWafRules(wafReq, this.config);
   }
 
-  getConfig(): WafConfig {
+  getConfig(): CompiledWafConfig {
     return { ...this.config };
   }
 
@@ -162,11 +172,13 @@ export async function applyWafMiddleware(
   const wafConfig = waf.getConfig();
   if (wafConfig.mode === "disabled") return false;
 
-  const result = await waf.evaluate(req);
-
   const url = req.url || "";
-  if (!isStaticAsset(url)) {
-    const wafReq = extractRequest(req);
+  if (isStaticAsset(url)) return false;
+
+  const wafReq = extractRequest(req);
+  const result = await waf.evaluate(req, wafReq);
+
+  if (true) {
     const queryIdx = url.indexOf("?");
     const entry = pushEntry({
       timestamp: new Date().toISOString(),
@@ -190,12 +202,9 @@ export async function applyWafMiddleware(
     const isHtml = req.headers.accept?.includes("text/html");
 
     if (isHtml) {
-      const ip = extractRequest(req).ip || "Desconocida";
-      const path = extractRequest(req).path;
       const incidentId = `${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 10000)}`;
-
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      res.end(getWafBlockHtml({ referenceId, ip, path, incidentId }));
+      res.end(getWafBlockHtml({ referenceId, ip: wafReq.ip || "Desconocida", path: wafReq.path, incidentId }));
     } else {
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({
@@ -205,8 +214,8 @@ export async function applyWafMiddleware(
       }));
     }
     log.warn("[waf] BLOQUEADO", {
-      ip: extractRequest(req).ip,
-      path: extractRequest(req).path,
+      ip: wafReq.ip,
+      path: wafReq.path,
       reason: result.reason,
       ruleCount: result.ruleResults.length,
       elapsedMs: result.elapsedMs,

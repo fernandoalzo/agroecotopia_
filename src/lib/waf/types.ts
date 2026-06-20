@@ -58,3 +58,18 @@ export interface DbRules {
   blockEmptyUserAgent: boolean;
   attackPatterns: string[];
 }
+
+export interface ParsedCidr {
+  network: number;
+  mask: number;
+  original: string;
+}
+
+export interface CompiledWafConfig extends WafConfig {
+  compiledIpBlocklist: ParsedCidr[];
+  botBlockSet: Set<string>;
+  botKnownSet: Set<string>;
+  blockedMethodsSet: Set<string>;
+  sensitivePathsLower: string[];
+  compiledAttackPatterns: RegExp[];
+}

@@ -182,7 +182,7 @@ export function WafMonitor({ actions }: { actions: WafMonitorActions }) {
   useEffect(() => {
     if (!socket) return;
     setConnected(true);
-    socket.emit("join_waf_monitor");
+    socket.emit("join_waf_monitor", { role: "admin" });
     socket.on("waf:request_live", handleNewEntry);
 
     return () => {

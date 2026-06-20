@@ -25,6 +25,8 @@ const BUFFER_KEY = "__wafRequestBuffer";
 
 interface BufferState {
   entries: WafRequestEntry[];
+  head: number;
+  size: number;
   counter: number;
 }
 
@@ -35,7 +37,7 @@ function getBuffer(): BufferState {
   if (typeof globalThis !== "undefined" && (globalThis as any)[BUFFER_KEY]) {
     return (globalThis as any)[BUFFER_KEY];
   }
-  const fresh: BufferState = { entries: [], counter: 0 };
+  const fresh: BufferState = { entries: new Array(MAX_ENTRIES), head: 0, size: 0, counter: 0 };
   if (typeof process !== "undefined") (process as any)[BUFFER_KEY] = fresh;
   (globalThis as any)[BUFFER_KEY] = fresh;
   return fresh;
@@ -45,19 +47,26 @@ const state = getBuffer();
 
 export function pushEntry(entry: Omit<WafRequestEntry, "id">): WafRequestEntry {
   const full: WafRequestEntry = { id: ++state.counter, ...entry };
-  state.entries.unshift(full);
-  if (state.entries.length > MAX_ENTRIES) {
-    state.entries.length = MAX_ENTRIES;
-  }
+  state.head = (state.head - 1 + MAX_ENTRIES) % MAX_ENTRIES;
+  state.entries[state.head] = full;
+  if (state.size < MAX_ENTRIES) state.size++;
   return full;
 }
 
 export function getEntries(n = 100): WafRequestEntry[] {
-  return state.entries.slice(0, n);
+  const count = Math.min(n, state.size);
+  const result: WafRequestEntry[] = new Array(count);
+  for (let i = 0; i < count; i++) {
+    const idx = (state.head + i) % MAX_ENTRIES;
+    result[i] = state.entries[idx];
+  }
+  return result;
 }
 
 export function clear(): void {
-  state.entries = [];
+  state.entries = new Array(MAX_ENTRIES);
+  state.head = 0;
+  state.size = 0;
   log.info("WAF request buffer cleared");
 }
 

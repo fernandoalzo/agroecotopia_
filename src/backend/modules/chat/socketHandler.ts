@@ -180,7 +180,12 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient):
     });
 
     // ─── WAF Monitor room ───
-    socket.on("join_waf_monitor", () => {
+    socket.on("join_waf_monitor", (payload?: { role?: string }) => {
+      if (payload?.role !== "admin") {
+        log.warn(`Socket ${socket.id} attempted to join WAF monitor without admin role`);
+        socket.emit("error", { message: "Acceso denegado al monitor WAF" });
+        return;
+      }
       socket.join("waf:monitor");
       log.debug(`Socket ${socket.id} joined WAF monitor room`);
     });

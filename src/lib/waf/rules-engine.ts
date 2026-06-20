@@ -1,4 +1,4 @@
-import type { WafRequest, WafRuleResult, WafResult, WafConfig } from "./types";
+import type { WafRequest, WafRuleResult, WafResult, CompiledWafConfig } from "./types";
 import { evaluateGeoblock, resolveGeo } from "./geoblock";
 import { evaluateIpBlocklist } from "./ip-blocklist";
 import {
@@ -12,7 +12,7 @@ const log = logger.child("src/lib/waf/rules-engine.ts");
 
 export async function evaluateWafRules(
   req: WafRequest,
-  cfg: WafConfig,
+  cfg: CompiledWafConfig,
 ): Promise<WafResult> {
   const start = performance.now();
   const ruleResults: WafRuleResult[] = [];
@@ -28,7 +28,7 @@ export async function evaluateWafRules(
   }
 
   // 0. Method Block
-  if (cfg.blockedMethods.length > 0 && cfg.blockedMethods.includes(req.method.toUpperCase())) {
+  if (cfg.blockedMethodsSet.size > 0 && cfg.blockedMethodsSet.has(req.method.toUpperCase())) {
     const result: WafRuleResult = {
       ruleId: "waf:db:method",
       ruleName: "Método HTTP Bloqueado",
@@ -44,8 +44,8 @@ export async function evaluateWafRules(
   }
 
   // 1. IP Blocklist
-  if (cfg.ipBlocklist.length > 0) {
-    const result = evaluateIpBlocklist(req, cfg.ipBlocklist);
+  if (cfg.compiledIpBlocklist.length > 0) {
+    const result = evaluateIpBlocklist(req, cfg.compiledIpBlocklist);
     if (result) {
       ruleResults.push(result);
       const elapsed = performance.now() - start;
@@ -56,8 +56,8 @@ export async function evaluateWafRules(
   // 2. Bot Detection
   const botResults = evaluateBotDetection(
     req,
-    cfg.botBlock,
-    cfg.botKnown,
+    cfg.botBlockSet,
+    cfg.botKnownSet,
     cfg.blockEmptyUserAgent,
   );
   for (const r of botResults) ruleResults.push(r);
@@ -70,8 +70,8 @@ export async function evaluateWafRules(
   }
 
   // 3. Sensitive Paths
-  if (cfg.sensitivePaths.length > 0) {
-    const result = evaluateSensitivePaths(req.path, req.rawUrl, cfg.sensitivePaths);
+  if (cfg.sensitivePathsLower.length > 0) {
+    const result = evaluateSensitivePaths(req.path, req.rawUrl, cfg.sensitivePathsLower);
     if (result) {
       ruleResults.push(result);
       const elapsed = performance.now() - start;
@@ -80,8 +80,8 @@ export async function evaluateWafRules(
   }
 
   // 4. Attack Pattern Detection
-  if (cfg.attackPatterns.length > 0) {
-    const result = evaluateAttackPatterns(req.path, req.headers, cfg.attackPatterns);
+  if (cfg.compiledAttackPatterns.length > 0) {
+    const result = evaluateAttackPatterns(req.path, req.headers, cfg.compiledAttackPatterns);
     if (result) {
       ruleResults.push(result);
       const elapsed = performance.now() - start;

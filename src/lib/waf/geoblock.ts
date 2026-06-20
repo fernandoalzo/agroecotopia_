@@ -1,6 +1,18 @@
 import type { WafRequest, WafRuleResult, GeoIpResult } from "./types";
 
-const geoCache = new Map<string, GeoIpResult>();
+interface CacheEntry {
+  data: GeoIpResult | null;
+  expiresAt: number;
+}
+
+const geoCache = new Map<string, CacheEntry>();
+const MAX_CACHE_SIZE = 2000;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+let apiRequestsCount = 0;
+let apiRequestsWindowStart = Date.now();
+const MAX_API_REQUESTS = 40;
+const API_WINDOW_MS = 60000;
 
 function isLocalIp(ip: string): boolean {
   return (
@@ -19,7 +31,24 @@ export async function resolveGeo(ip: string): Promise<GeoIpResult | null> {
   if (isLocalIp(ip)) return null;
 
   const cached = geoCache.get(ip);
-  if (cached) return cached;
+  if (cached) {
+    if (Date.now() < cached.expiresAt) {
+      return cached.data;
+    }
+    geoCache.delete(ip);
+  }
+
+  const now = Date.now();
+  if (now - apiRequestsWindowStart > API_WINDOW_MS) {
+    apiRequestsCount = 0;
+    apiRequestsWindowStart = now;
+  }
+  
+  if (apiRequestsCount >= MAX_API_REQUESTS) {
+    return null; // Rate limit reached, fail open
+  }
+
+  apiRequestsCount++;
 
   try {
     const response = await fetch(
@@ -39,7 +68,11 @@ export async function resolveGeo(ip: string): Promise<GeoIpResult | null> {
       lon: data.lon,
     };
 
-    geoCache.set(ip, result);
+    if (geoCache.size >= MAX_CACHE_SIZE) {
+      const firstKey = geoCache.keys().next().value;
+      if (firstKey) geoCache.delete(firstKey);
+    }
+    geoCache.set(ip, { data: result, expiresAt: Date.now() + CACHE_TTL_MS });
     return result;
   } catch {
     return null;

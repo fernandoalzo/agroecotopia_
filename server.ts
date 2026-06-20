@@ -17,18 +17,21 @@ const log = logger.child();
 const dev = config.isDevelopment;
 log.info(`Starting server in ${dev ? "development" : "production"} mode...`);
 
+// 🚀 Inicialización del motor principal (Next.js App Router)
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
-// Create HTTP server and initialize Socket.IO BEFORE app.prepare()
-// to eliminate the race window where Server Actions could run without Socket.IO.
+// ⚡ Creación del servidor HTTP (Monolito)
+// Se inicializa ANTES de app.prepare() para evitar la ventana de carrera (race window)
+// en la cual las Server Actions podrían ejecutarse sin un servidor Socket.IO disponible.
 const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
   const parsedUrl = parse(req.url!, true);
 
-  // Inyectar security headers en TODAS las respuestas (CSP, HSTS, XFO, etc.)
+  // 🛡️ Capa 1: Cabeceras de Seguridad (Security Headers)
+  // Inyecta políticas estrictas en TODAS las respuestas (CSP, HSTS, XFO, CORP, etc.)
   applySecurityHeaders(res);
 
-  // Skip logging for static assets and Next.js internals (noisy, no observability value)
+  // 🚦 Filtro de Telemetría: Evita inundar los logs con peticiones estáticas o internas de Next.js
   const url = req.url || "";
   const isStaticAsset =
     url.startsWith("/_next/static/") ||
@@ -41,31 +44,40 @@ const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse
     log.debug(`${req.method} ${url}`);
   }
 
-  // ── WAF: evalúa reglas de seguridad antes de cualquier procesamiento ──
+  // 🧱 Capa 2: Web Application Firewall (WAF)
+  // Evalúa reglas de bloqueo (IPs, Bots, Patrones Maliciosos) antes de cualquier procesamiento interno.
   const isWafBlocked = await applyWafMiddleware(req, res);
-  if (isWafBlocked) return;
+  if (isWafBlocked) return; // Termina la petición si el firewall la bloquea
 
+  // ⏱️ Capa 3: Limitador de Tasa (Rate Limiter)
+  // Previene ataques de denegación de servicio (DDoS) controlando el flujo por IP.
   const isRateLimited = await applyRateLimitMiddleware(req, res, url, isStaticAsset);
   if (isRateLimited) {
-    return;
+    return; // Termina la petición si excede el límite de tráfico
   }
 
+  // 🖥️ Capa 4: Enrutamiento Principal
+  // Transfiere el control al manejador estándar de Next.js (Server Actions, Páginas, APIs)
   handle(req, res, parsedUrl);
 });
 
+// 🔌 Inicialización de Comunicaciones en Tiempo Real (WebSockets)
 log.info("Initializing Socket.IO server...");
 initSocketServer(httpServer, prisma);
 
+// 🏗️ Preparación final de la aplicación y carga de dependencias asíncronas
 app.prepare()
   .then(() => {
     log.info("Next.js application prepared successfully.");
 
-    // Verify default admin user exists on boot
+    // 👤 Verificación de Superusuario (Bootstrapping)
+    // Asegura la existencia de la cuenta administradora base en cada reinicio.
     ensureAdminExists(prisma).catch((err) => {
       log.error("Failed to verify default admin exists on server boot:", err);
     });
 
-    // Cargar reglas iniciales del WAF desde PostgreSQL
+    // 🛡️ Sincronización de Reglas del Firewall (WAF)
+    // Carga las reglas configuradas desde PostgreSQL hacia la memoria volátil para evaluación ultra rápida.
     wafService.reloadWaf()
       .then(() => {
         log.info("🛡️ WAF (Web Application Firewall) inicializado y protegiendo el servidor.");
@@ -74,17 +86,20 @@ app.prepare()
         log.error("🛡️ ❌ Error crítico: No se pudieron cargar las reglas del WAF desde la DB en el inicio:", err);
       });
 
-    // Sincronizar stock maestro en Redis desde PostgreSQL (no bloqueante)
+    // 📦 Sincronización del Guardián de Stock (Redis Cache)
+    // Inicializa la memoria distribuida para el control concurrente de inventario (no es bloqueante).
     initializeStockMaster(prisma).catch((err) => {
       log.warn("Failed to initialize stock master in Redis (non-critical):", err);
     });
 
+    // 🟢 Arranque del Listener HTTP
     const PORT = config.app.port;
     httpServer.listen(PORT, () => {
       log.info(`> Monolith custom server ready on http://localhost:${PORT}`);
     });
   })
   .catch((err) => {
+    // 💥 Captura de errores fatales en el arranque
     log.error("Failed to start the monolith custom server", err);
     process.exit(1);
   });

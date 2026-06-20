@@ -2,8 +2,8 @@ import type { WafRequest, WafRuleResult } from "./types";
 
 export function evaluateBotDetection(
   req: WafRequest,
-  botBlock: string[],
-  botKnown: string[],
+  botBlock: Set<string>,
+  botKnown: Set<string>,
   blockEmptyUserAgent: boolean,
 ): WafRuleResult[] {
   const results: WafRuleResult[] = [];
@@ -22,7 +22,7 @@ export function evaluateBotDetection(
   }
 
   for (const scanner of botBlock) {
-    if (ua.includes(scanner.toLowerCase())) {
+    if (ua.includes(scanner)) {
       results.push({
         ruleId: "waf:bot:scanner",
         ruleName: "Scanner/Bot Bloqueado",
@@ -36,7 +36,13 @@ export function evaluateBotDetection(
   }
 
   if (ua.includes("bot") || ua.includes("crawler") || ua.includes("spider")) {
-    const isKnown = botKnown.some((b) => ua.includes(b.toLowerCase()));
+    let isKnown = false;
+    for (const b of botKnown) {
+      if (ua.includes(b)) {
+        isKnown = true;
+        break;
+      }
+    }
     if (!isKnown) {
       results.push({
         ruleId: "waf:bot:unknown",
@@ -55,14 +61,13 @@ export function evaluateBotDetection(
 export function evaluateSensitivePaths(
   path: string,
   rawUrl: string,
-  sensitivePaths: string[],
+  sensitivePathsLower: string[],
 ): WafRuleResult | null {
   const lowerPath = path.toLowerCase();
   const lowerRaw = rawUrl.toLowerCase();
 
-  for (const sp of sensitivePaths) {
-    const lowerSp = sp.toLowerCase();
-    if (lowerPath.startsWith(lowerSp) || lowerRaw.startsWith(lowerSp)) {
+  for (const sp of sensitivePathsLower) {
+    if (lowerPath.startsWith(sp) || lowerRaw.startsWith(sp)) {
       return {
         ruleId: "waf:path:sensitive",
         ruleName: "Ruta Sensible",
@@ -80,25 +85,25 @@ export function evaluateSensitivePaths(
 export function evaluateAttackPatterns(
   path: string,
   headers: Record<string, string | string[] | undefined>,
-  attackPatterns: string[],
+  compiledAttackPatterns: RegExp[],
 ): WafRuleResult | null {
-  const decoded = decodeURIComponent(path).toLowerCase();
-
-  for (const pattern of attackPatterns) {
+  let decoded = decodeURIComponent(path).toLowerCase();
+  if (decoded.includes("%")) {
     try {
-      const regex = new RegExp(pattern, "i");
-      if (regex.test(decoded)) {
+      decoded = decodeURIComponent(decoded);
+    } catch {}
+  }
+
+  for (const regex of compiledAttackPatterns) {
+    if (regex.test(decoded)) {
         return {
           ruleId: "waf:attack:pattern",
           ruleName: "Patrón de Ataque",
           action: "BLOCK",
           severity: "critical",
           blocked: true,
-          reason: `Patrón de ataque detectado en la ruta: ${pattern}`,
+          reason: `Patrón de ataque detectado en la ruta: ${regex.source}`,
         };
-      }
-    } catch {
-      continue;
     }
   }
 
@@ -107,11 +112,14 @@ export function evaluateAttackPatterns(
     : "";
 
   if (queryString) {
-    const decodedQuery = decodeURIComponent(queryString).toLowerCase();
-    for (const pattern of attackPatterns) {
+    let decodedQuery = decodeURIComponent(queryString).toLowerCase();
+    if (decodedQuery.includes("%")) {
       try {
-        const regex = new RegExp(pattern, "i");
-        if (regex.test(decodedQuery)) {
+        decodedQuery = decodeURIComponent(decodedQuery);
+      } catch {}
+    }
+    for (const regex of compiledAttackPatterns) {
+      if (regex.test(decodedQuery)) {
           return {
             ruleId: "waf:attack:query",
             ruleName: "Query String Malicioso",
@@ -120,9 +128,6 @@ export function evaluateAttackPatterns(
             blocked: true,
             reason: "Patrón de ataque detectado en query string",
           };
-        }
-      } catch {
-        continue;
       }
     }
   }
