@@ -120,11 +120,11 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
       />
 
       {/* Content */}
-      <motion.div
-        animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : {}}
-        transition={{ duration: 0.8, ease: "easeInOut" }}
-        className="relative z-10 w-full flex flex-col h-full pt-8 sm:pt-14 pb-6 sm:pb-8 gap-3 sm:gap-4"
-      >
+        <motion.div
+          animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : {}}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          className="relative z-10 w-full flex flex-col h-full pt-4 sm:pt-8 pb-3 sm:pb-4 gap-2 sm:gap-3"
+        >
 
         {/* Header Title */}
         <div className="shrink-0 container max-w-7xl mx-auto text-center px-4">
@@ -133,9 +133,9 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="mb-4"
+            className="mb-2"
           >
-            <span className="inline-flex items-center gap-2 text-[10px] sm:text-xs font-bold text-primary/70 tracking-[0.25em] uppercase">
+            <span className="inline-flex items-center gap-2 text-[9px] sm:text-[11px] font-bold text-primary/70 tracking-[0.25em] uppercase">
               <span
                 className="inline-block w-1.5 h-1.5 rounded-full bg-primary"
                 style={{
@@ -152,7 +152,7 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="text-3xl sm:text-5xl md:text-6xl font-black leading-[1.05] mb-4"
+            className="text-2xl sm:text-4xl md:text-5xl font-black leading-[1.05] mb-2"
           >
             {t.products.title.split(' ')[0]}{' '}
             <span
@@ -168,7 +168,7 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
             transition={{ delay: 0.35, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="h-0.5 w-20 sm:w-24 bg-gradient-to-r from-primary/60 via-accent/40 to-transparent rounded-full mb-5 mx-auto origin-center"
+            className="h-0.5 w-14 sm:w-20 bg-gradient-to-r from-primary/60 via-accent/40 to-transparent rounded-full mb-3 mx-auto origin-center"
           />
 
           {/* Description — CSS word reveal */}
@@ -190,7 +190,7 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
         {/* Floating product showcase - fills remaining space */}
         <div className="flex-1 min-h-0 flex items-center">
           {featuredProducts.length > 0 ? (
-            <div className="relative w-full max-w-6xl mx-auto flex items-center group px-8 sm:px-12">
+            <div className="relative w-full max-w-6xl mx-auto flex items-center group px-6 sm:px-10">
               {/* Left Arrow */}
               <button 
                 type="button"
@@ -203,7 +203,7 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
 
               <div 
                 ref={scrollContainerRef}
-                className="flex overflow-x-auto gap-3 sm:gap-4 py-2 sm:py-3 px-2 no-scrollbar snap-x snap-mandatory w-full"
+                className="flex overflow-x-auto gap-2 sm:gap-3 py-1 sm:py-2 px-1 no-scrollbar snap-x snap-mandatory w-full"
                 style={{ scrollBehavior: "smooth" }}
               >
                 {featuredProducts.map((p, i) => {
@@ -215,11 +215,11 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
                       viewport={{ once: true }}
                       transition={{ duration: 0.5, delay: i * 0.1 }}
                       whileHover={{
-                        scale: 1.05,
-                        z: 30,
-                        boxShadow: "0px 15px 30px rgba(var(--color-primary), 0.12)"
+                        scale: 1.02,
+                        z: 20,
+                        boxShadow: "0px 10px 20px rgba(var(--color-primary), 0.1)"
                       }}
-                      className="transition-all duration-300 relative shrink-0 snap-center w-[180px] sm:w-[220px] lg:w-[240px]"
+                      className="transition-all duration-300 relative shrink-0 snap-center w-[130px] sm:w-[160px] lg:w-[180px]"
                     >
                       <ProductCard p={p} variant="compact" />
                     </motion.div>
@@ -254,7 +254,7 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
               }, 800);
             }}
             disabled={isNavigating}
-            className="inline-flex items-center gap-2 rounded-2xl bg-primary px-8 py-3.5 font-display text-base font-bold text-white shadow-xl hover:bg-primary/95 transition-all hover:scale-105 active:scale-95 group cursor-pointer relative z-50 disabled:opacity-70"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 font-display text-sm font-bold text-white shadow-lg hover:bg-primary/95 transition-all hover:scale-105 active:scale-95 group cursor-pointer relative z-50 disabled:opacity-70"
           >
             <span>{t.products.viewAll}</span>
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

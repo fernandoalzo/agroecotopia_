@@ -240,7 +240,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
       <>
         <div
           onClick={handleNavigate}
-          className="group relative flex flex-col w-full bg-card border border-border shadow-card hover:shadow-card-hover hover:scale-[1.03] hover:-translate-y-2 hover:border-primary transition-all duration-500 rounded-xl overflow-hidden cursor-pointer"
+          className="group relative flex flex-col w-full bg-card border border-border shadow-card hover:shadow-card-hover hover:scale-[1.02] hover:-translate-y-1 hover:border-primary transition-all duration-500 rounded-lg overflow-hidden cursor-pointer"
         >
           {LoadingOverlay}
           {hasDiscount && (
@@ -251,97 +251,97 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
             </div>
           )}
 
-          <div className="relative aspect-square w-full bg-secondary/40 dark:bg-[#121212] flex items-center justify-center overflow-hidden transition-all duration-500">
+          <div className="relative aspect-[5/4] w-full bg-secondary/40 dark:bg-[#121212] flex items-center justify-center overflow-hidden transition-all duration-500">
             {p.images && p.images.length > 0 && p.images[0]?.trim() !== "" ? (
               <Image
                 src={getDeterministicImage(p.images[0], p.id!)}
                 alt={productTranslation.name}
                 fill
-                sizes="200px"
+                sizes="160px"
                 priority={priority}
                 loading={priority ? "eager" : "lazy"}
-                className="object-contain p-2 group-hover:scale-115 transition-transform duration-700 ease-out"
+                className="object-contain p-1.5 group-hover:scale-115 transition-transform duration-700 ease-out"
               />
             ) : (
-              <span className="text-5xl drop-shadow-[0_0_20px_rgba(var(--primary),0.2)]">{p.emoji || "📦"}</span>
+              <span className="text-4xl drop-shadow-[0_0_20px_rgba(var(--primary),0.2)]">{p.emoji || "📦"}</span>
             )}
 
             {p.stock === 0 && (
               <div className="absolute inset-0 bg-white/40 backdrop-blur-[0.5px] z-30 overflow-hidden">
-                <div className="absolute top-6 -right-10 w-32 rotate-45 bg-[#b12704] py-1 text-center text-[8px] font-black uppercase tracking-[0.15em] text-white shadow-lg border-y border-white/20">
+                <div className="absolute top-5 -right-10 w-28 rotate-45 bg-[#b12704] py-0.5 text-center text-[7px] font-black uppercase tracking-[0.15em] text-white shadow-lg border-y border-white/20">
                   {t.products.outOfStock}
                 </div>
               </div>
             )}
           </div>
 
-          <div className="p-3 flex flex-col flex-grow">
-            <h3 className="font-display font-bold text-sm text-foreground mb-1 line-clamp-1 group-hover:text-primary transition-colors">
+          <div className="p-2.5 flex flex-col flex-grow">
+            <h3 className="font-display font-bold text-xs text-foreground mb-0.5 line-clamp-1 group-hover:text-primary transition-colors">
               {productTranslation.name}
             </h3>
             {(p as any).store?.name && (
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground/80 mb-1.5">
-                <Store className="w-3 h-3 text-primary/70" />
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground/80 mb-1">
+                <Store className="w-2.5 h-2.5 text-primary/70" />
                 <span className="truncate">{(p as any).store.name}</span>
               </div>
             )}
 
-            <div className="flex items-center gap-1 mb-2">
+            <div className="flex items-center gap-1 mb-1">
               <div className="flex text-[#ffa41c]">
-                <Star className="w-3 h-3 fill-current" />
+                <Star className="w-2.5 h-2.5 fill-current" />
               </div>
-              <span className="text-[10px] text-muted-foreground font-medium">
+              <span className="text-[9px] text-muted-foreground font-medium">
                 {rating.toFixed(1)} ({totalReviews})
               </span>
             </div>
 
             <div className="mt-auto">
-              <div className="flex flex-col gap-0.5">
+              <div className="flex flex-col gap-px">
                 {hasDiscount ? (
                   <>
                     <div className="flex items-baseline gap-0.5 text-muted-foreground line-through decoration-muted-foreground/50">
-                      <span className="text-[8px] font-bold">$</span>
-                      <span className="text-xs font-bold">{p.price.toLocaleString()}</span>
+                      <span className="text-[7px] font-bold">$</span>
+                      <span className="text-[10px] font-bold">{p.price.toLocaleString()}</span>
                     </div>
                     <div className="flex items-baseline gap-0.5 text-red-600">
-                      <span className="text-[10px] font-bold">$</span>
-                      <span className="text-lg font-black">{discountedPrice.toLocaleString()}</span>
+                      <span className="text-[9px] font-bold">$</span>
+                      <span className="text-base font-black">{discountedPrice.toLocaleString()}</span>
                     </div>
                   </>
                 ) : (
                   <div className="flex items-baseline gap-0.5">
-                    <span className="text-[10px] font-bold">$</span>
-                    <span className="text-lg font-black text-foreground">{p.price.toLocaleString()}</span>
+                    <span className="text-[9px] font-bold">$</span>
+                    <span className="text-base font-black text-foreground">{p.price.toLocaleString()}</span>
                   </div>
                 )}
               </div>
               {p.stock === 0 ? (
-                <p className="text-[10px] font-bold text-red-600 uppercase mt-1">{t.products.outOfStock}</p>
+                <p className="text-[9px] font-bold text-red-600 uppercase mt-0.5">{t.products.outOfStock}</p>
               ) : (
                 <>
-                  <div className="flex items-center gap-1 text-[9px] text-[#007600] font-bold mt-1">
-                    <Truck className="w-2.5 h-2.5" />
+                  <div className="flex items-center gap-1 text-[8px] text-[#007600] font-bold mt-0.5">
+                    <Truck className="w-2 h-2" />
                     {language === 'es' ? 'Recíbelo pronto' : 'Get it soon'}
                   </div>
-                  <div onClick={(e) => e.stopPropagation()} className="flex items-center justify-between gap-2 mt-1.5 pt-1.5 border-t border-border/50">
+                  <div onClick={(e) => e.stopPropagation()} className="flex items-center justify-between gap-1 mt-1 pt-1 border-t border-border/50">
                     <div className="flex items-center gap-0.5">
-                      <button onClick={() => setQty(Math.max(1, qty - 1))} className="p-1 hover:bg-muted rounded-md transition-colors">
-                        <Minus className="w-3 h-3 text-muted-foreground" />
+                      <button onClick={() => setQty(Math.max(1, qty - 1))} className="p-0.5 hover:bg-muted rounded-md transition-colors">
+                        <Minus className="w-2.5 h-2.5 text-muted-foreground" />
                       </button>
-                      <span className="w-[18px] text-xs font-bold text-center tabular-nums text-foreground">{qty}</span>
-                      <button onClick={() => setQty(qty + 1)} className="p-1 hover:bg-muted rounded-md transition-colors">
-                        <Plus className="w-3 h-3 text-muted-foreground" />
+                      <span className="w-[16px] text-[11px] font-bold text-center tabular-nums text-foreground">{qty}</span>
+                      <button onClick={() => setQty(qty + 1)} className="p-0.5 hover:bg-muted rounded-md transition-colors">
+                        <Plus className="w-2.5 h-2.5 text-muted-foreground" />
                       </button>
                     </div>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleAddToCart(); }}
-                      className="flex items-center justify-center bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] p-1.5 rounded-lg transition-all shadow-sm disabled:opacity-80"
+                      className="flex items-center justify-center bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] p-1 rounded-lg transition-all shadow-sm disabled:opacity-80"
                       disabled={addedToCart}
                     >
                       {addedToCart ? (
-                        <Check className="w-3.5 h-3.5 text-green-700" />
+                        <Check className="w-3 h-3 text-green-700" />
                       ) : (
-                        <ShoppingCart className="w-3.5 h-3.5" />
+                        <ShoppingCart className="w-3 h-3" />
                       )}
                     </button>
                   </div>

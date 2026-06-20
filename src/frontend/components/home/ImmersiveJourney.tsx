@@ -181,7 +181,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
   // Stage 3 (Catalog 3D Showcase) Transforms
   const stage3Z = useTransform(smoothProgress, [0.50, 0.68, 0.95], [-1200, 0, 700]);
   const stage3Opacity = useTransform(smoothProgress, [0.50, 0.63, 0.84, 0.95], [0, 1, 1, 0]);
-  const stage3Scale = useTransform(smoothProgress, [0.50, 0.68, 0.95], [0.6, 1.0, 1.2]);
+  const stage3Scale = useTransform(smoothProgress, [0.50, 0.68, 0.95], [0.7, 1.0, 1.0]);
 
   // Stage 4 (Community & Network) Transforms
   const stage4Z = useTransform(smoothProgress, [0.78, 0.92], [-1200, 0]);
