@@ -9,6 +9,7 @@ import type {
   ModerationOptions,
 } from "./types";
 import { AIFeature } from "./types";
+import { config } from "@/config/config";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/ai/providers/ollama.ts");
@@ -246,7 +247,7 @@ export class OllamaProvider implements AIProvider {
   async moderate(content: string, options?: ModerationOptions): Promise<ModerationResult> {
     log.debug("🤖 [Ollama] Evaluando moderación de contenido...", { textLength: content.length });
 
-    const systemPrompt = `Eres un moderador estricto de una plataforma de agricultura (Agroecotopia). 
+    const systemPrompt = `Eres un moderador estricto de una plataforma de agricultura (${config.app.name}). 
 Debes evaluar el siguiente contenido y responder ÚNICAMENTE con un objeto JSON válido con este esquema exacto:
 {
   "isSpam": boolean,

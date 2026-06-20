@@ -1,6 +1,7 @@
 import type { AIProvider, ChatMessage, ChatOptions, ChatResponse } from "./providers/types";
 import { AIRepository } from "./ai.repository";
 import type { RAGService, RAGOptions } from "./nlp/rag.service";
+import { config } from "@/config/config";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/ai/ai.service.ts");
@@ -96,7 +97,7 @@ export class AIService {
 
     if (this.rag) {
       const lastUserMsg = [...messages].reverse().find(m => m.role === "user");
-      let systemPrompt = "Eres un asistente amigable de Agroecotopia.";
+      let systemPrompt = `Eres un asistente amigable de ${config.app.name}.`;
       
       if (lastUserMsg) {
         const context = await this.rag.retrieve(lastUserMsg.content, options?.rag);

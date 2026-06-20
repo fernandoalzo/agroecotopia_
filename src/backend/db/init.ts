@@ -31,7 +31,7 @@ export async function ensureDefaultAdminStore(prisma: PrismaClient) {
 
     if (!admin) return; // Admin hasn't logged in yet
 
-    const defaultStoreName = config.marketplace.adminDefaultStoreName;
+    const defaultStoreName = `${config.app.name} Oficial`;
     const defaultSlug = defaultStoreName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 
     const existingStore = await prisma.store.findFirst({
@@ -49,7 +49,7 @@ export async function ensureDefaultAdminStore(prisma: PrismaClient) {
         data: {
           name: defaultStoreName,
           slug: defaultSlug,
-          description: "Tienda oficial de Agroecotopia",
+          description: `Tienda oficial de ${config.app.name}`,
           status: 'ACTIVE',
           ownerId: admin.id,
         }

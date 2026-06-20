@@ -175,7 +175,7 @@ export default function PedidosPageClient({
                 className="text-muted-foreground text-lg max-w-xl"
               >
                 {isAdmin
-                  ? "Monitorea, gestiona y atiende todos los pedidos de los usuarios de Agroecotopia."
+                  ? `Monitorea, gestiona y atiende todos los pedidos de los usuarios de ${config.app.name}.`
                   : `Gestiona y haz seguimiento a todos tus pedidos realizados en ${config.app.name}.`}
               </motion.p>
             </div>

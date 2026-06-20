@@ -1,4 +1,5 @@
 import type { AIProvider, ChatMessage, ChatOptions, ChatResponse } from "../providers/types";
+import { config } from "@/config/config";
 import logger from "@/utils/logger";
 import { searchPlatformDocuments, type PlatformDocument } from "./platform-content";
 
@@ -25,7 +26,7 @@ export interface Retriever {
   retrieve(query: string, maxDocs: number): Promise<RAGDocument[]>;
 }
 
-const SYSTEM_PROMPT_BASE = `Eres un asistente de soporte especializado en agricultura y la plataforma Agroecotopia.
+const SYSTEM_PROMPT_BASE = `Eres un asistente de soporte especializado en agricultura y la plataforma ${config.app.name}.
 
 INSTRUCCIONES:
 - Responde de forma clara, concisa y amable en español.
@@ -35,7 +36,7 @@ INSTRUCCIONES:
 - Cuando menciones productos del catálogo, incluye detalles como precio (si está disponible) y unidad de medida.
 - Si la pregunta es sobre el foro, responde basándote en las discusiones existentes.`;
 
-const SYSTEM_PROMPT_NO_CONTEXT = `Eres un asistente de soporte especializado en agricultura y la plataforma Agroecotopia.
+const SYSTEM_PROMPT_NO_CONTEXT = `Eres un asistente de soporte especializado en agricultura y la plataforma ${config.app.name}.
 
 INSTRUCCIONES:
 - Responde de forma clara, concisa y amable en español.

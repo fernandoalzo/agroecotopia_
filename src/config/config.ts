@@ -56,7 +56,7 @@ export const config = {
     /**
      * Canonical origin — no trailing slash.
      * Required for CSP, CORS, OAuth redirects, HSTS preload.
-     * In production MUST be set to the real domain (e.g. https://agroecotopia.com).
+     * In production MUST be set to the real domain (e.g. https://example.com).
      */
     url: (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, ''),
 
@@ -536,8 +536,6 @@ export const config = {
     maxProductsPerStore: 50,
     /** Maximum number of stores a single seller can create. Prevents store-front squatting. */
     maxStoresPerUser: 5,
-    /** Name of the default store created alongside the admin bootstrap account. */
-    adminDefaultStoreName: "Agroecotopia Oficial",
   },
 
   // ─────────────────────────────────────────────────────────

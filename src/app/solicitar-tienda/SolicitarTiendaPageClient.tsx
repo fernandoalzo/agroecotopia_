@@ -1,5 +1,6 @@
 "use client";
 
+import { config } from "@/config/config";
 import { useState, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Leaf, Store, Mail, Phone, MapPin, Building, ChevronRight, CheckCircle2, ArrowRight, ArrowLeft } from "lucide-react";
@@ -201,7 +202,7 @@ function SolicitarTiendaContent({ submitStoreRequest }: SolicitarTiendaPageClien
             transition={{ delay: 0.1, duration: 0.6 }}
             className="text-4xl md:text-5xl font-black text-primary font-display tracking-tight relative"
           >
-            <span className="relative z-10">Vende en Agroecotopia</span>
+            <span className="relative z-10">{`Vende en ${config.app.name}`}</span>
             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-24 h-3 bg-primary/10 -z-10 rounded-full" />
           </motion.h1>
 

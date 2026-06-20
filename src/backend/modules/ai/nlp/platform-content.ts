@@ -10,13 +10,13 @@ export interface PlatformDocument {
 export const PLATFORM_DOCUMENTS: PlatformDocument[] = [
   {
     id: "platform-about",
-    title: "Acerca de Agroecotopia",
+    title: `Acerca de ${config.app.name}`,
     content: `${config.app.name} es una plataforma integral que conecta a campesinos, agrónomos, profesionales del agro, vendedores de productos y prestadores de servicios en un solo ecosistema digital. Ofrece un foro de discusión donde los actores del campo pueden interactuar sobre cultivos, plagas, técnicas y todo lo que abarca el agro colombiano. También brinda un espacio de comercio donde los usuarios pueden ofrecer y acceder a productos y servicios agropecuarios, así como contratar consultorías especializadas de forma virtual o presencial.`,
     category: "plataforma",
   },
   {
     id: "platform-mission",
-    title: "Misión de Agroecotopia",
+    title: `Misión de ${config.app.name}`,
     content: "Democratizar el acceso a la información y las oportunidades para todos los actores del campo colombiano, derribando las barreras geográficas y tecnológicas.",
     category: "plataforma",
   },

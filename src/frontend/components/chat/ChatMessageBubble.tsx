@@ -1,5 +1,6 @@
 "use client";
 
+import { config } from "@/config/config";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Copy } from "lucide-react";
 import type { Message } from "./ChatWidget";
@@ -97,7 +98,7 @@ export const ChatMessageBubble = ({
                 {isAIMessage && (
                     <div className="flex items-center gap-1.5 mb-1.5 text-[10px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wider">
                         <Bot className="w-3.5 h-3.5" />
-                        Agroecotopia IA
+                        {config.app.name} IA
                     </div>
                 )}
 
