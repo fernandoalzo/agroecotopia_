@@ -178,10 +178,9 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
   const stage2Opacity = useTransform(smoothProgress, [0.16, 0.32, 0.53, 0.63], [0, 1, 1, 0]);
   const stage2Scale = useTransform(smoothProgress, [0.16, 0.37, 0.63], [0.7, 1, 1.2]);
 
-  // Stage 3 (Catalog 3D Showcase) Transforms
-  const stage3Z = useTransform(smoothProgress, [0.50, 0.68, 0.95], [-1200, 0, 700]);
+  // Stage 3 (Catalog) — opacity only; Z and scale are skipped because
+  // applying CSS `transform` inside preserve-3d breaks pointer events in Chromium.
   const stage3Opacity = useTransform(smoothProgress, [0.50, 0.63, 0.84, 0.95], [0, 1, 1, 0]);
-  const stage3Scale = useTransform(smoothProgress, [0.50, 0.68, 0.95], [0.7, 1.0, 1.0]);
 
   // Stage 4 (Community & Network) Transforms
   const stage4Z = useTransform(smoothProgress, [0.78, 0.92], [-1200, 0]);
@@ -495,10 +494,8 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
           {renderedStages[2] && (
             <motion.div
               style={{
-                z: stage3Z,
                 opacity: stage3Opacity,
-                scale: stage3Scale,
-                zIndex: activeStage === 2 ? 30 : 0
+                zIndex: activeStage === 2 ? 30 : 0,
               }}
               className={`absolute inset-0 flex items-center justify-center p-4 sm:p-8 overflow-hidden backface-hidden ${activeStage === 2 ? "pointer-events-auto" : "pointer-events-none"}`}
             >

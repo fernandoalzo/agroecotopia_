@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ShoppingCart, ChevronLeft, ChevronRight, Package, Star, Tag, Leaf, ArrowRight } from "lucide-react";
 import { useRef, useState } from "react";
@@ -120,19 +119,14 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
       />
 
       {/* Content */}
-        <motion.div
-          animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : {}}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
-          className="relative z-10 w-full flex flex-col h-full pt-4 sm:pt-8 pb-3 sm:pb-4 gap-2 sm:gap-3"
+        <div
+          className="relative z-10 w-full flex flex-col h-full pt-16 sm:pt-20 pb-3 sm:pb-4 gap-2 sm:gap-3"
         >
 
         {/* Header Title */}
         <div className="shrink-0 container max-w-7xl mx-auto text-center px-4">
           {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          <div
             className="mb-2"
           >
             <span className="inline-flex items-center gap-2 text-[9px] sm:text-[11px] font-bold text-primary/70 tracking-[0.25em] uppercase">
@@ -145,13 +139,10 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
               />
               {language === "es" ? "Nuestra Cosecha" : "Our Harvest"}
             </span>
-          </motion.div>
+      </div>
 
           {/* Title */}
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          <h2
             className="text-2xl sm:text-4xl md:text-5xl font-black leading-[1.05] mb-2"
           >
             {t.products.title.split(' ')[0]}{' '}
@@ -161,13 +152,10 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
             >
               {t.products.title.split(' ').slice(1).join(' ')}
             </span>
-          </motion.h2>
+          </h2>
 
           {/* Animated decorative line */}
-          <motion.div
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ delay: 0.35, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          <div
             className="h-0.5 w-14 sm:w-20 bg-gradient-to-r from-primary/60 via-accent/40 to-transparent rounded-full mb-3 mx-auto origin-center"
           />
 
@@ -208,21 +196,12 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
               >
                 {featuredProducts.map((p, i) => {
                   return (
-                    <motion.div
+                    <div
                       key={p.id || p.name}
-                      initial={{ opacity: 0, x: 50 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.5, delay: i * 0.1 }}
-                      whileHover={{
-                        scale: 1.02,
-                        z: 20,
-                        boxShadow: "0px 10px 20px rgba(var(--color-primary), 0.1)"
-                      }}
-                      className="transition-all duration-300 relative shrink-0 snap-center w-[130px] sm:w-[160px] lg:w-[180px]"
+                      className="relative shrink-0 snap-center w-[130px] sm:w-[160px] lg:w-[180px]"
                     >
                       <ProductCard p={p} variant="compact" />
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>
@@ -261,7 +240,7 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
           </button>
         </div>
 
-      </motion.div>
+      </div>
 
       <style>{`
         @keyframes gradient-shift {
