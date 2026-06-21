@@ -1,11 +1,14 @@
-import prisma from "@/backend/db/prisma";
 import type { EmbeddingService } from "@/backend/modules/shared/embedding";
+import type { ForumRepository } from "./forum.repository";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/forum/forumPostEmbedding.service.ts");
 
 export class ForumPostEmbeddingService {
-  constructor(private genericService: EmbeddingService) {}
+  constructor(
+    private genericService: EmbeddingService,
+    private forumRepository?: ForumRepository,
+  ) {}
 
   buildEmbeddingText(post: { title: string; body: string; labels: string[] }): string {
     return [
@@ -34,16 +37,8 @@ export class ForumPostEmbeddingService {
     if (pending === 0) return { success: 0, failed: 0, skipped: 0 };
 
     return this.genericService.generateAll(async (limit) => {
-      const rows = await prisma.$queryRawUnsafe<
-        Array<{ id: string; title: string; body: string; labels: string[] }>
-      >(
-        `SELECT fp.id, fp.title, fp.body, fp.labels
-         FROM "ForumPost" fp
-         LEFT JOIN "ForumPostEmbedding" fpe ON fpe."postId" = fp.id
-         WHERE fpe."postId" IS NULL
-         LIMIT $1`,
-        limit,
-      );
+      if (!this.forumRepository) return [];
+      const rows = await this.forumRepository.getPostsPendingEmbedding(limit);
       return rows.map(r => ({
         id: r.id,
         text: this.buildEmbeddingText({
@@ -77,22 +72,20 @@ export class ForumPostEmbeddingService {
     }
 
     const ids = results.map(r => r.entityId);
-    const posts = await prisma.forumPost.findMany({
-      where: {
-        id: { in: ids },
-        labels: { hasSome: labels },
-      },
-      select: { id: true, title: true },
-    });
-    const filteredIds = new Set(posts.map(p => p.id));
+    if (!this.forumRepository) {
+      return results
+        .filter(r => ids.includes(r.entityId))
+        .map(r => ({ id: r.entityId, similarity: r.similarity }));
+    }
+    const filteredIds = await this.forumRepository.filterPostIdsByIds(ids, labels);
+    const filteredSet = new Set(filteredIds);
     const filtered = results
-      .filter(r => filteredIds.has(r.entityId))
+      .filter(r => filteredSet.has(r.entityId))
       .map(r => ({ id: r.entityId, similarity: r.similarity }));
 
     log.debug("🤖 [SemanticSearch] Después de filtro de labels:", {
       before: results.length,
       after: filtered.length,
-      topTitles: posts.filter(p => filteredIds.has(p.id)).slice(0, 5).map(p => ({ id: p.id.slice(0, 8), title: p.title.slice(0, 60) })),
     });
 
     return filtered;

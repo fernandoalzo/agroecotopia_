@@ -239,6 +239,14 @@ export class StoreRepository {
     });
   }
 
+  async getActiveCryptocurrencies() {
+    log.debug("[db] Obteniendo criptomonedas activas");
+    return prisma.cryptocurrency.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' }
+    });
+  }
+
   async approveRequestTransaction(request: StoreRequestForApproval, slug: string, adminNote?: string) {
     log.info("Aprobando solicitud de tienda en transacción", { requestId: request.id, slug });
 

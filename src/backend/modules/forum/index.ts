@@ -28,7 +28,7 @@ const genericEmbeddingService = new EmbeddingService(embeddingRepository, embedd
 });
 
 export const forumRepository = new ForumRepository(cacheService);
-export const forumPostEmbeddingService = new ForumPostEmbeddingService(genericEmbeddingService);
+export const forumPostEmbeddingService = new ForumPostEmbeddingService(genericEmbeddingService, forumRepository);
 export const forumService = new ForumService(forumRepository, userRepository, forumPostEmbeddingService);
 
 if (config.ai.features.semanticSearch) {

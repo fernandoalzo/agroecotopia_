@@ -271,9 +271,5 @@ export const getAllActiveStoresListAction = async () => {
 
 export const getCryptocurrenciesAction = async () => {
   log.info("Action: getCryptocurrenciesAction");
-  const { default: prisma } = await import("@/backend/db/prisma");
-  return await prisma.cryptocurrency.findMany({
-    where: { isActive: true },
-    orderBy: { name: 'asc' }
-  });
+  return await storeService.getActiveCryptocurrencies();
 };

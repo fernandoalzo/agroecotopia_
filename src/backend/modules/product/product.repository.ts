@@ -470,6 +470,40 @@ export class ProductRepository {
     return this.cacheService?.getOrSet(key, fetcher, config.cache.ttl.productRelated) ?? fetcher();
   }
 
+  async getProductsPendingEmbedding(limit: number): Promise<Array<{ id: string; name: string; description: string; tag: string; categories: Array<{ name: string }> }>> {
+    log.debug("[db] Obteniendo productos sin embedding:", { limit });
+    return prisma.$queryRawUnsafe<
+      Array<{ id: string; name: string; description: string; tag: string; categories: Array<{ name: string }> }>
+    >(
+      `SELECT p.id, p.name, p.description, p.tag,
+              COALESCE(
+                json_agg(json_build_object('name', c.name)) FILTER (WHERE c.name IS NOT NULL),
+                '[]'::json
+              ) AS categories
+       FROM "Product" p
+       LEFT JOIN "ProductEmbedding" pe ON pe."productId" = p.id
+       LEFT JOIN "_CategoriaToProduct" cp ON cp."A" = p.id
+       LEFT JOIN "Categoria" c ON c.id = cp."B"
+       WHERE pe."productId" IS NULL
+       GROUP BY p.id
+       LIMIT $1`,
+      limit,
+    );
+  }
+
+  async filterProductIdsByIds(ids: string[], storeId?: string, categories?: string[]): Promise<string[]> {
+    log.debug("[db] Filtrando productos por IDs:", { idsCount: ids.length, storeId, categories });
+    const products = await prisma.product.findMany({
+      where: {
+        id: { in: ids },
+        ...(storeId ? { storeId } : {}),
+        ...(categories?.length ? { categories: { some: { name: { in: categories } } } } : {}),
+      },
+      select: { id: true },
+    });
+    return products.map(p => p.id);
+  }
+
   async getCategories(): Promise<string[]> {
     return this.cacheService?.getOrSet(
       CacheKeys.product.categories,

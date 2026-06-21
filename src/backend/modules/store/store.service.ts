@@ -141,4 +141,8 @@ export class StoreService {
     const skip = (page - 1) * limit;
     return await this.storeRepository.findActiveStores(skip, limit);
   }
+
+  async getActiveCryptocurrencies() {
+    return await this.storeRepository.getActiveCryptocurrencies();
+  }
 }

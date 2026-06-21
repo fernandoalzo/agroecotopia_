@@ -447,4 +447,31 @@ export class ForumRepository {
   async getOrSetIds(key: string, fetcher: () => Promise<string[]>): Promise<string[]> {
     return this.cacheService?.getOrSet(key, fetcher, config.cache.ttl.forumRelated) ?? fetcher();
   }
+
+  async getPostsPendingEmbedding(limit: number): Promise<Array<{ id: string; title: string; body: string; labels: string[] }>> {
+    log.debug("[db] Obteniendo posts sin embedding:", { limit });
+    return prisma.$queryRawUnsafe<
+      Array<{ id: string; title: string; body: string; labels: string[] }>
+    >(
+      `SELECT fp.id, fp.title, fp.body, fp.labels
+       FROM "ForumPost" fp
+       LEFT JOIN "ForumPostEmbedding" fpe ON fpe."postId" = fp.id
+       WHERE fpe."postId" IS NULL
+       LIMIT $1`,
+      limit,
+    );
+  }
+
+  async filterPostIdsByIds(ids: string[], labels?: string[]): Promise<string[]> {
+    log.debug("[db] Filtrando posts por IDs:", { idsCount: ids.length, labels });
+    const where: Prisma.ForumPostWhereInput = { id: { in: ids } };
+    if (labels?.length) {
+      where.labels = { hasSome: labels };
+    }
+    const posts = await prisma.forumPost.findMany({
+      where,
+      select: { id: true },
+    });
+    return posts.map(p => p.id);
+  }
 }

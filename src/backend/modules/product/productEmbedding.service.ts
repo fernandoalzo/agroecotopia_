@@ -1,11 +1,14 @@
-import prisma from "@/backend/db/prisma";
 import type { EmbeddingService } from "@/backend/modules/shared/embedding";
+import type { ProductRepository } from "./product.repository";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/product/productEmbedding.service.ts");
 
 export class ProductEmbeddingService {
-  constructor(private genericService: EmbeddingService) {}
+  constructor(
+    private genericService: EmbeddingService,
+    private productRepository?: ProductRepository,
+  ) {}
 
   buildEmbeddingText(product: { name: string; description: string; tag: string; categories?: Array<{ name: string }> | string[] }): string {
     const categories = product.categories
@@ -39,23 +42,8 @@ export class ProductEmbeddingService {
     if (pending === 0) return { success: 0, failed: 0, skipped: 0 };
 
     return this.genericService.generateAll(async (limit) => {
-      const rows = await prisma.$queryRawUnsafe<
-        Array<{ id: string; name: string; description: string; tag: string; categories: Array<{ name: string }> }>
-      >(
-        `SELECT p.id, p.name, p.description, p.tag,
-                COALESCE(
-                  json_agg(json_build_object('name', c.name)) FILTER (WHERE c.name IS NOT NULL),
-                  '[]'::json
-                ) AS categories
-         FROM "Product" p
-         LEFT JOIN "ProductEmbedding" pe ON pe."productId" = p.id
-         LEFT JOIN "_CategoriaToProduct" cp ON cp."A" = p.id
-         LEFT JOIN "Categoria" c ON c.id = cp."B"
-         WHERE pe."productId" IS NULL
-         GROUP BY p.id
-         LIMIT $1`,
-        limit,
-      );
+      if (!this.productRepository) return [];
+      const rows = await this.productRepository.getProductsPendingEmbedding(limit);
       return rows.map(r => ({
         id: r.id,
         text: this.buildEmbeddingText({
@@ -81,17 +69,15 @@ export class ProductEmbeddingService {
     }
 
     const ids = results.map(r => r.entityId);
-    const products = await prisma.product.findMany({
-      where: {
-        id: { in: ids },
-        ...(storeId ? { storeId } : {}),
-        ...(categories?.length ? { categories: { some: { name: { in: categories } } } } : {}),
-      },
-      select: { id: true },
-    });
-    const filteredIds = new Set(products.map(p => p.id));
+    if (!this.productRepository) {
+      return results
+        .filter(r => ids.includes(r.entityId))
+        .map(r => ({ id: r.entityId, similarity: r.similarity }));
+    }
+    const filteredIds = await this.productRepository.filterProductIdsByIds(ids, storeId, categories);
+    const filteredSet = new Set(filteredIds);
     return results
-      .filter(r => filteredIds.has(r.entityId))
+      .filter(r => filteredSet.has(r.entityId))
       .map(r => ({ id: r.entityId, similarity: r.similarity }));
   }
 

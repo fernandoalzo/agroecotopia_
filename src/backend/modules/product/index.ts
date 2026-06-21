@@ -27,7 +27,7 @@ const genericEmbeddingService = new EmbeddingService(embeddingRepository, embedd
 });
 
 export const productRepository = new ProductRepository(cacheService);
-export const productEmbeddingService = new ProductEmbeddingService(genericEmbeddingService);
+export const productEmbeddingService = new ProductEmbeddingService(genericEmbeddingService, productRepository);
 export const productService = new ProductService(productRepository, productEmbeddingService);
 
 if (config.ai.features.semanticSearch) {
