@@ -1,7 +1,6 @@
 import type { Product } from "@/types";
 import { ProductRepository } from "./product.repository";
 import { ProductEmbeddingService } from "./productEmbedding.service";
-import { CacheKeys } from "@/backend/cache";
 import { config } from "@/config/config";
 import logger from "@/utils/logger";
 
@@ -148,8 +147,8 @@ export class ProductService {
 
       const categories = ((product as any).categories as Array<{ name: string }> | undefined)?.map(c => c.name) || [];
 
-      const relatedIds = await this.productRepository.getOrSetIds(
-        CacheKeys.product.related(productId),
+      const relatedIds = await this.productRepository.getRelatedIds(
+        productId,
         async () => {
           // Tier 1: embedding-based semantic search
           if (this.embeddingService) {

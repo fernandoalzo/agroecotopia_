@@ -6,7 +6,6 @@ import logger from "@/utils/logger";
 import { getForumNotificationStrings } from "./forum-notification-strings";
 import { config } from "@/config/config";
 import eventBus from "@/utils/eventBus";
-import { CacheKeys } from "@/backend/cache";
 
 const log = logger.child("src/backend/modules/forum/forum.service.ts");
 
@@ -133,8 +132,8 @@ export class ForumService {
 
       const labels = post.labels || [];
 
-      const relatedIds = await this.forumRepository.getOrSetIds(
-        CacheKeys.forum.related(postId),
+      const relatedIds = await this.forumRepository.getRelatedIds(
+        postId,
         async () => {
           // Tier 1: embedding-based semantic search
           if (this.embeddingService) {

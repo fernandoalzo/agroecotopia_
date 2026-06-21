@@ -444,7 +444,8 @@ export class ForumRepository {
     ) ?? [];
   }
 
-  async getOrSetIds(key: string, fetcher: () => Promise<string[]>): Promise<string[]> {
+  async getRelatedIds(postId: string, fetcher: () => Promise<string[]>): Promise<string[]> {
+    const key = CacheKeys.forum.related(postId);
     return this.cacheService?.getOrSet(key, fetcher, config.cache.ttl.forumRelated) ?? fetcher();
   }
 

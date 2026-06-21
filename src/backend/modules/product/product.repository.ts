@@ -466,7 +466,8 @@ export class ProductRepository {
     ) ?? 0;
   }
 
-  async getOrSetIds(key: string, fetcher: () => Promise<string[]>): Promise<string[]> {
+  async getRelatedIds(productId: string, fetcher: () => Promise<string[]>): Promise<string[]> {
+    const key = CacheKeys.product.related(productId);
     return this.cacheService?.getOrSet(key, fetcher, config.cache.ttl.productRelated) ?? fetcher();
   }
 
