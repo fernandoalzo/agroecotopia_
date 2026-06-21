@@ -8,7 +8,7 @@ const log = logger.child("src/backend/modules/waf/waf.service.ts");
 const VALID_TYPES: WafRuleType[] = [
   "IP_BLOCKLIST", "GEO_BLOCK",
   "SENSITIVE_PATH", "METHOD_BLOCK", "BOT_BLOCK",
-  "BOT_KNOWN", "BOT_EMPTY_UA", "ATTACK_PATTERN",
+  "BOT_KNOWN", "BOT_EMPTY_UA", "ATTACK_PATTERN", "RATE_LIMIT"
 ];
 
 export class WafService {
@@ -36,6 +36,14 @@ export class WafService {
       data.value = val;
     }
 
+    if (data.type === "RATE_LIMIT") {
+      try {
+        JSON.parse(data.value);
+      } catch (e) {
+        throw new Error("La regla RATE_LIMIT debe ser un JSON válido");
+      }
+    }
+
     const rule = await this.repository.create(data);
     await this.reloadWaf();
     return rule;
@@ -53,6 +61,13 @@ export class WafService {
   }
 
   async update(id: string, data: Partial<WafRuleData>): Promise<WafRuleRow> {
+    if (data.type === "RATE_LIMIT" && data.value) {
+      try {
+        JSON.parse(data.value);
+      } catch (e) {
+        throw new Error("La regla RATE_LIMIT debe ser un JSON válido");
+      }
+    }
     const rule = await this.repository.update(id, data);
     await this.reloadWaf();
     return rule;
@@ -60,6 +75,25 @@ export class WafService {
 
   public async reloadWaf(): Promise<void> {
     const rules = await this.repository.findActiveRules();
+    
+    const rateLimitConfigs: any[] = [];
+    rules.forEach((r) => {
+      if (r.type === "RATE_LIMIT") {
+        try {
+          const parsed = JSON.parse(r.value);
+          rateLimitConfigs.push({
+            id: r.id,
+            path: parsed.path || "*",
+            points: parsed.points,
+            duration: parsed.duration,
+            blockDuration: parsed.blockDuration
+          });
+        } catch (e) {
+          log.error("Error parseando regla RATE_LIMIT:", e);
+        }
+      }
+    });
+
     const db: Parameters<typeof waf.updateDbRules>[0] = {
       ipBlocklist: rules.filter((r) => r.type === "IP_BLOCKLIST").map((r) => r.value),
       geoBlocked: rules.filter((r) => r.type === "GEO_BLOCK").map((r) => r.value),
@@ -69,6 +103,7 @@ export class WafService {
       botKnown: rules.filter((r) => r.type === "BOT_KNOWN").map((r) => r.value),
       blockEmptyUserAgent: rules.some((r) => r.type === "BOT_EMPTY_UA"),
       attackPatterns: rules.filter((r) => r.type === "ATTACK_PATTERN").map((r) => r.value),
+      rateLimit: rateLimitConfigs,
     };
 
     waf.updateDbRules(db);
@@ -82,6 +117,7 @@ export class WafService {
       botKnown: db.botKnown.length,
       blockEmptyUserAgent: db.blockEmptyUserAgent,
       attackPatterns: db.attackPatterns.length,
+      rateLimit: db.rateLimit.length,
     });
   }
 }

@@ -8,7 +8,8 @@ export type WafRuleType =
   | "BOT_BLOCK"
   | "BOT_KNOWN"
   | "BOT_EMPTY_UA"
-  | "ATTACK_PATTERN";
+  | "ATTACK_PATTERN"
+  | "RATE_LIMIT";
 
 export interface WafRuleData {
   type: WafRuleType;

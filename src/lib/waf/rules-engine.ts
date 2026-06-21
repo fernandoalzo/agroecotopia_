@@ -6,6 +6,7 @@ import {
   evaluateSensitivePaths,
   evaluateAttackPatterns,
 } from "./bot-detection";
+import { evaluateRateLimit } from "./rate-limiter";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/lib/waf/rules-engine.ts");
@@ -49,6 +50,25 @@ export async function evaluateWafRules(
     if (result) {
       ruleResults.push(result);
       const elapsed = performance.now() - start;
+      return buildResult("BLOCK", result.reason, ruleResults, elapsed);
+    }
+  }
+
+  // 1.5 Rate Limiting (DDoS Protection)
+  if (cfg.compiledRateLimits.length > 0) {
+    const isRateLimited = await evaluateRateLimit(req.ip, req.path, cfg.compiledRateLimits);
+    if (isRateLimited) {
+      const result: WafRuleResult = {
+        ruleId: "waf:rate_limit",
+        ruleName: "Rate Limit Excedido",
+        action: "BLOCK",
+        severity: "high",
+        blocked: true,
+        reason: `Múltiples peticiones exceden el límite (L7 DDoS Protection)`,
+      };
+      ruleResults.push(result);
+      const elapsed = performance.now() - start;
+      log.warn("[waf] IP bloqueada por Rate Limit", { ip: req.ip, path: req.path });
       return buildResult("BLOCK", result.reason, ruleResults, elapsed);
     }
   }

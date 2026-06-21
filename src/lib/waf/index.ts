@@ -8,6 +8,7 @@ import { config } from "@/config/config";
 import logger from "@/utils/logger";
 import eventBus from "@/utils/eventBus";
 import { pushEntry, maskLastOctet, isStaticAsset } from "./request-buffer";
+import { initializeRateLimiter } from "./rate-limiter";
 
 const log = logger.child("src/lib/waf/index.ts");
 
@@ -29,6 +30,7 @@ function getDbOverrides(): DbRules {
     botKnown: [],
     blockEmptyUserAgent: false,
     attackPatterns: [],
+    rateLimit: [],
   };
   if (typeof process !== "undefined") (process as any)[WAF_DB_KEY] = fresh;
   (globalThis as any)[WAF_DB_KEY] = fresh;
@@ -48,6 +50,7 @@ function resolveWafConfig(): CompiledWafConfig {
     botKnown: dbOverrides.botKnown,
     blockEmptyUserAgent: dbOverrides.blockEmptyUserAgent,
     attackPatterns: dbOverrides.attackPatterns,
+    rateLimit: dbOverrides.rateLimit,
 
     compiledIpBlocklist: dbOverrides.ipBlocklist.map(parseCidr).filter((c): c is ParsedCidr => c !== null),
     botBlockSet: new Set(dbOverrides.botBlock.map(s => s.toLowerCase())),
@@ -57,8 +60,20 @@ function resolveWafConfig(): CompiledWafConfig {
     compiledAttackPatterns: dbOverrides.attackPatterns
       .map(p => { try { return new RegExp(p, 'i'); } catch { return null; } })
       .filter((r): r is RegExp => r !== null),
+    compiledRateLimits: dbOverrides.rateLimit.map(rl => {
+      let regex: RegExp;
+      try {
+        regex = rl.path === "*" || rl.path === ".*" ? /.*/ : new RegExp(rl.path, 'i');
+      } catch {
+        regex = /.*/; // fallback a global si el regex es inválido
+      }
+      return { ...rl, compiledPathRegex: regex };
+    }),
   };
 }
+
+// Inicializar el limitador en el primer arranque
+initializeRateLimiter(dbOverrides.rateLimit);
 
 function extractRequest(
   req: IncomingMessage,
@@ -133,11 +148,13 @@ export class Waf {
     if (typeof process !== "undefined") (process as any)[WAF_DB_KEY] = rules;
     (globalThis as any)[WAF_DB_KEY] = rules;
     this.config = resolveWafConfig();
+    initializeRateLimiter(this.config.rateLimit);
     log.info("[waf] Reglas DB sincronizadas");
   }
 
   reloadConfig(): void {
     this.config = resolveWafConfig();
+    initializeRateLimiter(this.config.rateLimit);
     log.info("[waf] Configuración recargada");
   }
 

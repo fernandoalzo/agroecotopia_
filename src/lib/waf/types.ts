@@ -36,6 +36,14 @@ export interface GeoIpResult {
   lon: number;
 }
 
+export interface WafRateLimitConfig {
+  id: string;
+  path: string;
+  points: number;
+  duration: number;
+  blockDuration: number;
+}
+
 export interface WafConfig {
   mode: WafMode;
   ipBlocklist: string[];
@@ -46,6 +54,7 @@ export interface WafConfig {
   botKnown: string[];
   blockEmptyUserAgent: boolean;
   attackPatterns: string[];
+  rateLimit: WafRateLimitConfig[];
 }
 
 export interface DbRules {
@@ -57,6 +66,7 @@ export interface DbRules {
   botKnown: string[];
   blockEmptyUserAgent: boolean;
   attackPatterns: string[];
+  rateLimit: WafRateLimitConfig[];
 }
 
 export interface ParsedCidr {
@@ -72,4 +82,5 @@ export interface CompiledWafConfig extends WafConfig {
   blockedMethodsSet: Set<string>;
   sensitivePathsLower: string[];
   compiledAttackPatterns: RegExp[];
+  compiledRateLimits: (WafRateLimitConfig & { compiledPathRegex: RegExp })[];
 }
