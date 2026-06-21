@@ -29,6 +29,7 @@ import logger from "@/utils/logger";
 import { Loader2 } from "lucide-react";
 
 import { getNextStatuses } from "@/frontend/components/admin/pedidos/adminOrderUtils";
+import { getRelatedProductsAction } from "@/backend/modules/product/product.actions";
 const log = logger.child("src/app/pedidos/[id]/page.tsx");
 
 
@@ -1374,6 +1375,7 @@ export default function OrderDetailPageClient({
           isOpen={!!selectedProduct}
           onClose={() => setSelectedProduct(null)}
           viewOnly={true}
+          fetchRelatedProducts={getRelatedProductsAction}
         />
       )}
       {orderChat && (

@@ -15,7 +15,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { formatPrice } from "@/lib/utils";
 import { getDeterministicImage } from "@/lib/image-utils";
 import { calculateDiscountedPrice } from "@/utils/promotions";
-import { getRelatedProductsAction } from "@/backend/modules/product/product.actions";
+
 import { RelatedProducts } from "@/components/ai";
 
 interface ProductModalProps {
@@ -24,9 +24,10 @@ interface ProductModalProps {
   onClose: () => void;
   viewOnly?: boolean;
   resolvedProduct?: Product;
+  fetchRelatedProducts?: (id: string, limit: number) => Promise<any[]>;
 }
 
-const ProductModal = ({ product, isOpen, onClose, viewOnly = false, resolvedProduct }: ProductModalProps) => {
+const ProductModal = ({ product, isOpen, onClose, viewOnly = false, resolvedProduct, fetchRelatedProducts }: ProductModalProps) => {
   const { addToCart } = useCart();
   const { t } = useLanguage();
   const [quantity, setQuantity] = useState(1);
@@ -38,8 +39,10 @@ const ProductModal = ({ product, isOpen, onClose, viewOnly = false, resolvedProd
 
   useEffect(() => {
     if (!isOpen || !currentProduct.id) return;
-    getRelatedProductsAction(currentProduct.id, 6).then(setRelatedProducts);
-  }, [isOpen, currentProduct.id]);
+    if (fetchRelatedProducts) {
+      fetchRelatedProducts(currentProduct.id, 6).then(setRelatedProducts);
+    }
+  }, [isOpen, currentProduct.id, fetchRelatedProducts]);
 
   const discountedPrice = calculateDiscountedPrice(
     currentProduct.price,

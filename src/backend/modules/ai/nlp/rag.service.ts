@@ -51,7 +51,7 @@ export class RAGService {
 
   registerRetriever(retriever: Retriever): void {
     this.retrievers.push(retriever);
-    log.info("[RAG] Retriever registrado:", { name: retriever.name });
+    log.info("🤖 [RAG] Retriever registrado:", { name: retriever.name });
   }
 
   async retrieve(query: string, options?: RAGOptions): Promise<RAGContext> {
@@ -59,7 +59,7 @@ export class RAGService {
     const minScore = options?.minScore ?? 0;
 
     if (this.retrievers.length === 0) {
-      log.warn("[RAG] No hay retrievers registrados — retornando contexto vacío");
+      log.warn("🤖 [RAG] No hay retrievers registrados — retornando contexto vacío");
       return { documents: [] };
     }
 
@@ -68,7 +68,7 @@ export class RAGService {
     const results = await Promise.all(
       this.retrievers.map(r =>
         r.retrieve(query, maxDocs).catch(err => {
-          log.warn(`[RAG] Error en retriever ${r.name}:`, err);
+          log.warn(`🤖 [RAG] Error en retriever ${r.name}:`, err);
           return [] as RAGDocument[];
         }),
       ),
@@ -82,7 +82,7 @@ export class RAGService {
 
     const elapsed = Date.now() - startTime;
 
-    log.info("[RAG] Retrieval completado:", {
+    log.info("🤖 [RAG] Retrieval completado:", {
       query: query.slice(0, 100),
       totalDocuments: documents.length,
       sources: [...new Set(documents.map(d => d.source))],
@@ -128,7 +128,7 @@ Responde a la pregunta del usuario basándote en el contexto anterior. Si el con
       ...messages,
     ];
 
-    log.debug("[RAG] Enviando mensaje a LLM con contexto", {
+    log.debug("🤖 [RAG] Enviando mensaje a LLM con contexto", {
       systemPromptLength: systemPrompt.length,
       messagesCount: augmentedMessages.length,
     });

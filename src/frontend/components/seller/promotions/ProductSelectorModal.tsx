@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/Loading";
 import { useDebounce } from "@/frontend/hooks/useDebounce";
 import { cn } from "@/lib/utils";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/frontend/components/seller/promotions/ProductSelectorModal.tsx");
 
 interface ProductSelectorModalProps {
   onClose: () => void;
@@ -39,7 +42,7 @@ export const ProductSelectorModal = ({
         setProducts(res.products);
       }
     } catch (e) {
-      console.error(e);
+      log.error("Error:", e);
     } finally {
       setLoading(false);
     }
@@ -53,7 +56,7 @@ export const ProductSelectorModal = ({
         setProducts(res.products);
       }
     } catch (e) {
-      console.error(e);
+      log.error("Error:", e);
     } finally {
       setLoading(false);
     }

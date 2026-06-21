@@ -13,6 +13,9 @@ import { useLanguage } from "@/context/LanguageContext";
 import { formatPrice } from "@/lib/utils";
 import { calculateDiscountedPrice } from "@/utils/promotions";
 import { useEffect, useState } from "react";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/app/cart/page.tsx");
 
 const CartContent = () => {
   const { cart, removeFromCart, updateQuantity, totalPrice } = useCart();
@@ -49,7 +52,7 @@ const CartContent = () => {
           setTaxBreakdown(data.taxBreakdown || []);
         }
       } catch (err) {
-        console.error('Error fetching taxes:', err);
+        log.error('Error fetching taxes:', err);
       }
     };
 

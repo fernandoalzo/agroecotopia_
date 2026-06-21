@@ -11,6 +11,9 @@ import { motion } from "framer-motion";
 
 import { config } from "@/config/config";
 import { calculateDiscountedPrice } from "@/utils/promotions";
+import logger from "@/utils/logger";
+
+const log = logger.child("src/frontend/components/checkout/OrderSummary.tsx");
 
 interface OrderSummaryProps {
   isSubmitting?: boolean;
@@ -55,7 +58,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
           setTaxBreakdown(data.taxBreakdown || []);
         }
       } catch (err) {
-        console.error('Error fetching taxes:', err);
+        log.error('Error fetching taxes:', err);
       }
 
       // Only fetch shipping when a city is selected and delivery type is ENVIO
@@ -72,7 +75,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
             setShippingBreakdown(shipData.storeBreakdown || []);
           }
         } catch (err) {
-          console.error('Error fetching shipping:', err);
+            log.error('Error fetching shipping:', err);
         }
       } else {
         setShippingCost(0);
