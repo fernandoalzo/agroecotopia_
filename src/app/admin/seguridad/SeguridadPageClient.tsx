@@ -31,7 +31,14 @@ type ActionSet = {
   delete: (id: string) => Promise<{ success?: boolean; error?: string }>;
   toggle: (id: string) => Promise<{ success?: boolean; rule?: WafRuleRow; error?: string }>;
   list?: () => Promise<{ success?: boolean; rules?: WafRuleRow[]; error?: string }>;
-  getLog?: (count?: number) => Promise<{ success: boolean; entries: WafRequestEntry[] }>;
+  getLog?: (page?: number, pageSize?: number) => Promise<{
+    success: boolean;
+    entries: WafRequestEntry[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }>;
   clearLog?: () => Promise<{ success: boolean }>;
 };
 

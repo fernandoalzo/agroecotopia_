@@ -122,6 +122,16 @@ export interface Translations {
     copyright: string;
     whatsappMessage: string;
   };
+  dataTable: {
+    loading: string;
+    emptyTitle: string;
+    emptyDescription: string;
+    rowsPerPage: string;
+    page: string;
+    of: string;
+    previous: string;
+    next: string;
+  };
   auth: {
     signIn: string;
     signInWith: string;

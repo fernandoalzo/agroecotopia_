@@ -96,4 +96,11 @@ export const CacheKeys = {
 
     allPattern: `${NAMESPACE}:forum:*`,
   },
+
+  waf: {
+    allRules: `${NAMESPACE}:waf:rules:all`,
+    activeRules: `${NAMESPACE}:waf:rules:active`,
+    byType: (type: string) => `${NAMESPACE}:waf:rules:type:${type}`,
+    allPattern: `${NAMESPACE}:waf:*`,
+  },
 };

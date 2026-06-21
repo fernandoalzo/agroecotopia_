@@ -63,6 +63,30 @@ export function getEntries(n = 100): WafRequestEntry[] {
   return result;
 }
 
+export interface PaginatedEntries {
+  entries: WafRequestEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export function getEntriesPaginated(page = 1, pageSize = 50): PaginatedEntries {
+  const total = state.size;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.max(1, Math.min(page, totalPages));
+  const skip = (safePage - 1) * pageSize;
+  const count = Math.min(pageSize, total - skip);
+
+  const entries: WafRequestEntry[] = [];
+  for (let i = 0; i < count; i++) {
+    const idx = (state.head + skip + i) % MAX_ENTRIES;
+    entries.push(state.entries[idx]);
+  }
+
+  return { entries, total, page: safePage, pageSize, totalPages };
+}
+
 export function clear(): void {
   state.entries = new Array(MAX_ENTRIES);
   state.head = 0;

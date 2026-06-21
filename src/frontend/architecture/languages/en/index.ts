@@ -148,6 +148,16 @@ export const en: Translations = {
     copyright: "All rights reserved.",
     whatsappMessage: "Hello, I am interested in knowing more about your products",
   },
+  dataTable: {
+    loading: "Loading data...",
+    emptyTitle: "No results",
+    emptyDescription: "No data to display.",
+    rowsPerPage: "Show",
+    page: "Page",
+    of: "of",
+    previous: "Previous",
+    next: "Next",
+  },
   auth: {
     signIn: "Sign in",
     signInWith: "Continue with",
