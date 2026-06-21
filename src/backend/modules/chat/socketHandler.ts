@@ -1,7 +1,6 @@
 import { Server } from "socket.io";
 import type { Server as HTTPServer } from "http";
-import type { PrismaClient } from "@prisma/client";
-import { Role } from "@prisma/client";
+import type { Role } from "@/types/auth.types";
 import logger from "@/utils/logger";
 import { socketRateLimiter } from "@/lib/rate-limit";
 import { chatService } from "./index";
@@ -29,7 +28,7 @@ function getSocketChatErrorMessage(error: unknown) {
  * @param prisma - The Prisma Client instance.
  * @returns The initialized Socket.IO server instance.
  */
-export function initSocketServer(httpServer: HTTPServer, _prisma: PrismaClient): Server {
+export function initSocketServer(httpServer: HTTPServer, _prisma: any): Server {
   const io = new Server(httpServer, {
     cors: {
       origin: config.app.url,

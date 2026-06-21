@@ -16,6 +16,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { getAdminConversations, getOrCreateMyConversation, getConversationMessages, markAsRead, deleteConversationAction, getOrCreateConversationForAdmin } from "@/backend/modules/chat/chat.actions";
+import { aiStreamChatAction } from "@/backend/modules/ai/ai.actions";
 import { getMyNotificationsAction, getMyUnreadCountAction, getNotificationInitialDataAction, markNotificationAsReadAction, markAllNotificationsAsReadAction, deleteNotificationAction } from "@/backend/modules/notifications/notifications.actions";
 import logger from "@/utils/logger";
 import { getConversationUnreadCount } from "@/frontend/lib/chatUnread";
@@ -50,6 +51,7 @@ interface ChatDeps {
   markAsRead: (conversationId: string) => Promise<unknown>;
   deleteConversationAction: (conversationId: string) => Promise<unknown>;
   getOrCreateConversationForAdmin: (targetUserId: string) => Promise<unknown>;
+  aiStreamChatAction: typeof aiStreamChatAction;
 }
 
 interface AppChromeDataProps {
@@ -134,6 +136,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                         markAsRead,
                         deleteConversationAction,
                         getOrCreateConversationForAdmin,
+                        aiStreamChatAction,
                       }}
                     />
                     {children}

@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Plus, Trash2, ToggleLeft, ToggleRight, Globe, Network, FileCode, Braces, Bot, Bug, CheckCircle, AlertTriangle, X, Radio } from "lucide-react";
-import type { WafRuleData, WafRuleRow, WafRuleType } from "@/backend/modules/waf";
+import type { WafRuleData, WafRuleRow, WafRuleType } from "@/types/waf";
 import { WafMonitor } from "@/frontend/components/admin/seguridad/WafMonitor";
 import type { WafRequestEntry } from "@/lib/waf/request-buffer";
 import { Button } from "@/frontend/components/ui/button";

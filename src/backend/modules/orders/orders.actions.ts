@@ -368,7 +368,8 @@ export async function getSellerDashboardDataAction(
 export async function calculateCartTaxesAction(cartItems: { storeId: string; subtotal: number }[]) {
   try {
     let totalTaxes = 0;
-    
+    const breakdownMap: Record<string, { name: string; percentage: number; amount: number }> = {};
+
     // Group subtotals by store
     const storeSubtotals = cartItems.reduce((acc, item) => {
       acc[item.storeId] = (acc[item.storeId] || 0) + item.subtotal;
@@ -380,17 +381,32 @@ export async function calculateCartTaxesAction(cartItems: { storeId: string; sub
     
     for (const [storeId, subtotal] of Object.entries(storeSubtotals)) {
       const activeTaxes = await storeTaxService.getTaxesByStoreId(storeId);
-      const totalTaxPercentage = activeTaxes
-        .filter((t: any) => t.isActive)
-        .reduce((sum: number, t: any) => sum + Number(t.percentage), 0);
-      
-      totalTaxes += subtotal * (totalTaxPercentage / 100);
+
+      for (const tax of activeTaxes) {
+        if (!tax.isActive) continue;
+
+        const percentage = Number(tax.percentage);
+        const amount = (subtotal as number) * (percentage / 100);
+        totalTaxes += amount;
+
+        const key = `${tax.name}_${percentage}`;
+        if (!breakdownMap[key]) {
+          breakdownMap[key] = {
+            name: tax.name,
+            percentage,
+            amount: 0,
+          };
+        }
+        breakdownMap[key].amount += amount;
+      }
     }
-    
-    return { success: true, taxes: totalTaxes };
+
+    const taxBreakdown = Object.values(breakdownMap);
+
+    return { success: true, taxes: totalTaxes, taxBreakdown };
   } catch (error: any) {
     log.error("Error calculating cart taxes:", error);
-    return { success: false, taxes: 0 };
+    return { success: false, taxes: 0, taxBreakdown: [] };
   }
 }
 

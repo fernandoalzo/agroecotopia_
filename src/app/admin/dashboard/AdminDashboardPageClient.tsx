@@ -32,7 +32,7 @@ import { toast } from "sonner";
 import { Store } from "lucide-react";
 import { getConversationUnreadCount } from "@/frontend/lib/chatUnread";
 import { SeguridadPageClient } from "@/app/admin/seguridad/SeguridadPageClient";
-import type { WafRuleRow } from "@/backend/modules/waf";
+import type { WafRuleRow } from "@/types/waf";
 
 const log = logger.child();
 

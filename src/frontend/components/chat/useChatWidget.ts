@@ -10,7 +10,6 @@ import { config } from "@/config/config";
 import logger from "@/utils/logger";
 import type { Message } from "./ChatWidget";
 import { getUnreadMessageCountForUser, isUnreadMessageForUser } from "@/frontend/lib/chatUnread";
-import { aiChatAction } from "@/backend/modules/ai/ai.actions";
 
 const log = logger.child("src/frontend/components/chat/useChatWidget.ts");
 
@@ -20,6 +19,7 @@ type ChatWidgetDeps = {
     markAsRead: (conversationId: string) => Promise<any>;
     deleteConversationAction: (conversationId: string) => Promise<any>;
     getOrCreateConversationForAdmin: (targetUserId: string) => Promise<any>;
+    aiStreamChatAction: (content: string, history: Array<{ role: "user" | "assistant"; content: string }>) => AsyncGenerator<string, void, unknown>;
 };
 
 let aiIdCounter = 0;
@@ -43,6 +43,7 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
         markAsRead,
         deleteConversationAction,
         getOrCreateConversationForAdmin,
+        aiStreamChatAction,
     } = deps || {};
     const { data: session, status } = useSession();
     const isAdminUser = session?.user?.role === "admin";
@@ -431,13 +432,14 @@ export function useChatWidget(forceShow: boolean, targetUserId?: string, enabled
         setReplyingTo(null);
 
         if (isAIMode) {
+            if (!aiStreamChatAction) return;
+
             setIsAIResponding(true);
             const userMsg = createAIMessage(content, conversation?.id ?? "ai", true);
             setMessages(prev => [...prev, userMsg]);
 
             try {
                 const history = aiConversationHistory;
-                const { aiStreamChatAction } = await import("@/backend/modules/ai/ai.actions");
                 
                 const stream = await aiStreamChatAction(content, history);
                 

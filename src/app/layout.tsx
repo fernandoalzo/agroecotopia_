@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Providers } from "./Providers";
 import "@/frontend/styles/globals.css";
 import { config } from "@/config/config";
-import "@/backend/modules/ai";
 
 export const metadata: Metadata = {
   title: `${config.app.name} | Cosecha Sostenible`,

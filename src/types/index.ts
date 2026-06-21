@@ -7,3 +7,4 @@ export * from "./envio";
 export * from "./chat";
 export * from "./shipping";
 export * from "./auth.types";
+export * from "./waf";

@@ -132,6 +132,19 @@ export async function deleteShippingRateAction(rateId: string) {
   }
 }
 
+export async function calculateShippingAction(
+  cartItems: Array<{ productId: string; storeId: string; quantity: number; subtotal: number }>,
+  destinationCity?: string,
+) {
+  try {
+    const result = await shippingService.calculateShipping(cartItems, destinationCity);
+    return { success: true, ...result };
+  } catch (error: any) {
+    log.error("Error calculateShippingAction:", error);
+    return { success: false, totalShippingCost: 0, storeBreakdown: [] };
+  }
+}
+
 export async function getAllCitiesAction() {
   try {
     const cities = await shippingService.getAllCities();
