@@ -6,7 +6,7 @@ import { X, Save, AlertCircle, ImageIcon, Plus, Trash2, Search, Check } from "lu
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { getProductSchema, ProductFormValues } from "./schemas/productSchema";
+import { getProductSchema, ProductFormValues } from "./schemas/product.schema";
 import { Store } from "lucide-react";
 import { useLanguage } from "@/frontend/context/LanguageContext";
 import logger from "@/utils/logger";

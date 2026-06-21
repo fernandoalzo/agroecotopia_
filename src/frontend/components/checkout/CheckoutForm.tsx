@@ -38,6 +38,7 @@ interface CheckoutFormProps {
 
 export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultValues, onCityChange, onTipoEntregaChange, onPaymentMethodChange, onTransactionIdChange, cityZones, bodegas, isLoadingBodegas, storeConfigs, isLoadingStoreConfigs }) => {
   const { t } = useLanguage();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<CheckoutValues>({
     resolver: zodResolver(CheckoutSchema),
@@ -54,6 +55,16 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
       transactionId: "",
     },
   });
+
+  const handleFormSubmit = async (data: CheckoutValues) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onSubmit(data);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const watchCity = form.watch("city");
   const watchTipoEntrega = form.watch("tipoEntrega");
@@ -99,7 +110,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, defaultVal
 
   return (
     <Form {...form}>
-      <form id="checkout-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form id="checkout-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <FormField
             control={form.control}

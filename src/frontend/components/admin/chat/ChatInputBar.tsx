@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Send, X } from "lucide-react";
 import { Message } from "@/frontend/components/chat/ChatWidget";
 import { Conversation } from "./types";
@@ -29,6 +29,15 @@ export function ChatInputBar({
   handleSendMessage,
   setReplyingTo,
 }: ChatInputBarProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    handleSendMessage(e);
+    setTimeout(() => setIsSubmitting(false), 300);
+  };
+
   return (
     <div
       className="border-t border-border/40 bg-card/20 shrink-0 z-20"
@@ -65,7 +74,7 @@ export function ChatInputBar({
         </div>
       )}
       
-      <form onSubmit={handleSendMessage} className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+      <form onSubmit={handleSubmit} className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
         <input
           ref={inputRef as React.RefObject<HTMLInputElement>}
           type="text"
@@ -83,7 +92,7 @@ export function ChatInputBar({
         <button
           type="submit"
           onMouseDown={(e) => e.preventDefault()}
-          disabled={!inputMessage.trim() || !isConnected || (config.chat.enableE2EE && !isE2EEReady)}
+          disabled={!inputMessage.trim() || !isConnected || isSubmitting || (config.chat.enableE2EE && !isE2EEReady)}
           className="h-12 w-12 flex items-center justify-center rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground disabled:opacity-40 disabled:hover:bg-primary shadow-md transition-all flex-shrink-0 cursor-pointer"
         >
           <Send className="w-4 h-4" />

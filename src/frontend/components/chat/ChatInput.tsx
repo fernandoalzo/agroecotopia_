@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Bot, Send, X } from "lucide-react";
 import { config } from "@/config/config";
 import type { Message } from "./ChatWidget";
@@ -55,13 +56,22 @@ export const ChatInput = ({
     onSubmit,
     onCancelReply,
 }: ChatInputProps) => {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        onSubmit(e);
+        setTimeout(() => setIsSubmitting(false), 300);
+    };
+
     const isAiDisabled = isAIMode && isAIResponding;
     const isHumanDisabled = !isAIMode && (
         !inputMessage.trim() ||
         !isConnected ||
         (config.chat.enableE2EE && !isE2EEReady)
     );
-    const isSendDisabled = isAIMode ? isAiDisabled : isHumanDisabled;
+    const isSendDisabled = isAIMode ? isAiDisabled : (isHumanDisabled || isSubmitting);
 
     return (
         <div className="border-t border-border bg-background">
@@ -108,7 +118,7 @@ export const ChatInput = ({
 
             {/* Input row */}
             <form
-                onSubmit={onSubmit}
+                onSubmit={handleSubmit}
                 className="p-3 flex items-center gap-2"
             >
                 <input

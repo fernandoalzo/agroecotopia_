@@ -117,6 +117,7 @@ export const ProductEditModal = ({
   };
 
   const handleSave = async () => {
+    if (loading) return;
     setLoading(true);
     try {
       const dataToSave = {
@@ -137,7 +138,7 @@ export const ProductEditModal = ({
   };
 
   const handleDelete = async () => {
-    if (!product) return;
+    if (!product || isDeleting) return;
     setIsDeleting(true);
     try {
       const success = await onDeleteProduct(product.id);
