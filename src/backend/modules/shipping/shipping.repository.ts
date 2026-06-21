@@ -133,6 +133,15 @@ export class ShippingRepository {
     });
   }
 
+  async findRateStoreId(rateId: string): Promise<string | null> {
+    log.debug("[db] Obteniendo storeId de tarifa:", { rateId });
+    const rate = await prisma.storeShippingRate.findUnique({
+      where: { id: rateId },
+      include: { zone: { select: { storeId: true } } },
+    });
+    return rate?.zone?.storeId ?? null;
+  }
+
   /**
    * Obtiene un producto por su ID (para cálculo de peso en envío).
    */

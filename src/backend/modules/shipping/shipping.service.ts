@@ -159,6 +159,10 @@ export class ShippingService {
     return this.shippingRepository.deleteRate(rateId);
   }
 
+  async getRateStoreId(rateId: string): Promise<string | null> {
+    return this.shippingRepository.findRateStoreId(rateId);
+  }
+
   /**
    * Calcula el envío de un carrito agrupando por tiendas y verificando
    * sus tarifas y zonas.

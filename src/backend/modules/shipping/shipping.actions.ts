@@ -114,6 +114,16 @@ export async function addShippingRateAction(zoneId: string, data: {
 
 export async function deleteShippingRateAction(rateId: string) {
   try {
+    const storeId = await shippingService.getRateStoreId(rateId);
+    if (!storeId) {
+      return { error: "Tarifa de envío no encontrada" };
+    }
+
+    const storeGuard = await withStoreOwner(storeId, async () => true as const);
+    if (typeof storeGuard === "object" && "error" in storeGuard) {
+      return storeGuard;
+    }
+
     await shippingService.deleteShippingRate(rateId);
     return { success: true };
   } catch (error: any) {
