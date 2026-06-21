@@ -34,7 +34,7 @@ import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import { PromotionsList } from "@/components/seller/promotions/PromotionsList";
 import { PromotionCreateModal } from "@/components/seller/promotions/PromotionCreateModal";
 import { StoreConfigurationPanel } from "@/components/seller/configuration/StoreConfigurationPanel";
-import { Promotion } from "@prisma/client";
+import type { Promotion } from "@/types/store";
 import { EnviosList } from "@/components/admin/envios/EnviosList";
 import { envioStatusConfig, type EnvioEstadoKey } from "@/components/admin/envios/envioUtils";
 

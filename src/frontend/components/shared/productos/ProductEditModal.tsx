@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Save, AlertCircle, ImageIcon, Plus, Trash2, Search, Check } from "lucide-react";
-import { Product } from "@prisma/client";
+import type { Product } from "@/types";
 import { Button } from "@/components/ui/button";
 import logger from "@/utils/logger";
 import { GenerateDescriptionButton } from "@/frontend/components/ai";

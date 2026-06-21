@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Package, Tag, Hash, Calendar, Box, Image as ImageIcon, Edit2, Save, AlertCircle, Plus, Trash2, Search, Check } from "lucide-react";
 import { CopyToClipboard } from "@/frontend/components/shared/CopyToClipboard";
-import { Product } from "@prisma/client";
+import type { Product } from "@/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";

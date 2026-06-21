@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Package, Plus } from "lucide-react";
-import { Product } from "@prisma/client";
+import type { Product } from "@/types";
 import { ProductCard } from "./ProductCard";
 import { ProductDetailPanel } from "./ProductDetailPanel";
 import { ProductCreateModal } from "./ProductCreateModal";

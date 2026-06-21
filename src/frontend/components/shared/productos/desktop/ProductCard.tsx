@@ -5,7 +5,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Product } from "@prisma/client";
+import type { Product } from "@/types";
 import { calculateDiscountedPrice } from "@/utils/promotions";
 
 interface ProductCardDesktopProps {

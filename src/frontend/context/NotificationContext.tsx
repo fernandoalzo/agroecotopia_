@@ -5,7 +5,6 @@ import { useSession } from "next-auth/react";
 import { useSocket } from "./SocketContext";
 import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import logger from "@/utils/logger";
-import { RecipientStatus } from "@prisma/client";
 
 import type { NotificationRecipientWithDetails } from "@/types/notification.types";
 
@@ -155,7 +154,7 @@ export const NotificationProvider = ({ children, actions }: NotificationProvider
     setNotifications((prev) =>
       prev.map((n) =>
         n.id === recipientId
-          ? { ...n, status: RecipientStatus.READ, readAt: new Date().toISOString() }
+          ? { ...n, status: "READ" as const, readAt: new Date().toISOString() }
           : n
       )
     );
@@ -172,7 +171,7 @@ export const NotificationProvider = ({ children, actions }: NotificationProvider
   const markAllAsRead = useCallback(async () => {
     // Optimistic update
     setNotifications((prev) =>
-      prev.map((n) => ({ ...n, status: RecipientStatus.READ, readAt: new Date().toISOString() }))
+      prev.map((n) => ({ ...n, status: "READ" as const, readAt: new Date().toISOString() }))
     );
     setUnreadCount(0);
 
@@ -186,7 +185,7 @@ export const NotificationProvider = ({ children, actions }: NotificationProvider
   const deleteNotification = useCallback(async (recipientId: string) => {
     // Optimistic update: remove from list
     const notificationToDelete = notifications.find(n => n.id === recipientId);
-    if (notificationToDelete && notificationToDelete.status !== RecipientStatus.READ) {
+    if (notificationToDelete && notificationToDelete.status !== "READ") {
       setUnreadCount(prev => Math.max(0, prev - 1));
     }
     

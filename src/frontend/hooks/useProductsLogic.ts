@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Product } from "@prisma/client";
+import type { Product } from "@/types";
 import { toast } from "sonner";
 import logger from "@/utils/logger";
 

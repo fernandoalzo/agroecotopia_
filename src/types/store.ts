@@ -44,3 +44,18 @@ export interface StoreCreateInput {
   address?: string;
   city?: string;
 }
+
+export interface Promotion {
+  id: string;
+  isActive: boolean;
+  name?: string;
+  description?: string;
+  discountType: "PERCENTAGE" | "FIXED_AMOUNT";
+  discountValue: number;
+  scope: "ENTIRE_STORE" | "SPECIFIC_PRODUCTS" | "SINGLE_PRODUCT";
+  storeId: string;
+  expiresAt: string;
+  productIds?: string[];
+  createdAt: string;
+  updatedAt: string;
+}

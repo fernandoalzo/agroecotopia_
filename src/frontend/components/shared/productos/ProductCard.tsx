@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { Product } from "@prisma/client";
+import type { Product } from "@/types";
 
 import { ProductCardMobile } from "./mobile/ProductCard";
 import { ProductCardDesktop } from "./desktop/ProductCard";

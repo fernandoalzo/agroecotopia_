@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Package, Tag, Hash, Calendar, Box, Image as ImageIcon } from "lucide-react";
-import { Product } from "@prisma/client";
+import type { Product } from "@/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
