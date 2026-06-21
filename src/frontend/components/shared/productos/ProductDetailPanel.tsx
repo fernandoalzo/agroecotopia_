@@ -128,7 +128,7 @@ export function ProductDetailPanel({
   };
 
   const handleSave = async () => {
-    if (!onSubmitUpdate) return;
+    if (loading || !onSubmitUpdate) return;
     setLoading(true);
     try {
       const dataToSave = {
