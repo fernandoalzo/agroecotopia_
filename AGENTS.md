@@ -211,7 +211,21 @@ No exceptions. This applies to all files under `ai/` including providers, RAG, m
 
 Agents must not open browsers, click UI, or verify behavior through visual inspection. Implement the code, then wait for the developer to test and report back.
 
+### 12. Prisma Enum Changes Must Sync to `src/types/`
+
+The files in `src/types/` contain hand-maintained mirrors of Prisma enums (`as const` objects + `keyof typeof` types). Whenever a Prisma schema enum is modified (value added, renamed, or removed), the corresponding type file **must** be updated in the same PR/commit.
+
+The source Prisma schema is annotated in a comment at the top of each type file. Every agent changing a `.prisma` enum MUST:
+
+1. Identify which type file mirrors it (check the source comment).
+2. Update the `as const` object and the inferred type in lockstep.
+3. Run `tsc --noEmit` to verify consistency.
+
+Failure to sync will cause silent runtime bugs when runtime code uses the stale `const` object to construct values that Prisma rejects.
+
 ---
+
+
 
 ## Creating a New Domain Module
 

@@ -1,5 +1,5 @@
 import { ChatRepository } from "./chat.repository";
-import { ConversationType, PedidoEstado, Role } from "@prisma/client";
+import { ConversationType, PedidoEstado, Role } from "@/types";
 import logger from "@/utils/logger";
 import { notificationsService } from "@/backend/modules/notifications";
 

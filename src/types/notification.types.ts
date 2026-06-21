@@ -3,9 +3,23 @@
 // ─────────────────────────────────────────────────────────────
 
 // ─── Enums (mirror Prisma enums for client-side usage) ───
+// Source: src/backend/prisma/schema/notification.model.prisma — keep in sync!
 
-export type AudienceType = "INDIVIDUAL" | "GROUP" | "BROADCAST";
-export type RecipientStatus = "PENDING" | "DELIVERED" | "READ";
+export const AudienceType = {
+  INDIVIDUAL: "INDIVIDUAL",
+  GROUP: "GROUP",
+  BROADCAST: "BROADCAST",
+} as const;
+
+export type AudienceType = keyof typeof AudienceType;
+
+export const RecipientStatus = {
+  PENDING: "PENDING",
+  DELIVERED: "DELIVERED",
+  READ: "READ",
+} as const;
+
+export type RecipientStatus = keyof typeof RecipientStatus;
 
 // ─── Creator (lightweight user reference) ───
 

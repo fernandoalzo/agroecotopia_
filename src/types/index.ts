@@ -3,3 +3,7 @@ export * from "./cart";
 export * from "./orders";
 export * from "./store";
 export * from "./notification.types";
+export * from "./envio";
+export * from "./chat";
+export * from "./shipping";
+export * from "./auth.types";

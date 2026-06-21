@@ -45,11 +45,32 @@ export class OrdersRepository {
     return success;
   }
 
-  async createPedido(data: Prisma.PedidoCreateInput, tx?: TxClient) {
+  async createPedido(data: Record<string, unknown>, tx?: TxClient) {
     const client = tx || prisma;
     log.debug("[db] Creando pedido en la base de datos.");
+
+    const decimalFields = ["subtotal", "impuestos", "costoEnvio", "total"] as const;
+    const prismaData: Record<string, unknown> = { ...data };
+    for (const field of decimalFields) {
+      if (typeof prismaData[field] === "number") {
+        prismaData[field] = new Prisma.Decimal(prismaData[field] as number);
+      }
+    }
+
+    const detalleArray = (prismaData.detalles as Record<string, unknown>)?.create;
+    if (Array.isArray(detalleArray)) {
+      const detailDecimalFields = ["cantidad", "precioUnitario", "subtotal"] as const;
+      for (const item of detalleArray) {
+        for (const field of detailDecimalFields) {
+          if (typeof item[field] === "number") {
+            item[field] = new Prisma.Decimal(item[field] as number);
+          }
+        }
+      }
+    }
+
     const pedido = await client.pedido.create({
-      data,
+      data: prismaData,
       include: { detalles: true },
     });
     await this.cacheService?.delPattern(CacheKeys.order.allPattern);

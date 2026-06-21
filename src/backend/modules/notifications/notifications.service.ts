@@ -1,4 +1,4 @@
-import { AudienceType, Prisma, RecipientStatus } from "@prisma/client";
+import { AudienceType, RecipientStatus } from "@/types";
 import { NotificationsRepository } from "./notifications.repository";
 import { AudienceResolver } from "./audience-resolver";
 import eventBus from "@/utils/eventBus";
@@ -60,7 +60,7 @@ export class NotificationsService {
       actorId,
       entityType,
       entityId,
-      payload: (payload as Prisma.InputJsonValue) ?? {},
+      payload: (payload ?? {}) as any,
     });
 
     // 2. Create Notification linked to the event
@@ -72,7 +72,7 @@ export class NotificationsService {
       audienceType: notifData.audienceType as AudienceType,
       audienceRef: notifData.audienceRef,
       eventId: domainEvent.id,
-      metadata: (notifData.metadata as Prisma.InputJsonValue) ?? {},
+      metadata: (notifData.metadata ?? {}) as any,
     });
 
     // 3. Resolve audience
@@ -351,7 +351,7 @@ export class NotificationsService {
     title: string;
     message: string;
     audienceType: string;
-    metadata: Prisma.JsonValue;
+    metadata: any;
     createdAt: Date;
     creator: { id: string; name: string | null; image: string | null };
   }): NotificationRecipientWithDetails {

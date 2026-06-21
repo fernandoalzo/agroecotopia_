@@ -1,7 +1,7 @@
 "use server";
 
 import { productService } from "@/backend/modules/product";
-import { Product } from "@prisma/client";
+import type { Product } from "@/types";
 import { withAdmin } from "@/lib/auth-guards";
 import { revalidatePath } from "next/cache";
 import logger from "@/utils/logger";

@@ -2,7 +2,7 @@
 
 import { envioService } from "./index";
 import { withStoreOwner } from "@/lib/auth-guards";
-import { EnvioEstado } from "@prisma/client";
+import { EnvioEstado } from "@/types";
 import { revalidatePath } from "next/cache";
 import logger from "@/utils/logger";
 import { deepSerialize } from "@/lib/serialize";

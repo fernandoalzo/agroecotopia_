@@ -3,7 +3,7 @@
 import { withAuth, withAdmin } from "@/lib/auth-guards";
 import { notificationsService } from "./index";
 import logger from "@/utils/logger";
-import { RecipientStatus } from "@prisma/client";
+import { RecipientStatus } from "@/types";
 import eventBus from "@/utils/eventBus";
 import type { DispatchNotificationParams } from "@/types/notification.types";
 

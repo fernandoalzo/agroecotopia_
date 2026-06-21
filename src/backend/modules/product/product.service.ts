@@ -1,4 +1,4 @@
-import type { Product } from "@prisma/client";
+import type { Product } from "@/types";
 import { ProductRepository } from "./product.repository";
 import { ProductEmbeddingService } from "./productEmbedding.service";
 import { CacheKeys } from "@/backend/cache";

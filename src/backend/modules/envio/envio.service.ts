@@ -1,5 +1,5 @@
 import { EnvioRepository } from "./envio.repository";
-import { EnvioEstado, PedidoEstado } from "@prisma/client";
+import { EnvioEstado, PedidoEstado } from "@/types";
 import logger from "@/utils/logger";
 import { deepSerialize } from "@/lib/serialize";
 import eventBus from "@/utils/eventBus";

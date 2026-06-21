@@ -1,5 +1,5 @@
 import { ShippingRepository } from "./shipping.repository";
-import { TipoTarifaEnvio } from "@prisma/client";
+import { TipoTarifaEnvio } from "@/types";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/shipping/shipping.service.ts");

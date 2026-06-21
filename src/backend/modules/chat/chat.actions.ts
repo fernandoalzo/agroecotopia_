@@ -3,7 +3,7 @@
 import { withAuth, withAdmin } from "@/lib/auth-guards";
 import { chatService } from "./index";
 import logger from "@/utils/logger";
-import { Role } from "@prisma/client";
+import { Role } from "@/types";
 import eventBus from "@/utils/eventBus";
 
 const log = logger.child("src/backend/modules/chat/chat.actions.ts");

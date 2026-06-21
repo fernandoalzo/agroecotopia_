@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { OrdersRepository } from "./orders.repository";
-import { PedidoEstado, TipoEntrega, Prisma } from "@prisma/client";
+import { PedidoEstado, TipoEntrega } from "@/types";
 import logger from "@/utils/logger";
 import { notificationsService } from "@/backend/modules/notifications";
 import { storeTaxService } from "@/backend/modules/store";
@@ -165,18 +165,18 @@ export class OrdersService {
     storeId: string,
     detalles: CreatePedidoDetalle[],
     allItemsSubtotal: number,
-    tx: Prisma.TransactionClient
+    tx: any
   ) {
     let subtotal = 0;
-    const detallesInput: Prisma.DetallePedidoCreateWithoutPedidoInput[] = detalles.map((d) => {
+    const detallesInput = detalles.map((d) => {
       const itemSubtotal = d.cantidad * d.precioUnitario;
       subtotal += itemSubtotal;
       return {
         producto: { connect: { id: d.productoId } },
-        cantidad: new Prisma.Decimal(d.cantidad),
-        precioUnitario: new Prisma.Decimal(d.precioUnitario),
+        cantidad: d.cantidad,
+        precioUnitario: d.precioUnitario,
         unidadMedida: d.unidadMedida,
-        subtotal: new Prisma.Decimal(itemSubtotal),
+        subtotal: itemSubtotal,
         store: { connect: { id: storeId } },
       };
     });
@@ -201,10 +201,10 @@ export class OrdersService {
       direccionEntrega: data.direccionEntrega,
       notasCliente: data.notasCliente,
       metodoPago: data.metodoPago,
-      subtotal: new Prisma.Decimal(subtotal),
-      impuestos: new Prisma.Decimal(impuestos),
-      costoEnvio: new Prisma.Decimal(costoEnvio),
-      total: new Prisma.Decimal(total),
+      subtotal,
+      impuestos,
+      costoEnvio,
+      total,
       estado: PedidoEstado.PENDIENTE,
       detalles: {
         create: detallesInput,
@@ -215,7 +215,7 @@ export class OrdersService {
       pedidoData.bodega = { connect: { id: data.bodegaId } };
     }
 
-    return await this.ordersRepository.createPedido(pedidoData as Prisma.PedidoCreateInput, tx);
+    return await this.ordersRepository.createPedido(pedidoData, tx);
   }
 
   async updateEstado(pedidoId: string, nuevoEstado: PedidoEstado, actorId: string, motivoCancelacion?: string, isAdmin: boolean = false) {
@@ -579,7 +579,7 @@ export class OrdersService {
     return result;
   }
 
-  async updatePedido(pedidoId: string, data: Prisma.PedidoUpdateInput) {
+  async updatePedido(pedidoId: string, data: Record<string, unknown>) {
     log.debug("Actualizando pedido:", { pedidoId });
     const pedido = await this.ordersRepository.findById(pedidoId);
     if (!pedido) {

@@ -3,7 +3,7 @@
 import { ordersService, StockError } from "./index";
 import { authService } from "@/backend/modules/auth";
 import { withAuth, withAdmin } from "@/lib/auth-guards";
-import { PedidoEstado, Role } from "@prisma/client";
+import { PedidoEstado, Role } from "@/types";
 import { revalidatePath } from "next/cache";
 import { chatService } from "@/backend/modules/chat";
 import logger from "@/utils/logger";

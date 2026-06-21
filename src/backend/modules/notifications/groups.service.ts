@@ -1,4 +1,3 @@
-import { Prisma } from "@prisma/client";
 import { GroupsRepository } from "./groups.repository";
 import logger from "@/utils/logger";
 
@@ -30,7 +29,7 @@ export class GroupsService {
     return await this.repo.findAllGroups();
   }
 
-  async updateGroup(id: string, data: Prisma.GroupUpdateInput) {
+  async updateGroup(id: string, data: Record<string, unknown>) {
     await this.getGroupById(id); // Ensure exists
     return await this.repo.updateGroup(id, data);
   }

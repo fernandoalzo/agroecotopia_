@@ -1,14 +1,19 @@
 import prisma from "@/backend/db/prisma";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/store/storeTax.repository.ts");
 
 export class StoreTaxRepository {
-  async createTax(data: Prisma.StoreTaxCreateInput) {
-    log.info("Creando nuevo impuesto", { name: data.name, storeId: data.store.connect?.id });
+  async createTax(data: { name: string; percentage: number; isActive: boolean; storeId: string }) {
+    log.info("Creando nuevo impuesto", { name: data.name, storeId: data.storeId });
     return await prisma.storeTax.create({
-      data,
+      data: {
+        name: data.name,
+        percentage: new Prisma.Decimal(data.percentage),
+        isActive: data.isActive,
+        store: { connect: { id: data.storeId } },
+      },
     });
   }
 
@@ -27,11 +32,15 @@ export class StoreTaxRepository {
     });
   }
 
-  async updateTax(id: string, data: Prisma.StoreTaxUpdateInput) {
+  async updateTax(id: string, data: Record<string, unknown>) {
     log.info("Actualizando impuesto", { taxId: id });
+    const prismaData: Record<string, unknown> = { ...data };
+    if (typeof prismaData.percentage === "number") {
+      prismaData.percentage = new Prisma.Decimal(prismaData.percentage as number);
+    }
     return await prisma.storeTax.update({
       where: { id },
-      data,
+      data: prismaData,
     });
   }
 

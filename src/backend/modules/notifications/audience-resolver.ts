@@ -1,4 +1,4 @@
-import { AudienceType } from "@prisma/client";
+import { AudienceType } from "@/types";
 import { GroupsRepository } from "./groups.repository";
 import { NotificationsRepository } from "./notifications.repository";
 import logger from "@/utils/logger";

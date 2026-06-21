@@ -1,5 +1,4 @@
 import { StoreTaxRepository } from "./storeTax.repository";
-import { Prisma } from "@prisma/client";
 import logger from "@/utils/logger";
 
 const log = logger.child("src/backend/modules/store/storeTax.service.ts");
@@ -11,9 +10,9 @@ export class StoreTaxService {
     log.info("Creando impuesto para tienda", { storeId, ...data });
     const tax = await this.storeTaxRepository.createTax({
       name: data.name,
-      percentage: new Prisma.Decimal(data.percentage),
+      percentage: data.percentage,
       isActive: data.isActive ?? true,
-      store: { connect: { id: storeId } }
+      storeId,
     });
     return { ...tax, percentage: Number(tax.percentage) };
   }
@@ -34,9 +33,9 @@ export class StoreTaxService {
     if (!tax) throw new Error("Impuesto no encontrado");
     if (tax.storeId !== storeId) throw new Error("No tienes permiso para editar este impuesto");
 
-    const updateData: Prisma.StoreTaxUpdateInput = {};
+    const updateData: Record<string, unknown> = {};
     if (data.name !== undefined) updateData.name = data.name;
-    if (data.percentage !== undefined) updateData.percentage = new Prisma.Decimal(data.percentage);
+    if (data.percentage !== undefined) updateData.percentage = data.percentage;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
     const updated = await this.storeTaxRepository.updateTax(id, updateData);

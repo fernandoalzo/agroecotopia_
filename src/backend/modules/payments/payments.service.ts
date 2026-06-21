@@ -1,6 +1,6 @@
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import { ordersService } from '@/backend/modules/orders';
-import { PedidoEstado } from '@prisma/client';
+import { PedidoEstado } from '@/types';
 import { config } from '@/config/config';
 import logger from '@/utils/logger';
 import { PaymentsRepository } from './payments.repository';
