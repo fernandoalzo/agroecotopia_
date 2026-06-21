@@ -3,6 +3,7 @@
 import { withStoreOwner } from "@/lib/auth-guards";
 import { shippingService } from "./index";
 import logger from "@/utils/logger";
+import { deepSerialize } from "@/lib/serialize";
 
 const log = logger.child("shipping.actions");
 
@@ -10,7 +11,7 @@ export async function getStoreShippingZonesAction(storeId: string) {
   return withStoreOwner(storeId, async () => {
     try {
       const mappedZones = await shippingService.getStoreShippingZones(storeId);
-      return { success: true, zones: mappedZones };
+      return deepSerialize({ success: true, zones: mappedZones });
     } catch (error: any) {
       log.error("Error getStoreShippingZonesAction:", error);
       return { error: error.message || "Error al obtener las zonas de envío" };
@@ -30,7 +31,7 @@ export async function createStoreShippingZoneAction(storeId: string, data: { nam
       }
 
       const zone = await shippingService.createShippingZone(storeId, data);
-      return { success: true, zone };
+      return deepSerialize({ success: true, zone });
     } catch (error: any) {
       log.error("Error createStoreShippingZoneAction:", error);
       return { error: error.message || "Error al crear la zona de envío" };
@@ -59,7 +60,7 @@ export async function updateStoreShippingZoneAction(zoneId: string, data: { name
     }
 
     const zone = await shippingService.updateShippingZone(zoneId, data);
-    return { success: true, zone };
+    return deepSerialize({ success: true, zone });
   } catch (error: any) {
     log.error("Error updateStoreShippingZoneAction:", error);
     return { error: error.message || "Error al actualizar la zona de envío" };
@@ -105,7 +106,7 @@ export async function addShippingRateAction(zoneId: string, data: {
     }
 
     const rate = await shippingService.addShippingRate(zoneId, data);
-    return { success: true, rate };
+    return deepSerialize({ success: true, rate });
   } catch (error: any) {
     log.error("Error addShippingRateAction:", error);
     return { error: error.message || "Error al agregar la tarifa de envío" };

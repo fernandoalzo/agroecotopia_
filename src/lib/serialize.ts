@@ -25,11 +25,15 @@ export function deepSerialize<T>(value: T): T {
     return (value as any).toNumber() as any;
   }
 
-  if (value instanceof Date || Array.isArray(value)) {
+  if (value instanceof Date) {
     return value as any;
   }
 
-  if (isPlainObject(value)) {
+  if (Array.isArray(value)) {
+    return value.map((item) => deepSerialize(item)) as any;
+  }
+
+  if (typeof value === "object") {
     const result: Record<string, any> = {};
     for (const key of Object.keys(value as Record<string, any>)) {
       result[key] = deepSerialize((value as Record<string, any>)[key]);

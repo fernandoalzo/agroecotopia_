@@ -5,6 +5,7 @@ import type { Product } from "@/types";
 import { withAdmin } from "@/lib/auth-guards";
 import { revalidatePath } from "next/cache";
 import logger from "@/utils/logger";
+import { deepSerialize } from "@/lib/serialize";
 
 const log = logger.child("src/backend/modules/product/product.actions.ts");
 
@@ -19,7 +20,7 @@ export async function getPaginatedProductsAction(
 ): Promise<{ products: Product[], total: number, totalPages: number }> {
   try {
     const result = await productService.getCatalog(page, limit, category, storeId);
-    return result as any;
+    return deepSerialize(result) as any;
   } catch (error) {
     log.error("Error getting paginated products:", error);
     return { products: [], total: 0, totalPages: 0 };
@@ -40,7 +41,7 @@ export async function searchProductsAction(
     if (!query || query.trim().length === 0) return { products: [], total: 0, totalPages: 0 };
     
     const result = await productService.searchProducts(query, page, limit, category, storeId);
-    return result as any;
+    return deepSerialize(result) as any;
   } catch (error) {
     log.error("Error searching products with pagination in DB:", error);
     return { products: [], total: 0, totalPages: 0 };
@@ -77,7 +78,7 @@ export async function getCategoryCountsAction(storeId?: string): Promise<Record<
 export async function getProductByIdAction(productId: string) {
   try {
     if (!productId) return null;
-    return await productService.getProductById(productId);
+    return deepSerialize(await productService.getProductById(productId));
   } catch (error) {
     log.error("Error getting product by id:", error);
     return null;
@@ -91,7 +92,7 @@ export async function getProductByIdAction(productId: string) {
 export async function getRelatedProductsAction(productId: string, limit?: number) {
   try {
     if (!productId) return [];
-    return await productService.getRelatedProducts(productId, limit);
+    return deepSerialize(await productService.getRelatedProducts(productId, limit));
   } catch (error) {
     log.error("Error getting related products:", error);
     return [];
@@ -112,7 +113,7 @@ export async function createProductAction(data: any) {
       revalidatePath("/admin/dashboard");
       revalidatePath("/productos");
       
-      return { success: true, message: "Producto creado correctamente.", product: newProduct };
+      return deepSerialize({ success: true, message: "Producto creado correctamente.", product: newProduct });
     } catch (error: any) {
       log.error(`Error in createProductAction for ${data.name}:`, error);
       return { success: false, message: error.message || "Error al crear el producto." };
@@ -134,7 +135,7 @@ export async function updateProductAction(id: string, data: Partial<Product>) {
       revalidatePath("/admin/dashboard");
       revalidatePath("/productos");
       
-      return { success: true, message: "Producto actualizado correctamente.", product: updatedProduct };
+      return deepSerialize({ success: true, message: "Producto actualizado correctamente.", product: updatedProduct });
     } catch (error: any) {
       log.error(`Error in updateProductAction for ${id}:`, error);
       return { success: false, message: error.message || "Error al actualizar el producto." };
@@ -176,7 +177,7 @@ export async function createStoreProductAction(storeId: string, data: any) {
       const newProduct = await productService.createStoreProduct(storeId, data);
       revalidatePath(`/mi-tienda/${storeId}/productos`);
       revalidatePath("/productos");
-      return { success: true, message: "Producto creado correctamente.", product: newProduct };
+      return deepSerialize({ success: true, message: "Producto creado correctamente.", product: newProduct });
     } catch (error: any) {
       log.error(`Error in createStoreProductAction:`, error);
       return { success: false, message: error.message || "Error al crear el producto." };
@@ -191,7 +192,7 @@ export async function updateStoreProductAction(storeId: string, productId: strin
       const updatedProduct = await productService.updateStoreProduct(storeId, productId, data);
       revalidatePath(`/mi-tienda/${storeId}/productos`);
       revalidatePath("/productos");
-      return { success: true, message: "Producto actualizado correctamente.", product: updatedProduct };
+      return deepSerialize({ success: true, message: "Producto actualizado correctamente.", product: updatedProduct });
     } catch (error: any) {
       log.error(`Error in updateStoreProductAction:`, error);
       return { success: false, message: error.message || "Error al actualizar el producto." };
@@ -243,7 +244,7 @@ export async function getStoreProductsAction(storeId: string, page: number = 1, 
   return withStoreOwner(storeId, async () => {
     log.info(`Action: getStoreProductsAction`, { storeId, page });
     try {
-      return await productService.getStoreProducts(storeId, page, limit);
+      return deepSerialize(await productService.getStoreProducts(storeId, page, limit));
     } catch (error) {
       log.error("Error getting store products:", error);
       return { products: [], total: 0, totalPages: 0 };
@@ -270,7 +271,7 @@ export async function getProductsPageDataAction(
       productService.getCategoryCounts(storeId),
     ]);
 
-    return { productsResult, availableCategories, categoryCounts };
+    return deepSerialize({ productsResult, availableCategories, categoryCounts });
   } catch (error) {
     log.error("Error getting products page data:", error);
     return {

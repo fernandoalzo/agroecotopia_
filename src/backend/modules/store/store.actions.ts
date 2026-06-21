@@ -8,6 +8,7 @@ import logger from "@/utils/logger";
 import eventBus from "@/utils/eventBus";
 import { notificationsService } from "../notifications";
 import { userRepository } from "../user";
+import { deepSerialize } from "@/lib/serialize";
 
 const log = logger.child("src/backend/modules/store/store.actions.ts");
 
@@ -50,7 +51,7 @@ export const submitStoreRequestAction = async (data: StoreCreateInput) => {
       log.error("Error al notificar admins sobre nueva solicitud de tienda:", notifError);
     }
 
-    return { success: true, data: request };
+    return deepSerialize({ success: true, data: request });
   });
 };
 
@@ -59,7 +60,7 @@ export const getMyRequestsAction = async () => {
     log.info("Action: getMyRequestsAction");
     const userId = session.user.id;
     
-    return await storeService.getMyRequests(userId);
+    return deepSerialize(await storeService.getMyRequests(userId));
   });
 };
 
@@ -68,7 +69,7 @@ export const getMyStoresAction = async () => {
     log.info("Action: getMyStoresAction");
     const userId = session.user.id;
     
-    return await storeService.getMyStores(userId);
+    return deepSerialize(await storeService.getMyStores(userId));
   });
 };
 
@@ -82,7 +83,7 @@ export const updateMyStoreAction = async (storeId: string, data: Partial<StoreCr
     const store = await storeService.updateMyStore(userId, storeId, data);
     revalidatePath(`/mi-tienda/${storeId}`);
     revalidatePath(`/tienda/${store.slug}`);
-    return { success: true, data: store };
+    return deepSerialize({ success: true, data: store });
   });
 };
 
@@ -95,7 +96,7 @@ export const updateStoreConfigAction = async (storeId: string, data: any) => {
     revalidatePath(`/mi-tienda/${storeId}`);
     // Also revalidate checkout as config affects checkout
     revalidatePath(`/checkout`);
-    return { success: true, data: config };
+    return deepSerialize({ success: true, data: config });
   });
 };
 
@@ -105,19 +106,19 @@ export const getPendingRequestsAction = async (page: number = 1, search?: string
   return withAdmin(async () => {
     log.info("Action: getPendingRequestsAction", { page, search });
     const result = await storeService.getPendingRequests(page, 10, search);
-    return {
+    return deepSerialize({
       requests: result.requests,
       totalPages: Math.ceil(result.total / 10),
       total: result.total,
       page
-    };
+    });
   });
 };
 
 export const getRequestByIdAction = async (requestId: string) => {
   return withAdmin(async () => {
     log.info("Action: getRequestByIdAction", { requestId });
-    return await storeService.getRequestById(requestId);
+    return deepSerialize(await storeService.getRequestById(requestId));
   });
 };
 
@@ -125,19 +126,19 @@ export const getAllRequestsAction = async (page: number = 1, search?: string) =>
   return withAdmin(async () => {
     log.info("Action: getAllRequestsAction", { page, search });
     const result = await storeService.getAllRequests(page, 10, search);
-    return {
+    return deepSerialize({
       requests: result.requests,
       totalPages: Math.ceil(result.total / 10),
       total: result.total,
       page
-    };
+    });
   });
 };
 
 export const getAllStoresAction = async (page: number = 1, status?: 'ACTIVE' | 'SUSPENDED' | 'CLOSED') => {
   return withAdmin(async () => {
     log.info("Action: getAllStoresAction", { page, status });
-    return await storeService.getAllStores(page, 10, status);
+    return deepSerialize(await storeService.getAllStores(page, 10, status));
   });
 };
 
@@ -177,7 +178,7 @@ export const approveRequestAction = async (requestId: string, adminNote?: string
       log.error("Error al notificar usuario sobre aprobación de tienda:", notifError);
     }
 
-    return { success: true, data: store };
+    return deepSerialize({ success: true, data: store });
   });
 };
 
@@ -216,7 +217,7 @@ export const rejectRequestAction = async (requestId: string, adminNote: string) 
       log.error("Error al notificar usuario sobre rechazo de tienda:", notifError);
     }
 
-    return { success: true, data: request };
+    return deepSerialize({ success: true, data: request });
   });
 };
 
@@ -227,7 +228,7 @@ export const suspendStoreAction = async (storeId: string) => {
     revalidatePath("/admin/dashboard");
     revalidatePath(`/tienda/${store.slug}`);
     revalidatePath("/products");
-    return { success: true, data: store };
+    return deepSerialize({ success: true, data: store });
   });
 };
 
@@ -238,7 +239,7 @@ export const reactivateStoreAction = async (storeId: string) => {
     revalidatePath("/admin/dashboard");
     revalidatePath(`/tienda/${store.slug}`);
     revalidatePath("/products");
-    return { success: true, data: store };
+    return deepSerialize({ success: true, data: store });
   });
 };
 
@@ -246,18 +247,18 @@ export const reactivateStoreAction = async (storeId: string) => {
 
 export const getStoreBySlugAction = async (slug: string) => {
   log.info("Action: getStoreBySlugAction", { slug });
-  return await storeService.getStoreBySlug(slug);
+  return deepSerialize(await storeService.getStoreBySlug(slug));
 };
 
 export const getStoreConfigsAction = async (storeIds: string[]) => {
   log.info("Action: getStoreConfigsAction", { storeIds });
   const stores = await Promise.all(storeIds.map(id => storeService.getStoreById(id)));
-  return stores.map(s => ({ storeId: s.id, config: s.config }));
+  return deepSerialize(stores.map(s => ({ storeId: s.id, config: s.config })));
 };
 
 export const getActiveStoresCatalogAction = async (page: number = 1) => {
   log.info("Action: getActiveStoresCatalogAction", { page });
-  return await storeService.getActiveStoresForCatalog(page);
+  return deepSerialize(await storeService.getActiveStoresForCatalog(page));
 };
 
 export const getAllActiveStoresListAction = async () => {

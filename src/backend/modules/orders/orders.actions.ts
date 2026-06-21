@@ -105,7 +105,7 @@ export async function getUserOrdersAction() {
     const userId = session.user.id;
 
     log.debug("Obteniendo pedidos del usuario:", { userId });
-    return await ordersService.getPedidosPorUsuario(userId);
+    return deepSerialize(await ordersService.getPedidosPorUsuario(userId));
   });
 }
 
@@ -120,7 +120,7 @@ export async function getPaginatedOrdersAction(params: {
 }) {
   return await withAdmin(async () => {
     log.info("Admin obteniendo pedidos paginados y filtrados:", params);
-    return await ordersService.getPaginatedPedidos(params);
+    return deepSerialize(await ordersService.getPaginatedPedidos(params));
   });
 }
 
@@ -130,7 +130,7 @@ export async function getPaginatedOrdersAction(params: {
 export async function getOrderStatusCountsAction() {
   return await withAdmin(async () => {
     log.info("Admin obteniendo conteo de estados de pedidos.");
-    return await ordersService.getOrderStatusCounts();
+    return deepSerialize(await ordersService.getOrderStatusCounts());
   });
 }
 
@@ -160,7 +160,7 @@ export async function getOrderDetailAction(pedidoId: string) {
       return { error: "FORBIDDEN" };
     }
 
-    return pedido;
+    return deepSerialize(pedido);
   });
 }
 

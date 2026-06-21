@@ -5,6 +5,7 @@ import { promotionService } from "./index";
 import { CreatePromotionInput, UpdatePromotionInput } from "./promotion.repository";
 import logger from "@/utils/logger";
 import { revalidatePath } from "next/cache";
+import { deepSerialize } from "@/lib/serialize";
 
 const log = logger.child();
 
@@ -13,7 +14,7 @@ export const createPromotionAction = async (storeId: string, data: CreatePromoti
     try {
       const result = await promotionService.createPromotion(data);
       revalidatePath("/mi-tienda");
-      return { success: true, promotion: result };
+      return deepSerialize({ success: true, promotion: result });
     } catch (error: any) {
       log.error("Error en createPromotionAction:", error);
       return { error: error.message || "Error al crear la promoción" };
@@ -24,7 +25,7 @@ export const getPromotionsByStoreAction = async (storeId: string) =>
   withStoreOwner(storeId, async () => {
     try {
       const result = await promotionService.getPromotionsByStore(storeId);
-      return { success: true, promotions: result };
+      return deepSerialize({ success: true, promotions: result });
     } catch (error: any) {
       log.error("Error en getPromotionsByStoreAction:", error);
       return { error: error.message || "Error al obtener las promociones" };
@@ -36,7 +37,7 @@ export const updatePromotionAction = async (storeId: string, id: string, data: U
     try {
       const result = await promotionService.updatePromotion(id, data);
       revalidatePath("/mi-tienda");
-      return { success: true, promotion: result };
+      return deepSerialize({ success: true, promotion: result });
     } catch (error: any) {
       log.error("Error en updatePromotionAction:", error);
       return { error: error.message || "Error al actualizar la promoción" };
@@ -47,7 +48,7 @@ export const togglePromotionAction = async (storeId: string, id: string, isActiv
   withStoreOwner(storeId, async () => {
     try {
       const result = await promotionService.togglePromotion(id, isActive);
-      return { success: true, promotion: result };
+      return deepSerialize({ success: true, promotion: result });
     } catch (error: any) {
       log.error("Error en togglePromotionAction:", error);
       return { error: error.message || "Error al cambiar el estado de la promoción" };
