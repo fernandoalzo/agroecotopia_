@@ -13,10 +13,13 @@ import { cn } from "@/lib/utils";
 import { envioStatusConfig, type EnvioEstadoKey } from "./envioUtils";
 import { EnvioDetailPanel } from "./EnvioDetailPanel";
 import { OrderDetailPanel } from "@/components/admin/pedidos/OrderDetailPanel";
-import { AdminEnvioCard } from "./AdminEnvioCard";
+
 import { Loading } from "@/components/ui/Loading";
-import { Fragment } from "react";
+import { Fragment, useMemo } from "react";
 import { PedidoEstado } from "@/types";
+import { DataTable } from "@/components/ui/data-table";
+import { getAdminEnvioColumns } from "./AdminEnviosTableColumns";
+import { SearchInput } from "@/components/shared/SearchInput";
 
 type Envio = any;
 
@@ -97,11 +100,20 @@ export function EnviosList({
     return result;
   };
 
+  const columns = useMemo(
+    () => getAdminEnvioColumns(setSelectedEnvio, setSelectedPedidoId),
+    []
+  );
+
   return (
     <>
-      <div className="space-y-6">
+      <div className="flex flex-col space-y-4 flex-1 min-h-0">
         {/* Filters */}
-        <div className="flex flex-col gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col gap-4 shrink-0"
+        >
           {/* Status Tabs */}
           <div className="flex flex-wrap gap-2">
             {Object.entries(allStats).map(([status, count]) => {
@@ -138,110 +150,61 @@ export function EnviosList({
           </div>
 
           {/* Search */}
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Buscar por guía, pedido, cliente..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-background border border-input text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-            />
-          </div>
-        </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={onSearchChange}
+            placeholder="Buscar por guía, pedido, cliente..."
+            onClear={() => onSearchChange("")}
+            containerClassName="max-w-md"
+            inputClassName="pr-4"
+          />
+        </motion.div>
 
-        {loading ? (
-          <motion.div
-            key="loading-state"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="py-20 flex justify-center"
-          >
-            <Loading className="scale-75" text="" subtext="" />
-          </motion.div>
-        ) : envios.length === 0 ? (
-          <motion.div
-            key="empty-state"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex flex-col items-center justify-center py-20 text-center"
-          >
-            <Filter className="h-10 w-10 text-muted-foreground/30 mb-3" />
-            <p className="text-muted-foreground font-medium">
-              {statusFilter !== "ALL" || searchQuery
-                ? "No se encontraron envíos con los filtros aplicados."
-                : "No hay envíos registrados. Los envíos se crean automáticamente al confirmar un pedido con envío a domicilio."}
+      <DataTable
+        columns={columns}
+        data={envios}
+        loading={loading}
+        pageCount={totalPages}
+        currentPage={currentPage}
+        pageSize={10}
+        totalEntries={totalCount}
+        onPageChange={onPageChange}
+        emptyTitle={
+          statusFilter !== "ALL" || searchQuery
+            ? "No se encontraron envíos con los filtros aplicados."
+            : "No hay envíos registrados."
+        }
+        emptyDescription="Los envíos se crean automáticamente al confirmar un pedido con envío a domicilio."
+        getRowClassName={(row) => {
+          const cfg = envioStatusConfig[row.estado as EnvioEstadoKey];
+          return cn(
+            "bg-card/40 backdrop-blur-sm",
+            cfg?.hoverClasses,
+            cfg?.cardBorderClass
+          );
+        }}
+        footerLeftContent={
+          <>
+            <p className="text-xs text-muted-foreground">
+              Mostrando envíos <span className="font-bold text-foreground">{envios.length > 0 ? (currentPage - 1) * 10 + 1 : 0}</span> al{" "}
+              <span className="font-bold text-foreground">{Math.min(currentPage * 10, totalCount)}</span> de{" "}
+              <span className="font-bold text-foreground">{totalCount}</span> totales
             </p>
-          </motion.div>
-        ) : (
-          <div className="grid grid-cols-1 gap-3">
-            {envios.map((envio, index) => (
-              <AdminEnvioCard
-                key={envio.id}
-                envio={envio}
-                index={index}
-                onOpenDetail={setSelectedEnvio}
-                onOpenOrderDetail={setSelectedPedidoId}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Página {currentPage} de {totalPages} ({totalCount} envíos)
-            </p>
-            <div className="flex items-center gap-2">
+            {(statusFilter !== "ALL" || searchQuery.trim() !== "") && (
               <button
-                onClick={() => onPageChange(currentPage - 1)}
-                disabled={currentPage <= 1}
-                className={cn(
-                  "p-2 rounded-xl transition-all",
-                  currentPage > 1
-                    ? "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-                    : "bg-muted text-muted-foreground cursor-not-allowed"
-                )}
+                className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors"
+                onClick={() => {
+                  onStatusFilterChange("ALL");
+                  onSearchChange("");
+                }}
               >
-                <ChevronLeft className="w-4 h-4" />
+                Limpiar filtros
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
-                .map((p, idx, arr) => (
-                  <Fragment key={p}>
-                    {idx > 0 && arr[idx - 1] !== p - 1 && (
-                      <span className="text-muted-foreground">...</span>
-                    )}
-                    <button
-                      onClick={() => onPageChange(p)}
-                      className={cn(
-                        "w-9 h-9 rounded-xl text-sm font-semibold transition-all",
-                        currentPage === p
-                          ? "bg-primary text-primary-foreground shadow-md shadow-primary/15"
-                          : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-                      )}
-                    >
-                      {p}
-                    </button>
-                    </Fragment>
-                ))}
-              <button
-                onClick={() => onPageChange(currentPage + 1)}
-                disabled={currentPage >= totalPages}
-                className={cn(
-                  "p-2 rounded-xl transition-all",
-                  currentPage < totalPages
-                    ? "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-                    : "bg-muted text-muted-foreground cursor-not-allowed"
-                )}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+            )}
+          </>
+        }
+      />
+    </div>
 
       {/* Detail Panels */}
       {selectedEnvio && (

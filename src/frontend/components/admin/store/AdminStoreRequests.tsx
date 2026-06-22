@@ -7,8 +7,9 @@ import { toast } from "sonner";
 import { Loading } from "@/components/ui/Loading";
 import { StoreRequest } from "@/types/store";
 import { SearchInput } from "@/components/shared/SearchInput";
-import { StoreRequestCard } from "./StoreRequestCard";
-import { StoreRequestDetailModal } from "./StoreRequestDetailModal";
+import { StoreRequestDetailPanel } from "./StoreRequestDetailPanel";
+import { DataTable } from "@/components/ui/data-table";
+import { getAdminStoreRequestsColumns } from "./AdminStoreRequestsTableColumns";
 
 interface AdminStoreRequestsProps {
   onLoadRequests: (page: number, search?: string) => Promise<StoreRequestsResponse>;
@@ -131,13 +132,14 @@ export const AdminStoreRequests = React.memo(function AdminStoreRequests({
     }
   };
 
-  if (loading && requests.length === 0) return <Loading />;
+  const columns = useMemo(() => getAdminStoreRequestsColumns((req) => setSelectedRequestId(req.id)), []);
 
   const searching = searchQuery.trim().length > 0;
 
   return (
-    <div className="space-y-6">
-      <div className="pb-6 border-b border-border/40">
+    <div className="flex flex-col space-y-4 flex-1 min-h-0 relative">
+      {/* ── Header ── */}
+      <div className="pb-4 border-b border-border/40 shrink-0">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-3xl font-display font-medium tracking-tight text-foreground">
@@ -157,72 +159,54 @@ export const AdminStoreRequests = React.memo(function AdminStoreRequests({
           </div>
         </div>
       </div>
+      
+      {/* ── Search ── */}
+      <div className="shrink-0">
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Buscar por tienda, nombre o datos del propietario..."
+          onClear={() => setSearchQuery("")}
+          containerClassName="max-w-md w-full"
+          inputClassName="h-10"
+        />
+      </div>
 
-      <SearchInput
-        value={searchQuery}
-        onChange={setSearchQuery}
-        placeholder="Buscar por tienda, nombre o datos del propietario..."
-        onClear={() => setSearchQuery("")}
-        containerClassName="max-w-2xl"
+      {/* ── DataTable Implementation ── */}
+      <DataTable
+        columns={columns}
+        data={visibleRequests}
+        loading={loading}
+        pageCount={totalPages}
+        currentPage={page}
+        pageSize={10}
+        totalEntries={totalRequests}
+        onPageChange={(p) => loadRequests(p, debouncedSearch)}
+        onRowClick={(row) => setSelectedRequestId(row.id)}
+        emptyTitle={searching ? "Sin resultados" : "Todo al día"}
+        emptyDescription={searching ? "No encontramos coincidencias en la lista actual ni en la base de datos." : "No hay solicitudes de tienda registradas."}
+        emptyIcon={CheckCircle}
+        footerLeftContent={
+          <>
+            <p className="text-xs text-muted-foreground">
+              Mostrando página <span className="font-bold text-foreground">{page}</span> de{" "}
+              <span className="font-bold text-foreground">{totalPages}</span>
+            </p>
+            {searching && (
+              <button
+                className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors"
+                onClick={() => setSearchQuery("")}
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </>
+        }
       />
 
-      {loading && requests.length > 0 && (
-        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Buscando coincidencias...
-        </div>
-      )}
 
-      {visibleRequests.length === 0 ? (
-        <div className="rounded-2xl border border-border/40 bg-card p-12 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-secondary/50">
-            <CheckCircle className="h-8 w-8 text-muted-foreground/50" />
-          </div>
-          <h3 className="text-lg font-bold">{searching ? "Sin resultados" : "Todo al día"}</h3>
-          <p className="text-muted-foreground">
-            {searching
-              ? "No encontramos coincidencias en la lista actual ni en la base de datos."
-              : "No hay solicitudes de tienda registradas."}
-          </p>
-        </div>
-      ) : (
-        <div className="relative space-y-3">
-          <AnimatePresence mode="popLayout">
-            {visibleRequests.map((req, index) => (
-              <StoreRequestCard
-                key={req.id}
-                req={req}
-                index={index}
-                onSelect={() => setSelectedRequestId(req.id)}
-              />
-            ))}
-          </AnimatePresence>
-        </div>
-      )}
 
-      {totalPages > 1 && (
-        <div className="mt-8 flex justify-center gap-2">
-          <button
-            onClick={() => loadRequests(page - 1, debouncedSearch)}
-            disabled={page === 1}
-            className="rounded-xl border border-border/50 bg-card px-4 py-2 transition-colors disabled:opacity-50 hover:bg-secondary"
-          >
-            Anterior
-          </button>
-          <span className="rounded-xl bg-secondary/50 px-4 py-2 font-medium">
-            {page} / {totalPages}
-          </span>
-          <button
-            onClick={() => loadRequests(page + 1, debouncedSearch)}
-            disabled={page === totalPages}
-            className="rounded-xl border border-border/50 bg-card px-4 py-2 transition-colors disabled:opacity-50 hover:bg-secondary"
-          >
-            Siguiente
-          </button>
-        </div>
-      )}
-
-      <StoreRequestDetailModal
+      <StoreRequestDetailPanel
         requestId={selectedRequestId}
         onLoadDetail={onLoadRequestDetail}
         onClose={() => setSelectedRequestId(null)}

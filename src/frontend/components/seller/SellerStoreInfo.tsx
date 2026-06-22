@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Store as StoreType, StoreCreateInput } from "@/types/store";
 import { Store, MapPin, Phone, Mail, Calendar, Globe, Pencil } from "lucide-react";
-import { SellerStoreEditModal } from "./SellerStoreEditModal";
+import { SellerStoreEditPanel } from "./SellerStoreEditPanel";
 
 interface SellerStoreInfoProps {
   store: StoreType;
@@ -12,7 +12,7 @@ interface SellerStoreInfoProps {
 }
 
 export function SellerStoreInfo({ store, onStoreUpdated, onUpdateStore }: SellerStoreInfoProps) {
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
 
   const infoItems = [
     { icon: Store, label: "Nombre", value: store.name },
@@ -32,7 +32,7 @@ export function SellerStoreInfo({ store, onStoreUpdated, onUpdateStore }: Seller
           {/* Edit Button */}
           <div className="flex justify-end mb-4 sm:absolute sm:top-0 sm:right-0 sm:mb-0 sm:z-10">
             <button
-              onClick={() => setIsEditModalOpen(true)}
+              onClick={() => setIsEditPanelOpen(true)}
               className="flex items-center gap-2 px-4 py-2 bg-secondary/50 backdrop-blur-sm rounded-full text-sm font-bold text-foreground hover:bg-secondary transition-all group"
             >
               <Pencil className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
@@ -92,14 +92,13 @@ export function SellerStoreInfo({ store, onStoreUpdated, onUpdateStore }: Seller
         </div>
       </div>
 
-      {isEditModalOpen && (
-        <SellerStoreEditModal
-          store={store}
-          onClose={() => setIsEditModalOpen(false)}
-          onSuccess={onStoreUpdated}
-          onUpdateStore={onUpdateStore}
-        />
-      )}
+      <SellerStoreEditPanel
+        open={isEditPanelOpen}
+        store={store}
+        onClose={() => setIsEditPanelOpen(false)}
+        onSuccess={onStoreUpdated}
+        onUpdateStore={onUpdateStore}
+      />
     </>
   );
 }

@@ -79,7 +79,7 @@ export function StorePaymentSection({ store, actions }: StorePaymentSectionProps
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 overflow-y-auto flex-1 min-h-0 pr-2 pb-8">
       <div>
         <h3 className="text-lg font-bold text-foreground font-display">Métodos de Pago</h3>
         <p className="text-sm text-muted-foreground mt-1">Configura las opciones de pago disponibles en tu tienda.</p>

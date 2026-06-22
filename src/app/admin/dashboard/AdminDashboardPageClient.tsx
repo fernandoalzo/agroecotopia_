@@ -546,7 +546,9 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
         <div
           className={cn(
             "flex-1 min-h-0",
-            activeTab === "chat" ? "overflow-hidden flex flex-col" : "overflow-auto",
+            (activeTab === "chat" || activeTab === "envios" || activeTab === "orders" || activeTab === "products" || activeTab === "store_requests")
+              ? "overflow-hidden flex flex-col"
+              : "overflow-auto",
           )}
         >
           <AnimatePresence mode="wait">
@@ -557,7 +559,7 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
                 transition={{ duration: 0.2 }}
-                className="p-4 md:p-8"
+                className="p-4 md:p-8 h-full flex flex-col"
               >
                 <AdminOrdersList
                   orders={orders}
@@ -604,9 +606,9 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
                 transition={{ duration: 0.2 }}
-                className="p-4 md:p-8"
+                className="p-4 md:p-8 h-full flex flex-col"
               >
-                <div className="mb-6">
+                <div className="mb-4 shrink-0">
                   <h2 className="text-2xl font-black tracking-tight">Gestión de Envíos</h2>
                   <p className="text-sm text-muted-foreground mt-1">Seguimiento de todos los envíos del sistema</p>
                 </div>
@@ -636,7 +638,7 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
                 transition={{ duration: 0.2 }}
-                className="p-4 md:p-8"
+                className="p-4 md:p-8 h-full flex flex-col"
               >
                 <ProductsList
                   products={productState.products}
@@ -669,7 +671,7 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
                 transition={{ duration: 0.2 }}
-                className="p-4 md:p-8"
+                className="p-4 md:p-8 h-full flex flex-col"
               >
                 <AdminStoreRequests
                   onLoadRequests={loadStoreRequests}

@@ -21,8 +21,8 @@ export function StoreConfigurationPanel({ store, actions }: StoreConfigurationPa
   const [activeTab, setActiveTab] = useState<"payment" | "taxes" | "shipping" | "bodegas">("payment");
 
   return (
-    <div className="space-y-6">
-      <div className="border-b border-border">
+    <div className="flex flex-col h-full flex-1 min-h-0 relative">
+      <div className="border-b border-border shrink-0">
         <nav className="-mb-px flex space-x-6" role="tablist">
           {TABS.map((tab) => (
             <button
@@ -42,7 +42,7 @@ export function StoreConfigurationPanel({ store, actions }: StoreConfigurationPa
         </nav>
       </div>
 
-      <div className="pt-2">
+      <div className="pt-6 flex-1 min-h-0 flex flex-col">
         {activeTab === "taxes" && (
           <StoreTaxesSection store={store} actions={actions} />
         )}

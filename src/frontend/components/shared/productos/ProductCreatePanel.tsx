@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Save, AlertCircle, ImageIcon, Plus, Trash2, Search, Check } from "lucide-react";
+import { X, Save, AlertCircle, ImageIcon, Plus, Trash2, Search, Check, Package } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,12 @@ import { useLanguage } from "@/frontend/context/LanguageContext";
 import logger from "@/utils/logger";
 import { PRODUCT_FIELDS, FieldConfig } from "./productFields.config";
 import { GenerateDescriptionButton } from "@/frontend/components/ai";
+import { SidePanel } from "@/frontend/components/ui/side-panel";
 
-const log = logger.child("src/frontend/components/shared/productos/ProductCreateModal.tsx");
+const log = logger.child("src/frontend/components/shared/productos/ProductCreatePanel.tsx");
 
-interface ProductCreateModalProps {
+interface ProductCreatePanelProps {
+  open: boolean;
   onClose: () => void;
   storeId?: string;
   availableCategories: string[];
@@ -24,14 +26,15 @@ interface ProductCreateModalProps {
   onGenerateDescription?: (name: string, categories: string[], tags: string) => Promise<string>;
 }
 
-export const ProductCreateModal = ({
+export const ProductCreatePanel = ({
+  open,
   onClose,
   storeId,
   availableCategories,
   storesList = [],
   onSubmitForm,
   onGenerateDescription,
-}: ProductCreateModalProps) => {
+}: ProductCreatePanelProps) => {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [imagesList, setImagesList] = useState<string[]>([]);
@@ -161,40 +164,45 @@ export const ProductCreateModal = ({
   };
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={loading ? undefined : onClose}
-          className="absolute inset-0 bg-background/80 backdrop-blur-sm transition-all duration-300"
-        />
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-border/50 bg-card shadow-2xl shadow-primary/5 custom-scrollbar"
-        >
-          {/* Header */}
-          <div className="sticky top-0 z-20 flex items-center justify-between px-6 py-4 border-b border-border/50 bg-card/80 backdrop-blur-md">
-            <div>
-              <h2 className="text-xl font-black tracking-tight text-foreground">Crear Nuevo Producto</h2>
-              <p className="text-xs font-bold text-muted-foreground">Añadir al catálogo general</p>
-            </div>
-            <button
-              onClick={onClose}
-              disabled={loading}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary hover:bg-muted text-muted-foreground transition-all disabled:opacity-50"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="p-6 space-y-6">
+    <SidePanel
+      open={open}
+      onClose={onClose}
+      title="Crear Nuevo Producto"
+      subtitle="Añadir un nuevo producto al catálogo"
+      icon={<Package className="h-4 w-4 text-primary" />}
+      footer={
+        <div className="flex items-center gap-3 w-full">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={onClose}
+            disabled={loading}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            form="product-create-form"
+            className="flex-1"
+            disabled={loading}
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Creando...
+              </span>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Crear Producto
+              </>
+            )}
+          </Button>
+        </div>
+      }
+    >
+      <form id="product-create-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {(() => {
                 const leftColumnNames = ["name", "price", "stock", "tag", "emoji", "peso", "dimensiones", "envioGratis"];
                 const rightColumnNames = ["categories", "unidad", "images"];
@@ -422,98 +430,102 @@ export const ProductCreateModal = ({
                 };
 
                 return (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Left Column */}
-                      <div className="grid grid-cols-2 gap-4 h-fit">
-                        {PRODUCT_FIELDS.filter(f => leftColumnNames.includes(f.name)).map(field => {
-                          if (field.name === "name") {
-                            return (
-                              <React.Fragment key="name-group">
-                                {renderField(field)}
-                                {!storeId && (
-                                  <div className="col-span-2">
-                                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">
-                                      Tienda Asignada <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50">
-                                        <Store className="h-4 w-4" />
-                                      </div>
-                                      <select
-                                        value={selectedStoreId}
-                                        onChange={(e) => setSelectedStoreId(e.target.value)}
-                                        className="w-full appearance-none rounded-xl border border-border/50 bg-background pl-10 pr-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
-                                        required
-                                      >
-                                        <option value="" disabled>Selecciona una tienda</option>
-                                        {storesList.map(store => (
-                                          <option key={store.id} value={store.id}>{store.name}</option>
-                                        ))}
-                                      </select>
-                                    </div>
-                                  </div>
-                                )}
-                              </React.Fragment>
-                            );
-                          }
-                          return renderField(field);
+                  <div className="space-y-8">
+                    {/* Sección 1: Información Principal */}
+                    <div className="space-y-4">
+                      <div className="border-b border-border/50 pb-2 mb-4">
+                        <h3 className="text-sm font-bold text-foreground">Información Principal</h3>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2">
+                          {PRODUCT_FIELDS.filter(f => f.name === "name").map(renderField)}
+                          {!storeId && (
+                            <div className="mt-4">
+                              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+                                Tienda Asignada <span className="text-red-500">*</span>
+                              </label>
+                              <div className="relative">
+                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50">
+                                  <Store className="h-4 w-4" />
+                                </div>
+                                <select
+                                  value={selectedStoreId}
+                                  onChange={(e) => setSelectedStoreId(e.target.value)}
+                                  className="w-full appearance-none rounded-xl border border-border/50 bg-background pl-10 pr-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                  required
+                                >
+                                  <option value="" disabled>Selecciona una tienda</option>
+                                  {storesList.map(store => (
+                                    <option key={store.id} value={store.id}>{store.name}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="col-span-2">
+                          {PRODUCT_FIELDS.filter(f => f.name === "categories").map(renderField)}
+                        </div>
+                        {PRODUCT_FIELDS.filter(f => ["tag", "emoji"].includes(f.name)).map(renderField)}
+                      </div>
+                    </div>
+
+                    {/* Sección 2: Precio e Inventario */}
+                    <div className="space-y-4">
+                      <div className="border-b border-border/50 pb-2 mb-4">
+                        <h3 className="text-sm font-bold text-foreground">Precio e Inventario</h3>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        {PRODUCT_FIELDS.filter(f => ["price", "stock", "unidad"].includes(f.name)).map(renderField)}
+                      </div>
+                    </div>
+
+                    {/* Sección 3: Logística y Envíos */}
+                    <div className="space-y-4">
+                      <div className="border-b border-border/50 pb-2 mb-4">
+                        <h3 className="text-sm font-bold text-foreground">Logística y Envíos</h3>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        {PRODUCT_FIELDS.filter(f => ["peso", "dimensiones"].includes(f.name)).map(renderField)}
+                        <div className="col-span-2">
+                          {PRODUCT_FIELDS.filter(f => f.name === "envioGratis").map(renderField)}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sección 4: Multimedia */}
+                    <div className="space-y-4">
+                      <div className="border-b border-border/50 pb-2 mb-4">
+                        <h3 className="text-sm font-bold text-foreground">Multimedia</h3>
+                      </div>
+                      <div className="grid grid-cols-1 gap-4">
+                        {PRODUCT_FIELDS.filter(f => f.name === "images").map(field => {
+                          const f = { ...field, colSpan: 1 } as FieldConfig;
+                          return renderField(f);
                         })}
                       </div>
+                    </div>
 
-                      {/* Right Column */}
-                      <div className="grid grid-cols-2 gap-4 h-fit">
-                        {PRODUCT_FIELDS.filter(f => rightColumnNames.includes(f.name)).map(renderField)}
+                    {/* Sección 5: Detalles */}
+                    <div className="space-y-4">
+                      <div className="border-b border-border/50 pb-2 mb-4">
+                        <h3 className="text-sm font-bold text-foreground">Detalles del Producto</h3>
+                      </div>
+                      <div className="grid grid-cols-1 gap-4">
+                        {PRODUCT_FIELDS.filter(f => f.name === "description").map(renderField)}
                       </div>
                     </div>
-
-                    {/* Description (Full Width) */}
-                    <div>
-                      {PRODUCT_FIELDS.filter(f => fullWidthNames.includes(f.name)).map(renderField)}
-                    </div>
-                  </>
+                  </div>
                 );
               })()}
 
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-primary/5 border border-primary/10">
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-primary/5 border border-primary/10 mt-6">
                 <AlertCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                 <p className="text-xs text-primary/80 leading-relaxed font-medium">
                   Una vez creado, el producto estará visible en el catálogo inmediatamente.
                 </p>
               </div>
-            </div>
-
-            <div className="sticky bottom-0 z-20 flex flex-col-reverse sm:flex-row justify-end gap-3 px-6 py-4 border-t border-border/50 bg-card/80 backdrop-blur-md">
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-xl font-bold px-6"
-                onClick={onClose}
-                disabled={loading}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                className="rounded-xl font-bold px-8 shadow-md shadow-primary/20 transition-all hover:shadow-primary/40"
-                disabled={loading}
-              >
-                {loading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="h-4 w-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
-                    Creando...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Save className="h-4 w-4" />
-                    Crear Producto
-                  </div>
-                )}
-              </Button>
-            </div>
-          </form>
-        </motion.div>
-      </div>
-    </AnimatePresence>
+      </form>
+    </SidePanel>
   );
 };

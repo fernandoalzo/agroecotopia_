@@ -32,7 +32,7 @@ import logger from "@/utils/logger";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import { PromotionsList } from "@/components/seller/promotions/PromotionsList";
-import { PromotionCreateModal } from "@/components/seller/promotions/PromotionCreateModal";
+import { PromotionCreatePanel } from "@/components/seller/promotions/PromotionCreatePanel";
 import { StoreConfigurationPanel } from "@/components/seller/configuration/StoreConfigurationPanel";
 import type { Promotion } from "@/types/store";
 import { EnviosList } from "@/components/admin/envios/EnviosList";
@@ -145,7 +145,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
   
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loadingPromotions, setLoadingPromotions] = useState(false);
-  const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
+  const [isPromoPanelOpen, setIsPromoPanelOpen] = useState(false);
 
   const [envios, setEnvios] = useState<any[]>([]);
   const [enviosLoading, setEnviosLoading] = useState(false);
@@ -719,8 +719,13 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
         </div>
 
         {/* Content area */}
-        <div className="flex-1 min-h-0 overflow-auto">
-          <div className="max-w-6xl mx-auto p-4 md:p-8">
+        <div className={cn(
+          "flex-1 min-h-0",
+          (activeTab === "orders" || activeTab === "envios" || activeTab === "products" || activeTab === "promotions" || activeTab === "configuration")
+            ? "overflow-hidden flex flex-col"
+            : "overflow-auto"
+        )}>
+          {(activeTab === "orders" || activeTab === "envios" || activeTab === "products" || activeTab === "promotions" || activeTab === "configuration") ? (
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
@@ -728,6 +733,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.2 }}
+                className="flex-1 min-h-0 flex flex-col p-4 md:p-8"
               >
                 {activeTab === "orders" && activeStore && (
                   <AdminOrdersList
@@ -841,7 +847,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                     storeId={activeStore.id}
                     promotions={promotions}
                     loading={loadingPromotions}
-                    onCreateNew={() => setIsPromoModalOpen(true)}
+                    onCreateNew={() => setIsPromoPanelOpen(true)}
                     onToggleStatus={async (id, isActive) => {
                       setPromotions(prev => prev.map(p => p.id === id ? { ...p, isActive } : p));
                       const res = await actions.togglePromotion(activeStore.id, id, isActive);
@@ -865,35 +871,49 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                     }}
                   />
                 )}
-                {activeTab === "store_info" && activeStore && (
-                  <SellerStoreInfo 
-                    store={activeStore} 
-                    onStoreUpdated={loadStore} 
-                    onUpdateStore={handleUpdateStore}
-                  />
-                )}
                 {activeTab === "configuration" && activeStore && (
                   <StoreConfigurationPanel store={activeStore} actions={actions} />
                 )}
               </motion.div>
             </AnimatePresence>
-          </div>
+          ) : (
+            <div className="max-w-6xl mx-auto p-4 md:p-8">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {activeTab === "store_info" && activeStore && (
+                    <SellerStoreInfo 
+                      store={activeStore} 
+                      onStoreUpdated={loadStore} 
+                      onUpdateStore={handleUpdateStore}
+                    />
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       </main>
       
-      {isPromoModalOpen && activeStore && (
-        <PromotionCreateModal
+      {activeStore && (
+        <PromotionCreatePanel
+          open={isPromoPanelOpen}
           storeId={activeStore.id}
           getProducts={(id) => actions.getPaginatedProducts(1, 1000, undefined, id)}
           searchProducts={(query) => actions.searchProducts(query, 1, 50, undefined, activeStore.id)}
-          onClose={() => setIsPromoModalOpen(false)}
+          onClose={() => setIsPromoPanelOpen(false)}
           onSubmit={async (data) => {
             const res = await actions.createPromotion(activeStore.id, data);
             if (res && res.success) {
-              loadPromotions();
+              loadPromotions(true);
               return true;
             }
-            throw new Error(res?.error || "Error");
+            return false;
           }}
         />
       )}

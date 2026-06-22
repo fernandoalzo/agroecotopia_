@@ -23,6 +23,7 @@ import {
 } from "@/frontend/components/ui/pagination";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/frontend/context/LanguageContext";
+import { Loading } from "@/frontend/components/ui/Loading";
 
 interface DataTableProps<TData, TValue = any> {
   columns: ColumnDef<TData, any>[];
@@ -86,6 +87,11 @@ export function DataTable<TData, TValue>({
     <div className="w-full flex-1 flex flex-col min-h-0">
       {/* Table Container */}
       <div className="flex-1 overflow-auto overscroll-contain relative border-y border-border/20">
+        {loading && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/40 backdrop-blur-[1px]">
+            <Loading text={t.dataTable.loading} subtext="" className="py-0 scale-75" />
+          </div>
+        )}
         <Table>
           <TableHeader className="sticky top-0 bg-background/95 backdrop-blur-md z-10 border-b border-border/40">
             {table.getHeaderGroups().map((headerGroup) => (
@@ -109,16 +115,7 @@ export function DataTable<TData, TValue>({
             ))}
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
-                  <div className="flex flex-col items-center justify-center">
-                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent mb-2" />
-                    {t.dataTable.loading}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : table.getRowModel().rows?.length ? (
+            {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row, i) => {
                 const isSelected = getRowId && selectedRowId !== undefined
                   ? getRowId(row.original) === selectedRowId
@@ -130,8 +127,8 @@ export function DataTable<TData, TValue>({
                     data-state={isSelected ? "selected" : undefined}
                     onClick={() => onRowClick?.(row.original)}
                     className={cn(
-                      "transition-colors border-b border-border/10",
-                      onRowClick && "cursor-pointer group hover:bg-muted/50",
+                      "transition-colors",
+                      onRowClick && "cursor-pointer group",
                       getRowClassName?.(row.original, i)
                     )}
                   >
@@ -143,6 +140,10 @@ export function DataTable<TData, TValue>({
                   </TableRow>
                 );
               })
+            ) : loading ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-48" />
+              </TableRow>
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-48 text-center text-muted-foreground hover:bg-transparent">

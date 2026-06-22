@@ -1,9 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Store as StoreType } from "@/types/store";
-import { Plus, Trash2, Edit2, CheckCircle2, XCircle, MapPin, Truck } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { MapPin, Truck, Plus, Trash2, Edit2, ChevronDown, ChevronUp, Save, Globe, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Loading } from "@/components/ui/Loading";
-import { Switch } from "@/components/ui/switch";
+import { DataTable } from "@/frontend/components/ui/data-table";
+import { ColumnDef } from "@tanstack/react-table";
+import { SidePanel } from "@/frontend/components/ui/side-panel";
+import { ZoneSidePanel, ZoneData } from "./panels/ZoneSidePanel";
+import { RateSidePanel, RateData } from "./panels/RateSidePanel";
 
 interface StoreShippingSectionProps {
   store: StoreType;
@@ -18,16 +23,6 @@ export function StoreShippingSection({ store, actions }: StoreShippingSectionPro
   const [editingZone, setEditingZone] = useState<any>(null);
   const [activeZoneId, setActiveZoneId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  // Zone Form states
-  const [zoneName, setZoneName] = useState("");
-  const [ciudadesText, setCiudadesText] = useState("");
-
-  // Rate Form states
-  const [rateName, setRateName] = useState("");
-  const [rateType, setRateType] = useState<"TARIFA_FIJA" | "POR_PESO">("TARIFA_FIJA");
-  const [ratePrice, setRatePrice] = useState("");
-  const [freeThreshold, setFreeThreshold] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -53,29 +48,20 @@ export function StoreShippingSection({ store, actions }: StoreShippingSectionPro
   const handleOpenZoneModal = (zone?: any) => {
     if (zone) {
       setEditingZone(zone);
-      setZoneName(zone.name);
-      setCiudadesText(zone.ciudades.join(", "));
     } else {
       setEditingZone(null);
-      setZoneName("");
-      setCiudadesText("");
     }
     setIsZoneModalOpen(true);
   };
 
-  const submitZone = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!zoneName || !ciudadesText || isSubmitting) return;
-
-    const ciudadesArray = ciudadesText.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean);
-
+  const submitZone = async (data: ZoneData) => {
     setIsSubmitting(true);
     try {
       if (editingZone) {
-        await actions.updateStoreShippingZone(editingZone.id, { name: zoneName, ciudades: ciudadesArray });
+        await actions.updateStoreShippingZone(editingZone.id, data);
         toast.success("Zona actualizada");
       } else {
-        await actions.createStoreShippingZone(store.id, { name: zoneName, ciudades: ciudadesArray });
+        await actions.createStoreShippingZone(store.id, data);
         toast.success("Zona creada");
       }
       setIsZoneModalOpen(false);
@@ -102,25 +88,15 @@ export function StoreShippingSection({ store, actions }: StoreShippingSectionPro
   // Rate Handlers
   const handleOpenRateModal = (zoneId: string) => {
     setActiveZoneId(zoneId);
-    setRateName("");
-    setRateType("TARIFA_FIJA");
-    setRatePrice("");
-    setFreeThreshold("");
     setIsRateModalOpen(true);
   };
 
-  const submitRate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!rateName || !ratePrice || !activeZoneId || isSubmitting) return;
+  const submitRate = async (data: RateData) => {
+    if (!activeZoneId || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
-      await actions.addShippingRate(activeZoneId, {
-        name: rateName,
-        type: rateType,
-        price: parseFloat(ratePrice),
-        freeShippingThreshold: freeThreshold ? parseFloat(freeThreshold) : undefined,
-      });
+      await actions.addShippingRate(activeZoneId, data);
       toast.success("Tarifa creada");
       setIsRateModalOpen(false);
       loadZones();
@@ -172,84 +148,129 @@ export function StoreShippingSection({ store, actions }: StoreShippingSectionPro
     }
   };
 
+  const rateColumns: ColumnDef<any>[] = useMemo(() => [
+    {
+      accessorKey: "name",
+      header: "Nombre de Tarifa",
+      cell: ({ row }) => (
+        <span className="font-medium flex items-center gap-2">
+          <Truck className="w-3.5 h-3.5 text-muted-foreground" />
+          {row.original.name}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "type",
+      header: "Tipo",
+      cell: ({ row }) => (
+        <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-md font-medium text-xs">
+          {row.original.type === "POR_PESO" ? "Por kg extra" : "Fija"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "price",
+      header: "Precio",
+      cell: ({ row }) => <span className="font-bold">${row.original.price.toLocaleString()}</span>,
+    },
+    {
+      accessorKey: "freeShippingThreshold",
+      header: "Envío Gratis Desde",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">
+          {row.original.freeShippingThreshold ? `$${row.original.freeShippingThreshold.toLocaleString()}` : "N/A"}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right">Acciones</div>,
+      cell: ({ row }) => {
+        const rate = row.original;
+        return (
+          <div className="flex justify-end gap-1">
+            {deletingId === rate.id ? (
+              <div className="flex items-center justify-end gap-1">
+                <button onClick={() => deleteRate(rate.id)} className="p-1 text-red-500 rounded-lg transition-colors"><CheckCircle2 className="w-4 h-4" /></button>
+                <button onClick={() => setDeletingId(null)} className="p-1 text-muted-foreground rounded-lg transition-colors"><XCircle className="w-4 h-4" /></button>
+              </div>
+            ) : (
+              <button onClick={() => setDeletingId(rate.id)} className="p-1 text-muted-foreground hover:text-red-500 rounded-lg transition-colors">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        );
+      },
+    },
+  ], [deletingId]);
+
   if (loading) {
     return <div className="py-12 flex justify-center"><Loading /></div>;
   }
 
   return (
-    <div className="space-y-6 relative">
-      <div className="bg-card p-6 rounded-2xl border border-border">
-        <div className="mb-6">
-          <h2 className="text-xl font-bold font-display">Opciones de Entrega</h2>
-          <p className="text-muted-foreground text-sm mt-1">Activa o desactiva las formas en las que los clientes pueden recibir sus pedidos.</p>
+    <div className="flex flex-col h-full space-y-4 relative">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0 border-b border-border/50 pb-4">
+        <div>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Opciones de Entrega</h2>
         </div>
         
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 rounded-xl border border-border/50 hover:bg-secondary/5 transition-colors">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <Truck className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="font-bold text-sm">Envío a domicilio</p>
-                <p className="text-xs text-muted-foreground">Permitir envíos usando tus zonas y tarifas configuradas.</p>
-              </div>
-            </div>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
             <Switch
+              id="delivery-switch"
               checked={deliveryEnabled}
               onCheckedChange={(checked) => toggleShippingMethod('delivery', checked)}
+              className="scale-75"
             />
+            <label htmlFor="delivery-switch" className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
+              <Truck className="w-4 h-4 text-muted-foreground" />
+              Domicilio
+            </label>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-xl border border-border/50 hover:bg-secondary/5 transition-colors">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <MapPin className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="font-bold text-sm">Recoger en bodega</p>
-                <p className="text-xs text-muted-foreground">Permitir a los clientes recoger sus pedidos sin costo de envío.</p>
-              </div>
-            </div>
+          <div className="flex items-center gap-2">
             <Switch
+              id="pickup-switch"
               checked={pickupEnabled}
               onCheckedChange={(checked) => toggleShippingMethod('pickup', checked)}
+              className="scale-75"
             />
+            <label htmlFor="pickup-switch" className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-muted-foreground" />
+              Bodega
+            </label>
           </div>
         </div>
       </div>
 
-      <div className="hidden sm:flex justify-between items-center bg-card p-6 rounded-2xl border border-border mt-8">
+      <div className="flex justify-between items-end px-1 shrink-0 pt-2">
         <div>
-          <h2 className="text-xl font-bold font-display">Zonas de Envío</h2>
-          <p className="text-muted-foreground text-sm mt-1">Configura las zonas donde ofreces envíos a domicilio y establece las tarifas.</p>
+          <h2 className="text-lg font-bold font-display">Zonas de Envío</h2>
+          <p className="text-muted-foreground text-sm">Configura las zonas donde ofreces envíos a domicilio y establece las tarifas.</p>
         </div>
-        <button
-          onClick={() => handleOpenZoneModal()}
-          className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-medium flex items-center gap-2 hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Nueva Zona</span>
-        </button>
       </div>
 
-      {/* Mobile floating button */}
+      {/* Floating Action Button for Nueva Zona */}
       <button
         onClick={() => handleOpenZoneModal()}
-        className="fixed bottom-6 right-6 z-40 sm:hidden bg-primary text-primary-foreground w-14 h-14 rounded-full shadow-xl flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+        className="fixed bottom-6 right-6 z-40 bg-primary text-primary-foreground w-14 h-14 rounded-full shadow-lg shadow-primary/30 flex items-center justify-center hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all hover:shadow-xl hover:shadow-primary/40"
+        title="Nueva Zona"
       >
-        <Plus className="w-7 h-7" />
+        <Plus className="w-6 h-6" />
       </button>
 
-      {zones.length === 0 ? (
-        <div className="bg-card rounded-2xl border border-border p-8 text-center text-muted-foreground">
-          No tienes zonas de envío configuradas. Se cobrará $0 de envío por defecto.
-        </div>
-      ) : (
-        <div className="space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto pr-2 pb-8 space-y-8">
+        {zones.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground">
+            No tienes zonas de envío configuradas. Se cobrará $0 de envío por defecto.
+          </div>
+        ) : (
+          <div className="space-y-8">
           {zones.map((zone) => (
-            <div key={zone.id} className="bg-card rounded-2xl border border-border overflow-hidden">
-              <div className="bg-secondary/20 p-4 border-b border-border/50 flex justify-between items-center">
+            <div key={zone.id} className="w-full">
+              <div className="flex justify-between items-center mb-4 px-2">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary/10 rounded-lg text-primary">
                     <MapPin className="w-5 h-5" />
@@ -281,160 +302,35 @@ export function StoreShippingSection({ store, actions }: StoreShippingSectionPro
                 </div>
               </div>
               
-              <div className="p-0">
-                {zone.rates && zone.rates.length > 0 ? (
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-secondary/10 text-muted-foreground text-xs uppercase tracking-wider">
-                      <tr>
-                        <th className="px-4 py-3 font-medium">Nombre de Tarifa</th>
-                        <th className="px-4 py-3 font-medium">Tipo</th>
-                        <th className="px-4 py-3 font-medium">Precio</th>
-                        <th className="px-4 py-3 font-medium">Envío Gratis Desde</th>
-                        <th className="px-4 py-3 font-medium text-right">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/40">
-                      {zone.rates.map((rate: any) => (
-                        <tr key={rate.id} className="hover:bg-secondary/5 transition-colors">
-                          <td className="px-4 py-3 font-medium flex items-center gap-2">
-                            <Truck className="w-3.5 h-3.5 text-muted-foreground" />
-                            {rate.name}
-                          </td>
-                          <td className="px-4 py-3 text-xs">
-                            <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-md font-medium">
-                              {rate.type === "POR_PESO" ? "Por kg extra" : "Fija"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 font-bold">${rate.price.toLocaleString()}</td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {rate.freeShippingThreshold ? `$${rate.freeShippingThreshold.toLocaleString()}` : "N/A"}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            {deletingId === rate.id ? (
-                              <div className="flex items-center justify-end gap-1">
-                                <button onClick={() => deleteRate(rate.id)} className="p-1 text-red-500 rounded-lg transition-colors"><CheckCircle2 className="w-4 h-4" /></button>
-                                <button onClick={() => setDeletingId(null)} className="p-1 text-muted-foreground rounded-lg transition-colors"><XCircle className="w-4 h-4" /></button>
-                              </div>
-                            ) : (
-                              <button onClick={() => setDeletingId(rate.id)} className="p-1 text-muted-foreground hover:text-red-500 rounded-lg transition-colors">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <div className="p-6 text-center text-sm text-muted-foreground italic">
-                    No hay tarifas para esta zona. Añade una para empezar a cobrar envíos.
-                  </div>
-                )}
-              </div>
+              <DataTable
+                  columns={rateColumns}
+                  data={zone.rates || []}
+                  emptyTitle="Sin Tarifas"
+                  emptyDescription="No hay tarifas para esta zona. Añade una para empezar a cobrar envíos."
+                  emptyIcon={Truck}
+                />
             </div>
           ))}
         </div>
-      )}
+        )}
+      </div>
 
-      {/* Zone Modal */}
-      {isZoneModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="bg-card w-full max-w-md rounded-2xl shadow-xl border border-border p-6">
-            <h3 className="text-xl font-bold mb-4">{editingZone ? "Editar Zona" : "Nueva Zona de Envío"}</h3>
-            <form onSubmit={submitZone} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Nombre de la Zona (Ej. Nacional)</label>
-                <input
-                  type="text"
-                  required
-                  value={zoneName}
-                  onChange={(e) => setZoneName(e.target.value)}
-                  className="w-full bg-background border border-input rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  placeholder="Ej: Bogotá y alrededores"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Ciudades incluidas (separadas por coma)</label>
-                <textarea
-                  required
-                  value={ciudadesText}
-                  onChange={(e) => setCiudadesText(e.target.value)}
-                  className="w-full bg-background border border-input rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[100px]"
-                  placeholder="Ej: bogota, chia, soacha"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Escribe las ciudades exactamente como las escribirían tus clientes.</p>
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setIsZoneModalOpen(false)} className="flex-1 px-4 py-2 rounded-xl border border-border font-medium hover:bg-secondary/50">Cancelar</button>
-                <button type="submit" disabled={isSubmitting} className="flex-1 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50">
-                  {isSubmitting ? "Guardando..." : "Guardar"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Zone SidePanel */}
+      <ZoneSidePanel
+        open={isZoneModalOpen}
+        onClose={() => setIsZoneModalOpen(false)}
+        onSubmit={submitZone}
+        initialData={editingZone}
+        isSubmitting={isSubmitting}
+      />
 
-      {/* Rate Modal */}
-      {isRateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="bg-card w-full max-w-md rounded-2xl shadow-xl border border-border p-6">
-            <h3 className="text-xl font-bold mb-4">Nueva Tarifa</h3>
-            <form onSubmit={submitRate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Nombre (Ej. Envío Estándar)</label>
-                <input
-                  type="text"
-                  required
-                  value={rateName}
-                  onChange={(e) => setRateName(e.target.value)}
-                  className="w-full bg-background border border-input rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">Tipo de Tarifa</label>
-                  <select
-                    value={rateType}
-                    onChange={(e: any) => setRateType(e.target.value)}
-                    className="w-full bg-background border border-input rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  >
-                    <option value="TARIFA_FIJA">Precio Fijo</option>
-                    <option value="POR_PESO">Cobro por Kg extra</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">Precio ($)</label>
-                  <input
-                    type="number"
-                    required
-                    value={ratePrice}
-                    onChange={(e) => setRatePrice(e.target.value)}
-                    className="w-full bg-background border border-input rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Monto para Envío Gratis (Opcional)</label>
-                <input
-                  type="number"
-                  value={freeThreshold}
-                  onChange={(e) => setFreeThreshold(e.target.value)}
-                  className="w-full bg-background border border-input rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  placeholder="Ej: 150000"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Si el pedido supera este monto, el envío será gratis.</p>
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setIsRateModalOpen(false)} className="flex-1 px-4 py-2 rounded-xl border border-border font-medium hover:bg-secondary/50">Cancelar</button>
-                <button type="submit" disabled={isSubmitting} className="flex-1 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50">
-                  {isSubmitting ? "Guardando..." : "Guardar"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Rate SidePanel */}
+      <RateSidePanel
+        open={isRateModalOpen}
+        onClose={() => setIsRateModalOpen(false)}
+        onSubmit={submitRate}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 }

@@ -32,7 +32,7 @@ export const envioStatusConfig: Record<EnvioEstadoKey, {
     barColor: "bg-gradient-to-b from-amber-400 to-amber-600",
     glowColor: "shadow-[2px_0_12px_rgba(245,158,11,0.3)] lg:shadow-[2px_0_15px_rgba(245,158,11,0.25)]",
     cardBorderClass: "border-amber-500/20 bg-amber-500/[0.01]",
-    hoverClasses: "hover:border-amber-500/40 hover:shadow-[0_10px_35px_-5px_rgba(245,158,11,0.15)] hover:bg-amber-500/[0.03]",
+    hoverClasses: "hover:border-amber-500/50 hover:shadow-[0_10px_35px_-5px_rgba(245,158,11,0.25)] hover:bg-amber-500/10 dark:hover:bg-amber-500/15",
     icon: Package,
   },
   DESPACHADO: {
@@ -44,7 +44,7 @@ export const envioStatusConfig: Record<EnvioEstadoKey, {
     barColor: "bg-gradient-to-b from-blue-400 to-blue-600",
     glowColor: "shadow-[2px_0_12px_rgba(59,130,246,0.3)] lg:shadow-[2px_0_15px_rgba(59,130,246,0.25)]",
     cardBorderClass: "border-blue-500/20 bg-blue-500/[0.01]",
-    hoverClasses: "hover:border-blue-500/40 hover:shadow-[0_10px_35px_-5px_rgba(59,130,246,0.15)] hover:bg-blue-500/[0.03]",
+    hoverClasses: "hover:border-blue-500/50 hover:shadow-[0_10px_35px_-5px_rgba(59,130,246,0.25)] hover:bg-blue-500/10 dark:hover:bg-blue-500/15",
     icon: Truck,
   },
   EN_TRANSITO: {
@@ -56,7 +56,7 @@ export const envioStatusConfig: Record<EnvioEstadoKey, {
     barColor: "bg-gradient-to-b from-indigo-400 to-indigo-600",
     glowColor: "shadow-[2px_0_12px_rgba(99,102,241,0.3)] lg:shadow-[2px_0_15px_rgba(99,102,241,0.25)]",
     cardBorderClass: "border-indigo-500/20 bg-indigo-500/[0.01]",
-    hoverClasses: "hover:border-indigo-500/40 hover:shadow-[0_10px_35px_-5px_rgba(99,102,241,0.15)] hover:bg-indigo-500/[0.03]",
+    hoverClasses: "hover:border-indigo-500/50 hover:shadow-[0_10px_35px_-5px_rgba(99,102,241,0.25)] hover:bg-indigo-500/10 dark:hover:bg-indigo-500/15",
     icon: Plane,
   },
   EN_REPARTO: {
@@ -68,7 +68,7 @@ export const envioStatusConfig: Record<EnvioEstadoKey, {
     barColor: "bg-gradient-to-b from-purple-400 to-purple-600",
     glowColor: "shadow-[2px_0_12px_rgba(168,85,247,0.3)] lg:shadow-[2px_0_15px_rgba(168,85,247,0.25)]",
     cardBorderClass: "border-purple-500/20 bg-purple-500/[0.01]",
-    hoverClasses: "hover:border-purple-500/40 hover:shadow-[0_10px_35px_-5px_rgba(168,85,247,0.15)] hover:bg-purple-500/[0.03]",
+    hoverClasses: "hover:border-purple-500/50 hover:shadow-[0_10px_35px_-5px_rgba(168,85,247,0.25)] hover:bg-purple-500/10 dark:hover:bg-purple-500/15",
     icon: MapPin,
   },
   ENTREGADO: {
@@ -80,7 +80,7 @@ export const envioStatusConfig: Record<EnvioEstadoKey, {
     barColor: "bg-gradient-to-b from-emerald-400 to-emerald-600",
     glowColor: "shadow-[2px_0_12px_rgba(16,185,129,0.3)] lg:shadow-[2px_0_15px_rgba(16,185,129,0.25)]",
     cardBorderClass: "border-emerald-500/20 bg-emerald-500/[0.01]",
-    hoverClasses: "hover:border-emerald-500/40 hover:shadow-[0_10px_35px_-5px_rgba(16,185,129,0.15)] hover:bg-emerald-500/[0.03]",
+    hoverClasses: "hover:border-emerald-500/50 hover:shadow-[0_10px_35px_-5px_rgba(16,185,129,0.25)] hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15",
     icon: CheckCircle2,
   },
   FALLIDO: {
@@ -92,7 +92,7 @@ export const envioStatusConfig: Record<EnvioEstadoKey, {
     barColor: "bg-gradient-to-b from-red-400 to-red-600",
     glowColor: "shadow-[2px_0_12px_rgba(239,68,68,0.3)] lg:shadow-[2px_0_15px_rgba(239,68,68,0.25)]",
     cardBorderClass: "border-red-500/20 bg-red-500/[0.01]",
-    hoverClasses: "hover:border-red-500/40 hover:shadow-[0_10px_35px_-5px_rgba(239,68,68,0.15)] hover:bg-red-500/[0.03]",
+    hoverClasses: "hover:border-red-500/50 hover:shadow-[0_10px_35px_-5px_rgba(239,68,68,0.25)] hover:bg-red-500/10 dark:hover:bg-red-500/15",
     icon: AlertTriangle,
   },
   DEVUELTO: {
@@ -104,7 +104,7 @@ export const envioStatusConfig: Record<EnvioEstadoKey, {
     barColor: "bg-gradient-to-b from-slate-400 to-slate-600",
     glowColor: "shadow-[2px_0_12px_rgba(100,116,139,0.3)] lg:shadow-[2px_0_15px_rgba(100,116,139,0.25)]",
     cardBorderClass: "border-slate-500/20 bg-slate-500/[0.01]",
-    hoverClasses: "hover:border-slate-500/40 hover:shadow-[0_10px_35px_-5px_rgba(100,116,139,0.15)] hover:bg-slate-500/[0.03]",
+    hoverClasses: "hover:border-slate-500/50 hover:shadow-[0_10px_35px_-5px_rgba(100,116,139,0.25)] hover:bg-slate-500/10 dark:hover:bg-slate-500/15",
     icon: RotateCcw,
   },
 };

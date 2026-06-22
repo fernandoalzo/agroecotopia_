@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import { Store as StoreType } from "@/types/store";
-import { Plus, Trash2, Edit2, CheckCircle2, XCircle, X, Warehouse, MapPin, Building2, ImageIcon } from "lucide-react";
+import { Plus, Trash2, Edit2, CheckCircle2, XCircle, X, Warehouse, MapPin, Building2, ImageIcon, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Loading } from "@/components/ui/Loading";
 import { cn } from "@/lib/utils";
+import { DataTable } from "@/frontend/components/ui/data-table";
+import { ColumnDef } from "@tanstack/react-table";
+import { SidePanel } from "@/frontend/components/ui/side-panel";
+import { BodegaSidePanel, BodegaData } from "./panels/BodegaSidePanel";
 
 interface StoreBodegasSectionProps {
   store: StoreType;
@@ -23,12 +27,6 @@ export function StoreBodegasSection({ store, actions }: StoreBodegasSectionProps
   const [editingBodega, setEditingBodega] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Form states
-  const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
-  const [imagenUrl, setImagenUrl] = useState("");
 
   const loadBodegas = async () => {
     setLoading(true);
@@ -51,32 +49,20 @@ export function StoreBodegasSection({ store, actions }: StoreBodegasSectionProps
   const handleOpenModal = (bodega?: any) => {
     if (bodega) {
       setEditingBodega(bodega);
-      setName(bodega.name);
-      setAddress(bodega.address);
-      setCity(bodega.city);
-      setImagenUrl(bodega.imagenUrl || "");
     } else {
       setEditingBodega(null);
-      setName("");
-      setAddress("");
-      setCity("");
-      setImagenUrl("");
     }
     setIsModalOpen(true);
   };
 
-  const submitBodega = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name || !address || !city || isSubmitting) return;
-
+  const submitBodega = async (data: BodegaData) => {
     setIsSubmitting(true);
     try {
-      const payload = { name, address, city, imagenUrl: imagenUrl || undefined };
       if (editingBodega) {
-        await actions.updateBodega(editingBodega.id, payload);
+        await actions.updateBodega(editingBodega.id, data);
         toast.success("Bodega actualizada");
       } else {
-        await actions.createBodega(store.id, payload);
+        await actions.createBodega(store.id, data);
         toast.success("Bodega creada");
       }
       setIsModalOpen(false);
@@ -100,260 +86,152 @@ export function StoreBodegasSection({ store, actions }: StoreBodegasSectionProps
     }
   };
 
+  const columns: ColumnDef<any>[] = useMemo(() => [
+    {
+      accessorKey: "name",
+      header: "Bodega",
+      cell: ({ row }) => {
+        const bodega = row.original;
+        return (
+          <div className="flex items-center gap-3">
+            <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-emerald-500/10 flex items-center justify-center">
+              {bodega.imagenUrl ? (
+                <Image
+                  src={bodega.imagenUrl}
+                  alt={bodega.name}
+                  fill
+                  className="object-cover"
+                  sizes="40px"
+                />
+              ) : (
+                <Warehouse className="w-5 h-5 text-emerald-600/50" />
+              )}
+            </div>
+            <div>
+              <p className="font-bold text-sm">{bodega.name}</p>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "address",
+      header: "Dirección",
+      cell: ({ row }) => (
+        <div className="flex items-start gap-2 text-sm text-muted-foreground">
+          <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
+          <span className="line-clamp-2">{row.original.address}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "city",
+      header: "Ciudad",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1.5 text-sm font-medium">
+          <Building2 className="w-4 h-4 text-muted-foreground/60 shrink-0" />
+          <span>{row.original.city}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "isActive",
+      header: "Estado",
+      cell: ({ row }) => {
+        const bodega = row.original;
+        return (
+          <span className={cn(
+            "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium",
+            bodega.isActive !== false ? "bg-green-500/10 text-green-600" : "bg-muted text-muted-foreground"
+          )}>
+            {bodega.isActive !== false ? "Activa" : "Inactiva"}
+          </span>
+        );
+      },
+    },
+    {
+      id: "actions",
+      header: () => <div className="text-right">Acciones</div>,
+      cell: ({ row }) => {
+        const bodega = row.original;
+        return (
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => handleOpenModal(bodega)}
+              className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+            {deletingId === bodega.id ? (
+              <div className="flex items-center gap-1 animate-in fade-in zoom-in duration-200">
+                <button
+                  onClick={() => deleteBodega(bodega.id)}
+                  className="p-2 text-green-600 hover:bg-green-500/10 rounded-lg transition-colors"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setDeletingId(null)}
+                  className="p-2 text-muted-foreground hover:bg-muted rounded-lg transition-colors"
+                >
+                  <XCircle className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setDeletingId(bodega.id)}
+                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        );
+      },
+    },
+  ], [deletingId]);
+
   if (loading) {
     return <div className="py-12 flex justify-center"><Loading /></div>;
   }
 
   return (
-    <div className="space-y-6 relative">
+    <div className="flex flex-col h-full space-y-4 relative">
       {/* Desktop header */}
-      <div className="hidden sm:flex justify-between items-center bg-card p-6 rounded-2xl border border-border">
+      <div className="flex justify-between items-end px-1 shrink-0 pt-2 pb-2">
         <div>
-          <h2 className="text-xl font-bold font-display">Bodegas de Recojo</h2>
-          <p className="text-muted-foreground text-sm mt-1">
-            Registra las bodegas donde los clientes pueden recoger sus pedidos. 
-            Cada bodega debe tener una ciudad asignada para aparecer en el checkout.
+          <h2 className="text-lg font-bold font-display">Bodegas de Recojo</h2>
+          <p className="text-muted-foreground text-sm">
+            Configura las bodegas donde los clientes pueden recoger sus pedidos sin costo.
           </p>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="bg-primary text-primary-foreground px-4 py-2 rounded-xl font-medium flex items-center gap-2 hover:bg-primary/90 transition-colors shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Nueva Bodega</span>
-        </button>
       </div>
 
-      {/* Mobile floating button */}
+      {/* Floating Action Button for Nueva Bodega */}
       <button
         onClick={() => handleOpenModal()}
-        className="fixed bottom-6 right-6 z-40 sm:hidden bg-primary text-primary-foreground w-14 h-14 rounded-full shadow-xl flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+        className="fixed bottom-6 right-6 z-40 bg-primary text-primary-foreground w-14 h-14 rounded-full shadow-lg shadow-primary/30 flex items-center justify-center hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all hover:shadow-xl hover:shadow-primary/40"
+        title="Nueva Bodega"
       >
-        <Plus className="w-7 h-7" />
+        <Plus className="w-6 h-6" />
       </button>
 
-      {bodegas.length === 0 ? (
-        <div className="bg-card rounded-2xl border border-border p-12 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/5">
-            <Warehouse className="h-8 w-8 text-primary/40" />
-          </div>
-          <p className="text-muted-foreground font-medium mb-1">No tienes bodegas configuradas</p>
-          <p className="text-sm text-muted-foreground/60">
-            Crea una bodega para que los clientes puedan seleccionar "Recoger en bodega" durante el checkout.
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {bodegas.map((bodega) => (
-            <div
-              key={bodega.id}
-              className={cn(
-                "group relative flex flex-col w-full h-full bg-card border border-border shadow-card",
-                "hover:shadow-card-hover hover:scale-[1.03] hover:-translate-y-2 hover:border-primary",
-                "transition-all duration-500 rounded-xl overflow-hidden",
-                !bodega.isActive && "opacity-60"
-              )}
-            >
-              {/* Image area */}
-              <div className="relative h-32 w-full bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 dark:from-emerald-500/5 dark:to-emerald-600/10 flex items-center justify-center overflow-hidden">
-                {bodega.imagenUrl ? (
-                  <Image
-                    src={bodega.imagenUrl}
-                    alt={bodega.name}
-                    fill
-                    className="object-cover group-hover:scale-115 transition-transform duration-700 ease-out"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                  />
-                ) : (
-                  <div className="relative z-10 flex flex-col items-center gap-1">
-                    <Warehouse className="w-16 h-16 text-emerald-500/30 dark:text-emerald-400/20 drop-shadow-[0_0_40px_rgba(16,185,129,0.15)]" />
-                    {!bodega.isActive && (
-                      <span className="text-[10px] font-black tracking-widest uppercase text-muted-foreground/40">
-                        Inactiva
-                      </span>
-                    )}
-                  </div>
-                )}
+      <DataTable
+        columns={columns}
+        data={bodegas}
+        loading={loading}
+        emptyTitle="No tienes bodegas configuradas"
+        emptyDescription="Crea una bodega para que los clientes puedan seleccionar 'Recoger en bodega' durante el checkout."
+        emptyIcon={Warehouse}
+      />
 
-                {/* Hover overlay with actions */}
-                <div className="absolute inset-0 bg-black/5 dark:bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleOpenModal(bodega)}
-                      className="bg-background/90 backdrop-blur-sm text-foreground px-4 py-2 rounded-full text-xs font-bold shadow-md hover:bg-background transition-colors"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 inline-block mr-1.5" />
-                      Editar
-                    </button>
-                    {deletingId === bodega.id ? (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => deleteBodega(bodega.id)}
-                          className="bg-red-500/90 backdrop-blur-sm text-white px-3 py-2 rounded-full text-xs font-bold shadow-md hover:bg-red-600 transition-colors"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => setDeletingId(null)}
-                          className="bg-background/90 backdrop-blur-sm text-foreground p-2 rounded-full text-xs font-bold shadow-md hover:bg-background transition-colors"
-                        >
-                          <XCircle className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setDeletingId(bodega.id)}
-                        className="bg-red-500/90 backdrop-blur-sm text-white px-3 py-2 rounded-full text-xs font-bold shadow-md hover:bg-red-600 transition-colors"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Details section */}
-              <div className="p-4 flex flex-col flex-grow">
-                <h3 className="font-display font-bold text-base text-foreground mb-1 line-clamp-2 leading-snug group-hover:text-primary transition-colors">
-                  {bodega.name}
-                </h3>
-
-                <div className="flex items-start gap-2 text-sm mt-1">
-                  <MapPin className="w-4 h-4 text-muted-foreground/60 shrink-0 mt-0.5" />
-                  <span className="text-muted-foreground leading-snug line-clamp-2">{bodega.address}</span>
-                </div>
-
-                <div className="mt-auto pt-3 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-sm">
-                    <Building2 className="w-4 h-4 text-muted-foreground/60 shrink-0" />
-                    <span className="font-semibold text-foreground/80">{bodega.city}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Create/Edit Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-[10vh] sm:items-center sm:p-4 bg-background/80 backdrop-blur-sm overflow-y-auto">
-          <div className="bg-card w-full max-w-md rounded-2xl shadow-xl border border-border p-6 my-auto max-h-[80vh] overflow-y-auto">
-              <div className="flex items-start justify-between gap-3 mb-6">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
-                    <Warehouse className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold">{editingBodega ? "Editar Bodega" : "Nueva Bodega"}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {editingBodega ? "Actualiza los datos de la bodega" : "Registra un punto de recogida para tus clientes"}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary/50 transition-colors shrink-0"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-            <form onSubmit={submitBodega} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Nombre de la Bodega</label>
-                <div className="relative">
-                  <Warehouse className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-background border border-input rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
-                    placeholder="Ej: Bodega Principal"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Dirección</label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
-                  <input
-                    type="text"
-                    required
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="w-full bg-background border border-input rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
-                    placeholder="Ej: Cra 45 #12-34, Local 201"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Ciudad</label>
-                <div className="relative">
-                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
-                  <input
-                    type="text"
-                    required
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="w-full bg-background border border-input rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
-                    placeholder="Ej: Bogotá"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1.5">
-                  La ciudad debe coincidir exactamente con la que los clientes seleccionan en el checkout.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Foto de la Bodega (opcional)</label>
-                <div className="relative">
-                  <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
-                  <input
-                    type="url"
-                    value={imagenUrl}
-                    onChange={(e) => setImagenUrl(e.target.value)}
-                    className="w-full bg-background border border-input rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow"
-                    placeholder="https://ejemplo.com/foto-bodega.jpg"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1.5">
-                  URL de una imagen que muestre la fachada o ubicación de la bodega.
-                </p>
-              </div>
-
-              <div className="flex gap-3 pt-4 border-t border-border/50">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-border font-medium text-sm hover:bg-secondary/50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 disabled:opacity-50 transition-colors"
-                >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                      Guardando...
-                    </span>
-                  ) : (
-                    editingBodega ? "Actualizar Bodega" : "Crear Bodega"
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <BodegaSidePanel
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={submitBodega}
+        initialData={editingBodega}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 }
