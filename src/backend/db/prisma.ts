@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import logger from "@/utils/logger";
 import { ensureDefaultAdminStore } from "./init";
+import { config, getRequiredConfig } from "@/config/config";
 
 const log = logger.child("src/backend/db/prisma.ts");
 
@@ -30,7 +31,9 @@ if (existing) {
     delete (process as any)[PRISMA_GLOBAL_KEY];
     delete (globalThis as any)[PRISMA_GLOBAL_KEY];
     log.info("Creando nueva instancia de PrismaClient...");
-    prisma = new PrismaClient();
+    prisma = new PrismaClient({
+      datasourceUrl: getRequiredConfig(config.database.url, "DATABASE_URL"),
+    });
     if (typeof process !== "undefined") (process as any)[PRISMA_GLOBAL_KEY] = prisma;
     (globalThis as any)[PRISMA_GLOBAL_KEY] = prisma;
     if (typeof window === "undefined") {
@@ -43,7 +46,9 @@ if (existing) {
   }
 } else {
   log.info("Creando nueva instancia de PrismaClient...");
-  prisma = new PrismaClient();
+  prisma = new PrismaClient({
+    datasourceUrl: getRequiredConfig(config.database.url, "DATABASE_URL"),
+  });
 
   // Almacenar en ambos para cubrir cualquier contexto de evaluación
   if (typeof process !== "undefined") (process as any)[PRISMA_GLOBAL_KEY] = prisma;
