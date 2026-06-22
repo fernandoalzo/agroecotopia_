@@ -141,14 +141,15 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
 
   // ── AbortController para cancelar búsquedas en vuelo ──
   const abortRef = useRef<AbortController | null>(null);
-  const skipSearchRef = useRef(false);
+  const prevSearchTermRef = useRef(queryParam);
 
   // ── Búsqueda local (escribe → fetch + URL silenciosa) ──
   useEffect(() => {
-    if (skipSearchRef.current) {
-      skipSearchRef.current = false;
-      return;
+    if (searchTerm === prevSearchTermRef.current) {
+      return; // Ignorar el primer render y renders de Strict Mode
     }
+    prevSearchTermRef.current = searchTerm;
+    
     const query = searchTerm.trim();
     if (abortRef.current) abortRef.current.abort();
     const abort = new AbortController();
@@ -174,11 +175,12 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
   useEffect(() => {
     const onPopState = () => {
       const p = new URLSearchParams(window.location.search);
-      skipSearchRef.current = true;
-      setSearchTerm(p.get("q") || "");
+      const newQ = p.get("q") || "";
+      prevSearchTermRef.current = newQ; // Prevenir trigger del effect
+      setSearchTerm(newQ);
       const page = Number(p.get("page")) || 1;
       const cat = p.get("category") || "";
-      doSearch(p.get("q") || "", page, cat);
+      doSearch(newQ, page, cat);
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
