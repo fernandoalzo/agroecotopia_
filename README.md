@@ -1,6 +1,6 @@
 # Agroecotopia — Marketplace Agroecológico
 
-Plataforma de comercio electrónico B2C y B2B enfocada en productos agroecológicos colombianos. Construida con Next.js 16, PostgreSQL, Redis y Socket.IO, desplegada en Render con conectividad privada entre servicios.
+Plataforma de comercio electrónico B2C y B2B enfocada en productos agroecológicos. Construida con Next.js 16, PostgreSQL, Redis y Socket.IO, desplegada en Render con conectividad privada entre servicios.
 
 ---
 
