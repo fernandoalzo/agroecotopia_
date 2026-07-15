@@ -45,11 +45,11 @@ export async function ensureAdminExists(prisma: PrismaClient) {
      */
     const generateE2EEData = () => {
       const registrationId = Math.floor(Math.random() * 16380) + 1;
-      
+
       // Identity Keys (Ed25519)
       const identityKeyPair = nacl.sign.keyPair();
       const identitySecret = identityKeyPair.secretKey;
-      
+
       // Signed PreKeys (Curve25519)
       const signedPreKeyKeyPair = nacl.box.keyPair();
       const signedPreKeySecret = signedPreKeyKeyPair.secretKey;
@@ -86,7 +86,7 @@ export async function ensureAdminExists(prisma: PrismaClient) {
       // Bootstrap the complete admin profile in a single transaction-like structure
       await prisma.user.create({
         data: {
-          name: "Admin Fernando",
+          name: "Admin",
           email: adminEmail,
           password: hashedPassword,
           role: adminRole as any,
