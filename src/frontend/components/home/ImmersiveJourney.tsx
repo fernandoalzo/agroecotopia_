@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { Sprout } from "lucide-react";
 import { Product } from "@/types";
+import BirdFlockBackground from "./BirdFlockBackground";
 
 // Import modular sections
 import WelcomeStage from "./sections/WelcomeStage";
@@ -200,6 +201,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
 
       {/* SECTIONS: Normal vertical layout with viewport-based entry animations */}
       <div className="relative z-10 w-full flex flex-col">
+        <BirdFlockBackground />
         {/* STAGE 1: PORTADA & BIENVENIDA */}
         <motion.section
           id="hero"
