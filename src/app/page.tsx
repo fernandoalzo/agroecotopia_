@@ -106,9 +106,7 @@ export default async function Home() {
       <main className="flex-grow">
         <ImmersiveJourney initialProducts={products} initialForumTopics={forumTopics} realStats={realStats} />
       </main>
-      <div className="hidden md:block">
-        <Footer />
-      </div>
+      <Footer />
     </div>
   );
 }
