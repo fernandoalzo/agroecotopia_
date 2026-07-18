@@ -4,6 +4,7 @@ import next from "next";
 import prisma from "@/backend/db/prisma";
 import { initSocketServer } from "./src/backend/modules/chat/socketHandler";
 import { ensureAdminExists } from "./src/lib/admin-init";
+import { ensureDefaultAdminStore } from "./src/backend/db/init";
 import logger from "./src/utils/logger";
 import { applyRateLimitMiddleware } from "./src/backend/middlewares/rateLimiter";
 import { config } from "./src/config/config";
@@ -74,6 +75,11 @@ app.prepare()
     // Asegura la existencia de la cuenta administradora base en cada reinicio.
     ensureAdminExists(prisma).catch((err) => {
       log.error("Failed to verify default admin exists on server boot:", err);
+    });
+
+    // 🏪 Tienda por defecto del admin + criptomoneda BTC
+    ensureDefaultAdminStore(prisma).catch((err) => {
+      log.error("Failed to ensure default admin store on server boot:", err);
     });
 
     // 🛡️ Sincronización de Reglas del Firewall (WAF)

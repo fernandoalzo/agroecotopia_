@@ -1,56 +1,18 @@
 import { PrismaClient } from "@prisma/client";
 import logger from "@/utils/logger";
-import { ensureDefaultAdminStore } from "./init";
 import { config, getRequiredConfig } from "@/config/config";
 
 const log = logger.child("src/backend/db/prisma.ts");
 
-const PRISMA_GLOBAL_KEY = "__prismaClient";
-
-// Usamos process como respaldo + globalThis porque Turbopack evalúa los módulos
-// del servidor en chunks separados con su propio alcance de módulo, pero process
-// es siempre el mismo singleton de Node.js en todos los contextos.
-const getGlobalStorage = () => {
-  if (typeof process !== "undefined" && (process as any)[PRISMA_GLOBAL_KEY]) {
-    return process as any;
-  }
-  if (typeof globalThis !== "undefined" && (globalThis as any)[PRISMA_GLOBAL_KEY]) {
-    return globalThis as any;
-  }
-  return null;
+const globalForPrisma = globalThis as unknown as {
+  __prismaClient?: PrismaClient;
 };
 
-let prisma: PrismaClient;
+const isNew = !globalForPrisma.__prismaClient;
 
-const existing = getGlobalStorage();
-if (existing) {
-  prisma = existing[PRISMA_GLOBAL_KEY];
-  // Si el schema cambió (ej: nuevo modelo Bodega), forzar recreación
-  if (!("storeConfig" in (prisma as any)) || !("cryptocurrency" in (prisma as any)) || !("wafRule" in (prisma as any))) {
-    log.warn("Schema desactualizado en PrismaClient singleton — forzando recreación.");
-    delete (process as any)[PRISMA_GLOBAL_KEY];
-    delete (globalThis as any)[PRISMA_GLOBAL_KEY];
-    log.info("Creando nueva instancia de PrismaClient...");
-    prisma = new PrismaClient({
-      datasourceUrl: getRequiredConfig(config.database.url, "DATABASE_URL"),
-      transactionOptions: {
-        maxWait: 5000,
-        timeout: 15000,
-      },
-    });
-    if (typeof process !== "undefined") (process as any)[PRISMA_GLOBAL_KEY] = prisma;
-    (globalThis as any)[PRISMA_GLOBAL_KEY] = prisma;
-    if (typeof window === "undefined") {
-      prisma.$connect().then(() => {
-        ensureDefaultAdminStore(prisma).catch(err => log.error("Error en init db:", err));
-      });
-    }
-  } else {
-    log.debug("Reutilizando instancia existente de PrismaClient.");
-  }
-} else {
-  log.info("Creando nueva instancia de PrismaClient...");
-  prisma = new PrismaClient({
+const prisma =
+  globalForPrisma.__prismaClient ??
+  new PrismaClient({
     datasourceUrl: getRequiredConfig(config.database.url, "DATABASE_URL"),
     transactionOptions: {
       maxWait: 5000,
@@ -58,15 +20,8 @@ if (existing) {
     },
   });
 
-  // Almacenar en ambos para cubrir cualquier contexto de evaluación
-  if (typeof process !== "undefined") (process as any)[PRISMA_GLOBAL_KEY] = prisma;
-  (globalThis as any)[PRISMA_GLOBAL_KEY] = prisma;
+globalForPrisma.__prismaClient = prisma;
 
-  if (typeof window === "undefined") {
-    prisma.$connect().then(() => {
-      ensureDefaultAdminStore(prisma).catch(err => log.error("Error en init db:", err));
-    });
-  }
-}
+log.debug(isNew ? "Primera instancia de PrismaClient creada." : "Reutilizando instancia existente de PrismaClient.");
 
 export default prisma;
