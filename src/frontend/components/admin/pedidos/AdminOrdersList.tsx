@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { PedidoEstado } from "@/types";
@@ -82,7 +82,7 @@ export const AdminOrdersList = ({
     }
   }, [orders, updatingStatusId, pendingTargetStatus]);
 
-  const handleUpdateStatus = async (orderId: string, newStatus: PedidoEstado) => {
+  const handleUpdateStatus = useCallback(async (orderId: string, newStatus: PedidoEstado) => {
     setUpdatingStatusId(orderId);
     setPendingTargetStatus(newStatus);
     try {
@@ -103,13 +103,17 @@ export const AdminOrdersList = ({
       setPendingTargetStatus(null);
       return false;
     }
-  };
+  }, [onUpdateStatus, onNavigateToEnvio, orders]);
+
+  // Keep a ref so the memoized columns always call the latest handler
+  const handleUpdateStatusRef = useRef(handleUpdateStatus);
+  handleUpdateStatusRef.current = handleUpdateStatus;
 
   const columns = useMemo(
     () =>
       getAdminOrderColumns(
         isUpdatingMap,
-        handleUpdateStatus,
+        (...args: Parameters<typeof handleUpdateStatus>) => handleUpdateStatusRef.current(...args),
         onOpenOrderChat,
         unreadChatCounts,
         openingChatOrderId,
