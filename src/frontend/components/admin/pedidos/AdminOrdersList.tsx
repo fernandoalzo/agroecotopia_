@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { PedidoEstado } from "@/types";
@@ -67,12 +67,24 @@ export const AdminOrdersList = ({
   onNavigateToEnvio,
 }: AdminOrdersListProps) => {
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+  const [pendingTargetStatus, setPendingTargetStatus] = useState<PedidoEstado | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const isUpdatingMap = updatingStatusId ? { [updatingStatusId]: true } : {};
 
+  // Clear spinner only when the orders data actually reflects the new status
+  useEffect(() => {
+    if (!updatingStatusId || !pendingTargetStatus) return;
+    const order = orders.find((o) => o.id === updatingStatusId);
+    if (order && order.estado === pendingTargetStatus) {
+      setUpdatingStatusId(null);
+      setPendingTargetStatus(null);
+    }
+  }, [orders, updatingStatusId, pendingTargetStatus]);
+
   const handleUpdateStatus = async (orderId: string, newStatus: PedidoEstado) => {
     setUpdatingStatusId(orderId);
+    setPendingTargetStatus(newStatus);
     try {
       const success = await onUpdateStatus(orderId, newStatus);
       if (success && newStatus === PedidoEstado.EN_PREPARACION && onNavigateToEnvio) {
@@ -81,9 +93,15 @@ export const AdminOrdersList = ({
           onNavigateToEnvio(orderId);
         }
       }
+      if (!success) {
+        setUpdatingStatusId(null);
+        setPendingTargetStatus(null);
+      }
       return success;
-    } finally {
+    } catch {
       setUpdatingStatusId(null);
+      setPendingTargetStatus(null);
+      return false;
     }
   };
 
