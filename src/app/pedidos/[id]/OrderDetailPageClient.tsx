@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useLanguage } from "@/context/LanguageContext";
@@ -31,7 +31,8 @@ import { Loader2 } from "lucide-react";
 import { getNextStatuses } from "@/frontend/components/admin/pedidos/adminOrderUtils";
 import { getRelatedProductsAction } from "@/backend/modules/product/product.actions";
 import { ProductRatingModal } from "@/frontend/components/products/ProductRatingModal";
-import { rateProductAction, getPendingRatingsAction } from "@/backend/modules/productRating/productRating.actions";
+import { BulkRatingModal } from "@/frontend/components/products/BulkRatingModal";
+import { rateProductAction, getPendingRatingsAction, getUserProductRatingAction } from "@/backend/modules/productRating/productRating.actions";
 const log = logger.child("src/app/pedidos/[id]/page.tsx");
 
 
@@ -113,6 +114,7 @@ export default function OrderDetailPageClient({
 }: OrderDetailPageClientProps) {
   const { status, data: session } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useLanguage();
   const { addToCart } = useCart();
   const [order, setOrder] = useState<any>(null);
@@ -137,6 +139,7 @@ export default function OrderDetailPageClient({
   const [confirmingStatus, setConfirmingStatus] = useState<PedidoEstado | null>(null);
   const [showStatusOptions, setShowStatusOptions] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [updatingToStatus, setUpdatingToStatus] = useState<PedidoEstado | null>(null);
   const [stockErrorProducts, setStockErrorProducts] = useState<{ productId: string; productName: string; detalleId: string }[] | null>(null);
   const [removingProductId, setRemovingProductId] = useState<string | null>(null);
 
@@ -144,6 +147,8 @@ export default function OrderDetailPageClient({
   const [ratingTarget, setRatingTarget] = useState<{ productId: string; productName: string; productEmoji?: string; productImage?: string | null; pedidoId: string } | null>(null);
   const [isRatingSubmitting, setIsRatingSubmitting] = useState(false);
   const [ratedProductIds, setRatedProductIds] = useState<Set<string>>(new Set());
+  const [bulkRatingOpen, setBulkRatingOpen] = useState(false);
+  const [existingProductRatings, setExistingProductRatings] = useState<Record<string, { score: number; comment?: string | null }>>({});
 
   const isBuyer = session?.user?.id === order?.usuarioId;
   const sellerStore: { id: string; name: string } | null = React.useMemo(() => {
@@ -186,6 +191,41 @@ export default function OrderDetailPageClient({
 
     if (id) fetchOrder();
   }, [id]);
+
+  // ─── Auto-open bulk rating modal from notification ───
+  const rateParam = searchParams.get("rate");
+  useEffect(() => {
+    if (rateParam === "all" && order?.estado === PedidoEstado.ENTREGADO) {
+      setBulkRatingOpen(true);
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("rate");
+        window.history.replaceState({}, "", url.toString());
+      }
+    }
+  }, [order?.estado, rateParam]);
+
+  // ─── Fetch existing ratings when bulk modal opens ───
+  useEffect(() => {
+    if (!bulkRatingOpen || !order?.detalles?.length) return;
+    const fetchExistingRatings = async () => {
+      const productIds = order.detalles.map((d: any) => d.productoId);
+      const results = await Promise.all(
+        productIds.map((pid: string) =>
+          getUserProductRatingAction(pid, order.id).catch(() => null)
+        )
+      );
+      const map: Record<string, { score: number; comment?: string | null }> = {};
+      for (let i = 0; i < productIds.length; i++) {
+        const r = results[i];
+        if (r && !("error" in r) && r !== null) {
+          map[productIds[i]] = { score: r.score, comment: r.comment };
+        }
+      }
+      setExistingProductRatings(map);
+    };
+    fetchExistingRatings();
+  }, [bulkRatingOpen, order?.id]);
 
   useEffect(() => {
     const processPaymentRedirect = async () => {
@@ -484,6 +524,7 @@ export default function OrderDetailPageClient({
   const handleUpdateStatus = async (nuevoEstado: PedidoEstado) => {
     if (!sellerStore) return;
     setIsUpdatingStatus(true);
+    setUpdatingToStatus(nuevoEstado);
     try {
       const result = await updateStoreOrderStatus(sellerStore.id, order.id, nuevoEstado);
       if (result && "error" in result) {
@@ -495,8 +536,17 @@ export default function OrderDetailPageClient({
           toast.error("Error", { description: result.error });
         }
       } else {
-        toast.success("Estado actualizado", { description: `Pedido cambiado a ${statusConfig[nuevoEstado].label}` });
-        setOrder((prev: any) => prev ? { ...prev, estado: nuevoEstado } : prev);
+        // Re-fetch from server to ensure the UI reflects the DB-confirmed state,
+        // not an optimistic local value.
+        const updatedOrder = await getOrderDetail(order.id);
+        if (updatedOrder && !("error" in updatedOrder)) {
+          setOrder(updatedOrder);
+          toast.success("Estado actualizado", { description: `Pedido cambiado a ${statusConfig[updatedOrder.estado as PedidoEstado].label}` });
+        } else {
+          // Fallback: use the local value if re-fetch fails
+          setOrder((prev: any) => prev ? { ...prev, estado: nuevoEstado } : prev);
+          toast.success("Estado actualizado", { description: `Pedido cambiado a ${statusConfig[nuevoEstado].label}` });
+        }
         setStockErrorProducts(null);
         setConfirmingStatus(null);
       }
@@ -504,6 +554,7 @@ export default function OrderDetailPageClient({
       toast.error("Error", { description: "No se pudo actualizar el estado del pedido." });
     } finally {
       setIsUpdatingStatus(false);
+      setUpdatingToStatus(null);
     }
   };
 
@@ -909,12 +960,15 @@ export default function OrderDetailPageClient({
                     <div className="mt-8 space-y-4">
                       <div className="flex items-center gap-2">
                         <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                          <RefreshCw className="h-4 w-4" />
+                          <RefreshCw className={cn("h-4 w-4", isUpdatingStatus && "animate-spin")} />
                         </div>
                         <div>
                           <h4 className="text-sm font-bold">Progreso del pedido</h4>
                           <p className="text-[11px] text-muted-foreground">
-                            Estado actual: <span className="font-semibold text-foreground">{statusConfig[order.estado as PedidoEstado].label}</span>
+                            {isUpdatingStatus
+                              ? <span className="font-semibold text-primary animate-pulse">Actualizando…</span>
+                              : <><span className="text-muted-foreground">Estado actual: </span><span className="font-semibold text-foreground">{statusConfig[order.estado as PedidoEstado].label}</span></>
+                            }
                           </p>
                         </div>
                       </div>
@@ -943,7 +997,7 @@ export default function OrderDetailPageClient({
                         const isCancelled = order.estado === PedidoEstado.CANCELADO;
 
                         return (
-                          <div className="relative px-1">
+                          <div className={cn("relative px-1 transition-opacity duration-200", isUpdatingStatus && "opacity-40 pointer-events-none")}>
                             <div className="absolute left-6 top-0 bottom-0 w-px bg-border/60" />
 
                             <div className="relative space-y-0">
@@ -1104,12 +1158,22 @@ export default function OrderDetailPageClient({
                       <div className="relative">
                         <div className="flex items-center gap-2 mb-4">
                           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                            <RefreshCw className="h-4 w-4" />
+                            {isUpdatingStatus
+                              ? <Loader2 className="h-4 w-4 animate-spin" />
+                              : <RefreshCw className="h-4 w-4" />
+                            }
                           </div>
                           <div>
                             <h4 className="text-sm font-bold">Progreso del pedido</h4>
                             <p className="text-[11px] text-muted-foreground">
-                              Estado actual: <span className="font-semibold text-foreground">{statusConfig[order.estado as PedidoEstado].label}</span>
+                              {isUpdatingStatus
+                                ? <span className="font-semibold text-primary animate-pulse">
+                                    {order.tipoEntrega === "ENVIO" && updatingToStatus === PedidoEstado.EN_PREPARACION 
+                                      ? "Confirmando y Creando Envío…" 
+                                      : "Confirmando con la base de datos…"}
+                                  </span>
+                                : <><span className="text-muted-foreground">Estado actual: </span><span className="font-semibold text-foreground">{statusConfig[order.estado as PedidoEstado].label}</span></>
+                              }
                             </p>
                           </div>
                         </div>
@@ -1138,7 +1202,7 @@ export default function OrderDetailPageClient({
                           const isCancelled = order.estado === PedidoEstado.CANCELADO;
 
                           return (
-                            <div className="relative px-1">
+                            <div className={cn("relative px-1 transition-opacity duration-200", isUpdatingStatus && "opacity-40 pointer-events-none")}>
                               {/* Barra de progreso de fondo */}
                               <div className="absolute left-6 top-0 bottom-0 w-px bg-border/60" />
 
@@ -1454,6 +1518,26 @@ export default function OrderDetailPageClient({
           } finally {
             setIsRatingSubmitting(false);
           }
+        }}
+      />
+
+      <BulkRatingModal
+        open={bulkRatingOpen}
+        onOpenChange={(open) => {
+          setBulkRatingOpen(open);
+          if (!open) setExistingProductRatings({});
+        }}
+        products={(order?.detalles || []).map((d: any) => ({
+          productId: d.productoId,
+          productName: d.producto.name,
+          productEmoji: d.producto.emoji,
+          productImage: d.producto.images?.[0] || null,
+          pedidoId: order.id,
+        }))}
+        existingRatings={existingProductRatings}
+        onRate={async (productId, pedidoId, score, comment) => {
+          await rateProductAction(productId, pedidoId, score, comment);
+          setRatedProductIds(prev => new Set(prev).add(productId));
         }}
       />
 

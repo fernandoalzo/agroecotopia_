@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { getOrderDetailAction, cancelUserOrderAction, deleteUserOrderAction, updateStoreOrderStatusAction, removeProductFromOrderAction } from "@/backend/modules/orders/orders.actions";
 import { processMercadoPagoPaymentAction } from "@/backend/modules/payments/payments.actions";
 import {
@@ -14,20 +15,22 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const { id } = await params;
 
   return (
-    <OrderDetailPageClient
-      id={id}
-      getOrderDetail={getOrderDetailAction}
-      cancelUserOrder={cancelUserOrderAction}
-      deleteUserOrder={deleteUserOrderAction}
-      processMercadoPagoPayment={processMercadoPagoPaymentAction}
-      getConversationMessages={getConversationMessages}
-      getOrCreateOrderConversation={getOrCreateOrderConversationAction}
-      getSellerOrderConversations={getSellerOrderConversationsAction}
-      getUserOrderConversations={getUserOrderConversationsAction}
-      markConversationAsRead={markAsRead}
-      openOrderChat={openOrderChatAction}
-      updateStoreOrderStatus={updateStoreOrderStatusAction}
-      removeProductFromOrder={removeProductFromOrderAction}
-    />
+    <Suspense fallback={null}>
+      <OrderDetailPageClient
+        id={id}
+        getOrderDetail={getOrderDetailAction}
+        cancelUserOrder={cancelUserOrderAction}
+        deleteUserOrder={deleteUserOrderAction}
+        processMercadoPagoPayment={processMercadoPagoPaymentAction}
+        getConversationMessages={getConversationMessages}
+        getOrCreateOrderConversation={getOrCreateOrderConversationAction}
+        getSellerOrderConversations={getSellerOrderConversationsAction}
+        getUserOrderConversations={getUserOrderConversationsAction}
+        markConversationAsRead={markAsRead}
+        openOrderChat={openOrderChatAction}
+        updateStoreOrderStatus={updateStoreOrderStatusAction}
+        removeProductFromOrder={removeProductFromOrderAction}
+      />
+    </Suspense>
   );
 }

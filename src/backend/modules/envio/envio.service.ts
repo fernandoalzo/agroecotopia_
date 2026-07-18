@@ -4,6 +4,7 @@ import logger from "@/utils/logger";
 import { deepSerialize } from "@/lib/serialize";
 import eventBus from "@/utils/eventBus";
 import { stockGuardianService } from "@/backend/modules/stockGuardian";
+import { notificationsService } from "@/backend/modules/notifications";
 
 const log = logger.child("src/backend/modules/envio/envio.service.ts");
 
@@ -75,11 +76,9 @@ export class EnvioService {
       pedidoId: pedido.id,
     });
 
-    eventBus.emit("envio:created", {
-      envioId: envio.id,
-      storeId,
-      pedidoId: pedido.id,
-    });
+    // NOTE: Do NOT emit eventBus here — this runs inside a transaction.
+    // The caller must emit "envio:created" AFTER the transaction commits
+    // to prevent cache poisoning (client fetches re-caching stale pre-commit data).
 
     return envio;
   }
@@ -232,6 +231,29 @@ export class EnvioService {
           estado: nuevoEstadoPedido,
           usuarioId: pedido.usuarioId,
         });
+
+        if (nuevoEstadoPedido === PedidoEstado.ENTREGADO) {
+          eventBus.emit("order:delivered", {
+            pedidoId: envio.pedidoId,
+            usuarioId: pedido.usuarioId,
+            _room: `user:${pedido.usuarioId}:notifications`,
+          });
+
+          notificationsService.dispatchNotification({
+            eventType: "order_delivered",
+            actorId,
+            entityType: "Pedido",
+            entityId: envio.pedidoId,
+            notification: {
+              type: "order_rating",
+              title: "¡Califica tus productos!",
+              message: `Tu pedido #${envio.pedidoId.slice(-6).toUpperCase()} fue entregado. Cuéntanos qué te parecieron los productos.`,
+              audienceType: "INDIVIDUAL",
+              audienceRef: pedido.usuarioId,
+              metadata: { actionUrl: `/pedidos/${envio.pedidoId}?rate=all` },
+            },
+          }).catch((err) => log.error("Error despachando notificación de calificación desde envío:", err));
+        }
       }
 
       const updated = await this.envioRepository.findById(envioId, tx);

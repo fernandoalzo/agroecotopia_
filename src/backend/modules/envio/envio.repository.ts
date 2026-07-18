@@ -125,7 +125,12 @@ export class EnvioRepository {
       data,
       include: { eventos: true },
     });
-    await this.cacheService?.delPattern(CacheKeys.envio.allPattern);
+    // Only invalidate cache if NOT inside a transaction.
+    // When inside a tx, the caller must invalidate AFTER commit to prevent
+    // cache poisoning (a fetch between clear and commit re-caches stale data).
+    if (!tx) {
+      await this.cacheService?.delPattern(CacheKeys.envio.allPattern);
+    }
     return envio;
   }
 

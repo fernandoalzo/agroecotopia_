@@ -7,6 +7,7 @@ import { storeTaxService } from "@/backend/modules/store";
 import { stockGuardianService } from "@/backend/modules/stockGuardian";
 import eventBus from "@/utils/eventBus";
 import { deepSerialize } from "@/lib/serialize";
+import { CacheService, CacheKeys } from "@/backend/cache";
 
 const log = logger.child("src/backend/modules/orders/orders.service.ts");
 
@@ -234,7 +235,7 @@ export class OrdersService {
 
     const lockUUID = randomUUID();
 
-    return await this.ordersRepository.executeTransaction(async (tx) => {
+    const txResult = await this.ordersRepository.executeTransaction(async (tx) => {
       // 1. Leer pedido actual dentro de la transacción
       const pedido = await this.ordersRepository.findById(pedidoId, tx);
       if (!pedido) {
@@ -252,7 +253,7 @@ export class OrdersService {
       // 2. Si ya está en el estado destino → retorno idempotente (sin tocar stock)
       if (estadoAnterior === nuevoEstado) {
         log.debug("Transición idempotente: el pedido ya está en el estado destino:", { pedidoId, estado: nuevoEstado });
-        return this.serializePedido(pedido);
+        return { pedido: pedido, createdEnvio: null, cancelledEnvioInfo: null };
       }
 
       // 3. Validar que la transición es legal
@@ -289,6 +290,9 @@ export class OrdersService {
         }
       }
 
+      let createdEnvio: { id: string; storeId: string; pedidoId: string } | null = null;
+      let cancelledEnvioInfo: { envioId: string; pedidoId: string; estadoAnterior: string } | null = null;
+
       try {
         // 3. Transición atómica con lock optimista (WHERE estado = estadoAnterior)
         log.debug("Intentando transición atómica con lock optimista:", { pedidoId, de: estadoAnterior, a: nuevoEstado });
@@ -307,7 +311,7 @@ export class OrdersService {
         if (!transitioned) {
           log.warn("Transición fallida (race condition). Otro proceso ya transicionó el pedido:", { pedidoId });
           const current = await this.ordersRepository.findById(pedidoId, tx);
-          return this.serializePedido(current);
+          return { pedido: current, createdEnvio: null, cancelledEnvioInfo: null };
         }
 
         log.info("Transición de estado exitosa:", { pedidoId, de: estadoAnterior, a: nuevoEstado });
@@ -345,11 +349,10 @@ export class OrdersService {
         // ─── EN_PREPARACION + ENVIO: Crear registro de envío automáticamente ───
         if (nuevoEstado === PedidoEstado.EN_PREPARACION && pedido.tipoEntrega === "ENVIO") {
           log.info("Creando registro de envío al iniciar preparación:", { pedidoId });
-          try {
-            const { envioService } = await import("@/backend/modules/envio");
-            await envioService.createEnvioFromPedido(pedido, tx);
-          } catch (err) {
-            log.error("Error creando envío automático (el pedido ya fue confirmado):", err);
+          const { envioService } = await import("@/backend/modules/envio");
+          const envio = await envioService.createEnvioFromPedido(pedido, tx);
+          if (envio) {
+            createdEnvio = { id: envio.id, storeId: pedido.detalles?.[0]?.storeId, pedidoId: pedido.id };
           }
         }
 
@@ -397,12 +400,7 @@ export class OrdersService {
                   descripcion: "Envío cancelado por cancelación del pedido",
                 },
               });
-              eventBus.emit("envio:status_updated", {
-                envioId: envio.id,
-                pedidoId,
-                estadoAnterior: envio.estado,
-                estadoNuevo: "DEVUELTO",
-              });
+              cancelledEnvioInfo = { envioId: envio.id, pedidoId, estadoAnterior: envio.estado };
             }
           } catch (err) {
             log.error("Error cancelando envío asociado (el pedido fue cancelado):", err);
@@ -448,7 +446,7 @@ export class OrdersService {
         eventBus.emit("product:stock_updated", { productIds });
       }
 
-      // ─── ENTREGADO: Emitir evento para solicitar calificación ───
+      // ─── ENTREGADO: Notificar + emitir evento para calificación ───
       if (nuevoEstado === PedidoEstado.ENTREGADO) {
         log.info("Emitting order:delivered for rating prompt:", { pedidoId });
         eventBus.emit("order:delivered", {
@@ -456,6 +454,21 @@ export class OrdersService {
           usuarioId: pedidoActualizado.usuarioId,
           _room: `user:${pedidoActualizado.usuarioId}:notifications`,
         });
+
+        notificationsService.dispatchNotification({
+          eventType: "order_delivered",
+          actorId,
+          entityType: "Pedido",
+          entityId: pedidoId,
+          notification: {
+            type: "order_rating",
+            title: "¡Califica tus productos!",
+            message: `Tu pedido #${pedidoId.slice(-6).toUpperCase()} fue entregado. Cuéntanos qué te parecieron los productos.`,
+            audienceType: "INDIVIDUAL",
+            audienceRef: pedidoActualizado.usuarioId,
+            metadata: { actionUrl: `/pedidos/${pedidoId}?rate=all` },
+          },
+        }).catch((err) => log.error("Error despachando notificación de calificación:", err));
       }
 
       // 8. Emitir evento para que el comprador vea el cambio de estado en tiempo real (Room scoped)
@@ -475,8 +488,32 @@ export class OrdersService {
         _room: `user:${pedidoActualizado.usuarioId}:notifications`,
       });
 
-      return this.serializePedido(pedidoActualizado);
+      // Store deferred events to emit AFTER transaction commits
+      return { pedido: pedidoActualizado, createdEnvio, cancelledEnvioInfo };
     });
+
+    // ─── POST-TRANSACTION: Emit envío events AFTER commit ───
+    // These events were deferred to prevent cache poisoning race conditions.
+    // Invalidate cache FIRST to guarantee clients fetch fresh DB data on socket reaction.
+    if (txResult.createdEnvio || txResult.cancelledEnvioInfo) {
+      const cacheService = new CacheService();
+      await cacheService.delPattern(CacheKeys.envio.allPattern);
+    }
+
+    if (txResult.createdEnvio) {
+      log.info("Emitting envio:created (post-commit):", txResult.createdEnvio);
+      eventBus.emit("envio:created", txResult.createdEnvio);
+    }
+    if (txResult.cancelledEnvioInfo) {
+      eventBus.emit("envio:status_updated", {
+        envioId: txResult.cancelledEnvioInfo.envioId,
+        pedidoId: txResult.cancelledEnvioInfo.pedidoId,
+        estadoAnterior: txResult.cancelledEnvioInfo.estadoAnterior,
+        estadoNuevo: "DEVUELTO",
+      });
+    }
+
+    return this.serializePedido(txResult.pedido);
   }
 
   async getPedidosPorUsuario(usuarioId: string) {

@@ -112,6 +112,7 @@ export class OrdersRepository {
           include: {
             usuario: { select: { id: true, name: true } },
             bodega: true,
+            envio: true,
             detalles: {
               include: {
                 producto: true,

@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { chatService } from "@/backend/modules/chat";
 import logger from "@/utils/logger";
 import { deepSerialize } from "@/lib/serialize";
+import { CacheService, CacheKeys } from "@/backend/cache";
 
 const log = logger.child("src/backend/modules/orders/orders.actions.ts");
 
@@ -315,6 +316,7 @@ export async function updateStoreOrderStatusAction(
       log.info("Seller actualizando estado de pedido de tienda:", { storeId, pedidoId, nuevoEstado });
       const pedido = await ordersService.updateEstadoForStore(storeId, pedidoId, nuevoEstado, userId, motivoCancelacion);
       log.info("Estado del pedido de tienda actualizado exitosamente:", { storeId, pedidoId, nuevoEstado });
+      
       revalidatePath("/mi-tienda");
       revalidatePath("/admin/pedidos");
       revalidatePath(`/pedidos/${pedidoId}`);

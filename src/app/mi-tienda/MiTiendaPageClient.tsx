@@ -243,12 +243,22 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     const load = async () => {
       if (!enviosLoadedRef.current) setEnviosLoading(true);
       try {
-        const response = await actions.getEnviosWithCounts(activeStore.id, {
+        const fetchPromise = actions.getEnviosWithCounts(activeStore.id, {
           page: enviosCurrentPage,
           limit: 10,
           estado: enviosStatusFilter === "ALL" ? undefined : enviosStatusFilter,
           search: enviosSearchQuery || undefined,
         });
+        
+        // Timeout para evitar que se quede colgado indefinidamente
+        let timeoutId: NodeJS.Timeout;
+        const timeoutPromise = new Promise<any>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error("Timeout obteniendo envíos")), 10000);
+        });
+
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
+        clearTimeout(timeoutId!);
+        
         if (cancelled) return;
         if (response?.enviosResult) {
           setEnvios(response.enviosResult.envios || []);
@@ -270,7 +280,10 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
       }
     };
     load();
-    return () => { cancelled = true; };
+    return () => { 
+      cancelled = true; 
+      setEnviosLoading(false); // Safety fallback if component unmounts or effect cleans up
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeStore?.id, activeTab, enviosCurrentPage, enviosStatusFilter, enviosSearchQuery, enviosRefresh]);
 
@@ -472,11 +485,16 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
     if (activeStoreId) params.set("store", activeStoreId);
-    router.replace(`/mi-tienda?${params.toString()}`, { scroll: false });
+    window.history.replaceState(null, "", `/mi-tienda?${params.toString()}`);
   };
 
   const handleNavigateToEnvio = (pedidoId: string) => {
     setAutoOpenEnvioPedidoId(pedidoId);
+    setEnviosStatusFilter("ALL");
+    setEnviosSearchQuery("");
+    setEnviosCurrentPage(1);
+    enviosLoadedRef.current = false;
+    setEnviosRefresh(prev => prev + 1);
     handleTabChange("envios");
   };
 
@@ -485,7 +503,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     setIsStoreSelectorOpen(false);
     const params = new URLSearchParams(searchParams.toString());
     params.set("store", storeId);
-    router.replace(`/mi-tienda?${params.toString()}`, { scroll: false });
+    window.history.replaceState(null, "", `/mi-tienda?${params.toString()}`);
   };
 
   const handleOpenOrderChat = async (order: AdminOrder) => {

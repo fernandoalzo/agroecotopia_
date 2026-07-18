@@ -147,6 +147,8 @@ export function OrderDetailPanel({
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [showStatusOptions, setShowStatusOptions] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [updatingToStatus, setUpdatingToStatus] = useState<PedidoEstado | null>(null);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -174,9 +176,8 @@ export function OrderDetailPanel({
   }, [pedidoId, getOrderDetail]);
 
   const handleUpdateStatus = async (nuevoEstado: PedidoEstado) => {
-    const previousState = order.estado;
-    // Actualización optimista: cambiamos el UI inmediatamente
-    setOrder((prev: any) => prev ? { ...prev, estado: nuevoEstado } : prev);
+    setIsUpdatingStatus(true);
+    setUpdatingToStatus(nuevoEstado);
     setConfirmingStatus(null);
     setShowStatusOptions(false);
 
@@ -184,15 +185,33 @@ export function OrderDetailPanel({
       const result = await updateStoreOrderStatus(storeId, order.id, nuevoEstado);
       if (result && "error" in result) {
         toast.error(result.error);
-        // Revertir en caso de error de API
-        setOrder((prev: any) => prev ? { ...prev, estado: previousState } : prev);
       } else {
-        toast.success(`Estado actualizado a ${statusConfig[nuevoEstado]?.label}`);
+        // Re-fetch from server to ensure the UI reflects the DB-confirmed state
+        const updatedOrder = await getOrderDetail(order.id);
+        if (updatedOrder && !("error" in updatedOrder)) {
+          setOrder(updatedOrder);
+          toast.success(`Estado actualizado a ${statusConfig[updatedOrder.estado as PedidoEstado]?.label}`);
+          
+          if (nuevoEstado === "EN_PREPARACION" && updatedOrder.tipoEntrega === "ENVIO" && onNavigateToEnvio) {
+            onNavigateToEnvio(updatedOrder.id);
+            onClose();
+          }
+        } else {
+          // Fallback: use the local value if re-fetch fails
+          setOrder((prev: any) => prev ? { ...prev, estado: nuevoEstado } : prev);
+          toast.success(`Estado actualizado a ${statusConfig[nuevoEstado]?.label}`);
+          
+          if (nuevoEstado === "EN_PREPARACION" && order.tipoEntrega === "ENVIO" && onNavigateToEnvio) {
+            onNavigateToEnvio(order.id);
+            onClose();
+          }
+        }
       }
     } catch {
       toast.error("No se pudo actualizar el estado del pedido");
-      // Revertir en caso de excepción
-      setOrder((prev: any) => prev ? { ...prev, estado: previousState } : prev);
+    } finally {
+      setIsUpdatingStatus(false);
+      setUpdatingToStatus(null);
     }
   };
 
@@ -581,7 +600,7 @@ export function OrderDetailPanel({
                 </span>
               )}
             </h3>
-            <div className="relative px-1">
+            <div className={cn("relative px-1 transition-opacity duration-200", isUpdatingStatus && "opacity-40 pointer-events-none")}>
               <div className="absolute left-[15px] top-0 bottom-0 w-px bg-border/60" />
               <div className="relative space-y-0">
                 {timelineStatuses.map((status, idx) => {
@@ -652,8 +671,15 @@ export function OrderDetailPanel({
           {(!esEnvioEnProceso && order.estado !== PedidoEstado.CANCELADO) && (
             <section>
               <h3 className="text-sm font-semibold mb-4 text-foreground/90 uppercase tracking-wider flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                Actualizar Estado
+              {isUpdatingStatus
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                : <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+              }
+              {isUpdatingStatus 
+                ? (order.tipoEntrega === "ENVIO" && updatingToStatus === PedidoEstado.EN_PREPARACION 
+                    ? "Confirmando y Creando Envío…" 
+                    : "Confirmando cambio…") 
+                : "Progreso del Pedido"}
               </h3>
 
               <div className="bg-secondary/20 border border-border/40 rounded-xl p-2 relative overflow-hidden group/status">
@@ -667,7 +693,7 @@ export function OrderDetailPanel({
                       const prevStatus = getPreviousStatus(order.estado, order.tipoEntrega, isAdmin);
                       if (prevStatus) handleUpdateStatus(prevStatus);
                     }}
-                    disabled={!getPreviousStatus(order.estado, order.tipoEntrega, isAdmin)}
+                    disabled={isUpdatingStatus || !getPreviousStatus(order.estado, order.tipoEntrega, isAdmin)}
                     className="h-10 w-12 flex items-center justify-center rounded-lg border border-border/50 bg-background hover:bg-secondary/80 hover:text-foreground text-muted-foreground disabled:opacity-40 disabled:hover:bg-background disabled:cursor-not-allowed transition-all"
                   >
                     <ArrowLeft className="w-4 h-4" />
@@ -675,10 +701,13 @@ export function OrderDetailPanel({
                   
                   <div className="flex flex-col items-center px-2 text-center">
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 mb-1.5">
-                      ESTADO ACTUAL
+                      {isUpdatingStatus ? "ACTUALIZANDO…" : "ESTADO ACTUAL"}
                     </span>
                     <div className="flex items-center gap-2 bg-background px-4 py-2 rounded-full border border-border/50 shadow-sm">
-                      <StatusIcon className={cn("w-4 h-4", cfg?.color)} />
+                      {isUpdatingStatus
+                        ? <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                        : <StatusIcon className={cn("w-4 h-4", cfg?.color)} />
+                      }
                       <span className="text-sm font-bold text-foreground">{cfg?.label}</span>
                     </div>
                   </div>
@@ -686,7 +715,7 @@ export function OrderDetailPanel({
                   <button
                     type="button"
                     onClick={() => nextStatusLineal && handleUpdateStatus(nextStatusLineal)}
-                    disabled={!nextStatusLineal}
+                    disabled={isUpdatingStatus || !nextStatusLineal}
                     title={nextStatusLineal ? `Avanzar a ${statusConfig[nextStatusLineal]?.label}` : "No se puede avanzar"}
                     className="p-3 rounded-xl bg-primary/10 hover:bg-primary/20 hover:shadow-md border border-primary/20 text-primary transition-all disabled:opacity-30 disabled:hover:shadow-none disabled:hover:bg-primary/10 disabled:cursor-not-allowed group relative"
                   >
@@ -782,7 +811,7 @@ export function OrderDetailPanel({
           )}
 
           {/* Envío tracking info (for ENVIO + EN_PREPARACION / EN_CAMINO) */}
-          {esEnvioEnProceso && (
+          {esEnvioEnProceso && !!order.envio && (
             <section>
               <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4">
                 <div className="flex items-start gap-3">
