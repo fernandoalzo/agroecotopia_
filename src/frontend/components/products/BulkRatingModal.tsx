@@ -157,7 +157,7 @@ export function BulkRatingModal({
       }
       const totalHandled =
         submittedIds.size + toRate.length + Object.keys(existingRatings).length;
-      if (totalHandled >= ratings.length) onOpenChange(false);
+      if (totalHandled >= ratings.length) handleOpenChange(false);
     } catch {
       setError(
         language === "es"
