@@ -26,6 +26,7 @@ export function EnvioDetailPanel({ envio: initialEnvio, onClose, onUpdateStatus,
   const [transportadora, setTransportadora] = useState(initialEnvio.transportadora || "");
   const [bodegaId, setBodegaId] = useState("");
   const [updating, setUpdating] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const statusInputRef = useRef<HTMLInputElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
@@ -71,6 +72,7 @@ export function EnvioDetailPanel({ envio: initialEnvio, onClose, onUpdateStatus,
       setBodegaId("");
     } finally {
       setUpdating(false);
+      setConfirming(false);
     }
   };
 
@@ -451,18 +453,56 @@ export function EnvioDetailPanel({ envio: initialEnvio, onClose, onUpdateStatus,
                   />
                 </div>
 
-                <button
-                  onClick={handleUpdateStatus}
-                  disabled={!selectedStatus || updating}
-                  className={cn(
-                    "w-full py-2.5 rounded-xl font-semibold text-sm transition-all",
-                    selectedStatus && !updating
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/15"
-                      : "bg-secondary text-muted-foreground cursor-not-allowed"
-                  )}
-                >
-                  {updating ? "Actualizando..." : "Actualizar Estado"}
-                </button>
+                {confirming ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground text-center">
+                      ¿Estás seguro de cambiar el estado a{" "}
+                      <strong className="text-foreground">
+                        {envioStatusConfig[selectedStatus as EnvioEstadoKey]?.labelEs}
+                      </strong>
+                      ?
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setConfirming(false);
+                          setSelectedStatus("");
+                          setUbicacion("");
+                          setDescripcion("");
+                          setBodegaId("");
+                        }}
+                        disabled={updating}
+                        className="flex-1 py-2.5 rounded-xl font-semibold text-sm border border-border hover:bg-secondary transition-all"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={handleUpdateStatus}
+                        disabled={updating}
+                        className={cn(
+                          "flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all",
+                          "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/15",
+                          updating && "opacity-60 cursor-not-allowed"
+                        )}
+                      >
+                        {updating ? "Actualizando..." : "Confirmar Cambio"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirming(true)}
+                    disabled={!selectedStatus}
+                    className={cn(
+                      "w-full py-2.5 rounded-xl font-semibold text-sm transition-all",
+                      selectedStatus
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/15"
+                        : "bg-secondary text-muted-foreground cursor-not-allowed"
+                    )}
+                  >
+                    Continuar
+                  </button>
+                )}
               </div>
             </section>
           )}
