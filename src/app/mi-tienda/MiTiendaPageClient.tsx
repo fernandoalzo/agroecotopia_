@@ -71,7 +71,7 @@ interface MiTiendaActions {
   updateStoreOrderStatus: (...args: any[]) => Promise<any>;
   getAllActiveStoresList: () => Promise<any>;
   getOrderDetail: (pedidoId: string) => Promise<any>;
-  
+
   // Promotions
   getPromotionsByStore: (storeId: string) => Promise<any>;
   createPromotion: (storeId: string, data: any) => Promise<any>;
@@ -142,7 +142,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
   const [storeOrderTotalCount, setStoreOrderTotalCount] = useState(0);
   const [storeOrdersRefresh, setStoreOrdersRefresh] = useState(0);
   const isSeller = session?.user?.role === "seller" || session?.user?.role === "admin";
-  
+
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loadingPromotions, setLoadingPromotions] = useState(false);
   const [isPromoPanelOpen, setIsPromoPanelOpen] = useState(false);
@@ -188,7 +188,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
   const handleUpdateStore = async (storeId: string, data: Partial<StoreCreateInput>) => {
     try {
       const result = await actions.updateMyStore(storeId, data);
-      
+
       if (result && "error" in result) {
         log.error("Error al actualizar la tienda:", result.error);
         if (typeof toast !== "undefined") {
@@ -249,7 +249,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
           estado: enviosStatusFilter === "ALL" ? undefined : enviosStatusFilter,
           search: enviosSearchQuery || undefined,
         });
-        
+
         // Timeout para evitar que se quede colgado indefinidamente
         let timeoutId: NodeJS.Timeout;
         const timeoutPromise = new Promise<any>((_, reject) => {
@@ -258,7 +258,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
 
         const response = await Promise.race([fetchPromise, timeoutPromise]);
         clearTimeout(timeoutId!);
-        
+
         if (cancelled) return;
         if (response?.enviosResult) {
           setEnvios(response.enviosResult.envios || []);
@@ -280,11 +280,11 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
       }
     };
     load();
-    return () => { 
-      cancelled = true; 
+    return () => {
+      cancelled = true;
       setEnviosLoading(false); // Safety fallback if component unmounts or effect cleans up
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeStore?.id, activeTab, enviosCurrentPage, enviosStatusFilter, enviosSearchQuery, enviosRefresh]);
 
   useEffect(() => {
@@ -409,7 +409,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     socket,
     enabled: !!activeStore?.id && !!isSeller && activeTab === "orders",
     refresh: refreshStoreOrders,
-    events: ["order:created"],
+    events: ["order:created", "order:status_updated_store", "order:deleted_store"],
   });
 
   useSocketRefresh({
@@ -615,7 +615,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
         </div>
 
         {/* Store Picker — fused into sidebar */}
-        <button 
+        <button
           onClick={() => setIsStoreSelectorOpen(!isStoreSelectorOpen)}
           className="w-full flex items-center justify-between px-5 py-4 hover:bg-secondary/40 transition-colors"
         >
@@ -650,8 +650,8 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                     }}
                     className={cn(
                       "w-full text-left px-3 py-2 text-sm rounded-xl transition-all duration-150",
-                      activeStoreId === s.id 
-                        ? "bg-secondary text-foreground font-bold" 
+                      activeStoreId === s.id
+                        ? "bg-secondary text-foreground font-bold"
                         : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                     )}
                   >
@@ -664,8 +664,8 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                     </div>
                   </button>
                 ))}
-                <button 
-                  onClick={() => router.push("/solicitar-tienda?from=dashboard")} 
+                <button
+                  onClick={() => router.push("/solicitar-tienda?from=dashboard")}
                   className="w-full text-left px-3 py-2 text-sm text-primary font-semibold rounded-xl hover:bg-secondary/50 transition-all duration-150"
                 >
                   <div className="flex items-center gap-2.5">
@@ -755,48 +755,48 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
               >
                 {activeTab === "orders" && activeStore && (
                   <AdminOrdersList
-                  orders={storeOrders}
-                  loading={storeOrdersLoading}
-                  totalPages={storeOrderTotalPages}
-                  totalCount={storeOrderTotalCount}
-                  statusCounts={storeOrderStatusCounts}
-                  currentPage={storeOrderCurrentPage}
-                  statusFilter={storeOrderStatusFilter}
-                  searchQuery={storeOrderSearchQuery}
-                  onPageChange={setStoreOrderCurrentPage}
-                  onSearchChange={setStoreOrderSearchQuery}
-                  onStatusFilterChange={setStoreOrderStatusFilter}
-                   onUpdateStatus={async (orderId, newStatus) => {
-                     const result = await actions.updateStoreOrderStatus(activeStore.id, orderId, newStatus);
-                     if (result && "error" in result) {
-                       if (result.outOfStockProducts && result.outOfStockProducts.length > 0) {
-                         const names = result.outOfStockProducts.map((p: any) => p.productName).join(", ");
-                         toast.error("Stock insuficiente", {
-                           description: `Sin stock para: ${names}. Ve al detalle del pedido para retirarlos.`,
-                           action: { label: "Ver detalle", onClick: () => router.push(`/pedidos/${orderId}`) }
-                         });
-                       } else {
-                         toast.error("Error", { description: result.error });
-                       }
-                       return false;
-                     }
-                     toast.success("Estado actualizado");
-                     setStoreOrdersRefresh(prev => prev + 1);
-                     return true;
-                   }}
-                  emptyMessage="No hay pedidos para los productos de esta tienda con los filtros aplicados."
-                  onOpenOrderChat={handleOpenOrderChat}
-                  unreadChatCounts={orderChatUnreadCounts}
-                  openingChatOrderId={openingChatOrderId}
-                  storeId={activeStore.id}
-                  getOrderDetail={actions.getOrderDetail}
-                  updateStoreOrderStatus={async (_storeId, pedidoId, newStatus) => {
-                    const result = await actions.updateStoreOrderStatus(activeStore.id, pedidoId, newStatus);
-                    if (result && "error" in result) return result;
-                    setStoreOrdersRefresh(prev => prev + 1);
-                    return result;
-                  }}
-                  onNavigateToEnvio={handleNavigateToEnvio}
+                    orders={storeOrders}
+                    loading={storeOrdersLoading}
+                    totalPages={storeOrderTotalPages}
+                    totalCount={storeOrderTotalCount}
+                    statusCounts={storeOrderStatusCounts}
+                    currentPage={storeOrderCurrentPage}
+                    statusFilter={storeOrderStatusFilter}
+                    searchQuery={storeOrderSearchQuery}
+                    onPageChange={setStoreOrderCurrentPage}
+                    onSearchChange={setStoreOrderSearchQuery}
+                    onStatusFilterChange={setStoreOrderStatusFilter}
+                    onUpdateStatus={async (orderId, newStatus) => {
+                      const result = await actions.updateStoreOrderStatus(activeStore.id, orderId, newStatus);
+                      if (result && "error" in result) {
+                        if (result.outOfStockProducts && result.outOfStockProducts.length > 0) {
+                          const names = result.outOfStockProducts.map((p: any) => p.productName).join(", ");
+                          toast.error("Stock insuficiente", {
+                            description: `Sin stock para: ${names}. Ve al detalle del pedido para retirarlos.`,
+                            action: { label: "Ver detalle", onClick: () => router.push(`/pedidos/${orderId}`) }
+                          });
+                        } else {
+                          toast.error("Error", { description: result.error });
+                        }
+                        return false;
+                      }
+                      toast.success("Estado actualizado");
+                      setStoreOrdersRefresh(prev => prev + 1);
+                      return true;
+                    }}
+                    emptyMessage="No hay pedidos para los productos de esta tienda con los filtros aplicados."
+                    onOpenOrderChat={handleOpenOrderChat}
+                    unreadChatCounts={orderChatUnreadCounts}
+                    openingChatOrderId={openingChatOrderId}
+                    storeId={activeStore.id}
+                    getOrderDetail={actions.getOrderDetail}
+                    updateStoreOrderStatus={async (_storeId, pedidoId, newStatus) => {
+                      const result = await actions.updateStoreOrderStatus(activeStore.id, pedidoId, newStatus);
+                      if (result && "error" in result) return result;
+                      setStoreOrdersRefresh(prev => prev + 1);
+                      return result;
+                    }}
+                    onNavigateToEnvio={handleNavigateToEnvio}
                   />
                 )}
                 {activeTab === "envios" && activeStore && (
@@ -905,9 +905,9 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                   transition={{ duration: 0.2 }}
                 >
                   {activeTab === "store_info" && activeStore && (
-                    <SellerStoreInfo 
-                      store={activeStore} 
-                      onStoreUpdated={loadStore} 
+                    <SellerStoreInfo
+                      store={activeStore}
+                      onStoreUpdated={loadStore}
                       onUpdateStore={handleUpdateStore}
                     />
                   )}
@@ -917,7 +917,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
           )}
         </div>
       </main>
-      
+
       {activeStore && (
         <PromotionCreatePanel
           open={isPromoPanelOpen}

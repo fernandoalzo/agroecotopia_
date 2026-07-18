@@ -488,6 +488,16 @@ export class OrdersService {
         _room: `user:${pedidoActualizado.usuarioId}:notifications`,
       });
 
+      // Emitir evento para actualizar el listado de pedidos de la tienda
+      const storeId = pedidoActualizado.detalles?.[0]?.storeId;
+      if (storeId) {
+        eventBus.emit("order:status_updated_store", {
+          pedidoId,
+          estado: nuevoEstado,
+          storeId,
+        });
+      }
+
       // Store deferred events to emit AFTER transaction commits
       return { pedido: pedidoActualizado, createdEnvio, cancelledEnvioInfo };
     });
@@ -621,8 +631,19 @@ export class OrdersService {
       log.warn("Eliminando pedido en estado no cancelado (Forzado por Admin):", { pedidoId, estado: pedido.estado });
     }
 
+    // Capturar storeId antes de eliminar (el pedido dejará de existir en DB)
+    const storeId = pedido.detalles?.[0]?.storeId;
+
     const result = await this.ordersRepository.deletePedido(pedidoId);
     log.info("Pedido eliminado exitosamente:", { pedidoId });
+
+    // Emitir evento para que el dashboard del vendedor/admin se actualice en tiempo real
+    if (storeId) {
+      eventBus.emit("order:deleted_store", { pedidoId, storeId });
+    } else {
+      eventBus.emit("order:deleted_store", { pedidoId });
+    }
+
     return result;
   }
 

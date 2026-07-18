@@ -47,7 +47,18 @@ const OrderRowActions = ({
   return (
     <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
       <AnimatePresence mode="wait">
-        {confirmingStatus ? (
+        {isUpdating ? (
+          <motion.div
+            key="updating"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="flex items-center gap-2 bg-secondary/60 border border-border/80 rounded-xl px-3 py-1 shadow-sm"
+          >
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <span className="text-xs font-bold text-muted-foreground">Actualizando…</span>
+          </motion.div>
+        ) : confirmingStatus ? (
           <motion.div
             key="confirm"
             initial={{ opacity: 0, scale: 0.95, x: 10 }}
@@ -64,11 +75,7 @@ const OrderRowActions = ({
               disabled={isUpdating}
               onClick={handleConfirm}
             >
-              {isUpdating ? (
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
-              ) : (
-                "Sí"
-              )}
+              Sí
             </Button>
             <button
               className="rounded-lg text-xs font-bold h-7 px-3 hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all cursor-pointer inline-flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"

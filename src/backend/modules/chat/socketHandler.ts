@@ -242,6 +242,8 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: any): Server {
     "product:stock_updated",
     "order:status_updated",
     "order:status_updated_user",
+    "order:status_updated_store",
+    "order:deleted_store",
     "envio:created",
     "envio:status_updated",
     "notification_read_state_changed",

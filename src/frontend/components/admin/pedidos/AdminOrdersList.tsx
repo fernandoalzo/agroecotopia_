@@ -104,7 +104,7 @@ export const AdminOrdersList = ({
         className="flex flex-col gap-4 shrink-0"
       >
         <div className="flex flex-wrap gap-2">
-            <button
+          <button
             onClick={() => onStatusFilterChange("ALL")}
             className={cn(
               "rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider border transition-all",
@@ -120,7 +120,7 @@ export const AdminOrdersList = ({
             return (
               <button
                 key={s}
-            onClick={() => onStatusFilterChange(s)}
+                onClick={() => onStatusFilterChange(s)}
                 className={cn(
                   "rounded-full px-4 py-2 text-xs font-bold border transition-all flex items-center gap-1.5",
                   statusFilter === s
@@ -149,40 +149,40 @@ export const AdminOrdersList = ({
         columns={columns}
         data={orders}
         loading={loading}
-          pageCount={totalPages}
-          currentPage={currentPage}
-          pageSize={10}
-          onPageChange={onPageChange}
-          emptyTitle={emptyMessage || "No se encontraron pedidos en la base de datos"}
-          emptyIcon={Filter}
-          getRowClassName={(row) => cn(
-            "group overflow-hidden backdrop-blur-md transition-all duration-300",
-            statusConfig[row.estado].cardBorderClass,
-            statusConfig[row.estado].hoverClasses
-          )}
-          footerLeftContent={
-            <>
-              <p className="text-xs text-muted-foreground">
-                Mostrando pedidos <span className="font-bold text-foreground">{orders.length > 0 ? (currentPage - 1) * 10 + 1 : 0}</span> al{" "}
-                <span className="font-bold text-foreground">{Math.min(currentPage * 10, totalCount)}</span> de{" "}
-                <span className="font-bold text-foreground">{totalCount}</span> totales
-              </p>
-              {(statusFilter !== "ALL" || searchQuery.trim() !== "") && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-xl text-xs font-bold text-muted-foreground hover:text-primary"
-                  onClick={() => {
-                    onStatusFilterChange("ALL");
-                    onSearchChange("");
-                  }}
-                >
-                  Limpiar filtros
-                </Button>
-              )}
-            </>
-          }
-        />
+        pageCount={totalPages}
+        currentPage={currentPage}
+        pageSize={10}
+        onPageChange={onPageChange}
+        emptyTitle={emptyMessage || "No se encontraron pedidos en la base de datos"}
+        emptyIcon={Filter}
+        getRowClassName={(row) => cn(
+          "group overflow-hidden backdrop-blur-md transition-all duration-300",
+          statusConfig[row.estado].cardBorderClass,
+          statusConfig[row.estado].hoverClasses
+        )}
+        footerLeftContent={
+          <>
+            <p className="text-xs text-muted-foreground">
+              Mostrando pedidos <span className="font-bold text-foreground">{orders.length > 0 ? (currentPage - 1) * 10 + 1 : 0}</span> al{" "}
+              <span className="font-bold text-foreground">{Math.min(currentPage * 10, totalCount)}</span> de{" "}
+              <span className="font-bold text-foreground">{totalCount}</span> totales
+            </p>
+            {(statusFilter !== "ALL" || searchQuery.trim() !== "") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-xl text-xs font-bold text-muted-foreground hover:text-primary"
+                onClick={() => {
+                  onStatusFilterChange("ALL");
+                  onSearchChange("");
+                }}
+              >
+                Limpiar filtros
+              </Button>
+            )}
+          </>
+        }
+      />
       {/* Side Panel */}
       <AnimatePresence>
         {selectedOrderId && getOrderDetail && updateStoreOrderStatus && (

@@ -266,7 +266,7 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
     socket,
     enabled: isAdmin && activeTab === "orders",
     refresh: refreshOrdersList,
-    events: ["order:created"],
+    events: ["order:created", "order:status_updated_store", "order:deleted_store"],
   });
 
   useEffect(() => {

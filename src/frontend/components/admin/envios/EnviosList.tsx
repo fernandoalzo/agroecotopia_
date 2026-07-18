@@ -160,51 +160,51 @@ export function EnviosList({
           />
         </motion.div>
 
-      <DataTable
-        columns={columns}
-        data={envios}
-        loading={loading}
-        pageCount={totalPages}
-        currentPage={currentPage}
-        pageSize={10}
-        totalEntries={totalCount}
-        onPageChange={onPageChange}
-        emptyTitle={
-          statusFilter !== "ALL" || searchQuery
-            ? "No se encontraron envíos con los filtros aplicados."
-            : "No hay envíos registrados."
-        }
-        emptyDescription="Los envíos se crean automáticamente al confirmar un pedido con envío a domicilio."
-        getRowClassName={(row) => {
-          const cfg = envioStatusConfig[row.estado as EnvioEstadoKey];
-          return cn(
-            "bg-card/40 backdrop-blur-sm",
-            cfg?.hoverClasses,
-            cfg?.cardBorderClass
-          );
-        }}
-        footerLeftContent={
-          <>
-            <p className="text-xs text-muted-foreground">
-              Mostrando envíos <span className="font-bold text-foreground">{envios.length > 0 ? (currentPage - 1) * 10 + 1 : 0}</span> al{" "}
-              <span className="font-bold text-foreground">{Math.min(currentPage * 10, totalCount)}</span> de{" "}
-              <span className="font-bold text-foreground">{totalCount}</span> totales
-            </p>
-            {(statusFilter !== "ALL" || searchQuery.trim() !== "") && (
-              <button
-                className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors"
-                onClick={() => {
-                  onStatusFilterChange("ALL");
-                  onSearchChange("");
-                }}
-              >
-                Limpiar filtros
-              </button>
-            )}
-          </>
-        }
-      />
-    </div>
+        <DataTable
+          columns={columns}
+          data={envios}
+          loading={loading}
+          pageCount={totalPages}
+          currentPage={currentPage}
+          pageSize={10}
+          totalEntries={totalCount}
+          onPageChange={onPageChange}
+          emptyTitle={
+            statusFilter !== "ALL" || searchQuery
+              ? "No se encontraron envíos con los filtros aplicados."
+              : "No hay envíos registrados."
+          }
+          emptyDescription="Los envíos se crean automáticamente al confirmar un pedido con envío a domicilio."
+          getRowClassName={(row) => {
+            const cfg = envioStatusConfig[row.estado as EnvioEstadoKey];
+            return cn(
+              "bg-card/40 backdrop-blur-sm",
+              cfg?.hoverClasses,
+              cfg?.cardBorderClass
+            );
+          }}
+          footerLeftContent={
+            <>
+              <p className="text-xs text-muted-foreground">
+                Mostrando envíos <span className="font-bold text-foreground">{envios.length > 0 ? (currentPage - 1) * 10 + 1 : 0}</span> al{" "}
+                <span className="font-bold text-foreground">{Math.min(currentPage * 10, totalCount)}</span> de{" "}
+                <span className="font-bold text-foreground">{totalCount}</span> totales
+              </p>
+              {(statusFilter !== "ALL" || searchQuery.trim() !== "") && (
+                <button
+                  className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors"
+                  onClick={() => {
+                    onStatusFilterChange("ALL");
+                    onSearchChange("");
+                  }}
+                >
+                  Limpiar filtros
+                </button>
+              )}
+            </>
+          }
+        />
+      </div>
 
       {/* Detail Panels */}
       {selectedEnvio && (
