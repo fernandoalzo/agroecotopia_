@@ -61,6 +61,7 @@ model Pedido {
   detalles      DetallePedido[]
   conversations Conversation[]
   envio         Envio?
+  productRatings ProductRating[]
 
   @@index([usuarioId])
   @@index([estado])

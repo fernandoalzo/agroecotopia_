@@ -60,11 +60,8 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
   
   const hasDiscount = discountedPrice !== null;
 
-  // Mock data for Amazon-style feel
-  // We use a constant seed based on name to keep it consistent per product
-  const seed = p.name.length;
-  const rating = 4.5 + (seed % 6) / 10;
-  const totalReviews = 50 + (seed * 7) % 500;
+  const productRatingAverage = p.ratingAverage ?? 0;
+  const productRatingCount = p.ratingCount ?? 0;
   const isAgroChoice = p.price > 15000 || p.stock < 10;
   const isBestSeller = p.stock > 40;
 
@@ -151,11 +148,15 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
 
             <div className="flex items-center gap-1 mb-3">
               <div className="flex text-[#ffa41c]">
-                {[...Array(4)].map((_, i) => <Star key={i} className="w-3.5 h-3.5 fill-current" />)}
-                <StarHalf className="w-3.5 h-3.5 fill-current" />
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`w-3.5 h-3.5 ${star <= Math.round(productRatingAverage) ? "fill-current" : "text-muted-foreground/20"}`}
+                  />
+                ))}
               </div>
               <span className="text-sm text-[#007185] hover:text-[#c45500] font-medium">
-                {totalReviews}
+                {productRatingCount > 0 ? productRatingCount : ""}
               </span>
             </div>
 
@@ -295,10 +296,15 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
 
             <div className="flex items-center gap-1 mb-1">
               <div className="flex text-[#ffa41c]">
-                <Star className="w-2.5 h-2.5 fill-current" />
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`w-2.5 h-2.5 ${star <= Math.round(productRatingAverage) ? "fill-current" : "text-muted-foreground/20"}`}
+                  />
+                ))}
               </div>
               <span className="text-[9px] text-muted-foreground font-medium">
-                {rating.toFixed(1)} ({totalReviews})
+                {productRatingCount > 0 ? `${productRatingAverage.toFixed(1)} (${productRatingCount})` : ""}
               </span>
             </div>
 
@@ -454,13 +460,15 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
           {/* Amazon Rating */}
           <div className="flex items-center gap-1 mb-1.5">
             <div className="flex text-[#ffa41c]">
-              {[...Array(4)].map((_, i) => (
-                <Star key={i} className="w-2.5 h-2.5 fill-current" />
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  className={`w-2.5 h-2.5 ${star <= Math.round(productRatingAverage) ? "fill-current" : "text-muted-foreground/20"}`}
+                />
               ))}
-              <StarHalf className="w-2.5 h-2.5 fill-current" />
             </div>
             <span className="text-[10px] text-[#007185] hover:text-[#c45500] font-medium">
-              {totalReviews}
+              {productRatingCount > 0 ? productRatingCount : ""}
             </span>
           </div>
 

@@ -245,6 +245,8 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: any): Server {
     "envio:created",
     "envio:status_updated",
     "notification_read_state_changed",
+    "order:delivered",
+    "product:rating_updated",
     "waf:request_live",
   ] as const;
 

@@ -697,6 +697,9 @@ export const config = {
       envioList: 60,             // Shipment listing — high churn
       envioDetail: 120,          // Single shipment view — medium churn
       envioStatusCounts: 120,    // Aggregate shipment status stats — low churn
+      productRatingList: 60,     // Product rating listings — high churn
+      productRatingDetail: 120,  // Single user-product rating — medium churn
+      productRatingPending: 60,  // Pending ratings per user — high churn
     },
   },
 } as const;

@@ -56,9 +56,8 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
     ? (product as any).categories.map((c: any) => c?.name).filter(Boolean)
     : [];
 
-  const seed = product.name.length;
-  const rating = 4.5 + (seed % 6) / 10;
-  const totalReviews = 50 + (seed * 7) % 500;
+  const productRatingAverage = product.ratingAverage ?? 0;
+  const productRatingCount = product.ratingCount ?? 0;
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
@@ -189,12 +188,16 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
                 {/* Rating */}
                 <div className="flex items-center gap-2 mb-4">
                   <div className="flex text-[#ffa41c]">
-                    {[...Array(4)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-current" />
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`w-4 h-4 ${star <= Math.round(productRatingAverage) ? "fill-current" : "text-muted-foreground/20"}`}
+                      />
                     ))}
-                    <StarHalf className="w-4 h-4 fill-current" />
                   </div>
-                  <span className="text-sm text-[#007185] font-medium">{totalReviews}</span>
+                  <span className="text-sm text-[#007185] font-medium">
+                    {productRatingCount > 0 ? `${productRatingAverage.toFixed(1)} (${productRatingCount})` : ""}
+                  </span>
                 </div>
 
                 {/* Price */}
@@ -382,10 +385,15 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
                       </h3>
                       <div className="flex items-center gap-1 mb-2">
                         <div className="flex text-[#ffa41c]">
-                          <Star className="w-3 h-3 fill-current" />
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              className={`w-3 h-3 ${s <= Math.round(rp.ratingAverage ?? 0) ? "fill-current" : "text-muted-foreground/20"}`}
+                            />
+                          ))}
                         </div>
                         <span className="text-[10px] text-muted-foreground font-medium">
-                          {(4 + (rp.name.length % 10) / 10).toFixed(1)}
+                          {rp.ratingCount ? `(${rp.ratingCount})` : ""}
                         </span>
                       </div>
                       <p className="font-display font-black text-primary">

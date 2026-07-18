@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useLanguage } from "@/context/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRightCircle, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw, Copy, Check, ChevronRight, ChevronDown, MessageSquare, Tag, Warehouse, Building2 } from "lucide-react";
+import { ArrowLeft, ArrowRightCircle, Package, MapPin, CreditCard, Calendar, Clock, CheckCircle2, Truck, Timer, XCircle, FileText, RefreshCw, Copy, Check, ChevronRight, ChevronDown, MessageSquare, Tag, Warehouse, Building2, Star } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
@@ -30,6 +30,8 @@ import { Loader2 } from "lucide-react";
 
 import { getNextStatuses } from "@/frontend/components/admin/pedidos/adminOrderUtils";
 import { getRelatedProductsAction } from "@/backend/modules/product/product.actions";
+import { ProductRatingModal } from "@/frontend/components/products/ProductRatingModal";
+import { rateProductAction, getPendingRatingsAction } from "@/backend/modules/productRating/productRating.actions";
 const log = logger.child("src/app/pedidos/[id]/page.tsx");
 
 
@@ -137,6 +139,11 @@ export default function OrderDetailPageClient({
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [stockErrorProducts, setStockErrorProducts] = useState<{ productId: string; productName: string; detalleId: string }[] | null>(null);
   const [removingProductId, setRemovingProductId] = useState<string | null>(null);
+
+  // ─── Rating state ───
+  const [ratingTarget, setRatingTarget] = useState<{ productId: string; productName: string; productEmoji?: string; productImage?: string | null; pedidoId: string } | null>(null);
+  const [isRatingSubmitting, setIsRatingSubmitting] = useState(false);
+  const [ratedProductIds, setRatedProductIds] = useState<Set<string>>(new Set());
 
   const isBuyer = session?.user?.id === order?.usuarioId;
   const sellerStore: { id: string; name: string } | null = React.useMemo(() => {
@@ -726,6 +733,58 @@ export default function OrderDetailPageClient({
                   </div>
                 </div>
               </div>
+
+              {/* ─── Rating Section (Buyer, ENTREGADO) ─── */}
+              {isBuyer && order.estado === PedidoEstado.ENTREGADO && (
+                <div className="pt-4">
+                  <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+                        <Package className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-sm">
+                          {t.ratings?.pendingTitle || "Califica tus productos"}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {t.ratings?.pendingDescription || "Ayuda a la comunidad con tu opinión"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="divide-y divide-emerald-500/10">
+                      {order.detalles.filter((d: any) => !ratedProductIds.has(d.productoId)).map((detalle: any) => (
+                        <div key={detalle.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {detalle.producto.images?.[0] ? (
+                              <img src={detalle.producto.images[0]} alt={detalle.producto.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                            ) : (
+                              <span className="text-2xl shrink-0">{detalle.producto.emoji || "📦"}</span>
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold truncate">{detalle.producto.name}</p>
+                              <p className="text-[10px] text-muted-foreground">{detalle.cantidad} {detalle.unidadMedida}</p>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            className="shrink-0 rounded-xl text-xs font-bold h-9 px-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all"
+                            onClick={() => setRatingTarget({
+                              productId: detalle.productoId,
+                              productName: detalle.producto.name,
+                              productEmoji: detalle.producto.emoji,
+                              productImage: detalle.producto.images?.[0] || null,
+                              pedidoId: order.id,
+                            })}
+                          >
+                            <Star className="w-3.5 h-3.5 mr-1.5" />
+                            {t.ratings?.rateNow || "Calificar"}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Delivery Info */}
               <div className="pt-6">
@@ -1378,6 +1437,26 @@ export default function OrderDetailPageClient({
           fetchRelatedProducts={getRelatedProductsAction}
         />
       )}
+      <ProductRatingModal
+        open={!!ratingTarget}
+        onOpenChange={(open) => { if (!open) setRatingTarget(null); }}
+        productName={ratingTarget?.productName || ""}
+        productEmoji={ratingTarget?.productEmoji}
+        productImage={ratingTarget?.productImage}
+        isSubmitting={isRatingSubmitting}
+        onSubmit={async (score, comment) => {
+          if (!ratingTarget) return;
+          setIsRatingSubmitting(true);
+          try {
+            await rateProductAction(ratingTarget.productId, ratingTarget.pedidoId, score, comment);
+            setRatedProductIds(prev => new Set(prev).add(ratingTarget.productId));
+            setRatingTarget(null);
+          } finally {
+            setIsRatingSubmitting(false);
+          }
+        }}
+      />
+
       {orderChat && (
         <OrderChatPanel
           conversation={orderChat.conversation}

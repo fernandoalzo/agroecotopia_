@@ -448,6 +448,16 @@ export class OrdersService {
         eventBus.emit("product:stock_updated", { productIds });
       }
 
+      // ─── ENTREGADO: Emitir evento para solicitar calificación ───
+      if (nuevoEstado === PedidoEstado.ENTREGADO) {
+        log.info("Emitting order:delivered for rating prompt:", { pedidoId });
+        eventBus.emit("order:delivered", {
+          pedidoId,
+          usuarioId: pedidoActualizado.usuarioId,
+          _room: `user:${pedidoActualizado.usuarioId}:notifications`,
+        });
+      }
+
       // 8. Emitir evento para que el comprador vea el cambio de estado en tiempo real (Room scoped)
       log.info("Emitting order:status_updated:", { pedidoId, nuevoEstado, usuarioId: pedidoActualizado.usuarioId });
       eventBus.emit("order:status_updated", {

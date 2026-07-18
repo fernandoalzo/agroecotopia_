@@ -1,0 +1,19 @@
+model ProductRating {
+  id        String   @id @default(cuid())
+  productId String
+  userId    String
+  pedidoId  String
+  score     Int      // 1-5
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pedido  Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, userId, pedidoId])
+  @@index([productId])
+  @@index([userId])
+  @@index([pedidoId])
+}

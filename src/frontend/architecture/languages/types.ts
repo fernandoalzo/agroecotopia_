@@ -155,6 +155,30 @@ export interface Translations {
     registrationError: string;
     userExists: string;
   };
+  ratings: {
+    title: string;
+    score: string;
+    comment: string;
+    commentPlaceholder: string;
+    submit: string;
+    submitting: string;
+    success: string;
+    error: string;
+    yourRating: string;
+    averageRating: string;
+    totalRatings: string;
+    pendingTitle: string;
+    pendingDescription: string;
+    rateNow: string;
+    alreadyRated: string;
+    thankYou: string;
+    veryBad: string;
+    bad: string;
+    average: string;
+    good: string;
+    excellent: string;
+    noRatings: string;
+  };
   checkout: {
     title: string;
     shippingInfo: string;

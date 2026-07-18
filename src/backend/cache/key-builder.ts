@@ -97,6 +97,22 @@ export const CacheKeys = {
     allPattern: `${NAMESPACE}:forum:*`,
   },
 
+  productRating: {
+    byProduct: (productId: string, page: number, limit: number) =>
+      `${NAMESPACE}:rating:product:${productId}:${page}:${limit}`,
+
+    byUserProduct: (userId: string, productId: string) =>
+      `${NAMESPACE}:rating:user:${userId}:product:${productId}`,
+
+    pendingByUser: (userId: string) =>
+      `${NAMESPACE}:rating:pending:${userId}`,
+
+    distribution: (productId: string) =>
+      `${NAMESPACE}:rating:dist:${productId}`,
+
+    allPattern: `${NAMESPACE}:rating:*`,
+  },
+
   waf: {
     allRules: `${NAMESPACE}:waf:rules:all`,
     activeRules: `${NAMESPACE}:waf:rules:active`,

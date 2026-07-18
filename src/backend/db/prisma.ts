@@ -33,6 +33,10 @@ if (existing) {
     log.info("Creando nueva instancia de PrismaClient...");
     prisma = new PrismaClient({
       datasourceUrl: getRequiredConfig(config.database.url, "DATABASE_URL"),
+      transactionOptions: {
+        maxWait: 5000,
+        timeout: 15000,
+      },
     });
     if (typeof process !== "undefined") (process as any)[PRISMA_GLOBAL_KEY] = prisma;
     (globalThis as any)[PRISMA_GLOBAL_KEY] = prisma;
@@ -48,6 +52,10 @@ if (existing) {
   log.info("Creando nueva instancia de PrismaClient...");
   prisma = new PrismaClient({
     datasourceUrl: getRequiredConfig(config.database.url, "DATABASE_URL"),
+    transactionOptions: {
+      maxWait: 5000,
+      timeout: 15000,
+    },
   });
 
   // Almacenar en ambos para cubrir cualquier contexto de evaluación

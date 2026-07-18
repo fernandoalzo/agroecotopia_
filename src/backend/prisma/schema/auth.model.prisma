@@ -20,6 +20,7 @@ model User {
   forumPosts              ForumPost[]
   forumAnswers            ForumAnswer[]
   forumRatings            ForumRating[]
+  productRatings          ProductRating[]
   stores                  Store[]
   storeRequests           StoreRequest[]
   // ─── Notification System Relations ───
