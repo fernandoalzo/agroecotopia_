@@ -243,21 +243,12 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     const load = async () => {
       if (!enviosLoadedRef.current) setEnviosLoading(true);
       try {
-        const fetchPromise = actions.getEnviosWithCounts(activeStore.id, {
+        const response = await actions.getEnviosWithCounts(activeStore.id, {
           page: enviosCurrentPage,
           limit: 10,
           estado: enviosStatusFilter === "ALL" ? undefined : enviosStatusFilter,
           search: enviosSearchQuery || undefined,
         });
-
-        // Timeout para evitar que se quede colgado indefinidamente
-        let timeoutId: NodeJS.Timeout;
-        const timeoutPromise = new Promise<any>((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error("Timeout obteniendo envíos")), 10000);
-        });
-
-        const response = await Promise.race([fetchPromise, timeoutPromise]);
-        clearTimeout(timeoutId!);
 
         if (cancelled) return;
         if (response?.enviosResult) {
@@ -488,13 +479,37 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     window.history.replaceState(null, "", `/mi-tienda?${params.toString()}`);
   };
 
-  const handleNavigateToEnvio = (pedidoId: string) => {
+  const handleNavigateToEnvio = async (pedidoId: string) => {
     setAutoOpenEnvioPedidoId(pedidoId);
+    setEnviosLoading(true);
+
+    // Pre-fetch envios data BEFORE switching tabs
+    if (activeStore) {
+      try {
+        const response = await actions.getEnviosWithCounts(activeStore.id, {
+          page: 1,
+          limit: 10,
+        });
+        if (response?.enviosResult) {
+          setEnvios(response.enviosResult.envios || []);
+          setEnviosTotalPages(response.enviosResult.totalPages || 1);
+          setEnviosTotalCount(response.enviosResult.totalCount || 0);
+        }
+        if (response?.stats) {
+          const s = response.stats as Record<string, number>;
+          const total = Object.values(s).reduce((a, b) => a + (Number(b) || 0), 0);
+          setEnviosStats({ ALL: total, ...s });
+        }
+      } catch (err) {
+        log.error("Error pre-fetching envios:", err);
+      }
+    }
+
+    enviosLoadedRef.current = true;
+    setEnviosLoading(false);
     setEnviosStatusFilter("ALL");
     setEnviosSearchQuery("");
     setEnviosCurrentPage(1);
-    enviosLoadedRef.current = false;
-    setEnviosRefresh(prev => prev + 1);
     handleTabChange("envios");
   };
 

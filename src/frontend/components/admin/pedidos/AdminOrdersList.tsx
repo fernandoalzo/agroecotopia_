@@ -74,7 +74,14 @@ export const AdminOrdersList = ({
   const handleUpdateStatus = async (orderId: string, newStatus: PedidoEstado) => {
     setUpdatingStatusId(orderId);
     try {
-      return await onUpdateStatus(orderId, newStatus);
+      const success = await onUpdateStatus(orderId, newStatus);
+      if (success && newStatus === PedidoEstado.EN_PREPARACION && onNavigateToEnvio) {
+        const order = orders.find((o) => o.id === orderId);
+        if (order?.tipoEntrega === "ENVIO") {
+          onNavigateToEnvio(orderId);
+        }
+      }
+      return success;
     } finally {
       setUpdatingStatusId(null);
     }
