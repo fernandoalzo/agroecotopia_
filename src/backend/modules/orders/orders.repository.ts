@@ -11,6 +11,8 @@ type TxClient = any;
 
 export class OrdersRepository {
   constructor(private cacheService?: CacheService) {}
+
+  private static readonly STATUS_ORDER_SQL = `CASE WHEN p."estado" = 'ENTREGADO' THEN 1 ELSE 0 END, p."fechaPedido" DESC`;
   /**
    * Ejecuta operaciones dentro de una transacción atómica de base de datos.
    */
@@ -152,25 +154,49 @@ export class OrdersRepository {
     return pedido;
   }
 
+  private async fetchOrderedIds(
+    tableAlias: string,
+    conditions: string,
+    values: unknown[],
+    skip?: number,
+    take?: number,
+  ): Promise<string[]> {
+    const limitOffset = take ? `LIMIT $${values.length + 1} OFFSET $${values.length + 2}` : "";
+    const rows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `SELECT p."id" FROM "${tableAlias}" p ${conditions} ORDER BY ${OrdersRepository.STATUS_ORDER_SQL} ${limitOffset}`,
+      ...values, ...(take ? [take, skip] : [])
+    );
+    return rows.map(r => r.id);
+  }
+
+  private async findWithOrder<T>(ids: string[], fetcher: (idList: string[]) => Promise<T[]>): Promise<T[]> {
+    if (ids.length === 0) return [];
+    const results = await fetcher(ids);
+    const posMap = new Map(ids.map((id, i) => [id, i]));
+    return results.sort((a, b) => (posMap.get((a as any).id) ?? 0) - (posMap.get((b as any).id) ?? 0));
+  }
+
   async findByUsuarioId(usuarioId: string) {
     const key = CacheKeys.order.byUsuarioId(usuarioId);
     return this.cacheService?.getOrSet(
       key,
       async () => {
         log.debug("[db] Buscando pedidos por usuario:", { usuarioId });
-        return prisma.pedido.findMany({
-          where: { usuarioId },
-          orderBy: { fechaPedido: "desc" },
-          include: {
-            bodega: true,
-            detalles: {
-              include: {
-                producto: true,
-                store: { select: { id: true, name: true } },
+        const ids = await this.fetchOrderedIds("Pedido", `WHERE p."usuarioId" = $1`, [usuarioId]);
+        return this.findWithOrder(ids, async (idList) =>
+          prisma.pedido.findMany({
+            where: { id: { in: idList } },
+            include: {
+              bodega: true,
+              detalles: {
+                include: {
+                  producto: true,
+                  store: { select: { id: true, name: true } },
+                },
               },
             },
-          },
-        });
+          })
+        );
       },
       config.cache.ttl.orderList,
     ) ?? [];
@@ -182,18 +208,20 @@ export class OrdersRepository {
       key,
       async () => {
         log.debug("[db] Buscando pedidos por tienda:", { storeId });
-        return prisma.pedido.findMany({
-          where: { detalles: { some: { storeId } } },
-          orderBy: { fechaPedido: "desc" },
-          include: {
-            usuario: { select: { id: true, name: true, email: true } },
-            bodega: true,
-            detalles: {
-              where: { storeId },
-              include: { producto: true },
+        const ids = await this.fetchOrderedIds("Pedido", `WHERE EXISTS (SELECT 1 FROM "DetallePedido" dp WHERE dp."pedidoId" = p."id" AND dp."storeId" = $1)`, [storeId]);
+        return this.findWithOrder(ids, async (idList) =>
+          prisma.pedido.findMany({
+            where: { id: { in: idList } },
+            include: {
+              usuario: { select: { id: true, name: true, email: true } },
+              bodega: true,
+              detalles: {
+                where: { storeId },
+                include: { producto: true },
+              },
             },
-          },
-        });
+          })
+        );
       },
       config.cache.ttl.orderList,
     ) ?? [];
@@ -205,14 +233,17 @@ export class OrdersRepository {
       key,
       async () => {
         log.debug("[db] Buscando todos los pedidos.");
-        return prisma.pedido.findMany({
-          orderBy: { fechaPedido: "desc" },
-          include: {
-            usuario: { select: { id: true, name: true, email: true } },
-            bodega: true,
-            detalles: { include: { producto: true } },
-          },
-        });
+        const ids = await this.fetchOrderedIds("Pedido", "", []);
+        return this.findWithOrder(ids, async (idList) =>
+          prisma.pedido.findMany({
+            where: { id: { in: idList } },
+            include: {
+              usuario: { select: { id: true, name: true, email: true } },
+              bodega: true,
+              detalles: { include: { producto: true } },
+            },
+          })
+        );
       },
       config.cache.ttl.orderList,
     ) ?? [];
@@ -250,13 +281,38 @@ export class OrdersRepository {
             },
           ];
         }
-        const [totalCount, orders] = await Promise.all([
-          prisma.pedido.count({ where }),
+
+        const totalCount = await prisma.pedido.count({ where });
+
+        const conditions: string[] = [];
+        const values: unknown[] = [];
+        let idx = 1;
+        if (estado) {
+          conditions.push(`p."estado" = CAST($${idx} AS "PedidoEstado")`); values.push(estado); idx++;
+        }
+        if (storeId) {
+          conditions.push(`EXISTS (SELECT 1 FROM "DetallePedido" dp WHERE dp."pedidoId" = p."id" AND dp."storeId" = $${idx})`); values.push(storeId); idx++;
+        }
+        if (search?.trim()) {
+          const q = `%${search.trim()}%`;
+          conditions.push(`(
+            p."id" ILIKE $${idx} OR
+            p."direccionEntrega" ILIKE $${idx} OR
+            EXISTS (SELECT 1 FROM "User" u WHERE u."id" = p."usuarioId" AND (u."name" ILIKE $${idx} OR u."email" ILIKE $${idx}))
+          )`); values.push(q); idx++;
+        }
+
+        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+        const ids = await prisma.$queryRawUnsafe<{ id: string }[]>(
+          `SELECT p."id" FROM "Pedido" p ${whereClause} ORDER BY ${OrdersRepository.STATUS_ORDER_SQL} LIMIT $${idx} OFFSET $${idx + 1}`,
+          ...values, limit, skip
+        );
+
+        const idList = ids.map(r => r.id);
+        const orders = await this.findWithOrder(idList, async (list) =>
           prisma.pedido.findMany({
-            where,
-            skip,
-            take: limit,
-            orderBy: { fechaPedido: "desc" },
+            where: { id: { in: list } },
             include: {
               usuario: { select: { id: true, name: true, email: true } },
               bodega: true,
@@ -268,8 +324,9 @@ export class OrdersRepository {
                 },
               },
             },
-          }),
-        ]);
+          })
+        );
+
         return { orders, totalCount, totalPages: Math.ceil(totalCount / limit), page, limit };
       },
       config.cache.ttl.orderList,
