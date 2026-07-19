@@ -79,9 +79,8 @@ export default function UserMenu() {
         className={cn(
           "flex items-center justify-center rounded-full transition-all duration-300",
           "h-9 w-9",
-          "bg-secondary/40 hover:bg-secondary/70 border border-border/50 hover:border-primary/30",
-          "dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:hover:border-primary/30",
-          open && "ring-2 ring-primary/30 border-primary/50 bg-secondary/70 dark:bg-white/10"
+          "hover:bg-secondary/60 dark:hover:bg-white/5",
+          open && "bg-secondary/60 dark:bg-white/5 text-primary"
         )}
         aria-label="Settings"
       >

@@ -358,17 +358,17 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
             )}
           </div>
 
-          {/* Settings + Mobile Toggle pill */}
-          <div className="flex shrink-0 items-center gap-1 bg-background/50 backdrop-blur-xl p-1 lg:p-1.5 rounded-full border border-border/40 dark:border-white/10 shadow-md lg:gap-2 group/pill transition-all duration-300">
+          {/* Settings + Mobile Toggle */}
+          <div className="flex shrink-0 items-center gap-1.5 lg:gap-2">
             <div className="flex items-center">
               <UserMenu />
             </div>
-            <div className="lg:hidden px-1">
+            <div className="lg:hidden">
               <button
                 onClick={() => setOpen(!open)}
                 className={cn(
                   "relative flex h-9 w-9 items-center justify-center rounded-full transition-all duration-300 text-foreground overflow-hidden group/menu",
-                  open ? "bg-primary text-primary-foreground rotate-90" : "hover:bg-secondary"
+                  open ? "bg-primary text-primary-foreground rotate-90" : "hover:bg-secondary/60 dark:hover:bg-white/5"
                 )}
                 aria-label="Toggle menu"
               >
@@ -383,7 +383,7 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
           {/* Mobile Notification Bell */}
           <div className="relative shrink-0 lg:hidden">
             {isAuthenticated && (
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border bg-card/80 backdrop-blur-xl border-border/60 dark:bg-white/5 dark:border-white/10 shadow-sm mr-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-secondary/60 dark:hover:bg-white/5 transition-all mr-1">
                 <NotificationBell isMobile />
               </div>
             )}
@@ -394,11 +394,9 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
             <Link href="/cart" className="group relative flex items-center">
               <motion.div
                 whileTap={{ scale: 0.9 }}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-300
-                  bg-card/80 backdrop-blur-xl text-foreground border-border/60
-                  dark:bg-white/5 dark:border-white/10 shadow-sm"
+                className="flex h-9 w-9 items-center justify-center rounded-full transition-all duration-300 hover:bg-secondary/60 dark:hover:bg-white/5"
               >
-                <ShoppingCart className="h-[18px] w-[18px] text-primary" />
+                <ShoppingCart className="h-5 w-5 text-primary" />
               </motion.div>
               <AnimatePresence>
                 {totalItems > 0 && (
@@ -407,7 +405,7 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
                     animate={{ scale: 1 }}
                     exit={{ scale: 0 }}
                     transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                    className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-primary text-[8px] font-black text-primary-foreground ring-2 ring-background z-20"
+                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[8px] font-black text-primary-foreground ring-1 ring-background z-20"
                   >
                     {totalItems}
                   </motion.span>
