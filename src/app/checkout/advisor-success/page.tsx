@@ -81,8 +81,8 @@ function AdvisorSuccessContent() {
           {isEs ? "No se encontró el ID del pedido" : "Order ID not found"}
         </h2>
         <p className="text-muted-foreground text-sm max-w-md">
-          {isEs 
-            ? "Redirigiéndote a la página de inicio en unos segundos..." 
+          {isEs
+            ? "Redirigiéndote a la página de inicio en unos segundos..."
             : "Redirecting you to the home page in a few seconds..."}
         </p>
       </div>
@@ -149,7 +149,7 @@ function AdvisorSuccessContent() {
               />
             </svg>
           </motion.div>
-          
+
           {/* Auras y Chispas decorativas */}
           <motion.div
             animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.6, 0.3] }}
@@ -175,28 +175,28 @@ function AdvisorSuccessContent() {
           {/* Elementos Decorativos de Ticket */}
           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-4 h-8 bg-background border-r border-border rounded-r-full -ml-px z-10" />
           <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-8 bg-background border-l border-border rounded-l-full -mr-px z-10" />
-          
+
           <CardContent className="p-6 md:p-8 relative">
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold uppercase tracking-widest">
                 <Database className="w-3.5 h-3.5" />
                 {isEs ? "Registro Exitoso en DB" : "DB Registry Success"}
               </div>
-              
+
               <div className="w-full space-y-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 block">
                   {isEs ? "ID del Registro / Código de Pedido" : "Registry ID / Order Code"}
                 </span>
-                
+
                 {/* ID en un contenedor muy premium */}
                 <div className="relative group max-w-lg mx-auto">
                   <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-amber-500 rounded-2xl filter blur opacity-15 group-hover:opacity-25 transition-opacity" />
-                  
+
                   <div className="relative flex items-center justify-between gap-4 p-4 bg-secondary/30 dark:bg-secondary/15 backdrop-blur-md rounded-2xl border border-border/80 font-mono text-sm md:text-base text-foreground break-all shadow-inner">
                     <span className="flex-1 text-center font-bold tracking-tight select-all pl-2 select-text">
                       {displayOrderCode}
                     </span>
-                    
+
                     <CopyToClipboard
                       text={displayOrderCode}
                       iconClassName="w-4 h-4"
@@ -211,8 +211,8 @@ function AdvisorSuccessContent() {
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
                 <span>
-                  {isEs 
-                    ? "Guarda este ID para tus registros y referencias." 
+                  {isEs
+                    ? "Guarda este ID para tus registros y referencias."
                     : "Save this ID for your records and reference."}
                 </span>
               </div>
@@ -227,7 +227,7 @@ function AdvisorSuccessContent() {
           <FileText className="w-4.5 h-4.5 text-primary" />
           {isEs ? "Siguientes Pasos" : "Next Steps"}
         </h3>
-        
+
         <div className="grid gap-4 md:grid-cols-3">
           {/* Paso 1 */}
           <div className="p-5 rounded-2xl border border-border/40 bg-secondary/10 dark:bg-secondary/5 space-y-3 hover:border-emerald-500/20 transition-colors">
@@ -238,8 +238,8 @@ function AdvisorSuccessContent() {
               {isEs ? "Registro Seguro" : "Secure Record"}
             </h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              {isEs 
-                ? "El pedido ya está asentado en nuestra base de datos con estado pendiente." 
+              {isEs
+                ? "El pedido ya está asentado en nuestra base de datos con estado pendiente."
                 : "The order is already registered in our database with a pending status."}
             </p>
           </div>
@@ -254,8 +254,8 @@ function AdvisorSuccessContent() {
               {isEs ? "Contacto Directo" : "Direct Contact"}
             </h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              {isEs 
-                ? "Un asesor experto te llamará o escribirá para afinar detalles de pago y envío." 
+              {isEs
+                ? "Un asesor experto te llamará o escribirá para afinar detalles de pago y envío."
                 : "An expert advisor will call or write to you to details payment and shipment."}
             </p>
           </div>
@@ -270,8 +270,8 @@ function AdvisorSuccessContent() {
               {isEs ? "Envío Rápido" : "Fast Shipment"}
             </h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              {isEs 
-                ? "Despachamos tus productos agroecológicos directo del campo a tu puerta." 
+              {isEs
+                ? "Despachamos tus productos agroecológicos directo del campo a tu puerta."
                 : "We dispatch your agroecological products direct from the field to your door."}
             </p>
           </div>
@@ -316,8 +316,8 @@ function AdvisorSuccessContent() {
       </motion.div>
 
       {/* Botones de Acción */}
-      <motion.div 
-        variants={itemVariants} 
+      <motion.div
+        variants={itemVariants}
         className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
       >
         <Button
@@ -327,14 +327,14 @@ function AdvisorSuccessContent() {
           {isEs ? "Ver Detalles del Pedido" : "View Order Details"}
           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </Button>
-        
+
         <Button
           variant="outline"
           onClick={() => router.push("/products")}
           className="w-full sm:w-auto rounded-2xl px-8 py-6 font-bold border-border/60 hover:bg-primary/5 hover:text-primary transition-all duration-200 flex items-center justify-center gap-2"
         >
           <ShoppingBag className="w-4 h-4" />
-          {isEs ? "Volver a la Tienda" : "Back to Shop"}
+          {isEs ? "Volver a Productos" : "Back to Shop"}
         </Button>
       </motion.div>
     </motion.div>
@@ -353,7 +353,7 @@ function AdvisorSuccessLoading() {
 export default function AdvisorSuccessPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background/50 selection:bg-primary/20">
-      
+
       <main className="flex-1 pt-28 pb-20 md:pt-36 flex items-center">
         <Suspense fallback={<AdvisorSuccessLoading />}>
           <AdvisorSuccessContent />

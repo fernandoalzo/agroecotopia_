@@ -299,7 +299,7 @@ function CryptoSuccessContent() {
           className="w-full sm:w-auto rounded-2xl px-8 py-6 font-bold border-border/60 hover:bg-primary/5 hover:text-primary transition-all duration-200 flex items-center justify-center gap-2"
         >
           <ShoppingBag className="w-4 h-4" />
-          {isEs ? "Volver a la Tienda" : "Back to Shop"}
+          {isEs ? "Volver a Productos" : "Back to Shop"}
         </Button>
       </motion.div>
     </motion.div>
