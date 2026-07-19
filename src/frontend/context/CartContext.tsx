@@ -14,6 +14,9 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [calculatedTaxes, setCalculatedTaxes] = useState<number>(0);
+  const [taxBreakdown, setTaxBreakdown] = useState<{ name: string; percentage: number; amount: number }[]>([]);
+  const [isFetchingTaxes, setIsFetchingTaxes] = useState(false);
 
   // Initialize cart from localStorage on mount
   useEffect(() => {
@@ -33,6 +36,52 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (isInitialized) {
       localStorage.setItem("agroecotopia_cart", JSON.stringify(cart));
     }
+  }, [cart, isInitialized]);
+
+  // Centralised tax calculation — single source of truth for all consumers
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    if (cart.length === 0) {
+      setCalculatedTaxes(0);
+      setTaxBreakdown([]);
+      return;
+    }
+
+    const fetchTaxes = async () => {
+      setIsFetchingTaxes(true);
+      const cartItems = cart.map(item => {
+        const discountedPrice = calculateDiscountedPrice(
+          item.product.price,
+          (item.product as any).promotions,
+          (item.product as any).store?.promotions
+        );
+        const finalPrice = discountedPrice !== null ? discountedPrice : item.product.price;
+        return {
+          storeId: item.product.storeId || (item.product as any).store?.id || "",
+          subtotal: finalPrice * item.quantity,
+        };
+      });
+
+      try {
+        const res = await fetch('/api/calculate-taxes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cartItems }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setCalculatedTaxes(data.taxes);
+          setTaxBreakdown(data.taxBreakdown || []);
+        }
+      } catch (err) {
+        log.error('[db] Error fetching taxes from /api/calculate-taxes:', err);
+      } finally {
+        setIsFetchingTaxes(false);
+      }
+    };
+
+    fetchTaxes();
   }, [cart, isInitialized]);
 
   const addToCart = (product: Product, quantity: number = 1, showToast: boolean = true) => {
@@ -99,7 +148,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, 0);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, totalItems, totalPrice }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, totalItems, totalPrice, calculatedTaxes, taxBreakdown, isFetchingTaxes }}>
       {children}
     </CartContext.Provider>
   );

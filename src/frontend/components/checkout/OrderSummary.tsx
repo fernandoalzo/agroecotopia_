@@ -23,47 +23,36 @@ interface OrderSummaryProps {
 }
 
 export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destinationCity, tipoEntrega, isConfirmDisabled }) => {
-  const { cart, totalPrice } = useCart();
+  const { cart, totalPrice, calculatedTaxes, taxBreakdown } = useCart();
+
   const { t, language } = useLanguage();
   const [showConfirm, setShowConfirm] = useState(false);
-  const [calculatedTaxes, setCalculatedTaxes] = useState<number>(0);
-  const [taxBreakdown, setTaxBreakdown] = useState<any[]>([]);
   const [shippingCost, setShippingCost] = useState<number>(0);
   const [shippingBreakdown, setShippingBreakdown] = useState<any[]>([]);
 
+  // Fetch shipping only — taxes come from CartContext
   React.useEffect(() => {
-    const fetchTaxesAndShipping = async () => {
-      const cartItems = cart.map(item => {
-        const discountedPrice = calculateDiscountedPrice(
-          item.product.price,
-          (item.product as any).promotions,
-          (item.product as any).store?.promotions
-        );
-        const finalPrice = discountedPrice !== null ? discountedPrice : item.product.price;
-        return {
-          storeId: item.product.storeId || (item.product as any).store?.id || "",
-          subtotal: finalPrice * item.quantity
-        };
-      });
+    if (cart.length === 0) {
+      setShippingCost(0);
+      setShippingBreakdown([]);
+      return;
+    }
 
-      try {
-        const res = await fetch('/api/calculate-taxes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cartItems }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          setCalculatedTaxes(data.taxes);
-          setTaxBreakdown(data.taxBreakdown || []);
-        }
-      } catch (err) {
-        log.error('Error fetching taxes:', err);
-      }
-
-      // Only fetch shipping when a city is selected and delivery type is ENVIO
+    const fetchShipping = async () => {
       if (tipoEntrega !== "RECOJO_EN_BODEGA" && destinationCity && destinationCity.trim()) {
         try {
+          const cartItems = cart.map(item => {
+            const discountedPrice = calculateDiscountedPrice(
+              item.product.price,
+              (item.product as any).promotions,
+              (item.product as any).store?.promotions
+            );
+            const finalPrice = discountedPrice !== null ? discountedPrice : item.product.price;
+            return {
+              storeId: item.product.storeId || (item.product as any).store?.id || "",
+              subtotal: finalPrice * item.quantity,
+            };
+          });
           const shipRes = await fetch('/api/calculate-shipping', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -75,7 +64,7 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
             setShippingBreakdown(shipData.storeBreakdown || []);
           }
         } catch (err) {
-            log.error('Error fetching shipping:', err);
+          log.error('[db] Error fetching shipping from /api/calculate-shipping:', err);
         }
       } else {
         setShippingCost(0);
@@ -83,15 +72,9 @@ export const OrderSummary: React.FC<OrderSummaryProps> = ({ isSubmitting, destin
       }
     };
 
-    if (cart.length > 0) {
-      fetchTaxesAndShipping();
-    } else {
-      setCalculatedTaxes(0);
-      setTaxBreakdown([]);
-      setShippingCost(0);
-      setShippingBreakdown([]);
-    }
-  }, [cart, destinationCity]);
+    fetchShipping();
+  }, [cart, destinationCity, tipoEntrega]);
+
 
   const formattedTotal = new Intl.NumberFormat(language === 'es' ? "es-CO" : "en-US", {
     style: "currency",

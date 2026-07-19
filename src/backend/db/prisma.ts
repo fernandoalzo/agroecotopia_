@@ -4,14 +4,16 @@ import { config, getRequiredConfig } from "@/config/config";
 
 const log = logger.child("src/backend/db/prisma.ts");
 
-const globalForPrisma = globalThis as unknown as {
-  __prismaClient?: PrismaClient;
-};
+const PRISMA_GLOBAL_KEY = "__prismaClient";
 
-const isNew = !globalForPrisma.__prismaClient;
+const existingClient: PrismaClient | undefined =
+  (typeof process !== "undefined" && (process as any)[PRISMA_GLOBAL_KEY]) ||
+  (typeof globalThis !== "undefined" && (globalThis as any)[PRISMA_GLOBAL_KEY]);
+
+const isNew = !existingClient;
 
 const prisma =
-  globalForPrisma.__prismaClient ??
+  existingClient ??
   new PrismaClient({
     datasourceUrl: getRequiredConfig(config.database.url, "DATABASE_URL"),
     transactionOptions: {
@@ -20,8 +22,20 @@ const prisma =
     },
   });
 
-globalForPrisma.__prismaClient = prisma;
+if (isNew) {
+  if (typeof process !== "undefined") {
+    (process as any)[PRISMA_GLOBAL_KEY] = prisma;
+  }
+  (globalThis as any)[PRISMA_GLOBAL_KEY] = prisma;
+}
 
-log.debug(isNew ? "Primera instancia de PrismaClient creada." : "Reutilizando instancia existente de PrismaClient.");
+log.debug(isNew ? "[db] Primera instancia de PrismaClient creada." : "[db] Reutilizando instancia existente de PrismaClient.");
+
+export function getPrisma(): PrismaClient {
+  const global =
+    (typeof process !== "undefined" && (process as any)[PRISMA_GLOBAL_KEY]) ||
+    (typeof globalThis !== "undefined" && (globalThis as any)[PRISMA_GLOBAL_KEY]);
+  return global ?? prisma;
+}
 
 export default prisma;

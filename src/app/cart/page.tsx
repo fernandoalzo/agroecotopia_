@@ -12,57 +12,16 @@ import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, Leaf, Tag } from "lucide-
 import { useLanguage } from "@/context/LanguageContext";
 import { formatPrice } from "@/lib/utils";
 import { calculateDiscountedPrice } from "@/utils/promotions";
-import { useEffect, useState } from "react";
+
 import logger from "@/utils/logger";
 
 const log = logger.child("src/app/cart/page.tsx");
 
 const CartContent = () => {
-  const { cart, removeFromCart, updateQuantity, totalPrice } = useCart();
+  const { cart, removeFromCart, updateQuantity, totalPrice, calculatedTaxes, taxBreakdown } = useCart();
   const { t, language } = useLanguage();
   const { status } = useSession();
   const router = useRouter();
-  const [calculatedTaxes, setCalculatedTaxes] = useState<number>(0);
-  const [taxBreakdown, setTaxBreakdown] = useState<any[]>([]);
-
-  useEffect(() => {
-    const fetchTaxes = async () => {
-      const cartItems = cart.map(item => {
-        const discountedPrice = calculateDiscountedPrice(
-          item.product.price,
-          (item.product as any).promotions,
-          (item.product as any).store?.promotions
-        );
-        const finalPrice = discountedPrice !== null ? discountedPrice : item.product.price;
-        return {
-          storeId: item.product.storeId || (item.product as any).store?.id || "",
-          subtotal: finalPrice * item.quantity
-        };
-      });
-
-      try {
-        const res = await fetch('/api/calculate-taxes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cartItems }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          setCalculatedTaxes(data.taxes);
-          setTaxBreakdown(data.taxBreakdown || []);
-        }
-      } catch (err) {
-        log.error('Error fetching taxes:', err);
-      }
-    };
-
-    if (cart.length > 0) {
-      fetchTaxes();
-    } else {
-      setCalculatedTaxes(0);
-      setTaxBreakdown([]);
-    }
-  }, [cart]);
 
   if (cart.length === 0) {
     return (

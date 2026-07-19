@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ['127.0.0.1', 'localhost', '192.168.1.1'],
@@ -6,47 +7,29 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**', // permite cualquier hostname
+        hostname: '**',
       },
       {
         protocol: 'http',
         hostname: '**',
       },
     ],
-    // remotePatterns: [
-    //   {
-    //     protocol: 'https',
-    //     hostname: 'images.unsplash.com',
-    //   },
-    //   {
-    //     protocol: 'https',
-    //     hostname: 'loremflickr.com',
-    //   },
-    //   {
-    //     protocol: 'https',
-    //     hostname: 'lh3.googleusercontent.com',
-    //   },
-    //   {
-    //     protocol: 'https',
-    //     hostname: 'avatars.githubusercontent.com',
-    //   },
-    //   {
-    //     protocol: 'https',
-    //     hostname: 'platform-lookaside.fbsbx.com',
-    //   },
-    //   {
-    //     protocol: 'https',
-    //     hostname: 'upload.wikimedia.org',
-    //   },
-    // ],
   },
-  turbopack: {},
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     config.experiments = {
       ...config.experiments,
       asyncWebAssembly: true,
       layers: true,
     };
+    if (isServer) {
+      const prismaPath = path.resolve('src/backend/db/prisma.ts');
+      config.externals.push(({ request }: { request?: string }, callback: Function) => {
+        if (request && (request === '@/backend/db/prisma' || request.includes('backend/db/prisma'))) {
+          return callback(null, `commonjs2 ${prismaPath}`);
+        }
+        callback();
+      });
+    }
     return config;
   },
 };

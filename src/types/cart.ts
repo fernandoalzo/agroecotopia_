@@ -13,4 +13,7 @@ export interface CartContextType {
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
+  calculatedTaxes: number;
+  taxBreakdown: { name: string; percentage: number; amount: number }[];
+  isFetchingTaxes: boolean;
 }
