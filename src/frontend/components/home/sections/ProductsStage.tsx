@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { ShoppingCart, ChevronLeft, ChevronRight, Package, Star, Tag, Leaf, ArrowRight } from "lucide-react";
 import { useRef, useState } from "react";
 import { Product } from "@/types";
@@ -119,7 +120,9 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
       />
 
       {/* Content */}
-        <div
+        <motion.div
+          animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : {}}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
           className="relative z-10 w-full flex flex-col h-full pt-16 sm:pt-20 pb-3 sm:pb-4 gap-2 sm:gap-3"
         >
 
@@ -240,7 +243,7 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
           </button>
         </div>
 
-      </div>
+        </motion.div>
 
       <style>{`
         @keyframes gradient-shift {

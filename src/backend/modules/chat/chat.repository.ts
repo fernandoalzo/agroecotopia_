@@ -1,10 +1,13 @@
 import prisma from "@/backend/db/prisma";
 import { ConversationType, PedidoEstado, Prisma, Role } from "@prisma/client";
 import logger from "@/utils/logger";
+import { CacheService, CacheKeys } from "@/backend/cache";
 
 const log = logger.child("src/backend/modules/chat/chat.repository.ts");
 
 export class ChatRepository {
+  constructor(private cacheService?: CacheService) {}
+
   async findUserRoleById(userId: string) {
     return prisma.user.findUnique({
       where: { id: userId },
@@ -14,7 +17,42 @@ export class ChatRepository {
 
   async findConversationById(id: string) {
     log.debug("Buscando conversación por ID:", { conversationId: id });
-    return prisma.conversation.findUnique({
+    const key = CacheKeys.chat.conversationById(id);
+    return this.cacheService?.getOrSet(
+      key,
+      () => prisma.conversation.findUnique({
+        where: { id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          seller: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          store: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          pedido: {
+            select: {
+              id: true,
+              estado: true,
+            },
+          },
+        },
+      }),
+      120 // TTL: 120s
+    ) ?? prisma.conversation.findUnique({
       where: { id },
       include: {
         user: {
@@ -392,7 +430,29 @@ export class ChatRepository {
 
   async findMessagesByConversationId(conversationId: string) {
     log.debug("Obteniendo mensajes de la conversación:", { conversationId });
-    return prisma.message.findMany({
+    const key = CacheKeys.chat.messagesByConversationId(conversationId);
+    return this.cacheService?.getOrSet(
+      key,
+      () => prisma.message.findMany({
+        where: { conversationId },
+        include: {
+          replyTo: {
+            select: {
+              id: true,
+              content: true,
+              senderId: true,
+              senderRole: true,
+              isEncrypted: true,
+              encryptionType: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      }),
+      30 // TTL: 30s
+    ) ?? prisma.message.findMany({
       where: { conversationId },
       include: {
         replyTo: {
@@ -414,7 +474,7 @@ export class ChatRepository {
 
   async createMessage(conversationId: string, content: string, senderId: string, senderRole: Role) {
     log.info("Creando mensaje en conversación:", { conversationId, senderId, senderRole });
-    return prisma.message.create({
+    const message = await prisma.message.create({
       data: {
         content,
         senderId,
@@ -422,6 +482,8 @@ export class ChatRepository {
         conversationId,
       },
     });
+    await this.cacheService?.del(CacheKeys.chat.messagesByConversationId(conversationId));
+    return message;
   }
 
   async createRealtimeMessage(data: {
@@ -463,12 +525,13 @@ export class ChatRepository {
       data: { updatedAt: new Date() },
     });
 
+    await this.cacheService?.del(CacheKeys.chat.messagesByConversationId(data.conversationId));
     return message;
   }
 
   async markMessagesAsRead(conversationId: string, excludeSenderId: string) {
     log.debug("Marcando mensajes como leídos en conversación:", { conversationId, excludeSenderId });
-    return prisma.message.updateMany({
+    const result = await prisma.message.updateMany({
       where: {
         conversationId,
         senderId: {
@@ -480,13 +543,20 @@ export class ChatRepository {
         isRead: true,
       },
     });
+    await this.cacheService?.del(CacheKeys.chat.messagesByConversationId(conversationId));
+    return result;
   }
 
   async deleteConversation(id: string) {
     log.info("Eliminando conversación de la base de datos:", { conversationId: id });
-    return prisma.conversation.delete({
+    const result = await prisma.conversation.delete({
       where: { id },
     });
+    await Promise.all([
+      this.cacheService?.del(CacheKeys.chat.conversationById(id)),
+      this.cacheService?.del(CacheKeys.chat.messagesByConversationId(id)),
+    ]);
+    return result;
   }
 
   async findUsersPaginated(searchQuery?: string, page: number = 1) {

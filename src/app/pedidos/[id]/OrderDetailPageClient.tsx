@@ -506,6 +506,13 @@ export default function OrderDetailPageClient({
         isLoading: false,
         unreadCount,
       });
+
+      // Actualizar localmente el estado de no leídos para evitar otra carga redundante
+      setOrderChatUnreadCounts((prev) => ({
+        ...prev,
+        [storeId]: unreadCount,
+        [order.id]: unreadCount,
+      }));
     } catch (err) {
       log.error("Error abriendo chat con vendedor:", err);
       const description = err instanceof Error

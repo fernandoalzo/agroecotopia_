@@ -119,4 +119,11 @@ export const CacheKeys = {
     byType: (type: string) => `${NAMESPACE}:waf:rules:type:${type}`,
     allPattern: `${NAMESPACE}:waf:*`,
   },
+  chat: {
+    conversationById: (id: string) => `${NAMESPACE}:chat:conversation:id:${id}`,
+    messagesByConversationId: (conversationId: string) => `${NAMESPACE}:chat:messages:conversation:${conversationId}`,
+    userConversations: (userId: string) => `${NAMESPACE}:chat:user:${userId}:conversations`,
+    sellerConversations: (storeId: string, sellerId: string) => `${NAMESPACE}:chat:seller:${storeId}:${sellerId}:conversations`,
+    allPattern: `${NAMESPACE}:chat:*`,
+  },
 };

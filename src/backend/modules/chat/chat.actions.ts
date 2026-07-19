@@ -240,9 +240,11 @@ export async function openOrderChatAction(pedidoId: string, storeId: string) {
       log.info("Abriendo chat consolidado de pedido:", { pedidoId, storeId, userId });
       const conversation = await chatService.getOrCreateOrderConversation(pedidoId, storeId, userId, userRole);
       
-      const messages = await chatService.getMessages(conversation.id, userId, userRole);
+      const [messages] = await Promise.all([
+        chatService.getMessages(conversation.id, userId, userRole),
+        chatService.markAsRead(conversation.id, userId),
+      ]);
       
-      await chatService.markAsRead(conversation.id, userId);
       eventBus.emit("unread_count_updated", { conversationId: conversation.id });
 
       return { conversation, messages };

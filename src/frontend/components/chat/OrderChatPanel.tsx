@@ -76,8 +76,13 @@ export function OrderChatPanel({
     if (!socket || !conversation.id) return;
 
     if (joinedConversationIdRef.current === conversation.id) return;
-    joinedConversationIdRef.current = conversation.id;
 
+    // Si ya estábamos en otra conversación, salir de ella antes de entrar a la nueva
+    if (joinedConversationIdRef.current && joinedConversationIdRef.current !== conversation.id) {
+      socket.emit("leave_room", { conversationId: joinedConversationIdRef.current });
+    }
+
+    joinedConversationIdRef.current = conversation.id;
     socket.emit("join_room", { conversationId: conversation.id });
 
     const handleReceiveMessage = (message: Message) => {
@@ -100,14 +105,18 @@ export function OrderChatPanel({
     socket.on("receive_message", handleReceiveMessage);
     socket.on("chat_error", handleChatError);
     return () => {
-      socket.emit("leave_room", { conversationId: conversation.id });
-      if (joinedConversationIdRef.current === conversation.id) {
-        joinedConversationIdRef.current = null;
-      }
       socket.off("receive_message", handleReceiveMessage);
       socket.off("chat_error", handleChatError);
     };
   }, [socket, conversation.id, session?.user?.id]);
+
+  useEffect(() => {
+    return () => {
+      if (socket && joinedConversationIdRef.current) {
+        socket.emit("leave_room", { conversationId: joinedConversationIdRef.current });
+      }
+    };
+  }, [socket]);
 
   useEffect(() => {
     // Read receipts are handled once by the parent after the conversation opens.
