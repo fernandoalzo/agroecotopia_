@@ -50,9 +50,6 @@ export default function NotFound() {
           <Link href="/comunidad" className="hover:text-primary hover:underline transition-colors">
             Comunidad
           </Link>
-          <Link href="/nosotros" className="hover:text-primary hover:underline transition-colors">
-            Sobre nosotros
-          </Link>
         </div>
       </div>
     </div>

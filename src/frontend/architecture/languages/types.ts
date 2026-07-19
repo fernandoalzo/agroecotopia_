@@ -4,7 +4,6 @@ export interface Translations {
   navbar: {
     inicio: string;
     productos: string;
-    nosotros: string;
     contacto: string;
     comunidad: string;
     carrito: string;

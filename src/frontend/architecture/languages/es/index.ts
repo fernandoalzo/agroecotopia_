@@ -5,7 +5,6 @@ export const es: Translations = {
   navbar: {
     inicio: "Inicio",
     productos: "Productos",
-    nosotros: "Nosotros",
     contacto: "Contacto",
     comunidad: "Comunidad",
     carrito: "Carrito",

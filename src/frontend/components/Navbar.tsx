@@ -51,7 +51,6 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
   const links = [
     { label: t.navbar.inicio, href: "/" },
     { label: t.navbar.productos, href: "/products" },
-    { label: t.navbar.nosotros, href: "/nosotros" },
     ...(!isAuthenticated ? [{ label: t.navbar.contacto, href: "/contacto" }] : []),
     { label: t.navbar.comunidad, href: "/comunidad" },
   ];

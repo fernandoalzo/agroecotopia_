@@ -34,14 +34,6 @@ const CTAStage = ({ t, language }: CTAStageProps) => {
         >
           <span>{language === "es" ? "Ir a la Tienda" : "Shop Catalog"}</span>
           <ShoppingCart className="w-5 h-5 transition-transform group-hover:translate-x-0.5" />
-        </button>
-
-        <button
-          onClick={() => router.push("/nosotros")}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-secondary hover:bg-secondary/80 text-foreground border border-border px-10 py-4 font-display text-lg font-bold transition-all hover:scale-105 active:scale-95 cursor-pointer"
-        >
-          <span>{language === "es" ? "Nuestra Historia" : "Our Story"}</span>
-        </button>
       </div>
 
       {/* Small credits footer inside Stage 5 */}
