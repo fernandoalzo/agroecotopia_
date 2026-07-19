@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useCallback, useMemo } from "react";
+import React, { useEffect, useCallback, useMemo, useState } from "react";
 import Footer from "@/components/Footer";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -42,6 +42,14 @@ export default function PedidosPageClient({
   const isAdmin = session?.user?.role === "admin";
   const { socket } = useSocket();
   const queryClient = useQueryClient();
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  const handleNavigate = useCallback((href: string) => {
+    setIsNavigating(true);
+    setTimeout(() => {
+      router.push(href);
+    }, 800);
+  }, [router]);
 
   // Protected route logic
   useEffect(() => {
@@ -139,7 +147,11 @@ export default function PedidosPageClient({
     <div className="min-h-screen flex flex-col bg-background/50 selection:bg-primary/20 overflow-x-hidden">
       
       <main className="flex-1 pt-24 pb-20 md:pt-32">
-        <div className={cn("container px-4 md:px-6 mx-auto", isAdmin ? "max-w-7xl" : "max-w-5xl")}>
+        <motion.div
+          animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : { opacity: 1 }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          className={cn("container px-4 md:px-6 mx-auto", isAdmin ? "max-w-7xl" : "max-w-5xl")}
+        >
           {/* Hero Section */}
           <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="space-y-4">
@@ -205,12 +217,13 @@ export default function PedidosPageClient({
                 orders={orders}
                 loading={ordersLoading}
                 unreadChatCounts={unreadChatCounts}
+                onNavigate={handleNavigate}
                 onCancelOrder={handleCancelOrder}
                 onDeleteOrder={handleDeleteOrder}
               />
             )}
           </div>
-        </div>
+        </motion.div>
       </main>
 
       <Footer />

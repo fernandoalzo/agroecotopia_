@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, MapPin, Clock, CheckCircle2, Truck, Timer, XCircle, RefreshCw, Copy, Check, Trash2, Store, Package, Warehouse } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
 import { format } from "date-fns";
@@ -12,7 +13,6 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 
 export interface Order {
   id: string;
@@ -119,11 +119,12 @@ interface OrderCardProps {
   order: Order;
   index: number;
   unreadChatCount?: number;
+  onNavigate: (href: string) => void;
   onCancelOrder: (orderId: string) => Promise<void>;
   onDeleteOrder: (orderId: string) => Promise<void>;
 }
 
-export const OrderCard = ({ order, index, unreadChatCount = 0, onCancelOrder, onDeleteOrder }: OrderCardProps) => {
+export const OrderCard = ({ order, index, unreadChatCount = 0, onNavigate, onCancelOrder, onDeleteOrder }: OrderCardProps) => {
   const [isCanceling, setIsCanceling] = useState(false);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -445,18 +446,16 @@ export const OrderCard = ({ order, index, unreadChatCount = 0, onCancelOrder, on
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="relative rounded-xl text-[11px] font-bold h-7 px-2.5 text-foreground hover:text-primary hover:bg-primary/5 transition-all"
-                        asChild
+                        className="relative rounded-xl text-[11px] font-bold h-7 px-2.5 text-foreground hover:text-primary hover:bg-primary/5 transition-all cursor-pointer"
+                        onClick={() => onNavigate(`/pedidos/${order.id}`)}
                       >
-                        <Link href={`/pedidos/${order.id}`}>
-                          Ver detalles
-                          <ChevronRight className="ml-0.5 h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-                          {unreadChatCount > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white shadow-md shadow-red-500/30 ring-2 ring-background">
-                              {unreadChatCount}
-                            </span>
-                          )}
-                        </Link>
+                        Ver detalles
+                        <ChevronRight className="ml-0.5 h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                        {unreadChatCount > 0 && (
+                          <span className="absolute -top-1.5 -right-1.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white shadow-md shadow-red-500/30 ring-2 ring-background">
+                            {unreadChatCount}
+                          </span>
+                        )}
                       </Button>
                     </motion.div>
                   )}

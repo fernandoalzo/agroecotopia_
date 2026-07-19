@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,7 +18,12 @@ import logger from "@/utils/logger";
 
 const log = logger.child("src/app/cart/page.tsx");
 
-const CartContent = () => {
+interface CartContentProps {
+  isNavigating: boolean;
+  setIsNavigating: (val: boolean) => void;
+}
+
+const CartContent = ({ isNavigating, setIsNavigating }: CartContentProps) => {
   const { cart, removeFromCart, updateQuantity, totalPrice, calculatedTaxes, taxBreakdown } = useCart();
   const { t, language } = useLanguage();
   const { status } = useSession();
@@ -25,11 +31,7 @@ const CartContent = () => {
 
   if (cart.length === 0) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center justify-center py-24 text-center"
-      >
+      <div className="flex flex-col items-center justify-center py-24 text-center">
         <div className="relative mb-8">
           <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl animate-pulse" />
           <div className="relative rounded-full bg-primary/10 p-10 shadow-inner border border-primary/20">
@@ -53,12 +55,19 @@ const CartContent = () => {
         <p className="text-muted-foreground mb-10 max-w-sm text-balance leading-relaxed">
           {t.cart.emptyCartPrompt}
         </p>
-        <Link href="/products">
-          <Button size="lg" className="rounded-full px-10 h-14 font-display font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.05] transition-transform active:scale-95 text-[#fefce8]">
-            {t.cart.viewProducts}
-          </Button>
-        </Link>
-      </motion.div>
+        <Button
+          onClick={() => {
+            setIsNavigating(true);
+            setTimeout(() => {
+              router.push("/products");
+            }, 800);
+          }}
+          size="lg"
+          className="rounded-full px-10 h-14 font-display font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.05] transition-transform active:scale-95 text-[#fefce8] cursor-pointer"
+        >
+          {t.cart.viewProducts}
+        </Button>
+      </div>
     );
   }
 
@@ -70,12 +79,11 @@ const CartContent = () => {
   }).format(totalPrice);
 
   const handleCompleteOrder = () => {
-    if (status === "unauthenticated") {
-      router.push("/login?callbackUrl=/checkout");
-      return;
-    }
-
-    router.push("/checkout");
+    const target = status === "unauthenticated" ? "/login?callbackUrl=/checkout" : "/checkout";
+    setIsNavigating(true);
+    setTimeout(() => {
+      router.push(target);
+    }, 800);
   };
 
   return (
@@ -204,15 +212,21 @@ const CartContent = () => {
 
         {/* Agregar mas productos button */}
         <div className="pt-8 pb-4">
-          <Link href="/products" className="block w-full group relative">
+          <div className="block w-full group relative">
             {/* Animated Glow Background */}
             <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 via-green-400/30 to-primary/30 rounded-3xl blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
             
             {/* Button Surface */}
             <Button
+              onClick={() => {
+                setIsNavigating(true);
+                setTimeout(() => {
+                  router.push("/products");
+                }, 800);
+              }}
               size="lg"
               variant="outline"
-              className="relative w-full rounded-2xl py-8 font-display font-black text-lg bg-card/80 backdrop-blur-xl border-2 border-primary/20 shadow-lg overflow-hidden flex items-center justify-center transition-all duration-500 group-hover:border-primary group-hover:shadow-[0_0_30px_rgba(var(--primary),0.15)] hover:scale-[1.01] active:scale-[0.98]"
+              className="relative w-full rounded-2xl py-8 font-display font-black text-lg bg-card/80 backdrop-blur-xl border-2 border-primary/20 shadow-lg overflow-hidden flex items-center justify-center transition-all duration-500 group-hover:border-primary group-hover:shadow-[0_0_30px_rgba(var(--primary),0.15)] hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
             >
               {/* Shine effect overlay */}
               <div className="absolute inset-0 -translate-x-[150%] skew-x-12 bg-gradient-to-r from-transparent via-primary/10 to-transparent group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out" />
@@ -229,7 +243,7 @@ const CartContent = () => {
                 </div>
               </div>
             </Button>
-          </Link>
+          </div>
         </div>
       </div>
 
@@ -327,11 +341,16 @@ const CartContent = () => {
 
 export default function CartPage() {
   const { t } = useLanguage();
+  const [isNavigating, setIsNavigating] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1 pt-24 pb-16">
-        <div className="container px-4 md:px-6 max-w-6xl mx-auto">
+        <motion.div
+          animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : { opacity: 1 }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          className="container px-4 md:px-6 max-w-6xl mx-auto"
+        >
           <div className="mb-8">
             <Link href="/products" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors mb-4 group">
               <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
@@ -342,8 +361,8 @@ export default function CartPage() {
             </h1>
           </div>
 
-          <CartContent />
-        </div>
+          <CartContent isNavigating={isNavigating} setIsNavigating={setIsNavigating} />
+        </motion.div>
       </main>
       <Footer />
     </div>

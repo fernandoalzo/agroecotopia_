@@ -31,6 +31,7 @@ export default function CheckoutPage() {
   const { cart, totalPrice, clearCart } = useCart();
   const { t, language } = useLanguage();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [destinationCity, setDestinationCity] = useState("");
   const [tipoEntrega, setTipoEntrega] = useState<string>("ENVIO");
   const [paymentMethod, setPaymentMethod] = useState<string>("advisor");
@@ -96,6 +97,8 @@ export default function CheckoutPage() {
 
   const handleCheckoutSubmit = async (values: CheckoutValues) => {
     if (isSubmitting) return;
+    setIsNavigating(true);
+    await new Promise(resolve => setTimeout(resolve, 700));
     setIsSubmitting(true);
 
     try {
@@ -164,9 +167,12 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
-
       <main className="flex-1 pt-24 pb-16">
-        <div className="container px-4 md:px-6 max-w-7xl mx-auto">
+        <motion.div
+          animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : { opacity: 1 }}
+          transition={{ duration: 0.7, ease: "easeInOut" }}
+          className="container px-4 md:px-6 max-w-7xl mx-auto"
+        >
           {/* Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
             {/* Left Column: Header + Form Section */}
@@ -209,7 +215,7 @@ export default function CheckoutPage() {
               />
             </motion.div>
           </div>
-        </div>
+        </motion.div>
       </main>
 
       <Footer />

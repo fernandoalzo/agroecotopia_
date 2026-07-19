@@ -11,11 +11,12 @@ type OrdersListProps = {
   orders: Order[];
   loading: boolean;
   unreadChatCounts?: Record<string, number>;
+  onNavigate: (href: string) => void;
   onCancelOrder: (orderId: string) => Promise<void>;
   onDeleteOrder: (orderId: string) => Promise<void>;
 };
 
-export const OrdersList = ({ orders, loading, unreadChatCounts = {}, onCancelOrder, onDeleteOrder }: OrdersListProps) => {
+export const OrdersList = ({ orders, loading, unreadChatCounts = {}, onNavigate, onCancelOrder, onDeleteOrder }: OrdersListProps) => {
   if (loading) {
     return (
       <div className="space-y-3">
@@ -56,6 +57,7 @@ export const OrdersList = ({ orders, loading, unreadChatCounts = {}, onCancelOrd
             order={order}
             index={index}
             unreadChatCount={unreadChatCounts[order.id]}
+            onNavigate={onNavigate}
             onCancelOrder={onCancelOrder}
             onDeleteOrder={onDeleteOrder}
           />
