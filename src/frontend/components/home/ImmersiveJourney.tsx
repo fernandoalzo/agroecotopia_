@@ -3,9 +3,9 @@
 import { motion } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { Sprout } from "lucide-react";
 import { Product } from "@/types";
 import BirdFlockBackground from "./BirdFlockBackground";
+import { HomeSkeleton } from "./HomeSkeleton";
 
 // Import modular sections
 import WelcomeStage from "./sections/WelcomeStage";
@@ -86,14 +86,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats, load
   }, [mounted]);
 
   if (!mounted) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-background">
-        <div className="text-center">
-          <Sprout className="h-12 w-12 text-primary animate-bounce mx-auto mb-4" />
-          <p className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">{t.common.loading}</p>
-        </div>
-      </div>
-    );
+    return <HomeSkeleton />;
   }
 
   // No longer slicing to 6 so all loaded popular products are passed

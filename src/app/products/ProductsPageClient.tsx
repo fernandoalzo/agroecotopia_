@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/context/LanguageContext";
 import { searchProductsAction, getPaginatedProductsAction } from "@/backend/modules/product/product.actions";
@@ -12,6 +13,7 @@ import { ProductsToolbar } from "@/components/products/ProductsToolbar";
 import { ProductsGrid } from "@/components/products/ProductsGrid";
 import { ProductsPagination } from "@/components/products/ProductsPagination";
 import { ProductsEmptyState } from "@/components/products/ProductsEmptyState";
+import { ProductsGridSkeleton } from "@/components/products/ProductsGridSkeleton";
 
 function groupProductsByCategory(products: any[]): ProductGroup[] {
   const groups = new Map<string, any[]>();
@@ -149,7 +151,7 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
       return; // Ignorar el primer render y renders de Strict Mode
     }
     prevSearchTermRef.current = searchTerm;
-    
+
     const query = searchTerm.trim();
     if (abortRef.current) abortRef.current.abort();
     const abort = new AbortController();
@@ -217,7 +219,7 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
     return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
   };
 
-  if (!mounted) return null;
+  const showSkeleton = !mounted || isSearching;
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 overflow-x-hidden font-body">
@@ -245,8 +247,25 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
 
         <div className="container mx-auto px-4 md:px-6">
           <div className="min-h-[500px]">
-              {(products.length > 0 || (groups && groups.length > 0)) ? (
-                <>
+            <AnimatePresence mode="wait">
+              {showSkeleton ? (
+                <motion.div
+                  key="skeleton"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ProductsGridSkeleton viewMode={viewMode} showPagination />
+                </motion.div>
+              ) : (products.length > 0 || (groups && groups.length > 0)) ? (
+                <motion.div
+                  key="content"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                >
                   <ProductsGrid
                     products={groups ? undefined : products}
                     groups={groups}
@@ -265,16 +284,25 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
                       t={t}
                     />
                   </div>
-                </>
+                </motion.div>
               ) : (
-                <ProductsEmptyState
-                  isLoading={isSearching}
-                  queryParam={queryParam}
-                  onClear={() => { setSearchTerm(""); navigate("", 1, 20, ""); }}
-                  t={t}
-                />
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ProductsEmptyState
+                    isLoading={false}
+                    queryParam={queryParam}
+                    onClear={() => { setSearchTerm(""); navigate("", 1, 20, ""); }}
+                    t={t}
+                  />
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
+          </div>
         </div>
       </main>
 

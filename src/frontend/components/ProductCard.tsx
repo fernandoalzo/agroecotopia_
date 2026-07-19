@@ -57,7 +57,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
     (p as any).promotions,
     (p as any).store?.promotions
   );
-  
+
   const hasDiscount = discountedPrice !== null;
 
   const productRatingAverage = p.ratingAverage ?? 0;
@@ -94,7 +94,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
               </div>
             </div>
           )}
-          
+
           {/* List Image */}
           <div className="relative w-full md:w-[240px] aspect-square bg-secondary/40 dark:bg-[#121212] flex items-center justify-center rounded-md overflow-hidden flex-shrink-0 transition-all duration-500">
             {p.images && p.images.length > 0 && p.images[0]?.trim() !== "" ? (
@@ -130,7 +130,7 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
               )}
               {isAgroChoice && (
                 <div className="bg-gradient-to-r from-[#f59e0b] to-[#d97706] dark:from-[#fbbf24] dark:to-[#f59e0b] text-white dark:text-black text-[10px] font-black px-2.5 py-1 rounded-sm shadow-lg flex items-center gap-1.5 border border-white/20 dark:border-black/10">
-                  <span className="uppercase tracking-tighter">{config.app.name}'s</span> 
+                  <span className="uppercase tracking-tighter">{config.app.name}'s</span>
                   <span className="uppercase tracking-widest text-[#fefce8] dark:text-black/80 font-black">Choice</span>
                 </div>
               )}

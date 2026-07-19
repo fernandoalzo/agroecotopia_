@@ -8,56 +8,7 @@ import { Users, Globe, MessageCircle, ShoppingBag, TreePine, Bird } from "lucide
 const slugify = (text: string) =>
   text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
-const FLOATING_ICONS = [
-  { Icon: Users, x: 3, y: 12, size: 26, delay: 0, driftX: 50, driftY: -40, duration: 9 },
-  { Icon: Globe, x: 94, y: 18, size: 22, delay: 1.8, driftX: -35, driftY: -30, duration: 11 },
-  { Icon: MessageCircle, x: 8, y: 78, size: 20, delay: 0.7, driftX: 40, driftY: 30, duration: 8 },
-  { Icon: TreePine, x: 90, y: 72, size: 28, delay: 2.5, driftX: -40, driftY: 25, duration: 10 },
-  { Icon: Bird, x: 50, y: 6, size: 18, delay: 3.2, driftX: 60, driftY: 15, duration: 12 },
-];
 
-function FloatingIcon({
-  Icon,
-  x,
-  y,
-  size,
-  delay,
-  driftX,
-  driftY,
-  duration,
-}: {
-  Icon: React.ElementType;
-  x: number;
-  y: number;
-  size: number;
-  delay: number;
-  driftX: number;
-  driftY: number;
-  duration: number;
-}) {
-  return (
-    <div
-      className="absolute pointer-events-none"
-      style={{
-        left: `${x}%`,
-        top: `${y}%`,
-        willChange: "transform",
-        animation: `community-float ${duration}s ease-in-out ${delay}s infinite`,
-        "--dx1": `${driftX * 0.3}px`,
-        "--dy1": `${driftY * 0.3}px`,
-        "--dx2": `${driftX * 0.7}px`,
-        "--dy2": `${driftY * 0.7}px`,
-        "--dx3": `${driftX}px`,
-        "--dy3": `${driftY}px`,
-      } as React.CSSProperties}
-    >
-      <div className="relative">
-        <div className="absolute inset-0 bg-accent/20 rounded-full blur-xl scale-150" />
-        <Icon className="text-accent/30" style={{ width: size, height: size }} />
-      </div>
-    </div>
-  );
-}
 
 interface CommunityStageProps {
   language: string;
@@ -168,12 +119,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
       className="relative w-full h-full flex items-center justify-center overflow-hidden"
     >
 
-      {/* Floating icons */}
-      <div className="absolute inset-0 pointer-events-none">
-        {FLOATING_ICONS.map((item, i) => (
-          <FloatingIcon key={i} {...item} />
-        ))}
-      </div>
+
 
       {/* Horizontal rule decorations */}
       <div
@@ -524,13 +470,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
           0%, 100% { transform: translateX(0); }
           50% { transform: translateX(3px); }
         }
-        @keyframes community-float {
-          0% { opacity: 0; transform: translate(0, 0) scale(0) rotate(0deg); }
-          25% { opacity: 0.2; transform: translate(var(--dx1), var(--dy1)) scale(1) rotate(-15deg); }
-          50% { opacity: 0.1; transform: translate(var(--dx2), var(--dy2)) scale(0.85) rotate(10deg); }
-          75% { opacity: 0.2; transform: translate(var(--dx3), var(--dy3)) scale(1) rotate(-5deg); }
-          100% { opacity: 0; transform: translate(0, 0) scale(0) rotate(0deg); }
-        }
+
         @keyframes community-line {
           0%, 100% { opacity: 0.2; }
           50% { opacity: 0.5; }

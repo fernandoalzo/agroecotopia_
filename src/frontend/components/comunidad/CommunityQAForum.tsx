@@ -12,6 +12,7 @@ import { Question } from "./forum/forum.types";
 import ForumSidebar from "./forum/ForumSidebar";
 import ForumTrendingBanner from "./forum/ForumTrendingBanner";
 import ForumQuestionCard from "./forum/ForumQuestionCard";
+import { ForumQuestionCardSkeleton } from "./forum/ForumQuestionCardSkeleton";
 import ForumStatsPanel from "./forum/ForumStatsPanel";
 const ForumCreatePostModal = dynamic(() => import("./forum/ForumCreatePostModal"), { ssr: false });
 
@@ -166,49 +167,29 @@ export default function CommunityQAForum({
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <AnimatePresence mode="popLayout">
                 {isSearching && questions.length === 0 ? (
-                  <motion.div 
+                  <motion.div
+                    key="skeleton"
+                    layout
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center py-32 space-y-8"
+                    exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                    transition={{ duration: 0.25 }}
+                    className="space-y-4"
                   >
-                    <div className="relative">
-                      <motion.div
-                        animate={{ scale: [1, 1.5, 1], opacity: [0.2, 0.5, 0.2] }}
-                        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-                        className="absolute inset-0 rounded-full bg-primary/20 blur-xl"
-                      />
-                      <div className="relative bg-background border border-primary/20 w-20 h-20 rounded-3xl flex items-center justify-center shadow-2xl shadow-primary/10">
-                        <motion.div
-                          animate={{ rotate: [0, 10, -10, 0] }}
-                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                        >
-                          <Search className="w-10 h-10 text-primary drop-shadow-md" />
-                        </motion.div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-center gap-3">
-                      <h3 className="text-sm font-semibold text-foreground/80 tracking-widest uppercase">
-                        Explorando conocimientos
-                      </h3>
-                      <div className="flex gap-1.5">
-                        {[0, 1, 2].map((i) => (
-                          <motion.div
-                            key={i}
-                            animate={{ opacity: [0.2, 1, 0.2], scale: [0.8, 1.2, 0.8] }}
-                            transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
-                            className="w-1.5 h-1.5 rounded-full bg-primary/70"
-                          />
-                        ))}
-                      </div>
-                    </div>
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <ForumQuestionCardSkeleton key={i} />
+                    ))}
                   </motion.div>
                 ) : questions.length === 0 ? (
                   <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    key="empty"
+                    layout
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.25 }}
                     className="flex flex-col items-center justify-center py-24 px-6 text-center"
                   >
                     <motion.div 
@@ -225,33 +206,40 @@ export default function CommunityQAForum({
                     </p>
                   </motion.div>
                 ) : (
-                  questions.map((q) => (
-                    <ForumQuestionCard 
-                      key={q.id} 
-                      question={q} 
-                    />
-                  ))
+                  <motion.div
+                    key="content"
+                    layout
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                  >
+                    {questions.map((q) => (
+                      <ForumQuestionCard 
+                        key={q.id} 
+                        question={q} 
+                      />
+                    ))}
+                    {hasNextPage && (
+                      <div className="flex justify-center mt-6">
+                        <button
+                          onClick={() => fetchNextPage?.()}
+                          disabled={isFetchingNextPage}
+                          className="px-6 py-2.5 rounded-full bg-primary/10 text-primary font-bold hover:bg-primary/20 transition-all disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {isFetchingNextPage ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                              {t.forum.loading}
+                            </>
+                          ) : (
+                            t.forum.qaList.loadMore
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
                 )}
-                
-                {hasNextPage && (
-                  <div className="flex justify-center mt-6">
-                    <button
-                      onClick={() => fetchNextPage?.()}
-                      disabled={isFetchingNextPage}
-                      className="px-6 py-2.5 rounded-full bg-primary/10 text-primary font-bold hover:bg-primary/20 transition-all disabled:opacity-50 flex items-center gap-2"
-                    >
-                      {isFetchingNextPage ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                          {t.forum.loading}
-                        </>
-                      ) : (
-                        t.forum.qaList.loadMore
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
+              </AnimatePresence>
             </motion.div>
           </div>
 

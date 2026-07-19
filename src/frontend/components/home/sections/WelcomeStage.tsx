@@ -5,56 +5,7 @@ import { Sprout, Leaf, Wheat, Sun, Wind, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-const FLOATING_ICONS = [
-  { Icon: Leaf, x: 5, y: 10, size: 24, delay: 0, driftX: 40, driftY: -30, duration: 8 },
-  { Icon: Sprout, x: 90, y: 18, size: 20, delay: 1.5, driftX: -35, driftY: -25, duration: 10 },
-  { Icon: Wheat, x: 10, y: 75, size: 22, delay: 0.8, driftX: 30, driftY: 20, duration: 9 },
-  { Icon: Sun, x: 88, y: 80, size: 28, delay: 2.2, driftX: -25, driftY: -35, duration: 11 },
-  { Icon: Wind, x: 50, y: 5, size: 16, delay: 3, driftX: 50, driftY: 10, duration: 7 },
-];
 
-function FloatingIcon({
-  Icon,
-  x,
-  y,
-  size,
-  delay,
-  driftX,
-  driftY,
-  duration,
-}: {
-  Icon: React.ElementType;
-  x: number;
-  y: number;
-  size: number;
-  delay: number;
-  driftX: number;
-  driftY: number;
-  duration: number;
-}) {
-  return (
-    <div
-      className="absolute pointer-events-none"
-      style={{
-        left: `${x}%`,
-        top: `${y}%`,
-        willChange: "transform",
-        animation: `welcome-float ${duration}s ease-in-out ${delay}s infinite`,
-        "--dx1": `${driftX * 0.3}px`,
-        "--dy1": `${driftY * 0.3}px`,
-        "--dx2": `${driftX * 0.7}px`,
-        "--dy2": `${driftY * 0.7}px`,
-        "--dx3": `${driftX}px`,
-        "--dy3": `${driftY}px`,
-      } as React.CSSProperties}
-    >
-      <div className="relative">
-        <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl scale-150" />
-        <Icon className="text-primary/30" style={{ width: size, height: size }} />
-      </div>
-    </div>
-  );
-}
 
 interface WelcomeStageProps {
   t: any;
@@ -69,12 +20,7 @@ const WelcomeStage = ({ t, language, onStartJourney }: WelcomeStageProps) => {
 
   return (
     <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-      {/* Floating nature icons */}
-      <div className="absolute inset-0 pointer-events-none">
-        {FLOATING_ICONS.map((item, i) => (
-          <FloatingIcon key={i} {...item} />
-        ))}
-      </div>
+
 
       {/* Horizontal rule decorations */}
       <div
@@ -187,13 +133,7 @@ const WelcomeStage = ({ t, language, onStartJourney }: WelcomeStageProps) => {
           0%, 100% { transform: scale(1); opacity: 0.7; }
           50% { transform: scale(1.5); opacity: 1; }
         }
-        @keyframes welcome-float {
-          0% { opacity: 0; transform: translate(0, 0) scale(0) rotate(0deg); }
-          25% { opacity: 0.25; transform: translate(var(--dx1), var(--dy1)) scale(1) rotate(15deg); }
-          50% { opacity: 0.15; transform: translate(var(--dx2), var(--dy2)) scale(0.9) rotate(-10deg); }
-          75% { opacity: 0.25; transform: translate(var(--dx3), var(--dy3)) scale(1) rotate(5deg); }
-          100% { opacity: 0; transform: translate(0, 0) scale(0) rotate(0deg); }
-        }
+
         @keyframes welcome-line {
           0%, 100% { opacity: 0.2; }
           50% { opacity: 0.5; }
