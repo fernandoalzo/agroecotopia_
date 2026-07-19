@@ -103,137 +103,98 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
           <AnimatedLogo />
         </div>
 
-        {/* Right Side Action Group: Contains Nav Pill, Auth, and Settings with homogeneous spacing */}
-        <div className="flex shrink-0 items-center gap-2 lg:gap-3 justify-end min-w-0">
-          {/* Desktop Navigation (Center Pill) */}
-          <div className="hidden items-center lg:flex gap-1 xl:gap-2 bg-secondary/30 backdrop-blur-sm pl-4 xl:pl-6 pr-3 xl:pr-4 py-2 rounded-full border border-border/40 shadow-inner group/nav overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full group-hover/nav:translate-x-full transition-transform duration-1000 pointer-events-none" />
+        {/* Center Side: Desktop Navigation Links (Blends elegantly with the background) */}
+        <div className="hidden lg:flex items-center justify-center gap-6 xl:gap-8 absolute left-1/2 -translate-x-1/2 z-10">
+          {links.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={cn(
+                "relative py-2 px-1 font-body text-[13px] xl:text-sm font-bold tracking-tight transition-colors duration-300 z-20 whitespace-nowrap",
+                isActive(l.href) ? "text-primary" : "text-muted-foreground/80 hover:text-primary"
+              )}
+            >
+              <span className="relative z-10 pointer-events-none">{l.label}</span>
+              {isActive(l.href) && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full shadow-[0_0_8px_oklch(var(--color-primary)/0.5)]"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+            </Link>
+          ))}
+        </div>
 
-            <div className="flex items-center gap-3 xl:gap-6">
-              {links.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className={cn(
-                    "relative py-1 font-body text-[13px] xl:text-sm font-bold tracking-tight transition-all hover:text-primary z-20 whitespace-nowrap",
-                    isActive(l.href) ? "text-primary" : "text-muted-foreground/80"
-                  )}
-                >
-                  <span className="relative z-10 pointer-events-none">{l.label}</span>
-                  {isActive(l.href) && (
-                    <motion.div
-                      layoutId="activeTab"
-                      className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full shadow-[0_0_8px_oklch(var(--color-primary)/0.5)]"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                </Link>
-              ))}
-            </div>
-
-            {/* Integrated Orders Link — only visible if logged in */}
+        {/* Right Side: Actions (Desktop & Mobile) */}
+        <div className="flex items-center gap-2 lg:gap-3 justify-end z-20">
+          {/* Desktop-Only Action Icons */}
+          <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 mr-2">
+            {/* Orders / Dashboard Link */}
             {isAuthenticated && (
               <Link
                 href={isAdmin ? "/admin/dashboard" : "/pedidos"}
                 className={cn(
-                  "group/orders relative flex items-center gap-2.5 px-3 py-1.5 rounded-full transition-all duration-300 hover:bg-primary/5 z-20",
-                  (isAdmin ? pathname?.startsWith("/admin/dashboard") : isActive("/pedidos")) ? "bg-primary/10 text-primary" : "text-muted-foreground/80"
+                  "group/orders relative flex items-center justify-center p-2 rounded-full transition-all duration-300 hover:bg-secondary/40 border border-transparent hover:border-border/30 z-20",
+                  (isAdmin ? pathname?.startsWith("/admin/dashboard") : isActive("/pedidos")) ? "bg-primary/10 text-primary border-primary/20" : "text-muted-foreground/80"
                 )}
+                title={isAdmin ? t.navbar.dashboard : t.navbar.pedidos}
               >
-                <div className="relative flex items-center justify-center pointer-events-none">
-                  {isAdmin ? (
-                    <LayoutDashboard className={cn(
-                      "h-4.5 w-4.5 transition-transform duration-300 group-hover/orders:scale-110",
-                      pathname?.startsWith("/admin/dashboard") ? "text-primary" : "text-primary/70"
-                    )} />
-                  ) : (
-                    <Package className={cn(
-                      "h-4.5 w-4.5 transition-transform duration-300 group-hover/orders:scale-110",
-                      isActive("/pedidos") ? "text-primary" : "text-primary/70"
-                    )} />
-                  )}
-                </div>
-                <div className="flex flex-col leading-tight pointer-events-none">
-                  <span className={cn(
-                    "text-[10px] font-black uppercase tracking-widest transition-colors",
-                    (isAdmin ? pathname?.startsWith("/admin/dashboard") : isActive("/pedidos")) ? "text-primary" : "text-primary/60 group-hover/orders:text-primary"
-                  )}>
-                    {isAdmin ? t.navbar.dashboard : t.navbar.pedidos}
-                  </span>
-                </div>
+                {isAdmin ? (
+                  <LayoutDashboard className="h-4.5 w-4.5 transition-transform duration-300 group-hover/orders:scale-110" />
+                ) : (
+                  <Package className="h-4.5 w-4.5 transition-transform duration-300 group-hover/orders:scale-110" />
+                )}
                 {isAdmin && unreadCount > 0 && (
-                  <span className="min-w-[16px] h-[16px] rounded-full flex items-center justify-center text-[8px] font-bold px-1 bg-red-500 text-white animate-pulse shadow-sm shadow-red-500/20 pointer-events-none">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[7px] font-bold px-0.5 bg-red-500 text-white animate-pulse shadow-sm shadow-red-500/20">
                     {unreadCount}
                   </span>
                 )}
               </Link>
             )}
 
-            {/* Vertical Separator */}
-            <div className="h-6 w-px bg-border/40 mx-1 z-10" />
-
-            {/* Integrated Cart Button */}
+            {/* Cart Link */}
             <Link
               href="/cart"
               className={cn(
-                "group/cart relative flex items-center gap-2.5 px-3 py-1.5 rounded-full transition-all duration-300 hover:bg-primary/5 z-20",
-                isActive("/cart") ? "bg-primary/10 text-primary" : "text-muted-foreground/80"
+                "group/cart relative flex items-center justify-center p-2 rounded-full transition-all duration-300 hover:bg-secondary/40 border border-transparent hover:border-border/30 z-20",
+                isActive("/cart") ? "bg-primary/10 text-primary border-primary/20" : "text-muted-foreground/80"
               )}
+              title={t.navbar.carrito}
             >
-              <div className="relative flex items-center justify-center pointer-events-none">
-                <motion.div
-                  animate={totalItems > 0 ? { scale: [1, 1.1, 1] } : {}}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  <ShoppingCart className={cn(
-                    "h-4.5 w-4.5 transition-transform duration-300 group-hover/cart:scale-110 group-hover/cart:rotate-[-8deg]",
-                    isActive("/cart") ? "text-primary" : "text-primary/70"
-                  )} />
-                </motion.div>
-
-                <AnimatePresence>
-                  {totalItems > 0 && (
-                    <motion.span
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      className="absolute -right-2.5 -top-2.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-primary text-[8px] font-black text-primary-foreground shadow-sm ring-2 ring-background/50"
-                    >
-                      {totalItems}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </div>
-              <div className="flex flex-col leading-tight pointer-events-none">
-                <span className={cn(
-                  "text-[10px] font-black uppercase tracking-widest transition-colors",
-                  isActive("/cart") ? "text-primary" : "text-primary/60 group-hover/cart:text-primary"
-                )}>
-                  {t.navbar.carrito}
-                </span>
+              <motion.div
+                animate={totalItems > 0 ? { scale: [1, 1.1, 1] } : {}}
+                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <ShoppingCart className="h-4.5 w-4.5 transition-transform duration-300 group-hover/cart:scale-110 group-hover/cart:rotate-[-8deg]" />
+              </motion.div>
+              <AnimatePresence>
                 {totalItems > 0 && (
-                  <span className={cn(
-                    "text-[8px] font-bold transition-colors",
-                    isActive("/cart") ? "text-primary/70" : "text-muted-foreground/60"
-                  )}>
-                    {totalItems} {totalItems === 1 ? "Item" : "Items"}
-                  </span>
+                  <motion.span
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[8px] font-black text-primary-foreground shadow-sm ring-1 ring-background/30"
+                  >
+                    {totalItems}
+                  </motion.span>
                 )}
-              </div>
+              </AnimatePresence>
             </Link>
-          </div>
 
+            {/* Divider */}
+            {isAuthenticated && <div className="h-4 w-px bg-border/40 mx-1 z-10" />}
 
-
-
-          {/* Auth Button and Notifications — standalone, outside settings dropdown */}
-          <div className="hidden lg:flex items-center gap-2">
+            {/* Notification Bell */}
             {isAuthenticated && (
-              <div className="flex shrink-0 items-center bg-background/50 backdrop-blur-xl p-1 rounded-full border border-border/50 shadow-sm mr-1">
+              <div className="flex shrink-0 items-center bg-secondary/20 p-0.5 rounded-full border border-border/30 shadow-sm mr-1">
                 <NotificationBell />
               </div>
             )}
-            
+          </div>
+
+          {/* Desktop-Only Auth / Profile Button */}
+          <div className="hidden lg:flex items-center mr-1">
             {isAuthenticated ? (
               <DropdownMenu open={userProfileOpen} onOpenChange={setUserProfileOpen}>
                 <DropdownMenuTrigger asChild>
@@ -398,7 +359,7 @@ const Navbar = ({ unreadCount = 0 }: NavbarProps) => {
           </div>
 
           {/* Settings + Mobile Toggle pill */}
-          <div className="flex shrink-0 items-center gap-1 bg-background/50 backdrop-blur-xl p-1 lg:p-1.5 rounded-full border-2 border-primary/10 dark:border-primary/30 shadow-lg lg:gap-2 group/pill hover:border-primary/30 dark:hover:border-primary/50 transition-all duration-300">
+          <div className="flex shrink-0 items-center gap-1 bg-background/50 backdrop-blur-xl p-1 lg:p-1.5 rounded-full border border-border/40 dark:border-white/10 shadow-md lg:gap-2 group/pill transition-all duration-300">
             <div className="flex items-center">
               <UserMenu />
             </div>
