@@ -34,6 +34,7 @@ const CTAStage = ({ t, language }: CTAStageProps) => {
         >
           <span>{language === "es" ? "Ir a la Tienda" : "Shop Catalog"}</span>
           <ShoppingCart className="w-5 h-5 transition-transform group-hover:translate-x-0.5" />
+        </button>
       </div>
 
       {/* Small credits footer inside Stage 5 */}
