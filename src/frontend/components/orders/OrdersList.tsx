@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
 import { Order, OrderCard } from "./OrderCard";
 
 type OrdersListProps = {
@@ -41,8 +40,11 @@ export const OrdersList = ({ orders, loading, unreadChatCounts = {}, onNavigate,
         <p className="mt-2 text-muted-foreground">
           Cuando realices una compra, aparecerá aquí.
         </p>
-        <Button className="mt-8 rounded-2xl px-8 h-12 text-base font-bold shadow-xl shadow-primary/20 transition-all hover:scale-105" asChild>
-          <Link href="/products">Ir a la tienda</Link>
+        <Button
+          className="mt-8 rounded-2xl px-8 h-12 text-base font-bold shadow-xl shadow-primary/20 transition-all hover:scale-105"
+          onClick={() => onNavigate("/products")}
+        >
+          Ir a Productos
         </Button>
       </motion.div>
     );

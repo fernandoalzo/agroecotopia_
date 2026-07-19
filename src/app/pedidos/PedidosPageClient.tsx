@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
 import { motion } from "framer-motion";
 import { Package, ArrowLeft, LayoutDashboard, History } from "lucide-react";
-import Link from "next/link";
 import { OrdersList } from "@/components/orders/OrdersList";
 import { AdminOrdersList } from "@/components/admin/pedidos/AdminOrdersList";
 import { Button } from "@/components/ui/button";
@@ -197,11 +196,13 @@ export default function PedidosPageClient({
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3 }}
             >
-              <Button variant="outline" className="rounded-2xl px-6 h-11 font-bold border-primary/20 hover:bg-primary/5 hover:border-primary/50 hover:text-primary transition-all shadow-sm" asChild>
-                <Link href={isAdmin ? "/admin/chat" : "/products"} className="flex items-center gap-2">
-                  <ArrowLeft className="h-4 w-4" />
-                  {isAdmin ? "Volver a Soporte Chat" : "Volver a la tienda"}
-                </Link>
+              <Button
+                variant="outline"
+                className="rounded-2xl px-6 h-11 font-bold border-primary/20 hover:bg-primary/5 hover:border-primary/50 hover:text-primary transition-all shadow-sm"
+                onClick={() => handleNavigate(isAdmin ? "/admin/chat" : "/products")}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                {isAdmin ? "Volver a Soporte Chat" : "Volver a la tienda"}
               </Button>
             </motion.div>
           </div>
