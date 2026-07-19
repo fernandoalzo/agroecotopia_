@@ -28,6 +28,22 @@ export async function getPaginatedProductsAction(
 }
 
 /**
+ * Server Action para obtener productos populares ordenados por calificación
+ */
+export async function getPopularProductsAction(
+  page: number = 1,
+  limit: number = 10
+): Promise<{ products: Product[], total: number, totalPages: number }> {
+  try {
+    const result = await productService.getPopularProducts(page, limit);
+    return deepSerialize(result) as any;
+  } catch (error) {
+    log.error("Error getting popular products:", error);
+    return { products: [], total: 0, totalPages: 0 };
+  }
+}
+
+/**
  * Server Action para buscar productos paginados en la base de datos con opcional filtro de categoría
  */
 export async function searchProductsAction(

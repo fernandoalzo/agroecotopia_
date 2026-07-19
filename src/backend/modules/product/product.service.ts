@@ -33,6 +33,26 @@ export class ProductService {
     }
   }
 
+  async getPopularProducts(page: number = 1, limit: number = 10): Promise<{ products: any[], total: number, totalPages: number }> {
+    try {
+      const skip = (page - 1) * limit;
+      
+      const [products, total] = await Promise.all([
+        this.productRepository.getPopularProducts(skip, limit),
+        this.productRepository.getTotalCount([], undefined)
+      ]);
+      
+      return {
+        products: products.map(p => this.serializeProduct(p)),
+        total,
+        totalPages: Math.ceil(total / limit)
+      };
+    } catch (error) {
+      log.error("Error in getPopularProducts:", error);
+      return { products: [], total: 0, totalPages: 0 };
+    }
+  }
+
   groupByCategory(products: any[]): Array<{ label: string; products: any[] }> {
     const groups = new Map<string, any[]>();
     for (const p of products) {

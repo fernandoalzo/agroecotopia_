@@ -6,6 +6,11 @@ import { ShoppingCart, ChevronLeft, ChevronRight, Package, Star, Tag, Leaf, Arro
 import { useRef, useState } from "react";
 import { Product } from "@/types";
 import ProductCard from "@/components/ProductCard";
+import { SmallProductCardSkeleton } from "@/components/shared/SmallProductCardSkeleton";
+import logger from "@/utils/logger";
+
+const log = logger.child();
+
 
 const FLOATING_ICONS = [
   { Icon: ShoppingCart, x: 5, y: 12, size: 22, delay: 0, driftX: 35, driftY: -25, duration: 8 },
@@ -61,14 +66,56 @@ function FloatingIcon({
 interface ProductsStageProps {
   t: any;
   language: string;
-  featuredProducts: Product[];
+  initialProducts: Product[];
+  loadPopularProducts: (page: number, limit: number) => Promise<{ products: Product[], total: number, totalPages: number }>;
 }
 
-const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) => {
+const ProductsStage = ({ t, language, initialProducts, loadPopularProducts }: ProductsStageProps) => {
   const router = useRouter();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+
   const words = (t.products.catalogDescription || t.products.description || "").split(" ");
+
+  const loadMore = async () => {
+    if (isLoading || !hasMore) return;
+    setIsLoading(true);
+    try {
+      const nextPage = page + 1;
+      const res = await loadPopularProducts(nextPage, 10);
+      if (res && res.products && res.products.length > 0) {
+        setProducts(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const newProds = res.products.filter(p => !existingIds.has(p.id));
+          return [...prev, ...newProds];
+        });
+        setPage(nextPage);
+        if (nextPage >= res.totalPages || res.products.length < 10) {
+          setHasMore(false);
+        }
+      } else {
+        setHasMore(false);
+      }
+    } catch (err) {
+      log.error("Error loading more popular products:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleScroll = () => {
+    if (scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const isNearEnd = container.scrollWidth - container.scrollLeft - container.clientWidth < 400;
+      if (isNearEnd) {
+        loadMore();
+      }
+    }
+  };
 
   const scrollLeft = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -120,11 +167,11 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
       />
 
       {/* Content */}
-        <motion.div
-          animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : {}}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
-          className="relative z-10 w-full flex flex-col h-full pt-16 sm:pt-20 pb-3 sm:pb-4 gap-2 sm:gap-3"
-        >
+      <motion.div
+        animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : {}}
+        transition={{ duration: 0.8, ease: "easeInOut" }}
+        className="relative z-10 w-full flex flex-col h-full pt-16 sm:pt-20 pb-3 sm:pb-4 gap-2 sm:gap-3"
+      >
 
         {/* Header Title */}
         <div className="shrink-0 container max-w-7xl mx-auto text-center px-4">
@@ -142,7 +189,7 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
               />
               {language === "es" ? "Nuestra Cosecha" : "Our Harvest"}
             </span>
-      </div>
+          </div>
 
           {/* Title */}
           <h2
@@ -180,10 +227,10 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
 
         {/* Floating product showcase - fills remaining space */}
         <div className="flex-1 min-h-0 flex items-center">
-          {featuredProducts.length > 0 ? (
+          {products.length > 0 ? (
             <div className="relative w-full max-w-6xl mx-auto flex items-center group px-6 sm:px-10">
               {/* Left Arrow */}
-              <button 
+              <button
                 type="button"
                 onClick={scrollLeft}
                 className="absolute left-0 z-40 p-1.5 sm:p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg text-primary hover:bg-primary hover:text-white transition-all opacity-100"
@@ -192,12 +239,13 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
                 <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
 
-              <div 
+              <div
                 ref={scrollContainerRef}
+                onScroll={handleScroll}
                 className="flex overflow-x-auto gap-2 sm:gap-3 py-1 sm:py-2 px-1 no-scrollbar snap-x snap-mandatory w-full"
                 style={{ scrollBehavior: "smooth" }}
               >
-                {featuredProducts.map((p, i) => {
+                {products.map((p, i) => {
                   return (
                     <div
                       key={p.id || p.name}
@@ -207,10 +255,15 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
                     </div>
                   );
                 })}
+                {isLoading && (
+                  <div className="relative shrink-0 snap-center w-[130px] sm:w-[160px] lg:w-[180px]">
+                    <SmallProductCardSkeleton />
+                  </div>
+                )}
               </div>
 
               {/* Right Arrow */}
-              <button 
+              <button
                 type="button"
                 onClick={scrollRight}
                 className="absolute right-0 z-40 p-1.5 sm:p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg text-primary hover:bg-primary hover:text-white transition-all opacity-100"
@@ -243,7 +296,7 @@ const ProductsStage = ({ t, language, featuredProducts }: ProductsStageProps) =>
           </button>
         </div>
 
-        </motion.div>
+      </motion.div>
 
       <style>{`
         @keyframes gradient-shift {

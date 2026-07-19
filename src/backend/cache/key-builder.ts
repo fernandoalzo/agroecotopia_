@@ -15,6 +15,9 @@ export const CacheKeys = {
     list: (skip: number, take: number, categories?: string[], storeId?: string) =>
       `${NAMESPACE}:product:list:${skip}:${take}:${categories ? hash(categories.join(",")) : ""}:${storeId || ""}`,
 
+    popular: (skip: number, take: number) =>
+      `${NAMESPACE}:product:popular:${skip}:${take}`,
+
     total: (categories?: string[], storeId?: string) =>
       `${NAMESPACE}:product:total:${categories ? hash(categories.join(",")) : ""}:${storeId || ""}`,
 

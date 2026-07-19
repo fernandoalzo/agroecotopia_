@@ -17,9 +17,10 @@ interface ImmersiveJourneyProps {
   initialProducts: Product[];
   initialForumTopics?: any[];
   realStats?: { users: number; posts: number; products: number };
+  loadPopularProducts: (page: number, limit: number) => Promise<{ products: Product[], total: number, totalPages: number }>;
 }
 
-const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: ImmersiveJourneyProps) => {
+const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats, loadPopularProducts }: ImmersiveJourneyProps) => {
   const { t, language } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -95,8 +96,8 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
     );
   }
 
-  // Filter 6 beautiful products for Stage 3 Showcase
-  const featuredProducts = initialProducts.slice(0, 6);
+  // No longer slicing to 6 so all loaded popular products are passed
+  const featuredProducts = initialProducts;
 
   const sectionVariants = {
     hidden: { opacity: 0, y: 40 },
@@ -239,7 +240,12 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats }: Im
           variants={sectionVariants}
           className="w-full min-h-screen flex items-center justify-center p-4 sm:p-8 relative border-b border-border/5"
         >
-          <ProductsStage t={t} language={language} featuredProducts={featuredProducts} />
+          <ProductsStage
+            t={t}
+            language={language}
+            initialProducts={featuredProducts}
+            loadPopularProducts={loadPopularProducts}
+          />
         </motion.section>
 
         {/* STAGE 4: COMUNIDAD & RED */}

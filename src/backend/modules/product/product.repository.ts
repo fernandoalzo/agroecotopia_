@@ -46,6 +46,42 @@ export class ProductRepository {
   }
 
   /**
+   * Obtiene productos populares paginados, ordenados por ratingAverage desc, ratingCount desc, y createdAt desc.
+   */
+  async getPopularProducts(skip: number = 0, take: number = 20): Promise<Product[]> {
+    const key = CacheKeys.product.popular(skip, take);
+    return this.cacheService?.getOrSet(
+      key,
+      async () => {
+        log.debug("[db] Querying popular products:", { skip, take });
+        return prisma.product.findMany({
+          where: {
+            store: { status: 'ACTIVE' }
+          },
+          skip,
+          take,
+          include: {
+            categories: true,
+            promotions: { where: { isActive: true } },
+            store: {
+              select: {
+                id: true, name: true, slug: true, logo: true,
+                promotions: { where: { isActive: true, scope: "ENTIRE_STORE" } }
+              }
+            }
+          },
+          orderBy: [
+            { ratingAverage: { sort: "desc", nulls: "last" } },
+            { ratingCount: "desc" },
+            { createdAt: "desc" }
+          ],
+        });
+      },
+      config.cache.ttl.productList,
+    ) ?? [];
+  }
+
+  /**
    * Obtiene productos por array de IDs (para búsqueda semántica donde ya tenemos los IDs ordenados por similitud).
    */
   async getProductsByIds(ids: string[], categories?: string[]): Promise<Product[]> {

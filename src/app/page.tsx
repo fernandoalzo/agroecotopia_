@@ -1,8 +1,9 @@
 import ImmersiveJourney from "@/components/home/ImmersiveJourney";
 import Footer from "@/components/Footer";
-import { getPaginatedProductsAction } from "@/backend/modules/product/product.actions";
+import { getPopularProductsAction } from "@/backend/modules/product/product.actions";
 import { getPostsAction } from "@/backend/modules/forum/forum.actions";
 import { getHomeStatsAction } from "@/backend/modules/stats/stats.actions";
+
 import logger from "@/utils/logger";
 import type { Product } from "@/types";
 
@@ -49,13 +50,13 @@ export default async function Home() {
   const [productsResult, forumResult, statsResult] = await Promise.all([
     (async () => {
       try {
-        log.debug("Página de inicio: consultando catálogo de productos.");
-        const result = await getPaginatedProductsAction(1, 40);
+        log.debug("Página de inicio: consultando catálogo de productos populares.");
+        const result = await getPopularProductsAction(1, 10);
         const products = result.products as unknown as Product[];
-        log.debug("Página de inicio: catálogo de productos cargado exitosamente.", { totalProductos: products.length });
+        log.debug("Página de inicio: catálogo de productos populares cargado exitosamente.", { totalProductos: products.length });
         return products;
       } catch (error) {
-        log.error("Página de inicio: error al cargar el catálogo de productos:", error);
+        log.error("Página de inicio: error al cargar el catálogo de productos populares:", error);
         return [] as Product[];
       }
     })(),
@@ -104,7 +105,13 @@ export default async function Home() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <main className="flex-grow">
-        <ImmersiveJourney initialProducts={products} initialForumTopics={forumTopics} realStats={realStats} />
+        <ImmersiveJourney
+          initialProducts={products}
+          initialForumTopics={forumTopics}
+          realStats={realStats}
+          loadPopularProducts={getPopularProductsAction}
+        />
+
       </main>
       <Footer />
     </div>
