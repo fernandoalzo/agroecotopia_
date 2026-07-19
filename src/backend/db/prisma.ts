@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
-import logger from "@/utils/logger";
-import { config, getRequiredConfig } from "@/config/config";
+import logger from "../../utils/logger";
+import { config, getRequiredConfig } from "../../config/config";
 
 const log = logger.child("src/backend/db/prisma.ts");
 
