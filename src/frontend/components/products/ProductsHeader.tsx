@@ -23,9 +23,23 @@ export function ProductsHeader({ t }: ProductsHeaderProps) {
         <h1 className="font-display text-4xl font-black tracking-tight text-foreground sm:text-5xl md:text-7xl mb-6">
           {t.products.ourHarvest.split(' ')[0]} <span className="text-primary italic">{t.products.ourHarvest.split(' ').slice(1).join(' ')}</span>
         </h1>
-        <p className="max-w-2xl font-body text-base leading-relaxed text-muted-foreground md:text-xl">
-          {t.products.catalogDescription}
-        </p>
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ delay: 0.35, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="h-1 w-48 bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_200%] rounded-full mx-auto origin-center"
+          style={{
+            animation: "gradient-shift-line 4s ease-in-out infinite",
+            maskImage: "linear-gradient(to right, black 65%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to right, black 65%, transparent 100%)"
+          }}
+        />
+        <style>{`
+          @keyframes gradient-shift-line {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+          }
+        `}</style>
       </motion.div>
     </div>
   );
