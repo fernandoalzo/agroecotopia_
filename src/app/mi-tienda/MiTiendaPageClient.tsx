@@ -13,6 +13,7 @@ import {
   ShoppingBag,
   AlertCircle,
   ChevronDown,
+  ChevronLeft,
   Tag,
   Settings,
   Truck,
@@ -124,6 +125,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
   const initialTab = (searchParams.get("tab") as SellerTab) || "orders";
   const [activeTab, setActiveTab] = useState<SellerTab>(initialTab);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [stores, setStores] = useState<StoreType[]>([]);
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null);
   const [isStoreSelectorOpen, setIsStoreSelectorOpen] = useState(false);
@@ -595,7 +597,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
   };
 
   return (
-    <div className="flex h-[100dvh] max-h-[100dvh] overflow-hidden bg-background pt-14 md:pt-20">
+    <div className="relative flex h-[100dvh] max-h-[100dvh] overflow-hidden bg-background pt-14 md:pt-20">
       {/* ═══ SIDEBAR — Desktop: fixed left, Mobile: overlay ═══ */}
       <AnimatePresence>
         {sidebarOpen && (
@@ -611,8 +613,10 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
 
       <aside
         className={cn(
-          "fixed top-14 md:top-20 left-0 bottom-0 z-50 w-72 flex flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl transition-transform duration-300 ease-out lg:translate-x-0 lg:static lg:z-auto",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed top-14 md:top-20 left-0 bottom-0 z-50 flex flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl transition-all duration-300 ease-out lg:static lg:z-auto w-72",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
+          sidebarCollapsed && "lg:w-0 lg:border-r-0 lg:overflow-hidden",
+          !sidebarCollapsed && "lg:translate-x-0"
         )}
       >
         {/* Mobile Sidebar Header with close button */}
@@ -720,6 +724,23 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
           })}
         </nav>
       </aside>
+
+      {/* Floating toggle button for desktop sidebar */}
+      <button
+        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+        className={cn(
+          "hidden lg:flex absolute z-[60] items-center justify-center w-6 h-10 rounded-r-lg border border-l-0 border-border/40 bg-background/80 backdrop-blur-sm shadow-lg hover:bg-secondary transition-all duration-300 ease-out cursor-pointer text-muted-foreground hover:text-foreground top-20",
+          sidebarCollapsed ? "left-0" : "left-[288px]"
+        )}
+        title={sidebarCollapsed ? "Mostrar panel lateral" : "Ocultar panel lateral"}
+      >
+        <ChevronLeft
+          className={cn(
+            "w-3.5 h-3.5 transition-transform duration-300",
+            sidebarCollapsed && "rotate-180"
+          )}
+        />
+      </button>
 
       {/* ═══ MAIN CONTENT ═══ */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">

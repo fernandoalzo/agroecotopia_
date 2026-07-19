@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   ArrowLeft,
   ChevronRight,
+  ChevronLeft,
   Menu,
   X,
   Truck,
@@ -94,6 +95,7 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
   const initialTab = (searchParams.get("tab") as DashboardTab) || "orders";
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingStoresCount, setPendingStoresCount] = useState(0);
   const [orders, setOrders] = useState<any[]>([]);
@@ -383,7 +385,7 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
   }
 
   return (
-    <div className="flex h-[100dvh] max-h-[100dvh] overflow-hidden bg-background pt-14 md:pt-20">
+    <div className="relative flex h-[100dvh] max-h-[100dvh] overflow-hidden bg-background pt-14 md:pt-20">
       {/* ═══ SIDEBAR — Desktop: fixed left, Mobile: overlay ═══ */}
 
       {/* Mobile overlay backdrop */}
@@ -402,8 +404,10 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
       {/* Sidebar panel */}
       <aside
         className={cn(
-          "fixed top-14 md:top-20 left-0 bottom-0 z-50 w-72 flex flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl transition-transform duration-300 ease-out md:translate-x-0 md:static md:z-auto",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed top-14 md:top-20 left-0 bottom-0 z-50 flex flex-col border-r border-border/40 bg-card/80 backdrop-blur-xl transition-all duration-300 ease-out md:static md:z-auto w-72",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
+          sidebarCollapsed && "md:w-0 md:border-r-0 md:overflow-hidden",
+          !sidebarCollapsed && "md:translate-x-0"
         )}
       >
         {/* Sidebar header */}
@@ -529,6 +533,23 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
           </div>
         </div>
       </aside>
+
+      {/* Floating toggle button for desktop sidebar */}
+      <button
+        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+        className={cn(
+          "hidden md:flex absolute z-[60] items-center justify-center w-6 h-10 rounded-r-lg border border-l-0 border-border/40 bg-background/80 backdrop-blur-sm shadow-lg hover:bg-secondary transition-all duration-300 ease-out cursor-pointer text-muted-foreground hover:text-foreground top-20",
+          sidebarCollapsed ? "left-0" : "left-[288px]"
+        )}
+        title={sidebarCollapsed ? "Mostrar panel lateral" : "Ocultar panel lateral"}
+      >
+        <ChevronLeft
+          className={cn(
+            "w-3.5 h-3.5 transition-transform duration-300",
+            sidebarCollapsed && "rotate-180"
+          )}
+        />
+      </button>
 
       {/* ═══ MAIN CONTENT ═══ */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
