@@ -122,6 +122,7 @@ export default function OrderDetailPageClient({
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isOpeningChat, setIsOpeningChat] = useState(false);
@@ -436,9 +437,10 @@ export default function OrderDetailPageClient({
         id: "repeat-order-toast",
         description: "Serás redirigido al carrito..."
       });
+      setIsNavigating(true);
       setTimeout(() => {
         router.push("/cart");
-      }, 1000);
+      }, 800);
     } else {
       toast.error("No se pudieron agregar los productos al carrito", { id: "repeat-order-error" });
       setIsRepeating(false);
@@ -618,7 +620,11 @@ export default function OrderDetailPageClient({
     <div className="min-h-screen flex flex-col bg-background selection:bg-primary/20">
 
       <main className="flex-1 pt-24 pb-20 md:pt-32">
-        <div className="container px-4 md:px-6 max-w-4xl mx-auto">
+        <motion.div
+          animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : { opacity: 1 }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          className="container px-4 md:px-6 max-w-4xl mx-auto"
+        >
           {/* Back Button */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -1437,7 +1443,7 @@ export default function OrderDetailPageClient({
 
             </div>
           </div>
-        </div>
+        </motion.div>
       </main>
 
       <Footer />
