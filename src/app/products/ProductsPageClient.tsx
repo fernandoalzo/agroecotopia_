@@ -5,7 +5,8 @@ import { useSearchParams, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/context/LanguageContext";
-import { searchProductsAction, getPaginatedProductsAction } from "@/backend/modules/product/product.actions";
+import { useProductsData } from "@/hooks/useProductsData";
+import { ProductsPageSkeleton } from "@/components/products/ProductsPageSkeleton";
 
 // Modular Components
 import { ProductsHeader } from "@/components/products/ProductsHeader";
@@ -15,9 +16,12 @@ import { ProductsPagination } from "@/components/products/ProductsPagination";
 import { ProductsEmptyState } from "@/components/products/ProductsEmptyState";
 import { ProductsGridSkeleton } from "@/components/products/ProductsGridSkeleton";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function groupProductsByCategory(products: any[]): ProductGroup[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const groups = new Map<string, any[]>();
   for (const p of products) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cats = (p.categories || []).map((c: any) => c?.name).filter(Boolean);
     const key = cats.length > 0 ? cats[0] : "Otros";
     if (!groups.has(key)) groups.set(key, []);
@@ -26,48 +30,23 @@ function groupProductsByCategory(products: any[]): ProductGroup[] {
   return Array.from(groups.entries()).map(([label, prods]) => ({ label, products: prods }));
 }
 
-const categoryTranslations: Record<string, { es: string; en: string }> = {
-  fertilizantes: { es: "Fertilizantes", en: "Fertizers" },
-  semillas: { es: "Semillas", en: "Seeds" },
-  maquinaria: { es: "Maquinaria", en: "Machinery" },
-  insumos: { es: "Insumos", en: "Supplies" },
-  equipos: { es: "Equipos", en: "Equipment" },
-  enmiendas: { es: "Enmiendas", en: "Soil Amendments" },
-  abonos: { es: "Abonos", en: "Compost & Manure" },
-  riego: { es: "Riego", en: "Irrigation" },
-  herramientas: { es: "Herramientas", en: "Tools" },
-  sustratos: { es: "Sustratos", en: "Substrates" },
-};
+
 
 interface ProductGroup {
   label: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   products: any[];
 }
 
-interface ProductsPageClientProps {
-  initialData: {
-    products: any[];
-    total: number;
-    totalPages: number;
-  };
-  categories: string[];
-  categoryCounts?: Record<string, number>;
-  selectedCategory: string;
-}
-
-export default function ProductsPageClient({ initialData, categories, categoryCounts = {}, selectedCategory }: ProductsPageClientProps) {
-  const { t, language } = useLanguage();
+export default function ProductsPageClient() {
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
-  // Hydration state
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
-
-  // URL States (solo lectura)
+  // URL initial values (read once on mount)
+  const queryParam = searchParams.get("q") || "";
   const pageParam = Number(searchParams.get("page")) || 1;
   const limitParam = Number(searchParams.get("limit")) || 20;
-  const queryParam = searchParams.get("q") || "";
   const categoryParam = searchParams.get("category") || "";
 
   // View & UI state
@@ -75,54 +54,34 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
   const [groupByCategory, setGroupByCategory] = useState(false);
   const [searchTerm, setSearchTerm] = useState(queryParam);
 
-  // ── Resultados locales (no dependen de props) ──
-  const [products, setProducts] = useState(initialData.products);
-  const [total, setTotal] = useState(initialData.total);
-  const [totalPages, setTotalPages] = useState(initialData.totalPages);
+  // Data-fetching params (drive React Query keys)
+  const [currentPage, setCurrentPage] = useState(pageParam);
+  const [currentCategory, setCurrentCategory] = useState(categoryParam);
   const [isSearching, setIsSearching] = useState(false);
+
+  const prevSearchTermRef = useRef(queryParam);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const isSearchingRef = useRef(false);
+
+  const { categories, categoryCounts, products, total, totalPages, isPending, isFetching } = useProductsData({
+    q: searchTerm,
+    page: currentPage,
+    limit: limitParam,
+    category: currentCategory,
+  });
+
+  // Clear isSearching when fetch completes
+  useEffect(() => {
+    if (isSearchingRef.current && !isFetching) {
+      isSearchingRef.current = false;
+      setIsSearching(false);
+    }
+  }, [isFetching]);
 
   // Derived groups for category grouping
   const groups = groupByCategory
     ? groupProductsByCategory(products)
     : undefined;
-
-  // Inicializar desde props solo en montaje
-  const hydrated = useRef(false);
-  useEffect(() => {
-    if (!hydrated.current) {
-      setProducts(initialData.products);
-      setTotal(initialData.total);
-      setTotalPages(initialData.totalPages);
-      hydrated.current = true;
-    }
-  }, [initialData]);
-
-  // Selected categories list
-  const selectedCategories = categoryParam ? categoryParam.split(",").filter(Boolean) : [];
-
-  // ── Helpers compartidos ──
-  const fetchData = useCallback(async (q: string, p: number, l: number, cat: string) => {
-    try {
-      const cats = cat ? cat.split(",").filter(Boolean) : [];
-      const catStr = cats.length > 0 ? cats.join(",") : undefined;
-
-      if (q.trim()) {
-        const result = await searchProductsAction(q.trim(), p, l, catStr);
-        setProducts(result.products);
-        setTotal(result.total);
-        setTotalPages(result.totalPages);
-      } else {
-        const result = await getPaginatedProductsAction(p, l, catStr);
-        setProducts(result.products);
-        setTotal(result.total);
-        setTotalPages(result.totalPages);
-      }
-    } catch (error) {
-      setProducts([]);
-      setTotal(0);
-      setTotalPages(0);
-    }
-  }, []);
 
   const syncUrl = useCallback((q: string, p: number, l: number, cat: string) => {
     const params = new URLSearchParams();
@@ -133,93 +92,68 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
     window.history.replaceState(null, "", `${pathname}?${params.toString()}`);
   }, [pathname]);
 
-  const doSearch = useCallback(async (q: string, p: number, cat: string) => {
-    setIsSearching(true);
-    try {
-      await fetchData(q, p, limitParam, cat);
-      syncUrl(q, p, limitParam, cat);
-    } finally { setIsSearching(false); }
-  }, [limitParam, fetchData, syncUrl]);
-
-  // ── AbortController para cancelar búsquedas en vuelo ──
-  const abortRef = useRef<AbortController | null>(null);
-  const prevSearchTermRef = useRef(queryParam);
-
-  // ── Búsqueda local (escribe → fetch + URL silenciosa) ──
+  // Debounced search: user types → update params → React Query refetches
   useEffect(() => {
-    if (searchTerm === prevSearchTermRef.current) {
-      return; // Ignorar el primer render y renders de Strict Mode
-    }
+    if (searchTerm === prevSearchTermRef.current) return;
     prevSearchTermRef.current = searchTerm;
 
     const query = searchTerm.trim();
-    if (abortRef.current) abortRef.current.abort();
-    const abort = new AbortController();
-    abortRef.current = abort;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    const delayFn = setTimeout(() => {
-      if (!abort.signal.aborted) doSearch(query, 1, categoryParam);
+    debounceRef.current = setTimeout(() => {
+      isSearchingRef.current = true;
+      setIsSearching(true);
+      setCurrentPage(1);
+      syncUrl(query, 1, limitParam, categoryParam);
     }, 300);
 
-    return () => { clearTimeout(delayFn); abort.abort(); };
-  }, [searchTerm]); // SOLO searchTerm
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
 
-  // ── Navegación explícita (paginación, categorías, limpiar) ──
-  const navigate = useCallback(async (
-    newQuery: string, newPage: number, newLimit: number, newCategory?: string,
+  // Navigation helper (pagination, categories, clear)
+  const handleNavigate = useCallback((
+    newQuery?: string,
+    newPage?: number,
+    newLimit?: number,
+    newCategory?: string,
   ) => {
     const q = newQuery !== undefined ? newQuery : searchTerm;
-    const cat = newCategory !== undefined ? newCategory : categoryParam;
-    await doSearch(q, newPage, cat);
-  }, [searchTerm, categoryParam, doSearch]);
+    const cat = newCategory !== undefined ? newCategory : currentCategory;
+    const page = newPage ?? 1;
+    const limit = newLimit ?? limitParam;
+    isSearchingRef.current = true;
+    setIsSearching(true);
+    setSearchTerm(q);
+    setCurrentPage(page);
+    setCurrentCategory(cat);
+    syncUrl(q, page, limit, cat);
+  }, [searchTerm, currentCategory, limitParam, syncUrl]);
 
-  // ── Sincronizar desde URL externa (back/forward, link directo) ──
+  // Back/forward browser navigation
   useEffect(() => {
     const onPopState = () => {
       const p = new URLSearchParams(window.location.search);
       const newQ = p.get("q") || "";
-      prevSearchTermRef.current = newQ; // Prevenir trigger del effect
+      prevSearchTermRef.current = newQ;
+      isSearchingRef.current = true;
+      setIsSearching(true);
       setSearchTerm(newQ);
-      const page = Number(p.get("page")) || 1;
-      const cat = p.get("category") || "";
-      doSearch(newQ, page, cat);
+      setCurrentPage(Number(p.get("page")) || 1);
+      setCurrentCategory(p.get("category") || "");
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [doSearch]);
+  }, []);
 
-  // ── Primera carga desde props ──
-  useEffect(() => {
-    if (!hydrated.current) {
-      setProducts(initialData.products);
-      setTotal(initialData.total);
-      setTotalPages(initialData.totalPages);
-      hydrated.current = true;
-    }
-  }, [initialData]);
+  // Full-page skeleton only on first-ever load (no cached data)
+  if (isPending) {
+    return <ProductsPageSkeleton />;
+  }
 
-  // Toggle Category selection
-  const handleCategoryToggle = (category: string) => {
-    let nextCategories: string[];
-    if (selectedCategories.includes(category)) {
-      nextCategories = selectedCategories.filter((c) => c !== category);
-    } else {
-      nextCategories = [...selectedCategories, category];
-    }
-    const categoryQuery = nextCategories.join(",");
-    navigate(queryParam, 1, limitParam, categoryQuery);
-  };
-
-  const getCategoryLabel = (category: string) => {
-    const key = category.toLowerCase();
-    const translation = categoryTranslations[key];
-    if (translation) {
-      return language === "es" ? translation.es : translation.en;
-    }
-    return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
-  };
-
-  const showSkeleton = !mounted || isSearching;
+  const showContentSkeleton = isSearching;
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 overflow-x-hidden font-body">
@@ -235,12 +169,12 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
           viewMode={viewMode}
           setViewMode={setViewMode}
           limitParam={limitParam}
-          updateUrl={navigate}
+          updateUrl={handleNavigate}
           queryParam={queryParam}
           t={t}
           categories={categories}
           categoryCounts={categoryCounts}
-          categoryParam={categoryParam}
+          categoryParam={currentCategory}
           groupByCategory={groupByCategory}
           setGroupByCategory={setGroupByCategory}
         />
@@ -248,7 +182,7 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
         <div className="container mx-auto px-4 md:px-6">
           <div className="min-h-[500px]">
             <AnimatePresence mode="wait">
-              {showSkeleton ? (
+              {showContentSkeleton ? (
                 <motion.div
                   key="skeleton"
                   initial={{ opacity: 0 }}
@@ -275,11 +209,11 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
 
                   <div className="mt-12">
                     <ProductsPagination
-                      pageParam={pageParam}
+                      pageParam={currentPage}
                       totalPages={totalPages}
-                      updateUrl={navigate}
+                      updateUrl={handleNavigate}
                       isLoading={isSearching}
-                      queryParam={queryParam}
+                      queryParam={searchTerm}
                       limitParam={limitParam}
                       t={t}
                     />
@@ -295,8 +229,8 @@ export default function ProductsPageClient({ initialData, categories, categoryCo
                 >
                   <ProductsEmptyState
                     isLoading={false}
-                    queryParam={queryParam}
-                    onClear={() => { setSearchTerm(""); navigate("", 1, 20, ""); }}
+                    queryParam={searchTerm}
+                    onClear={() => handleNavigate("", 1, 20, "")}
                     t={t}
                   />
                 </motion.div>
