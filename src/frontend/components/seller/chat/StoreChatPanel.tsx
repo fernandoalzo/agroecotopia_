@@ -108,7 +108,6 @@ export function StoreChatPanel({
       "order:created",
       "order:status_updated_store",
       "order:deleted_store",
-      "new_message_notification",
       "unread_count_updated",
     ],
   });
