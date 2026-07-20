@@ -3,9 +3,9 @@
 import { motion } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { Product } from "@/types";
 import BirdFlockBackground from "./BirdFlockBackground";
 import { HomeSkeleton } from "./HomeSkeleton";
+import { useHomeData } from "@/hooks/useHomeData";
 
 // Import modular sections
 import WelcomeStage from "./sections/WelcomeStage";
@@ -13,15 +13,9 @@ import SovereigntyStage from "./sections/SovereigntyStage";
 import ProductsStage from "./sections/ProductsStage";
 import CommunityStage from "./sections/CommunityStage";
 
-interface ImmersiveJourneyProps {
-  initialProducts: Product[];
-  initialForumTopics?: any[];
-  realStats?: { users: number; posts: number; products: number };
-  loadPopularProducts: (page: number, limit: number) => Promise<{ products: Product[], total: number, totalPages: number }>;
-}
-
-const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats, loadPopularProducts }: ImmersiveJourneyProps) => {
+const ImmersiveJourney = () => {
   const { t, language } = useLanguage();
+  const { products, forumTopics, stats, isPending, loadPopularProducts } = useHomeData();
   const containerRef = useRef<HTMLDivElement>(null);
 
   const welcomeRef = useRef<HTMLDivElement>(null);
@@ -29,12 +23,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats, load
   const productsRef = useRef<HTMLDivElement>(null);
   const communityRef = useRef<HTMLDivElement>(null);
 
-  const [mounted, setMounted] = useState(false);
   const [activeStage, setActiveStage] = useState(0);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const scrollToStage = (idx: number) => {
     const refs = [welcomeRef, sovereigntyRef, productsRef, communityRef];
@@ -44,13 +33,10 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats, load
     }
   };
 
-  // IntersectionObserver to sync the lateral dot navigation (HUD)
   useEffect(() => {
-    if (!mounted) return;
-
     const observerOptions = {
       root: null,
-      rootMargin: "-30% 0px -40% 0px", // Trigger when a section occupies the center of the viewport
+      rootMargin: "-30% 0px -40% 0px",
       threshold: 0.1,
     };
 
@@ -83,14 +69,11 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats, load
         if (el) observer.unobserve(el);
       });
     };
-  }, [mounted]);
+  }, []);
 
-  if (!mounted) {
+  if (isPending) {
     return <HomeSkeleton />;
   }
-
-  // No longer slicing to 6 so all loaded popular products are passed
-  const featuredProducts = initialProducts;
 
   const sectionVariants = {
     hidden: { opacity: 0, y: 40 },
@@ -99,7 +82,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats, load
       y: 0,
       transition: {
         duration: 0.8,
-        ease: [0.16, 1, 0.3, 1] as any // Custom cubic-bezier for maximum elegance
+        ease: [0.16, 1, 0.3, 1] as const
       }
     }
   };
@@ -236,7 +219,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats, load
           <ProductsStage
             t={t}
             language={language}
-            initialProducts={featuredProducts}
+            initialProducts={products}
             loadPopularProducts={loadPopularProducts}
           />
         </motion.section>
@@ -251,7 +234,7 @@ const ImmersiveJourney = ({ initialProducts, initialForumTopics, realStats, load
           variants={sectionVariants}
           className="w-full min-h-screen flex items-center justify-center p-4 relative"
         >
-          <CommunityStage t={t} language={language} initialForumTopics={initialForumTopics} realStats={realStats} />
+          <CommunityStage t={t} language={language} initialForumTopics={forumTopics} realStats={stats} />
         </motion.section>
       </div>
 
