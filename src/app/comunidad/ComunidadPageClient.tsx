@@ -3,41 +3,40 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import CommunityQAForum from "@/frontend/components/comunidad/CommunityQAForum";
+import { CommunityForumSkeleton } from "@/frontend/components/comunidad/CommunityForumSkeleton";
 import { Question, type RawPost } from "@/frontend/components/comunidad/forum/forum.types";
+import type { Translations } from "@/architecture/languages";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  getPostsAction,
+  createPostAction,
+  rateItemAction,
+  getCommunityStatsAction,
+  getTopContributorsAction,
+  getTrendingLabelsAction,
+} from "@/backend/modules/forum/forum.actions";
 import { toast } from "sonner";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 
 type ActionResult = { success?: boolean; [key: string]: unknown };
 
-interface ComunidadPageClientProps {
-  initialPosts: unknown[];
-  initialNextCursor: unknown;
-  getPosts: (
-    activeFilters: Record<string, string[]>,
-    searchQuery: string,
-    limit: number,
-    cursor: string | undefined,
-    sortBy: "newest" | "popular",
-  ) => Promise<ActionResult>;
-  createPost: (postData: { title: string; body: string; labels: string[] }) => Promise<ActionResult>;
-  rateItem: (data: { itemId: string; itemType: "post" | "answer"; value: number }) => Promise<ActionResult>;
-  getCommunityStats: () => Promise<ActionResult>;
-  getTopContributors: () => Promise<ActionResult>;
-  getTrendingLabels: () => Promise<ActionResult>;
-}
+const mapRawPost = (p: RawPost, t: Translations) => ({
+  id: p.id,
+  title: p.title,
+  body: p.body,
+  author: p.author.name || t.forum.fallbackAuthorName,
+  authorImage: p.author.image,
+  labels: p.labels,
+  ratingTotal: p.ratingTotal,
+  ratingCount: p.ratingCount,
+  createdAt: p.createdAt,
+  answers: [] as Question["answers"],
+  _count: p._count,
+  isTrending: p.isTrending,
+});
 
-export default function ComunidadPageClient({
-  initialPosts,
-  initialNextCursor,
-  getPosts,
-  createPost,
-  rateItem,
-  getCommunityStats,
-  getTopContributors,
-  getTrendingLabels,
-}: ComunidadPageClientProps) {
+export default function ComunidadPageClient() {
   const [activeFilters, setActiveFilters] = useState<Record<string, string[]>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -61,53 +60,19 @@ export default function ComunidadPageClient({
     events: ["forum:post_created", "forum:post_deleted"],
   });
 
-  const mapRawPost = (p: RawPost) => ({
-    id: p.id,
-    title: p.title,
-    body: p.body,
-    author: p.author.name || t.forum.fallbackAuthorName,
-    authorImage: p.author.image,
-    labels: p.labels,
-    ratingTotal: p.ratingTotal,
-    ratingCount: p.ratingCount,
-    createdAt: p.createdAt,
-    answers: [] as Question["answers"],
-    _count: p._count,
-    isTrending: p.isTrending,
-  });
-
-  const initialPageData = initialPosts.length > 0
-    ? {
-        pages: [{
-          posts: (initialPosts as RawPost[]).map(mapRawPost),
-          nextCursor: initialNextCursor as string | undefined,
-          searchType: undefined as "semantic" | "textual" | null | undefined,
-          totalCount: undefined as number | undefined,
-        }],
-        pageParams: [undefined as string | undefined],
-      }
-    : undefined;
-
-  const {
-    data: postsPages,
-    isFetching,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery({
+  const { data: postsPages, isPending: isPostsPending, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["forumPosts", activeFilters, debouncedQuery, sortBy],
     queryFn: async ({ pageParam }: { pageParam: string | undefined }) => {
-      const res = await getPosts(activeFilters, debouncedQuery, 10, pageParam, sortBy);
+      const res = await getPostsAction(activeFilters, debouncedQuery, 10, pageParam, sortBy);
       if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
       const rawPosts = res.posts as RawPost[];
       return {
-        posts: rawPosts.map(mapRawPost),
+        posts: rawPosts.map((p) => mapRawPost(p, t)),
         nextCursor: res.nextCursor as string | undefined,
         searchType: res.searchType as "semantic" | "textual" | null | undefined,
         totalCount: res.totalCount as number | undefined,
       };
     },
-    placeholderData: initialPageData,
     staleTime: 30000,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: undefined as string | undefined,
@@ -131,7 +96,7 @@ export default function ComunidadPageClient({
   const { data: communityStats, isPending: isStatsPending } = useQuery({
     queryKey: ["communityStats"],
     queryFn: async () => {
-      const res = await getCommunityStats();
+      const res = await getCommunityStatsAction();
       if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
       const stats = res.stats as { totalMembers: number; onlineNow: number };
       return stats;
@@ -152,7 +117,7 @@ export default function ComunidadPageClient({
   const { data: topContributorsData, isPending: isContributorsPending } = useQuery({
     queryKey: ["topContributors"],
     queryFn: async () => {
-      const res = await getTopContributors();
+      const res = await getTopContributorsAction();
       if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
       return res.contributors as { id: string; name: string; image: string | null; role: string; points: number }[];
     },
@@ -173,7 +138,7 @@ export default function ComunidadPageClient({
   const { data: trendingLabels, isPending: isTrendingPending } = useQuery({
     queryKey: ["trendingLabels"],
     queryFn: async () => {
-      const res = await getTrendingLabels();
+      const res = await getTrendingLabelsAction();
       if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
       return res.labels as string[];
     },
@@ -183,7 +148,7 @@ export default function ComunidadPageClient({
 
   const createPostMutation = useMutation({
     mutationFn: async (postData: { title: string; body: string; labels: string[] }) => {
-      return await createPost(postData);
+      return await createPostAction(postData) as ActionResult;
     },
     onSuccess: (res) => {
       if (!res.success) {
@@ -200,7 +165,7 @@ export default function ComunidadPageClient({
 
   const rateItemMutation = useMutation({
     mutationFn: async (data: { itemId: string; rating: number }) => {
-      const res = await rateItem({ itemId: data.itemId, itemType: "post", value: data.rating });
+      const res = await rateItemAction({ itemId: data.itemId, itemType: "post", value: data.rating }) as ActionResult;
       if (!res.success) throw new Error((res.error as string | undefined) ?? "Unknown error");
       return res.rating as unknown;
     },
@@ -245,6 +210,15 @@ export default function ComunidadPageClient({
   const handleRate = useCallback((itemId: string, rating: number) => {
     rateItemMutation.mutate({ itemId, rating });
   }, [rateItemMutation]);
+
+  // Full-page skeleton only on first-ever load (no cached data)
+  if (isPostsPending) {
+    return (
+      <main className="min-h-screen bg-background">
+        <CommunityForumSkeleton />
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background">
