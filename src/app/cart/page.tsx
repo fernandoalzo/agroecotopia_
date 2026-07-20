@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "@/context/CartContext";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import Image from "next/image";
 import { ShoppingCart, Minus, Plus, Trash2, ArrowLeft, Leaf, Tag } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
@@ -367,6 +366,7 @@ const CartContent = ({ isNavigating, setIsNavigating }: CartContentProps) => {
 
 export default function CartPage() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
 
   return (
@@ -378,10 +378,10 @@ export default function CartPage() {
           className="container px-4 md:px-6 max-w-6xl mx-auto"
         >
           <div className="mb-8">
-            <Link href="/products" className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors mb-4 group">
+            <button onClick={() => router.back()} className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors mb-4 group">
               <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
               {t.cart.keepShopping}
-            </Link>
+            </button>
             <h1 className="font-display text-3xl font-black md:text-5xl text-foreground">
               {t.cart.title.split(' ')[0]} <span className="text-primary">{t.cart.title.split(' ').slice(1).join(' ')}</span>
             </h1>

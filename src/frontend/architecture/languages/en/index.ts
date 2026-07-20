@@ -161,7 +161,7 @@ export const en: Translations = {
     toCalculate: "To be calculated",
     completeOrder: "Complete Order",
     securePayment: "Secure and protected payment",
-    keepShopping: "Keep shopping",
+    keepShopping: "Go back",
   },
   common: {
     loading: "Loading...",

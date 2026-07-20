@@ -161,7 +161,7 @@ export const es: Translations = {
     toCalculate: "Por calcular",
     completeOrder: "Completar Pedido",
     securePayment: "Pago seguro y protegido",
-    keepShopping: "Seguir comprando",
+    keepShopping: "Volver atrás",
   },
   common: {
     loading: "Cargando...",
