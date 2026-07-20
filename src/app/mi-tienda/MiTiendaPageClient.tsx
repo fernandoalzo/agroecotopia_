@@ -168,6 +168,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
   const [enviosRefresh, setEnviosRefresh] = useState(0);
   const [autoOpenEnvioPedidoId, setAutoOpenEnvioPedidoId] = useState<string | null>(null);
   const [bodegasList, setBodegasList] = useState<any[]>([]);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
 
   const activeStore = stores.find(s => s.id === activeStoreId) || null;
 
@@ -372,6 +373,32 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     enabled: !!activeStore?.id && !!isSeller,
     refresh: loadUnreadCounts,
   });
+
+  const refreshChatUnread = useCallback(async () => {
+    if (!activeStore?.id || !isSeller || activeTab === "chat") {
+      setChatUnreadCount(0);
+      return;
+    }
+    try {
+      const res = await actions.getStoreCustomersChat(activeStore.id);
+      if (Array.isArray(res)) {
+        const total = res.reduce((acc: number, c: any) => acc + (Number(c.unreadCount) || 0), 0);
+        setChatUnreadCount(total);
+      }
+    } catch (err) {
+      log.error("Error loading chat unread count:", err);
+    }
+  }, [activeStore?.id, isSeller, activeTab, actions]);
+
+  useSocketRefresh({
+    socket,
+    enabled: !!activeStore?.id && !!isSeller && activeTab !== "chat",
+    refresh: refreshChatUnread,
+  });
+
+  useEffect(() => {
+    refreshChatUnread();
+  }, [refreshChatUnread]);
 
   const refreshStoreOrders = useCallback(async () => {
     if (!activeStore?.id) return;
@@ -726,6 +753,11 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                 >
                   <Icon className={cn("w-5 h-5 shrink-0 transition-transform duration-200", isActive && "scale-110")} />
                   <span className="flex-1 text-left">{item.labelEs}</span>
+                  {item.id === "chat" && chatUnreadCount > 0 && (
+                    <span className="flex-shrink-0 min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold px-1.5 bg-red-500 text-white shadow-sm shadow-red-500/20">
+                      {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
+                    </span>
+                  )}
                 </button>
               </React.Fragment>
             );

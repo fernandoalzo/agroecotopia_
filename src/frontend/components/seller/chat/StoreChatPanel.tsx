@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare, User, Send, X, Leaf, ArrowLeft, Store, ShoppingBag, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSocket } from "@/frontend/context/SocketContext";
+import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import { Message } from "@/frontend/components/chat/ChatWidget";
 import { ChatMessageBubble } from "@/frontend/components/chat/ChatMessageBubble";
 import { Loading } from "@/components/ui/Loading";
@@ -98,6 +99,19 @@ export function StoreChatPanel({
   useEffect(() => {
     loadCustomers();
   }, [loadCustomers]);
+
+  useSocketRefresh({
+    socket,
+    enabled: !!storeId,
+    refresh: loadCustomers,
+    events: [
+      "order:created",
+      "order:status_updated_store",
+      "order:deleted_store",
+      "new_message_notification",
+      "unread_count_updated",
+    ],
+  });
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
