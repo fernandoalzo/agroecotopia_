@@ -417,32 +417,67 @@ export default function OrderDetailPageClient({
     loadUnreadCounts();
   }, [loadUnreadCounts]);
 
-  const handleRepeatOrder = (e: React.MouseEvent) => {
+  const handleRepeatOrder = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (!order || !order.detalles || isRepeating) return;
 
     setIsRepeating(true);
+
+    const { getAvailableStockBatchAction } = await import("@/backend/modules/stockGuardian/stockGuardian.actions");
+
+    const productIds = order.detalles
+      .filter((d: any) => d.producto?.id)
+      .map((d: any) => d.producto.id);
+
+    const stockMap = productIds.length > 0 ? await getAvailableStockBatchAction(productIds) : {};
+
     let addedCount = 0;
-    order.detalles.forEach((detalle: any) => {
-      if (detalle.producto) {
+    const unavailable: { name: string; requested: number; available: number }[] = [];
+
+    for (const detalle of order.detalles) {
+      if (!detalle.producto) continue;
+      const available = stockMap[detalle.producto.id] ?? 0;
+      if (available >= detalle.cantidad) {
         addToCart(detalle.producto, detalle.cantidad, false);
         addedCount++;
+      } else {
+        unavailable.push({
+          name: detalle.producto.name,
+          requested: detalle.cantidad,
+          available,
+        });
       }
-    });
+    }
 
     if (addedCount > 0) {
-      toast.success("Productos agregados al carrito", {
-        id: "repeat-order-toast",
-        description: "Serás redirigido al carrito..."
-      });
+      if (unavailable.length > 0) {
+        toast.success(`${addedCount} producto(s) agregados al carrito`, {
+          id: "repeat-order-partial",
+          description: `Sin stock suficiente: ${unavailable.map((u) => u.name).join(", ")}`,
+          duration: 5000,
+        });
+      } else {
+        toast.success("Productos agregados al carrito", {
+          id: "repeat-order-toast",
+          description: "Serás redirigido al carrito...",
+        });
+      }
       setIsNavigating(true);
       setTimeout(() => {
         router.push("/cart");
       }, 800);
     } else {
-      toast.error("No se pudieron agregar los productos al carrito", { id: "repeat-order-error" });
+      if (unavailable.length > 0) {
+        toast.error("No hay stock suficiente", {
+          id: "repeat-order-error",
+          description: `Sin stock disponible: ${unavailable.map((u) => u.name).join(", ")}`,
+          duration: 5000,
+        });
+      } else {
+        toast.error("No se pudieron agregar los productos al carrito", { id: "repeat-order-error" });
+      }
       setIsRepeating(false);
     }
   };
