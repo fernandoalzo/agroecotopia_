@@ -361,14 +361,17 @@ export default function OrderDetailPageClient({
       }
 
       const res = await getUserOrderConversations();
-      if (!Array.isArray(res)) return;
+      if (!Array.isArray(res)) {
+        log.debug("[chat badge] getUserOrderConversations no devolvió array", { res });
+        return;
+      }
 
       const counts = res.reduce((acc: Record<string, number>, conv: any) => {
         if (conv?.pedido?.id) {
           const unread = Number(conv.unreadCount) || 0;
-          acc[conv.pedido.id] = unread;
+          acc[conv.pedido.id] = (acc[conv.pedido.id] || 0) + unread;
           if (conv.store?.id) {
-            acc[conv.store.id] = unread;
+            acc[conv.store.id] = (acc[conv.store.id] || 0) + unread;
           }
         }
         return acc;
@@ -376,7 +379,7 @@ export default function OrderDetailPageClient({
 
       setOrderChatUnreadCounts(counts);
     } catch (err) {
-      log.error("Error loading order unread counts:", err);
+      log.error("[chat badge] Error loading order unread counts:", err);
     }
   }, [getSellerOrderConversations, getUserOrderConversations, order?.id, orderStoreIds.join("|"), session?.user?.role]);
 
