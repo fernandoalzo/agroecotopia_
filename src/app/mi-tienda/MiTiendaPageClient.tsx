@@ -17,6 +17,7 @@ import {
   Tag,
   Settings,
   Truck,
+  MessageSquare,
 } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { cn } from "@/lib/utils";
@@ -38,10 +39,11 @@ import { StoreConfigurationPanel } from "@/components/seller/configuration/Store
 import type { Promotion } from "@/types/store";
 import { EnviosList } from "@/components/admin/envios/EnviosList";
 import { envioStatusConfig, type EnvioEstadoKey } from "@/components/admin/envios/envioUtils";
+import { StoreChatPanel } from "@/components/seller/chat/StoreChatPanel";
 
 const log = logger.child();
 
-type SellerTab = "orders" | "envios" | "products" | "promotions" | "store_info" | "configuration";
+type SellerTab = "orders" | "envios" | "products" | "promotions" | "store_info" | "configuration" | "chat";
 
 interface MiTiendaActions {
   getMyStores: () => Promise<any>;
@@ -106,11 +108,17 @@ interface MiTiendaActions {
   getEnvioStats: (...args: any[]) => Promise<any>;
   updateEnvioStatus: (...args: any[]) => Promise<any>;
   getEnvioDetail: (...args: any[]) => Promise<any>;
+
+  // Store Chat (centralized customer chat)
+  getStoreCustomersChat: (storeId: string) => Promise<any>;
+  getStoreCustomerChatMessages: (storeId: string, customerId: string) => Promise<any>;
+  getOrCreateCustomerConversation: (storeId: string, customerId: string) => Promise<any>;
 }
 
 const SIDEBAR_ITEMS: { id: SellerTab; labelEs: string; labelEn: string; icon: React.ElementType }[] = [
   { id: "store_info", labelEs: "Mi Tienda", labelEn: "My Store", icon: Store },
   { id: "orders", labelEs: "Pedidos", labelEn: "Orders", icon: ClipboardList },
+  { id: "chat", labelEs: "Chat Clientes", labelEn: "Customer Chat", icon: MessageSquare },
   { id: "envios", labelEs: "Envíos", labelEn: "Shipments", icon: Truck },
   { id: "products", labelEs: "Mis Productos", labelEn: "My Products", icon: Package },
   { id: "promotions", labelEs: "Promociones", labelEn: "Promotions", icon: Tag },
@@ -768,6 +776,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
               {activeTab === "products" && "Gestiona los productos de tu tienda"}
               {activeTab === "store_info" && "Información y configuración de tu tienda"}
               {activeTab === "configuration" && "Configura impuestos, zonas de envío y bodegas de recogida"}
+              {activeTab === "chat" && "Chat centralizado con clientes que han comprado en tu tienda"}
             </p>
           </div>
         </div>
@@ -775,11 +784,11 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
         {/* Content area */}
         <div className={cn(
           "flex-1 min-h-0",
-          (activeTab === "orders" || activeTab === "envios" || activeTab === "products" || activeTab === "promotions" || activeTab === "configuration")
+          (activeTab === "orders" || activeTab === "envios" || activeTab === "products" || activeTab === "promotions" || activeTab === "configuration" || activeTab === "chat")
             ? "overflow-hidden flex flex-col"
             : "overflow-auto"
         )}>
-          {(activeTab === "orders" || activeTab === "envios" || activeTab === "products" || activeTab === "promotions" || activeTab === "configuration") ? (
+          {(activeTab === "orders" || activeTab === "envios" || activeTab === "products" || activeTab === "promotions" || activeTab === "configuration" || activeTab === "chat") ? (
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
@@ -787,7 +796,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.2 }}
-                className="flex-1 min-h-0 flex flex-col p-4 md:p-8"
+                className={cn("flex-1 min-h-0 flex flex-col", activeTab === "chat" ? "" : "p-4 md:p-8")}
               >
                 {activeTab === "orders" && activeStore && (
                   <AdminOrdersList
@@ -927,6 +936,17 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                 )}
                 {activeTab === "configuration" && activeStore && (
                   <StoreConfigurationPanel store={activeStore} actions={actions} />
+                )}
+                {activeTab === "chat" && activeStore && (
+                  <StoreChatPanel
+                    storeId={activeStore.id}
+                    storeName={activeStore.name}
+                    embedded
+                    getStoreCustomersAction={actions.getStoreCustomersChat}
+                    getStoreCustomerChatMessagesAction={actions.getStoreCustomerChatMessages}
+                    getOrCreateCustomerConversationAction={actions.getOrCreateCustomerConversation}
+                    markAsReadAction={actions.markAsRead}
+                  />
                 )}
               </motion.div>
             </AnimatePresence>

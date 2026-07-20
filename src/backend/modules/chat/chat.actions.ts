@@ -1,6 +1,6 @@
 "use server";
 
-import { withAuth, withAdmin } from "@/lib/auth-guards";
+import { withAuth, withAdmin, withAdminOrSeller } from "@/lib/auth-guards";
 import { chatService } from "./index";
 import logger from "@/utils/logger";
 import { Role } from "@/types";
@@ -17,6 +17,7 @@ function getChatActionErrorMessage(error: unknown) {
     UNAUTHORIZED_ACCESS: "No tienes permiso para acceder a esta conversación.",
     CONVERSATION_NOT_FOUND: "No se encontró la conversación solicitada.",
     DELETE_NOT_ALLOWED: "Los chats de pedido se conservan como historial y no se pueden eliminar.",
+    CUSTOMER_NO_ORDERS: "Este cliente no tiene pedidos en tu tienda.",
   };
 
   return messages[error.message] || "Ocurrió un error inesperado en el chat.";
@@ -227,6 +228,51 @@ export async function sendCryptoTransactionMessageAction(params: {
     } catch (error) {
       log.warn("No se pudieron enviar los mensajes de transacción cripto:", { userId, error });
       return { error: getChatActionErrorMessage(error as unknown as Error) };
+    }
+  });
+}
+
+export async function getStoreCustomersChatAction(storeId: string) {
+  return withAdminOrSeller(async (session) => {
+    const userId = session.user.id;
+    const userRole = session.user.role as Role;
+
+    try {
+      log.debug("Obteniendo clientes con chat para tienda:", { storeId, userId });
+      return await chatService.getStoreCustomersChatList(storeId, userId, userRole);
+    } catch (error) {
+      log.warn("No se pudieron obtener clientes con chat para tienda:", { storeId, userId, error });
+      return { error: getChatActionErrorMessage(error) };
+    }
+  });
+}
+
+export async function getStoreCustomerChatMessagesAction(storeId: string, customerId: string) {
+  return withAdminOrSeller(async (session) => {
+    const userId = session.user.id;
+    const userRole = session.user.role as Role;
+
+    try {
+      log.debug("Obteniendo mensajes de cliente para tienda:", { storeId, customerId, userId });
+      return await chatService.getStoreCustomerChatMessages(storeId, customerId, userId, userRole);
+    } catch (error) {
+      log.warn("No se pudieron obtener mensajes de cliente:", { storeId, customerId, userId, error });
+      return { error: getChatActionErrorMessage(error) };
+    }
+  });
+}
+
+export async function getOrCreateCustomerActiveConversationAction(storeId: string, customerId: string) {
+  return withAdminOrSeller(async (session) => {
+    const userId = session.user.id;
+    const userRole = session.user.role as Role;
+
+    try {
+      log.debug("Obteniendo o creando conversación activa con cliente:", { storeId, customerId, userId });
+      return await chatService.getOrCreateCustomerActiveConversation(storeId, customerId, userId);
+    } catch (error) {
+      log.warn("No se pudo obtener o crear conversación con cliente:", { storeId, customerId, userId, error });
+      return { error: getChatActionErrorMessage(error) };
     }
   });
 }

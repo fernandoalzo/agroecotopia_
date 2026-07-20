@@ -559,6 +559,163 @@ export class ChatRepository {
     return result;
   }
 
+  async findStoreCustomersWithConversations(storeId: string, sellerId: string) {
+    log.debug("Obteniendo clientes con pedidos abiertos para tienda:", { storeId });
+
+    const orderCustomers = await prisma.pedido.findMany({
+      where: {
+        detalles: { some: { storeId } },
+        estado: {
+          in: [
+            PedidoEstado.PENDIENTE,
+            PedidoEstado.CONFIRMADO,
+            PedidoEstado.EN_PREPARACION,
+            PedidoEstado.EN_BODEGA,
+          ],
+        },
+      },
+      select: { usuarioId: true },
+      distinct: ["usuarioId"],
+    });
+
+    if (orderCustomers.length === 0) return [];
+
+    const userIds = orderCustomers.map(c => c.usuarioId);
+
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true, email: true },
+    });
+
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        type: ConversationType.ORDER,
+        storeId,
+        userId: { in: userIds },
+      },
+      include: {
+        messages: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+        pedido: {
+          select: { id: true, estado: true, fechaPedido: true },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    let unreadMap = new Map<string, number>();
+    if (conversations.length > 0) {
+      const unreadCounts = await prisma.message.groupBy({
+        by: ["conversationId"],
+        where: {
+          conversationId: { in: conversations.map(c => c.id) },
+          isRead: false,
+          senderId: { not: sellerId },
+        },
+        _count: { _all: true },
+      });
+      unreadMap = new Map(unreadCounts.map(u => [u.conversationId, u._count._all]));
+    }
+
+    const userConvMap = new Map<string, any[]>();
+    for (const conv of conversations) {
+      const list = userConvMap.get(conv.userId) || [];
+      list.push({ ...conv, unreadCount: unreadMap.get(conv.id) ?? 0 });
+      userConvMap.set(conv.userId, list);
+    }
+
+    return users.map(user => {
+      const convs = userConvMap.get(user.id) || [];
+      const totalUnread = convs.reduce((sum: number, c: any) => sum + c.unreadCount, 0);
+      const lastMsg = convs.length > 0 ? convs[0].messages?.[0] : null;
+      return {
+        user,
+        conversations: convs,
+        unreadCount: totalUnread,
+        lastMessage: lastMsg
+          ? { content: lastMsg.content, createdAt: lastMsg.createdAt }
+          : null,
+        updatedAt: convs.length > 0 ? convs[0].updatedAt : null,
+      };
+    }).sort((a, b) => {
+      if (!a.updatedAt) return 1;
+      if (!b.updatedAt) return -1;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+  }
+
+  async findCustomerOrdersForStore(storeId: string, customerId: string) {
+    log.debug("Buscando pedidos de cliente en tienda:", { storeId, customerId });
+    return prisma.pedido.findMany({
+      where: {
+        usuarioId: customerId,
+        detalles: { some: { storeId } },
+      },
+      orderBy: { fechaPedido: "desc" },
+      select: {
+        id: true,
+        estado: true,
+        fechaPedido: true,
+        detalles: {
+          where: { storeId },
+          select: { store: { select: { id: true, name: true, ownerId: true } } },
+          take: 1,
+        },
+      },
+    });
+  }
+
+  async findCustomerConversations(storeId: string, customerId: string) {
+    log.debug("Buscando conversaciones de cliente en tienda:", { storeId, customerId });
+    return prisma.conversation.findMany({
+      where: {
+        type: ConversationType.ORDER,
+        storeId,
+        userId: customerId,
+      },
+      include: {
+        pedido: {
+          select: { id: true, estado: true, fechaPedido: true },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+  }
+
+  async findAllMessagesByConversationIds(conversationIds: string[]) {
+    log.debug("Buscando mensajes de múltiples conversaciones:", { count: conversationIds.length });
+    return prisma.message.findMany({
+      where: { conversationId: { in: conversationIds } },
+      include: {
+        replyTo: {
+          select: {
+            id: true,
+            content: true,
+            senderId: true,
+            senderRole: true,
+            isEncrypted: true,
+            encryptionType: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
+  async findFirstStoreOwnerOrder(storeId: string, customerId: string) {
+    log.debug("Buscando primer pedido de cliente en tienda:", { storeId, customerId });
+    return prisma.pedido.findFirst({
+      where: {
+        usuarioId: customerId,
+        detalles: { some: { storeId } },
+      },
+      orderBy: { fechaPedido: "desc" },
+      select: { id: true, estado: true },
+    });
+  }
+
   async findUsersPaginated(searchQuery?: string, page: number = 1) {
     const take = 20;
     const skip = (page - 1) * take;

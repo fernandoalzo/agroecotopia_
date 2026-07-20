@@ -215,6 +215,69 @@ export class ChatService {
     return this.chatRepository.deleteConversation(conversationId);
   }
 
+  async getStoreCustomersChatList(storeId: string, sellerId: string, userRole: Role) {
+    if (userRole !== "admin" && userRole !== "seller") {
+      throw new Error("UNAUTHORIZED_ACCESS");
+    }
+    log.debug("Obteniendo lista de clientes con chat para tienda:", { storeId, sellerId });
+    return this.chatRepository.findStoreCustomersWithConversations(storeId, sellerId);
+  }
+
+  async getOrCreateCustomerActiveConversation(storeId: string, customerId: string, sellerId: string) {
+    // Find the customer's most recent order in this store
+    const order = await this.chatRepository.findFirstStoreOwnerOrder(storeId, customerId);
+    if (!order) {
+      log.warn("El cliente no tiene pedidos en esta tienda:", { storeId, customerId });
+      throw new Error("CUSTOMER_NO_ORDERS");
+    }
+
+    // Find or create ORDER conversation for this order
+    const existing = await this.chatRepository.findOrderConversation(order.id, storeId);
+    if (existing) return existing;
+
+    // Need seller info
+    const store = await this.chatRepository.findPedidoStoreAccess(order.id, storeId);
+    const sellerIdFromStore = store?.detalles[0]?.store?.ownerId || sellerId;
+
+    return this.chatRepository.createOrderConversation({
+      pedidoId: order.id,
+      storeId,
+      userId: customerId,
+      sellerId: sellerIdFromStore,
+    });
+  }
+
+  async getStoreCustomerChatMessages(storeId: string, customerId: string, sellerId: string, userRole: Role) {
+    if (userRole !== "admin" && userRole !== "seller") {
+      throw new Error("UNAUTHORIZED_ACCESS");
+    }
+
+    // Get or create the active conversation for messaging
+    const activeConversation = await this.getOrCreateCustomerActiveConversation(storeId, customerId, sellerId);
+
+    // Get all conversations for this customer in this store
+    const conversations = await this.chatRepository.findCustomerConversations(storeId, customerId);
+    const conversationIds = conversations.map(c => c.id);
+
+    // Get all messages from all conversations
+    const messages = conversationIds.length > 0
+      ? await this.chatRepository.findAllMessagesByConversationIds(conversationIds)
+      : [];
+
+    // Mark messages as read
+    for (const conv of conversations) {
+      await this.chatRepository.markMessagesAsRead(conv.id, sellerId);
+    }
+
+    log.debug("Mensajes de cliente obtenidos:", { customerId, conversationCount: conversations.length, messageCount: messages.length });
+
+    return {
+      conversations,
+      messages,
+      activeConversationId: activeConversation.id,
+    };
+  }
+
   async getUsersForAdminChat(searchQuery?: string, page: number = 1) {
     log.debug("Buscando usuarios paginados para chat de admin:", { searchQuery, page });
     return this.chatRepository.findUsersPaginated(searchQuery, page);

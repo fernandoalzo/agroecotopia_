@@ -6,6 +6,9 @@ import {
   getSellerOrderConversationsAction,
   markAsRead,
   openOrderChatAction,
+  getStoreCustomersChatAction,
+  getStoreCustomerChatMessagesAction,
+  getOrCreateCustomerActiveConversationAction,
 } from "@/backend/modules/chat/chat.actions";
 import {
   getPaginatedProductsAction,
@@ -126,6 +129,10 @@ export default function Page() {
         getEnvioStats: getEnvioStatsAction,
         updateEnvioStatus: updateEnvioEstadoAction,
         getEnvioDetail: getEnvioDetailAction,
+        // Store Chat (centralized customer chat)
+        getStoreCustomersChat: getStoreCustomersChatAction,
+        getStoreCustomerChatMessages: getStoreCustomerChatMessagesAction,
+        getOrCreateCustomerConversation: getOrCreateCustomerActiveConversationAction,
       }}
     />
   );
