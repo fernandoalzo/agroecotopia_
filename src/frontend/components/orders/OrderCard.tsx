@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, MapPin, Clock, CheckCircle2, Truck, Timer, XCircle, RefreshCw, Copy, Check, Trash2, Store, Package, Warehouse } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
 import { format } from "date-fns";
@@ -178,6 +177,9 @@ export const OrderCard = ({ order, index, unreadChatCount = 0, onNavigate, onCan
         id: "repeat-order-toast",
         description: "Serás redirigido al carrito..."
       });
+      setTimeout(() => {
+        onNavigate("/cart");
+      }, 1000);
     } else {
       toast.error("No se pudieron agregar los productos al carrito", { id: "repeat-order-error" });
       setIsRepeating(false);

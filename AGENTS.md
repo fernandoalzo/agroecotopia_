@@ -700,6 +700,82 @@ export const config = {
 
 ---
 
+## Page Transition Motion Effects
+
+When asked to add motion/animation effects to a page or to a redirect between pages, use the following standardized pattern. Do not search other files for reference — this is the single source of truth.
+
+### Navigation Blur-Out (Redirecting AWAY from a page)
+
+Wrap the page content in a `motion.div` and use an `isNavigating` state to trigger a zoom-out + blur + fade exit before `router.push()`:
+
+```tsx
+const [isNavigating, setIsNavigating] = useState(false);
+const router = useRouter();
+
+const handleNavigate = useCallback((href: string) => {
+  setIsNavigating(true);
+  setTimeout(() => {
+    router.push(href);
+  }, 800);
+}, [router]);
+
+// In JSX, wrap the entire page content:
+<motion.div
+  animate={isNavigating ? { scale: 1.4, opacity: 0, filter: "blur(10px)" } : { opacity: 1 }}
+  transition={{ duration: 0.8, ease: "easeInOut" }}
+  className="container px-4 md:px-6 mx-auto"
+>
+  {/* page content */}
+</motion.div>
+```
+
+**Buttons that navigate away** must call `handleNavigate(href)` instead of `router.push(href)` directly. Pass `handleNavigate` down as `onNavigate` prop to child components that need to trigger navigation.
+
+### Staggered Page Entrance (Content appearing ON a page)
+
+Use `containerVariants` + `itemVariants` on the main content grid and a separate `sidebarVariants` for sidebars:
+
+```tsx
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } },
+};
+
+const sidebarVariants = {
+  hidden: { opacity: 0, x: 30 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.2 } },
+};
+
+// Apply to main grid:
+<motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid ...">
+  <motion.div variants={itemVariants} className="col-span-2">
+    {/* main content */}
+  </motion.div>
+  <motion.div variants={sidebarVariants} className="col-span-1">
+    {/* sidebar */}
+  </motion.div>
+</motion.div>
+```
+
+### Redirecting FROM a child component with blur-out
+
+If a child component (e.g., an `OrderCard`) needs to trigger navigation with the blur-out effect, it must receive `onNavigate: (href: string) => void` as a prop and call `onNavigate(href)` instead of `router.push(href)`. The parent page owns the `isNavigating` state and passes `handleNavigate` as `onNavigate`.
+
+**Cart items already inside `AnimatePresence`** should retain their individual `motion.div` with `layout`, `initial`, `animate`, and `exit` props for add/remove animations — these are independent of the page entrance above.
+
+---
+
 ## Quick Violation Checklist
 
 Before submitting any change, verify none of the following are present:
@@ -725,3 +801,5 @@ Before submitting any change, verify none of the following are present:
 - [ ] A write method in a cached repository missing `delPattern()` invalidation
 - [ ] A payment method added without the full `config.ts` + `handler.ts` + `index.ts` structure
 - [ ] `server.ts` modified to use `next dev` or `next start` instead of `tsx server.ts`
+- [ ] A page redirect without the blur-out motion effect (`setIsNavigating(true)` + `setTimeout(router.push, 800)`)
+- [ ] A page without staggered entrance animation (`containerVariants`/`itemVariants`) when applying motion to a new page

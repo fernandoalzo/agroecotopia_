@@ -23,6 +23,27 @@ interface CartContentProps {
   setIsNavigating: (val: boolean) => void;
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } },
+};
+
+const sidebarVariants = {
+  hidden: { opacity: 0, x: 30 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.2 } },
+};
+
 const CartContent = ({ isNavigating, setIsNavigating }: CartContentProps) => {
   const { cart, removeFromCart, updateQuantity, totalPrice, calculatedTaxes, taxBreakdown } = useCart();
   const { t, language } = useLanguage();
@@ -87,8 +108,13 @@ const CartContent = ({ isNavigating, setIsNavigating }: CartContentProps) => {
   };
 
   return (
-    <div className="grid gap-12 lg:grid-cols-3">
-      <div className="lg:col-span-2 flex flex-col gap-6">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="grid gap-12 lg:grid-cols-3"
+    >
+      <motion.div variants={itemVariants} className="lg:col-span-2 flex flex-col gap-6">
         <AnimatePresence mode="popLayout">
           {cart.map((item) => {
             const productTranslation = t.products.items[item.product.id!] || {
@@ -147,7 +173,7 @@ const CartContent = ({ isNavigating, setIsNavigating }: CartContentProps) => {
                       <div className="flex items-center gap-2 mt-2.5">
                         <div className="flex items-center gap-1.5 text-muted-foreground uppercase font-semibold text-[10px] tracking-wider shrink-0 bg-secondary/50 px-2 py-1 rounded-md border border-border/50">
                           <Tag className="w-3 h-3" />
-                          {item.product.categories.map((c: any) => c.name).join(", ")}
+                          {item.product.categories?.map((c: any) => c.name).join(", ") || "—"}
                         </div>
                       </div>
                     </div>
@@ -245,10 +271,10 @@ const CartContent = ({ isNavigating, setIsNavigating }: CartContentProps) => {
             </Button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Summary Sidebar */}
-      <div className="lg:col-span-1">
+      <motion.div variants={sidebarVariants} className="lg:col-span-1">
         <div className="sticky top-24 pt-2">
           <div className="mb-6 border-b-2 border-foreground/10 pb-4">
             <h3 className="font-display text-2xl font-black uppercase tracking-widest text-foreground">{t.cart.orderSummary}</h3>
@@ -334,8 +360,8 @@ const CartContent = ({ isNavigating, setIsNavigating }: CartContentProps) => {
             <Leaf className="w-3 h-3 text-primary" /> {t.cart.securePayment}
           </p>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
