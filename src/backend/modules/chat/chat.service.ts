@@ -160,7 +160,7 @@ export class ChatService {
       });
 
       if (recipientId && recipientId !== data.senderId) {
-        const actionUrl = `/pedidos/${conversation.pedido.id}`;
+        const actionUrl = `/pedidos/${conversation.pedido.id}${isSeller ? '?openChat=true' : ''}`;
 
         notificationsService.dispatchNotification({
           eventType: "order_message_sent",
