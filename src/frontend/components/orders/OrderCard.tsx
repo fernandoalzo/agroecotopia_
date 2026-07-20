@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, MapPin, Clock, CheckCircle2, Truck, Timer, XCircle, RefreshCw, Copy, Check, Trash2, Store, Package, Warehouse } from "lucide-react";
 import { useCart } from "@/context/CartContext";
@@ -141,7 +141,6 @@ export const OrderCard = ({ order, index, unreadChatCount = 0, onNavigate, onCan
       toast.success("Pedido cancelado", { description: "Tu pedido ha sido cancelado exitosamente." });
     } catch (error) {
       toast.error("Error", { description: "Hubo un problema al cancelar el pedido." });
-    } finally {
       setIsCanceling(false);
       setIsConfirmingCancel(false);
     }
@@ -154,7 +153,6 @@ export const OrderCard = ({ order, index, unreadChatCount = 0, onNavigate, onCan
       toast.success("Pedido eliminado", { description: "El pedido ha sido eliminado permanentemente." });
     } catch (error) {
       toast.error("Error", { description: "Hubo un problema al eliminar el pedido." });
-    } finally {
       setIsDeleting(false);
       setIsConfirmingDelete(false);
     }
@@ -191,6 +189,20 @@ export const OrderCard = ({ order, index, unreadChatCount = 0, onNavigate, onCan
   const showRepeat = order.estado === PedidoEstado.CONFIRMADO || order.estado === PedidoEstado.ENTREGADO || order.estado === PedidoEstado.CANCELADO;
   const isPending = order.estado === PedidoEstado.PENDIENTE;
   const isCancelled = order.estado === PedidoEstado.CANCELADO;
+
+  useEffect(() => {
+    if (!isPending) {
+      setIsConfirmingCancel(false);
+      setIsCanceling(false);
+    }
+  }, [isPending]);
+
+  useEffect(() => {
+    if (!isCancelled) {
+      setIsConfirmingDelete(false);
+      setIsDeleting(false);
+    }
+  }, [isCancelled]);
 
   return (
     <motion.div

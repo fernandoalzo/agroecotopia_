@@ -95,24 +95,20 @@ export default function PedidosPageClient({
   // React Query Mutations
   const cancelOrderMutation = useMutation({
     mutationFn: cancelUserOrder,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userOrders"] });
-    },
   });
 
   const deleteOrderMutation = useMutation({
     mutationFn: deleteUserOrder,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userOrders"] });
-    },
   });
 
   const handleCancelOrder = async (orderId: string) => {
     await cancelOrderMutation.mutateAsync(orderId);
+    await queryClient.invalidateQueries({ queryKey: ["userOrders"] });
   };
 
   const handleDeleteOrder = async (orderId: string) => {
     await deleteOrderMutation.mutateAsync(orderId);
+    await queryClient.invalidateQueries({ queryKey: ["userOrders"] });
   };
 
   // Socket Refresh Listeners
