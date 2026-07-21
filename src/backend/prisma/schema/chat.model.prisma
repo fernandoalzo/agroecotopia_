@@ -1,46 +1,57 @@
 enum ConversationType {
   SUPPORT
   ORDER
+  WHATSAPP
+}
+
+enum MessageChannel {
+  INTERNAL
+  WHATSAPP
 }
 
 model Conversation {
-  id        String           @id @default(cuid())
-  type      ConversationType @default(SUPPORT)
-  userId    String
-  sellerId  String?
-  storeId   String?
-  pedidoId  String?
-  user      User             @relation("ConversationUser", fields: [userId], references: [id], onDelete: Cascade)
-  seller    User?            @relation("ConversationSeller", fields: [sellerId], references: [id], onDelete: Cascade)
-  store     Store?           @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  pedido    Pedido?          @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
-  messages  Message[]
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id             String           @id @default(cuid())
+  type           ConversationType @default(SUPPORT)
+  userId         String?
+  sellerId       String?
+  storeId        String?
+  pedidoId       String?
+  whatsappPhone  String?
+  user           User?            @relation("ConversationUser", fields: [userId], references: [id], onDelete: Cascade)
+  seller         User?            @relation("ConversationSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  store          Store?           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  pedido         Pedido?          @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  messages       Message[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   @@index([type, userId])
   @@index([type, sellerId])
   @@index([type, storeId, sellerId])
   @@index([pedidoId, storeId])
+  @@index([type, whatsappPhone])
 }
 
 model Message {
-  id             String       @id @default(cuid())
+  id             String         @id @default(cuid())
   content        String
   senderId       String
-  senderRole     Role         @default(user)
+  senderRole     Role           @default(user)
+  channel        MessageChannel @default(INTERNAL)
+  whatsappMsgId  String?        @unique
   conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation   Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   replyToId      String?
-  replyTo        Message?     @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
-  replies        Message[]    @relation("MessageReplies")
-  isRead         Boolean      @default(false)
-  isEncrypted    Boolean      @default(false)
-  encryptionType Int          @default(0) // 0: plain, 1: prekey signal, 3: signal message
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @default(now()) @updatedAt
+  replyTo        Message?       @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies        Message[]      @relation("MessageReplies")
+  isRead         Boolean        @default(false)
+  isEncrypted    Boolean        @default(false)
+  encryptionType Int            @default(0) // 0: plain, 1: prekey signal, 3: signal message
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @default(now()) @updatedAt
 
   @@index([conversationId])
   @@index([conversationId, isRead])
   @@index([conversationId, createdAt])
+  @@index([whatsappMsgId])
 }

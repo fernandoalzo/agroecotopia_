@@ -37,13 +37,27 @@ export class ChatService {
       && (userRole === "admin" || conversation.userId === currentUserId);
     const canAccessOrder = conversation.type === ConversationType.ORDER
       && (conversation.userId === currentUserId || conversation.sellerId === currentUserId || userRole === "admin");
+    const canAccessWhatsApp = conversation.type === ConversationType.WHATSAPP
+      && (userRole === "admin" || conversation.userId === currentUserId);
 
-    if (!canAccessSupport && !canAccessOrder) {
+    if (!canAccessSupport && !canAccessOrder && !canAccessWhatsApp) {
       log.warn("Acceso no autorizado a conversación:", { conversationId: id, currentUserId, ownerUserId: conversation.userId });
       throw new Error("UNAUTHORIZED_ACCESS");
     }
 
     return conversation;
+  }
+
+  /**
+   * Safe version of getConversationById that returns null instead of throwing.
+   * Used by the socket handler to check conversation type without error handling.
+   */
+  async getConversationByIdSafe(id: string, currentUserId: string, userRole: Role) {
+    try {
+      return await this.getConversationById(id, currentUserId, userRole);
+    } catch {
+      return null;
+    }
   }
 
   async getMessages(conversationId: string, currentUserId: string, userRole: Role) {

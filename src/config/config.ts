@@ -499,6 +499,48 @@ export const config = {
   },
 
   // ─────────────────────────────────────────────────────────
+  //  WhatsApp Integration (Meta Cloud API)
+  // ─────────────────────────────────────────────────────────
+  //  Enables the platform to send and receive messages via
+  //  WhatsApp using Meta's Cloud API. Incoming messages arrive
+  //  via webhook and are bridged to the internal chat system
+  //  via Socket.IO. Outgoing messages are sent from the admin
+  //  chat panel and forwarded to WhatsApp.
+  //
+  //  REQUIRED ENV VARS:
+  //    WHATSAPP_PHONE_NUMBER_ID — Meta Business WhatsApp sender
+  //    WHATSAPP_API_KEY        — Permanent access token
+  //    WHATSAPP_WEBHOOK_SECRET — HMAC verification for inbound
+  //    WHATSAPP_API_VERSION    — API version (default: v22.0)
+  // ─────────────────────────────────────────────────────────
+
+  whatsapp: {
+    /** Master switch. When false, all WhatsApp features are disabled. */
+    enabled: process.env.WHATSAPP_ENABLED === 'true',
+
+    /** Phone Number ID assigned by Meta Business Platform. Used as the sender ID in API calls. */
+    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || '',
+
+    /** Permanent access token from Meta Business Platform (long-lived, generated in System Users). */
+    apiKey: process.env.WHATSAPP_API_KEY || '',
+
+    /**
+     * HMAC-SHA256 shared secret for webhook payload verification.
+     * Configured in the Meta WhatsApp Webhook settings panel.
+     */
+    webhookSecret: process.env.WHATSAPP_WEBHOOK_SECRET || '',
+
+    /** Meta Cloud API version string (e.g., "v22.0"). */
+    apiVersion: process.env.WHATSAPP_API_VERSION || 'v22.0',
+
+    /** Base URL for the WhatsApp Cloud API. */
+    apiBaseUrl: 'https://graph.facebook.com',
+
+    /** Verify token for webhook subscription (returned in GET challenge). */
+    verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || 'agroecotopia-wa-verify',
+  },
+
+  // ─────────────────────────────────────────────────────────
   //  Community Forum
   // ─────────────────────────────────────────────────────────
   //  User-generated content configuration: posting rules,

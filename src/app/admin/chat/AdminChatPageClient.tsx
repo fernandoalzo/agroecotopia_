@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSocket } from "@/frontend/context/SocketContext";
@@ -9,6 +9,7 @@ import { Message } from "@/frontend/components/chat/ChatWidget";
 import { SignalService } from "@/frontend/lib/signalService";
 import { signalStore } from "@/frontend/lib/signalStore";
 import { config } from "@/config/config";
+import { sendNewWhatsAppMessageAction } from "@/backend/modules/whatsapp/whatsapp.actions";
 // import { Send, MessageSquare, ShieldAlert, ArrowLeft, User, Sparkles, Trash2, Search, ChevronLeft, ChevronRight, UserPlus, X, Copy, Check, Lock } from "lucide-react";
 import { Loading } from "@/components/ui/Loading";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,6 +29,9 @@ interface AdminChatActions {
   deleteConversation: (conversationId: string) => Promise<any>;
   getAdminUsersList: (searchQuery?: string, page?: number) => Promise<any>;
   getOrCreateConversationForAdmin: (targetUserId: string) => Promise<any>;
+  getWhatsAppConversations?: () => Promise<any>;
+  sendWhatsAppMessage?: (conversationId: string, content: string) => Promise<any>;
+  markWhatsAppAsRead?: (conversationId: string) => Promise<any>;
 }
 
 const isErrorResult = (value: unknown): value is { error: string } => {
@@ -64,13 +68,20 @@ export function AdminChatPageContent({
   const [viewportHeight, setViewportHeight] = useState("100vh");
   const [keyboardInset, setKeyboardInset] = useState(0);
   // User search and navigation states
-  const [sidebarTab, setSidebarTab] = useState<"chats" | "users">("chats");
+  const [sidebarTab, setSidebarTab] = useState<"chats" | "whatsapp" | "users">("chats");
   const [usersList, setUsersList] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [usersPage, setUsersPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  // WhatsApp state
+  const [whatsappConversations, setWhatsAppConversations] = useState<Conversation[]>([]);
+  const [isLoadingWhatsApp, setIsLoadingWhatsApp] = useState(false);
+  const [newPhoneNumber, setNewPhoneNumber] = useState("");
+  const [whatsappNewMsg, setWhatsAppNewMsg] = useState("");
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [whatsappError, setWhatsAppError] = useState<string | null>(null);
   // Refs for scrolling behavior
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const firstUnreadRef = useRef<HTMLDivElement>(null);
@@ -98,7 +109,7 @@ export function AdminChatPageContent({
         }
 
         try {
-          const targetId = lastMsg.senderId === sessionUserId ? conv.userId : lastMsg.senderId;
+          const targetId = lastMsg.senderId === sessionUserId ? (conv.userId || lastMsg.senderId) : lastMsg.senderId;
           const decryptedContent = await SignalService.decryptMessage(
             targetId,
             lastMsg.content,
@@ -134,6 +145,22 @@ export function AdminChatPageContent({
       log.error("Error loading admin conversations:", err);
     } finally {
       if (withLoading && isMountedRef.current) setIsLoadingConvs(false);
+    }
+  };
+
+  const refreshWhatsAppConversations = async (withLoading = false) => {
+    if (!actions.getWhatsAppConversations) return;
+    if (withLoading) setIsLoadingWhatsApp(true);
+    try {
+      const res = await actions.getWhatsAppConversations();
+      if (!isMountedRef.current) return;
+      if (res && !isErrorResult(res)) {
+        if (isMountedRef.current) setWhatsAppConversations(res);
+      }
+    } catch (err) {
+      log.error("Error loading WhatsApp conversations:", err);
+    } finally {
+      if (withLoading && isMountedRef.current) setIsLoadingWhatsApp(false);
     }
   };
 
@@ -283,7 +310,10 @@ export function AdminChatPageContent({
 
     const initializeAdminChat = async () => {
       await initE2EE();
-      await refreshConversations(true);
+      await Promise.all([
+        refreshConversations(true),
+        refreshWhatsAppConversations(true),
+      ]);
     };
 
     initializeAdminChat();
@@ -340,24 +370,26 @@ export function AdminChatPageContent({
 
         const res = await actions.getConversationMessages(activeConv.id);
         if (isCancelled) return;
+        const isWhatsAppConv = activeConv.type === "WHATSAPP";
         if (res && !("error" in res)) {
-          // Descifrar historial de mensajes
-          const decryptedMsgs = await Promise.all(res.map(async (m: Message) => {
+          // WhatsApp messages don't need E2EE decryption
+
+          const processedMsgs = await Promise.all(res.map(async (m: Message) => {
             let decryptedContent = m.content;
             let decryptedReplyContent = m.replyTo?.content;
 
-            if (m.isEncrypted) {
+            if (!isWhatsAppConv && m.isEncrypted) {
               try {
-                const targetId = m.senderId === sessionUserId ? activeConv.userId : m.senderId;
+                const targetId = m.senderId === sessionUserId ? (activeConv.userId || m.senderId) : m.senderId;
                 decryptedContent = await SignalService.decryptMessage(targetId, m.content, m.encryptionType || 1);
               } catch (e) {
                 decryptedContent = "🔒 Mensaje de otra sesión";
               }
             }
 
-            if (m.replyTo && m.replyTo.isEncrypted && m.replyTo.content) {
+            if (!isWhatsAppConv && m.replyTo && m.replyTo.isEncrypted && m.replyTo.content) {
               try {
-                const replyTargetId = m.replyTo.senderId === sessionUserId ? activeConv.userId : m.replyTo.senderId;
+                const replyTargetId = m.replyTo.senderId === sessionUserId ? (activeConv.userId || m.replyTo.senderId) : m.replyTo.senderId;
                 decryptedReplyContent = await SignalService.decryptMessage(replyTargetId, m.replyTo.content, m.replyTo.encryptionType || 1);
               } catch (e) {
                 decryptedReplyContent = "🔒 Mensaje de otra sesión";
@@ -373,15 +405,26 @@ export function AdminChatPageContent({
               } : null
             };
           }));
-          if (!isCancelled) setMessages(decryptedMsgs);
+          if (!isCancelled) setMessages(processedMsgs);
         }
-        await actions.markAsRead(activeConv.id);
+
+        // Mark as read (WhatsApp uses its own markAsRead)
+        if (isWhatsAppConv && actions.markWhatsAppAsRead) {
+          await actions.markWhatsAppAsRead(activeConv.id);
+        } else {
+          await actions.markAsRead(activeConv.id);
+        }
 
         // Reset unread indicator locally in conversations list
         if (!isCancelled) {
-          setConversations((prev) =>
-            prev.map((c) => (c.id === activeConv.id ? { ...c, unreadCount: 0 } : c))
-          );
+          const updater = (prev: Conversation[]) =>
+            prev.map((c) => (c.id === activeConv.id ? { ...c, unreadCount: 0 } : c));
+
+          if (activeConv.type === "WHATSAPP") {
+            setWhatsAppConversations(updater);
+          } else {
+            setConversations(updater);
+          }
         }
       } catch (err) {
         log.error("Error loading messages:", err);
@@ -410,7 +453,7 @@ export function AdminChatPageContent({
         try {
           // Find the active conversation in the current state to know its target user ID
           const targetConv = conversationsRef.current.find((c) => c.id === conversationId);
-          const userId = targetConv ? targetConv.userId : message.senderId;
+          const userId = targetConv ? (targetConv.userId || message.senderId) : message.senderId;
           const targetId = message.senderId === sessionUserId ? userId : message.senderId;
 
           signalStore.setUserId(sessionUserId);
@@ -514,16 +557,53 @@ export function AdminChatPageContent({
       }
     };
 
+    // Listen for WhatsApp new message notifications
+    const handleWhatsAppNewMessage = () => {
+      refreshWhatsAppConversations();
+    };
+
+    // Listen for WhatsApp inbound/outbound messages in real-time
+    const handleWhatsAppMessage = ({ conversationId, message }: { conversationId: string; message: Message }) => {
+      const currentActiveConv = activeConvRef.current;
+      if (currentActiveConv && currentActiveConv.id === conversationId) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
+      }
+
+      // Update WhatsApp conversations list
+      setWhatsAppConversations((prev) => {
+        const index = prev.findIndex((c) => c.id === conversationId);
+        if (index === -1) return prev;
+        const updated = [...prev];
+        const conv = { ...updated[index] };
+        conv.messages = [message];
+        conv.updatedAt = message.createdAt;
+        if (currentActiveConv?.id !== conversationId) {
+          conv.unreadCount = (conv.unreadCount || 0) + 1;
+        }
+        updated.splice(index, 1);
+        return [conv, ...updated];
+      });
+    };
+
     socket.on("new_message_notification", handleNewMessageNotification);
     socket.on("user_typing", handleUserTyping);
     socket.on("conversation_deleted", handleConversationDeleted);
     socket.on("key_sync_needed", handleKeySyncNeeded);
+    socket.on("whatsapp:new_message", handleWhatsAppNewMessage);
+    socket.on("whatsapp:message_inbound", handleWhatsAppMessage);
+    socket.on("whatsapp:message_outbound", handleWhatsAppMessage);
 
     return () => {
       socket.off("new_message_notification", handleNewMessageNotification);
       socket.off("user_typing", handleUserTyping);
       socket.off("conversation_deleted", handleConversationDeleted);
       socket.off("key_sync_needed", handleKeySyncNeeded);
+      socket.off("whatsapp:new_message", handleWhatsAppNewMessage);
+      socket.off("whatsapp:message_inbound", handleWhatsAppMessage);
+      socket.off("whatsapp:message_outbound", handleWhatsAppMessage);
     };
   }, [socket, status, sessionUserId, sessionUserRole]);
 
@@ -621,11 +701,29 @@ export function AdminChatPageContent({
       isTyping: false,
     });
 
-    let finalContent = inputMessage.trim();
+    const finalContent = inputMessage.trim();
+
+    // ─── WhatsApp conversations: send via Server Action ───
+    if (activeConv.type === "WHATSAPP" && actions.sendWhatsAppMessage) {
+      try {
+        const res = await actions.sendWhatsAppMessage(activeConv.id, finalContent);
+        if (res && !isErrorResult(res)) {
+          setMessages((prev) => [...prev, res]);
+        }
+      } catch (err) {
+        log.error("Error enviando mensaje WhatsApp:", err);
+      }
+      setInputMessage("");
+      setReplyingTo(null);
+      setTimeout(() => inputRef.current?.focus(), 50);
+      return;
+    }
+
+    // ─── Normal internal messages: E2EE + Socket.IO ───
+    let finalEncryptedContent = finalContent;
     let isEncrypted = false;
     let encryptionType = 0;
 
-    // Cifrar el mensaje antes de enviarlo
     if (config.chat.enableE2EE && activeConv.userId) {
       if (!isE2EEReady) {
         log.warn("E2EE está activado pero no está listo aún en Admin. Esperando...");
@@ -633,20 +731,20 @@ export function AdminChatPageContent({
         return;
       }
       try {
-        const encrypted = await SignalService.encryptMessage(activeConv.userId, finalContent);
-        finalContent = encrypted.ciphertext;
+        const encrypted = await SignalService.encryptMessage(activeConv.userId, finalEncryptedContent);
+        finalEncryptedContent = encrypted.ciphertext;
         isEncrypted = encrypted.type !== 0;
         encryptionType = encrypted.type;
       } catch (err) {
         log.error("Error cifrando el mensaje admin:", err);
         inputRef.current?.focus();
-        return; // Previene el envío en texto plano si falla
+        return;
       }
     }
 
     socket.emit("send_message", {
       conversationId: activeConv.id,
-      content: finalContent,
+      content: finalEncryptedContent,
       isEncrypted,
       encryptionType,
       senderId: session.user.id,
@@ -657,7 +755,6 @@ export function AdminChatPageContent({
     setInputMessage("");
     setReplyingTo(null);
 
-    // Mantiene el foco en el input para evitar que se cierre el teclado en móviles
     setTimeout(() => {
       inputRef.current?.focus();
     }, 50);
@@ -721,6 +818,49 @@ export function AdminChatPageContent({
     }
   };
 
+  // Start a new WhatsApp conversation with a phone number
+  const handleStartNewWhatsApp = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWhatsAppError(null);
+
+    if (!newPhoneNumber.trim() || !whatsappNewMsg.trim()) {
+      setWhatsAppError("Completa el número y el mensaje.");
+      return;
+    }
+
+    const phone = newPhoneNumber.trim();
+    const content = whatsappNewMsg.trim();
+    setIsSendingWhatsApp(true);
+
+    try {
+      log.info("Enviando nuevo mensaje WhatsApp...");
+      const res = await sendNewWhatsAppMessageAction(phone, content);
+      log.info("Respuesta recibida:", res);
+
+      if (res && !isErrorResult(res)) {
+        const { conversation, message } = res as unknown as { conversation: Conversation; message: Message };
+
+        setWhatsAppConversations((prev) => {
+          const exists = prev.find((c) => c.id === conversation.id);
+          if (exists) return prev;
+          return [{ ...conversation, messages: [message], unreadCount: 0 }, ...prev];
+        });
+
+        setActiveConv({ ...conversation, messages: [message], unreadCount: 0 });
+        setNewPhoneNumber("");
+        setWhatsAppNewMsg("");
+      } else if (res && isErrorResult(res)) {
+        setWhatsAppError(res.error || "Error desconocido");
+        log.error("Error starting WhatsApp conversation:", res.error);
+      }
+    } catch (err) {
+      log.error("Error starting WhatsApp conversation:", err);
+      setWhatsAppError(err instanceof Error ? err.message : "Error inesperado");
+    } finally {
+      setIsSendingWhatsApp(false);
+    }
+  }, [newPhoneNumber, whatsappNewMsg]);
+
   // Guard loading session
   if (status === "loading" && !session) {
     return (
@@ -742,10 +882,12 @@ export function AdminChatPageContent({
       viewportHeight={viewportHeight}
       keyboardInset={keyboardInset}
       conversations={conversations}
+      whatsappConversations={whatsappConversations}
       activeConv={activeConv}
       messages={messages}
       inputMessage={inputMessage}
       isLoadingConvs={isLoadingConvs}
+      isLoadingWhatsApp={isLoadingWhatsApp}
       isLoadingMsgs={isLoadingMsgs}
       isUserTyping={isUserTyping}
       showDeleteConfirm={showDeleteConfirm}
@@ -772,6 +914,14 @@ export function AdminChatPageContent({
       setReplyingTo={setReplyingTo}
       handleInputChange={handleInputChange}
       handleSendMessage={handleSendMessage}
+      newPhoneNumber={newPhoneNumber}
+      setNewPhoneNumber={setNewPhoneNumber}
+      whatsappNewMsg={whatsappNewMsg}
+      setWhatsAppNewMsg={setWhatsAppNewMsg}
+      handleStartNewWhatsApp={handleStartNewWhatsApp}
+      isSendingWhatsApp={isSendingWhatsApp}
+      whatsappError={whatsappError}
+      setWhatsAppError={setWhatsAppError}
       pageContainerRef={pageContainerRef}
       sidebarScrollRef={sidebarScrollRef}
       messagesScrollRef={messagesScrollRef}

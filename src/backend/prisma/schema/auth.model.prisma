@@ -11,6 +11,7 @@ model User {
   emailVerified           DateTime?
   image                   String?
   password                String?
+  phone                   String?                 @unique
   role                    Role                    @default(user)
   accounts                Account[]
   pedidos                 Pedido[]

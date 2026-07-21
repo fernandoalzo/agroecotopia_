@@ -86,14 +86,23 @@ export function ChatInputBar({
             });
           }}
           disabled={!isConnected}
-          placeholder={isConnected ? "Escribe tu respuesta..." : "Chat desconectado..."}
+          placeholder={isConnected
+            ? activeConv?.type === "WHATSAPP"
+              ? "Escribe tu respuesta a WhatsApp..."
+              : "Escribe tu respuesta..."
+            : "Chat desconectado..."
+          }
           className="flex-1 h-12 px-4 border border-border/60 hover:border-border/80 focus:border-primary focus:ring-1 focus:ring-primary rounded-xl text-sm outline-none bg-secondary/20 transition-all text-foreground disabled:opacity-50"
         />
         <button
           type="submit"
           onMouseDown={(e) => e.preventDefault()}
-          disabled={!inputMessage.trim() || !isConnected || isSubmitting || (config.chat.enableE2EE && !isE2EEReady)}
-          className="h-12 w-12 flex items-center justify-center rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground disabled:opacity-40 disabled:hover:bg-primary shadow-md transition-all flex-shrink-0 cursor-pointer"
+          disabled={!inputMessage.trim() || !isConnected || isSubmitting || (config.chat.enableE2EE && !isE2EEReady && activeConv?.type !== "WHATSAPP")}
+          className={`h-12 w-12 flex items-center justify-center rounded-xl shadow-md transition-all flex-shrink-0 cursor-pointer ${
+            activeConv?.type === "WHATSAPP"
+              ? "bg-[#25D366] hover:bg-[#25D366]/95 text-white disabled:opacity-40"
+              : "bg-primary hover:bg-primary/95 text-primary-foreground disabled:opacity-40"
+          }`}
         >
           <Send className="w-4 h-4" />
         </button>

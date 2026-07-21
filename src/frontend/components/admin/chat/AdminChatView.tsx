@@ -6,6 +6,13 @@ import { ChatMainArea } from "./ChatMainArea";
 import { DeleteConfirmModal } from "./DeleteConfirmModal";
 
 export function AdminChatView(props: AdminChatViewProps) {
+  const isWhatsAppTab = props.sidebarTab === "whatsapp";
+  const activeWhatsAppList = isWhatsAppTab
+    ? props.whatsappConversations
+    : props.sidebarTab === "chats"
+    ? props.conversations
+    : [];
+
   return (
     <div
       ref={props.pageContainerRef}
@@ -20,11 +27,12 @@ export function AdminChatView(props: AdminChatViewProps) {
         activeConv={props.activeConv}
         isConnected={props.isConnected}
         isE2EEReady={props.isE2EEReady}
+        isWhatsAppTab={isWhatsAppTab}
         sidebarTab={props.sidebarTab}
         setSidebarTab={props.setSidebarTab}
         sidebarScrollRef={props.sidebarScrollRef}
-        conversations={props.conversations}
-        isLoadingConvs={props.isLoadingConvs}
+        conversations={activeWhatsAppList}
+        isLoadingConvs={isWhatsAppTab ? props.isLoadingWhatsApp : props.isLoadingConvs}
         setActiveConv={props.setActiveConv}
         searchQuery={props.searchQuery}
         setSearchQuery={props.setSearchQuery}
@@ -34,6 +42,14 @@ export function AdminChatView(props: AdminChatViewProps) {
         usersPage={props.usersPage}
         totalPages={props.totalPages}
         setUsersPage={props.setUsersPage}
+        newPhoneNumber={props.newPhoneNumber}
+        setNewPhoneNumber={props.setNewPhoneNumber}
+        whatsappNewMsg={props.whatsappNewMsg}
+        setWhatsAppNewMsg={props.setWhatsAppNewMsg}
+        handleStartNewWhatsApp={props.handleStartNewWhatsApp}
+        isSendingWhatsApp={props.isSendingWhatsApp}
+        whatsappError={props.whatsappError}
+        setWhatsAppError={props.setWhatsAppError}
       />
 
       <ChatMainArea

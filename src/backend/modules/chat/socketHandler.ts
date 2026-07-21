@@ -4,6 +4,7 @@ import type { Role } from "@/types/auth.types";
 import logger from "@/utils/logger";
 import { socketRateLimiter } from "@/lib/rate-limit";
 import { chatService } from "./index";
+import { whatsappService } from "@/backend/modules/whatsapp";
 import eventBus from "@/utils/eventBus";
 import { config } from "@/config/config";
 const log = logger.child("src/backend/modules/chat/socketHandler.ts");
@@ -95,6 +96,25 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: any): Server {
         }
 
         const normalizedRole = senderRole as Role;
+
+        // ─── Detect WHATSAPP conversations and route externally ───
+        const conversation = await chatService.getConversationByIdSafe(conversationId, senderId, normalizedRole);
+
+        if (conversation && conversation.type === "WHATSAPP") {
+          // Route through WhatsApp service for external delivery
+          const message = await whatsappService.sendMessageFromAdmin({
+            conversationId,
+            content,
+            senderId,
+            senderRole: normalizedRole,
+          });
+
+          // Broadcast to the room for the admin panel UI
+          io.to(`conversation_${conversationId}`).emit("receive_message", message);
+          return;
+        }
+
+        // ─── Normal internal message flow ───
         const message = await chatService.sendRealtimeMessage({
           conversationId,
           content,
@@ -250,6 +270,9 @@ export function initSocketServer(httpServer: HTTPServer, _prisma: any): Server {
     "order:delivered",
     "product:rating_updated",
     "waf:request_live",
+    "whatsapp:message_inbound",
+    "whatsapp:message_outbound",
+    "whatsapp:new_message",
   ] as const;
 
   for (const eventName of BRIDGE_EVENTS) {

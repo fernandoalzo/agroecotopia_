@@ -621,9 +621,11 @@ export class ChatRepository {
 
     const userConvMap = new Map<string, any[]>();
     for (const conv of conversations) {
-      const list = userConvMap.get(conv.userId) || [];
+      const uid = conv.userId;
+      if (!uid) continue;
+      const list = userConvMap.get(uid) || [];
       list.push({ ...conv, unreadCount: unreadMap.get(conv.id) ?? 0 });
-      userConvMap.set(conv.userId, list);
+      userConvMap.set(uid, list);
     }
 
     return users.map(user => {

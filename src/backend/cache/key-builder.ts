@@ -129,4 +129,9 @@ export const CacheKeys = {
     sellerConversations: (storeId: string, sellerId: string) => `${NAMESPACE}:chat:seller:${storeId}:${sellerId}:conversations`,
     allPattern: `${NAMESPACE}:chat:*`,
   },
+  whatsapp: {
+    conversationByPhone: (phone: string) => `${NAMESPACE}:whatsapp:conversation:phone:${phone}`,
+    messageByWhatsappId: (msgId: string) => `${NAMESPACE}:whatsapp:message:id:${msgId}`,
+    allPattern: `${NAMESPACE}:whatsapp:*`,
+  },
 };
