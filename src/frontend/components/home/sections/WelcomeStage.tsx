@@ -48,7 +48,7 @@ const WelcomeStage = ({ t, language, onStartJourney }: WelcomeStageProps) => {
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }}
           className="mb-5"
         >
           <span className="inline-flex items-center gap-2 text-[10px] sm:text-xs font-bold text-primary/70 tracking-[0.25em] uppercase">
@@ -67,7 +67,7 @@ const WelcomeStage = ({ t, language, onStartJourney }: WelcomeStageProps) => {
         <motion.h1
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ delay: 0.15, duration: 0.8, ease: [0.16, 1, 0.3, 1] as const }}
           className="text-4xl sm:text-6xl md:text-7xl font-black leading-[1.15] sm:leading-[1.2] mb-4"
         >
           <span className="text-foreground">{t.hero.title}</span>
@@ -84,7 +84,7 @@ const WelcomeStage = ({ t, language, onStartJourney }: WelcomeStageProps) => {
         <motion.div
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
-          transition={{ delay: 0.35, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ delay: 0.35, duration: 0.8, ease: [0.16, 1, 0.3, 1] as const }}
           className="h-0.5 w-20 sm:w-24 bg-gradient-to-r from-primary/60 via-accent/40 to-transparent rounded-full mb-6 mx-auto origin-center"
         />
 

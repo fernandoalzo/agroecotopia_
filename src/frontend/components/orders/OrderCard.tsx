@@ -6,6 +6,7 @@ import { ChevronRight, MapPin, Clock, CheckCircle2, Truck, Timer, XCircle, Refre
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { PedidoEstado } from "@/types";
+import type { Product } from "@/types/product";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ export interface Order {
     cantidad: number;
     precioUnitario: number;
     producto: {
+      id: string;
       name: string;
       images: string[];
     };
@@ -168,8 +170,8 @@ export const OrderCard = ({ order, index, unreadChatCount = 0, onNavigate, onCan
     const { getAvailableStockBatchAction } = await import("@/backend/modules/stockGuardian/stockGuardian.actions");
 
     const productIds = order.detalles
-      .filter((d: any) => d.producto?.id)
-      .map((d: any) => d.producto.id);
+      .filter((d) => d.producto?.id)
+      .map((d) => d.producto.id);
 
     const stockMap = productIds.length > 0 ? await getAvailableStockBatchAction(productIds) : {};
 
@@ -180,7 +182,24 @@ export const OrderCard = ({ order, index, unreadChatCount = 0, onNavigate, onCan
       if (!detalle.producto) continue;
       const available = stockMap[detalle.producto.id] ?? 0;
       if (available >= detalle.cantidad) {
-        addToCart(detalle.producto, detalle.cantidad, false);
+        const productToAdd: Product = {
+          id: detalle.producto.id,
+          slug: detalle.producto.name.toLowerCase().replace(/\s+/g, "-"),
+          name: detalle.producto.name,
+          description: "",
+          price: detalle.precioUnitario,
+          categories: [],
+          unidad: "",
+          tag: "",
+          emoji: "",
+          images: detalle.producto.images,
+          stock: available,
+          storeId: detalle.store?.id ?? null,
+          store: detalle.store ? { id: detalle.store.id, name: detalle.store.name, slug: detalle.store.name.toLowerCase().replace(/\s+/g, "-") } : null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        addToCart(productToAdd, detalle.cantidad, false);
         addedCount++;
       } else {
         unavailable.push({

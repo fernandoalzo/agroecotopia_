@@ -26,7 +26,7 @@ export function ProductsHeader({ t }: ProductsHeaderProps) {
         <motion.div
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
-          transition={{ delay: 0.35, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ delay: 0.35, duration: 0.8, ease: [0.16, 1, 0.3, 1] as const }}
           className="h-1 w-48 bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_200%] rounded-full mx-auto origin-center"
           style={{
             animation: "gradient-shift-line 4s ease-in-out infinite",

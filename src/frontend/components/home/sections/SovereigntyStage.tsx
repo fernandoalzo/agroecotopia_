@@ -23,7 +23,7 @@ function AnimatedPillar({
       transition={{
         delay: 0.7 + index * 0.15,
         duration: 0.7,
-        ease: [0.16, 1, 0.3, 1],
+        ease: [0.16, 1, 0.3, 1] as const,
       }}
       className="group relative"
     >
@@ -109,7 +109,7 @@ const SovereigntyStage = ({ t }: SovereigntyStageProps) => {
             <motion.div
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }}
               className="mb-4 sm:mb-6"
             >
               <span className="inline-flex items-center gap-2 text-[10px] sm:text-xs font-bold text-primary/70 tracking-[0.25em] uppercase">
@@ -128,7 +128,7 @@ const SovereigntyStage = ({ t }: SovereigntyStageProps) => {
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ delay: 0.15, duration: 0.8, ease: [0.16, 1, 0.3, 1] as const }}
               className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-[1.05] mb-4"
             >
               <span className="text-foreground">Soberanía</span>
@@ -145,7 +145,7 @@ const SovereigntyStage = ({ t }: SovereigntyStageProps) => {
             <motion.div
               initial={{ scaleX: 0 }}
               animate={{ scaleX: 1 }}
-              transition={{ delay: 0.35, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ delay: 0.35, duration: 0.8, ease: [0.16, 1, 0.3, 1] as const }}
               className="h-0.5 w-24 bg-gradient-to-r from-primary/60 via-accent/40 to-transparent rounded-full mb-6 origin-left"
             />
 

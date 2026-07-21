@@ -149,7 +149,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] as const }}
             className="mb-3 sm:mb-5"
           >
             <span
@@ -171,7 +171,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ delay: 0.15, duration: 0.8, ease: [0.16, 1, 0.3, 1] as const }}
             className="text-2xl sm:text-4xl lg:text-5xl font-black leading-tight mb-2 sm:mb-3"
           >
             {t.comunidadPage.hero.title}{" "}
@@ -187,7 +187,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
           <motion.div
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
-            transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ delay: 0.3, duration: 0.8, ease: [0.16, 1, 0.3, 1] as const }}
             className="h-0.5 w-16 sm:w-24 bg-gradient-to-r from-accent/60 via-primary/40 to-transparent rounded-full mb-4 sm:mb-5 origin-left"
           />
 
@@ -222,7 +222,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
                 key={i}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 + i * 0.1, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ delay: 0.7 + i * 0.1, duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }}
                 whileTap={{ scale: 0.97 }}
                 className="relative p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-accent/[0.04] border border-accent/10 overflow-hidden group cursor-default"
               >
@@ -271,7 +271,7 @@ const CommunityStage = ({ t, language, initialForumTopics, realStats }: Communit
         <motion.div
           initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.5, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ delay: 0.5, duration: 0.8, ease: [0.16, 1, 0.3, 1] as const }}
           className="relative w-full h-[280px] sm:h-[340px] lg:h-[420px] flex items-center justify-center perspective-[1200px] mt-6 lg:mt-0"
         >
           {/* Carousel stage glow */}
