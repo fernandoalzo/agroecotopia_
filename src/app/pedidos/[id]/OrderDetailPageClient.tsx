@@ -396,7 +396,10 @@ export default function OrderDetailPageClient({
     return () => { socket.emit("leave_order", { pedidoId: id }); };
   }, [socket, id]);
 
-  const orderUpdateEvents = React.useMemo(() => ["order:status_updated"], []);
+  const orderUpdateEvents = React.useMemo(
+    () => ["order:status_updated", "order:delivered"],
+    []
+  );
 
   useSocketRefresh({
     socket,
@@ -406,7 +409,7 @@ export default function OrderDetailPageClient({
         const result = await getOrderDetail(id);
         if (result && !("error" in result)) {
           setOrder(result);
-          toast.info(`El pedido ha sido actualizado`, { 
+          toast.info(`El pedido ha sido actualizado`, {
             description: `El estado del pedido ahora es ${statusConfig[result.estado as PedidoEstado]?.label || result.estado}`
           });
         }
@@ -415,6 +418,23 @@ export default function OrderDetailPageClient({
       }
     },
     events: orderUpdateEvents,
+  });
+
+  // Listen to envio events (emitted globally — filter by pedidoId)
+  useSocketRefresh({
+    socket,
+    enabled: !!order?.id,
+    refresh: async () => {
+      try {
+        const result = await getOrderDetail(id);
+        if (result && !("error" in result)) {
+          setOrder(result);
+        }
+      } catch (error) {
+        log.error("Error fetching order detail after envio event:", error);
+      }
+    },
+    events: React.useMemo(() => ["envio:created", "envio:status_updated"], []),
   });
 
   useEffect(() => {
