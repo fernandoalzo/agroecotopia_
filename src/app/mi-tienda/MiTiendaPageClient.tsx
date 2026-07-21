@@ -118,8 +118,8 @@ interface MiTiendaActions {
 const SIDEBAR_ITEMS: { id: SellerTab; labelEs: string; labelEn: string; icon: React.ElementType }[] = [
   { id: "store_info", labelEs: "Mi Tienda", labelEn: "My Store", icon: Store },
   { id: "orders", labelEs: "Pedidos", labelEn: "Orders", icon: ClipboardList },
-  { id: "chat", labelEs: "Chat Clientes", labelEn: "Customer Chat", icon: MessageSquare },
   { id: "envios", labelEs: "Envíos", labelEn: "Shipments", icon: Truck },
+  { id: "chat", labelEs: "Chat Clientes", labelEn: "Customer Chat", icon: MessageSquare },
   { id: "products", labelEs: "Mis Productos", labelEn: "My Products", icon: Package },
   { id: "promotions", labelEs: "Promociones", labelEn: "Promotions", icon: Tag },
   { id: "configuration", labelEs: "Configuración", labelEn: "Configuration", icon: Settings },
