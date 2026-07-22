@@ -103,15 +103,13 @@ export function ChatMainArea({
               </p>
             </div>
 
-            {activeConv.type !== "WHATSAPP" && (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="p-2.5 shrink-0 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-all flex items-center justify-center cursor-pointer border border-red-500/20 hover:border-red-500/30 shadow-sm"
-                title="Eliminar Conversación"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="p-2.5 shrink-0 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-all flex items-center justify-center cursor-pointer border border-red-500/20 hover:border-red-500/30 shadow-sm"
+              title="Eliminar Conversación"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
 
           <ChatMessageList

@@ -215,8 +215,8 @@ export class ChatService {
       throw new Error("CONVERSATION_NOT_FOUND");
     }
 
-    // Solo soporte mantiene borrado por usuario/admin. Los chats de pedido se conservan como historial operativo.
-    if (conversation.type !== ConversationType.SUPPORT) {
+    // Solo soporte y WhatsApp permiten borrado. Los chats de pedido se conservan como historial operativo.
+    if (conversation.type !== ConversationType.SUPPORT && conversation.type !== ConversationType.WHATSAPP) {
       throw new Error("DELETE_NOT_ALLOWED");
     }
 
