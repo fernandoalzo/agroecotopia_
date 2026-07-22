@@ -225,11 +225,31 @@ export class EnvioService {
       }
 
       if (orderStatusChanged && nuevoEstadoPedido) {
+        const storeId = pedido.detalles?.[0]?.storeId;
+
         log.info("Emitting order:status_updated from envio:", { pedidoId: envio.pedidoId, nuevoEstadoPedido, usuarioId: pedido.usuarioId });
         eventBus.emit("order:status_updated", {
           pedidoId: envio.pedidoId,
           estado: nuevoEstadoPedido,
           usuarioId: pedido.usuarioId,
+          _room: `order:${envio.pedidoId}`,
+        });
+
+        // Notify the store admin dashboard so the orders list refreshes
+        if (storeId) {
+          eventBus.emit("order:status_updated_store", {
+            pedidoId: envio.pedidoId,
+            estado: nuevoEstadoPedido,
+            storeId,
+          });
+        }
+
+        // Notify the buyer's order list
+        eventBus.emit("order:status_updated_user", {
+          pedidoId: envio.pedidoId,
+          estado: nuevoEstadoPedido,
+          usuarioId: pedido.usuarioId,
+          _room: `user:${pedido.usuarioId}:notifications`,
         });
 
         if (nuevoEstadoPedido === PedidoEstado.ENTREGADO) {
