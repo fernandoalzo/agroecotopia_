@@ -41,6 +41,7 @@ export class WhatsAppRepository {
           { whatsappPhone: digits },
           { whatsappPhone: `57${withoutPrefix}` },
           { whatsappPhone: withoutPrefix },
+          ...(withoutPrefix.length >= 7 ? [{ whatsappPhone: { endsWith: withoutPrefix } }] : []),
         ],
       },
       include: {

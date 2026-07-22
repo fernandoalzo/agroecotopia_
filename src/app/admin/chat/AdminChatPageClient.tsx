@@ -582,7 +582,10 @@ export function AdminChatPageContent({
       // Update WhatsApp conversations list
       setWhatsAppConversations((prev) => {
         const index = prev.findIndex((c) => c.id === conversationId);
-        if (index === -1) return prev;
+        if (index === -1) {
+          refreshWhatsAppConversations();
+          return prev;
+        }
         const updated = [...prev];
         const conv = { ...updated[index] };
         conv.messages = [message];
