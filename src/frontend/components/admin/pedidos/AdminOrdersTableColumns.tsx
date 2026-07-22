@@ -21,6 +21,7 @@ interface OrderRowActionsProps {
   isOpeningChat?: boolean;
   onOpenOrderDetail?: (orderId: string) => void;
   onNavigateToEnvio?: (pedidoId: string) => void;
+  navigatingEnvioOrderId?: string | null;
 }
 
 const OrderRowActions = ({
@@ -32,10 +33,12 @@ const OrderRowActions = ({
   isOpeningChat = false,
   onOpenOrderDetail,
   onNavigateToEnvio,
+  navigatingEnvioOrderId,
 }: OrderRowActionsProps) => {
   const [confirmingStatus, setConfirmingStatus] = useState<PedidoEstado | null>(null);
   const nextStatuses = getNextStatuses(order.estado, order.tipoEntrega);
   const esEnvioEnProceso = isEnvioEnProceso(order);
+  const isNavigatingThisEnvio = navigatingEnvioOrderId === order.id;
 
   const handleConfirm = async () => {
     if (confirmingStatus) {
@@ -100,11 +103,21 @@ const OrderRowActions = ({
               onNavigateToEnvio ? (
                 <button
                   type="button"
+                  disabled={isNavigatingThisEnvio}
                   onClick={() => onNavigateToEnvio(order.id)}
-                  className="inline-flex items-center gap-1.5 rounded-xl text-xs font-bold h-8 px-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all cursor-pointer whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 rounded-xl text-xs font-bold h-8 px-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all cursor-pointer whitespace-nowrap disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  <Truck className="w-3.5 h-3.5" />
-                  Ir a Envíos
+                  {isNavigatingThisEnvio ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Redirigiendo...
+                    </>
+                  ) : (
+                    <>
+                      <Truck className="w-3.5 h-3.5" />
+                      Ir a Envíos
+                    </>
+                  )}
                 </button>
               ) : (
                 <Link
@@ -174,7 +187,8 @@ export const getAdminOrderColumns = (
   unreadChatCounts?: Record<string, number>,
   openingChatOrderId?: string | null,
   onOpenOrderDetail?: (orderId: string) => void,
-  onNavigateToEnvio?: (pedidoId: string) => void
+  onNavigateToEnvio?: (pedidoId: string) => void,
+  navigatingEnvioOrderId?: string | null
 ) => {
   const columnHelper = createColumnHelper<AdminOrder>();
 
@@ -350,6 +364,7 @@ export const getAdminOrderColumns = (
           isOpeningChat={openingChatOrderId === row.original.id}
           onOpenOrderDetail={onOpenOrderDetail}
           onNavigateToEnvio={onNavigateToEnvio}
+          navigatingEnvioOrderId={navigatingEnvioOrderId}
         />
       ),
     }),

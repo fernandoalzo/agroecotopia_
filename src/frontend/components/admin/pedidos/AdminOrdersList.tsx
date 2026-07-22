@@ -69,8 +69,20 @@ export const AdminOrdersList = ({
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [pendingTargetStatus, setPendingTargetStatus] = useState<PedidoEstado | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [navigatingEnvioOrderId, setNavigatingEnvioOrderId] = useState<string | null>(null);
 
   const isUpdatingMap = updatingStatusId ? { [updatingStatusId]: true } : {};
+
+  const handleNavigateToEnvioWrapper = useCallback(async (pedidoId: string) => {
+    setNavigatingEnvioOrderId(pedidoId);
+    try {
+      if (onNavigateToEnvio) {
+        await onNavigateToEnvio(pedidoId);
+      }
+    } catch {
+      setNavigatingEnvioOrderId(null);
+    }
+  }, [onNavigateToEnvio]);
 
   // Clear spinner only when the orders data actually reflects the new status
   useEffect(() => {
@@ -90,7 +102,7 @@ export const AdminOrdersList = ({
       if (success && newStatus === PedidoEstado.EN_PREPARACION && onNavigateToEnvio) {
         const order = orders.find((o) => o.id === orderId);
         if (order?.tipoEntrega === "ENVIO") {
-          onNavigateToEnvio(orderId);
+          handleNavigateToEnvioWrapper(orderId);
         }
       }
       if (!success) {
@@ -103,7 +115,7 @@ export const AdminOrdersList = ({
       setPendingTargetStatus(null);
       return false;
     }
-  }, [onUpdateStatus, onNavigateToEnvio, orders]);
+  }, [onUpdateStatus, onNavigateToEnvio, orders, handleNavigateToEnvioWrapper]);
 
   // Keep a ref so the memoized columns always call the latest handler
   const handleUpdateStatusRef = useRef(handleUpdateStatus);
@@ -118,10 +130,11 @@ export const AdminOrdersList = ({
         unreadChatCounts,
         openingChatOrderId,
         setSelectedOrderId,
-        onNavigateToEnvio
+        handleNavigateToEnvioWrapper,
+        navigatingEnvioOrderId
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isUpdatingMap, onOpenOrderChat, unreadChatCounts, openingChatOrderId, onNavigateToEnvio]
+    [isUpdatingMap, onOpenOrderChat, unreadChatCounts, openingChatOrderId, handleNavigateToEnvioWrapper, navigatingEnvioOrderId]
   );
 
   // ── Admin view ────────────────────────────────────────────────────
@@ -223,7 +236,7 @@ export const AdminOrdersList = ({
             getOrderDetail={getOrderDetail}
             updateStoreOrderStatus={updateStoreOrderStatus}
             onDeleteOrder={onDeleteOrder}
-            onNavigateToEnvio={onNavigateToEnvio}
+            onNavigateToEnvio={handleNavigateToEnvioWrapper}
           />
         )}
       </AnimatePresence>

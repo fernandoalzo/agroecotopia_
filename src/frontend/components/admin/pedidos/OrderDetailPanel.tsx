@@ -149,6 +149,7 @@ export function OrderDetailPanel({
   const [showStatusOptions, setShowStatusOptions] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [updatingToStatus, setUpdatingToStatus] = useState<PedidoEstado | null>(null);
+  const [isNavigatingToEnvio, setIsNavigatingToEnvio] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -825,16 +826,27 @@ export function OrderDetailPanel({
                       </p>
                       <button
                         type="button"
-                        onClick={() => {
+                        disabled={isNavigatingToEnvio}
+                        onClick={async () => {
+                          setIsNavigatingToEnvio(true);
                           if (onNavigateToEnvio) {
-                            onNavigateToEnvio(order.id);
-                            onClose();
+                            await onNavigateToEnvio(order.id);
                           }
+                          onClose();
                         }}
-                        className="inline-flex items-center gap-1.5 mt-3 rounded-lg text-xs font-bold h-8 px-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all"
+                        className="inline-flex items-center gap-1.5 mt-3 rounded-lg text-xs font-bold h-8 px-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
                       >
-                        <Truck className="w-3.5 h-3.5" />
-                        Ir a Envíos
+                        {isNavigatingToEnvio ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            Redirigiendo...
+                          </>
+                        ) : (
+                          <>
+                            <Truck className="w-3.5 h-3.5" />
+                            Ir a Envíos
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>

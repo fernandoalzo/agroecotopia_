@@ -618,9 +618,9 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                     return true;
                   }}
                   onNavigateToEnvio={(pedidoId: string) => {
-                     setAutoOpenEnvioPedidoId(pedidoId);
-                     handleTabChange("envios");
-                   }}
+                    setAutoOpenEnvioPedidoId(pedidoId);
+                    handleTabChange("envios");
+                  }}
                 />
               </motion.div>
             )}
@@ -651,7 +651,19 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                   onPageChange={setAdminEnviosPage}
                   onSearchChange={setAdminEnviosSearch}
                   onStatusFilterChange={setAdminEnviosFilter}
-                  onUpdateStatus={async () => false}
+                  onUpdateStatus={async (envioId, nuevoEstado, extra) => {
+                    if (!actions.updateEnvioStatus) return false;
+                    const targetEnvio = adminEnvios.find((e) => e.id === envioId);
+                    const storeId = targetEnvio?.storeId || "";
+                    const result = await actions.updateEnvioStatus(storeId, envioId, nuevoEstado, extra);
+                    if (result && "error" in result) {
+                      toast.error("Error al actualizar envío", { description: result.error });
+                      return false;
+                    }
+                    toast.success("Estado del envío actualizado");
+                    setAdminEnviosRefresh(prev => prev + 1);
+                    return true;
+                  }}
                   onRefresh={() => setAdminEnviosRefresh(prev => prev + 1)}
                   autoOpenPedidoId={autoOpenEnvioPedidoId}
                   onAutoOpenConsumed={() => setAutoOpenEnvioPedidoId(null)}

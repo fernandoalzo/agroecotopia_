@@ -25,6 +25,7 @@ interface AdminOrderCardDesktopProps {
     isOpeningChat?: boolean;
     onOpenOrderDetail?: () => void;
     onNavigateToEnvio?: (pedidoId: string) => void;
+    navigatingEnvioOrderId?: string | null;
 }
 
 export const AdminOrderCardDesktop = ({
@@ -41,10 +42,12 @@ export const AdminOrderCardDesktop = ({
     isOpeningChat = false,
     onOpenOrderDetail,
     onNavigateToEnvio,
+    navigatingEnvioOrderId,
 }: AdminOrderCardDesktopProps) => {
     const cfg = statusConfig[order.estado];
     const StatusIcon = cfg.icon;
     const storeName = order.detalles.find((d) => d.store?.name)?.store?.name || "Tienda no disponible";
+    const isNavigatingThisEnvio = navigatingEnvioOrderId === order.id;
 
     const totalDiscount = order.detalles.reduce((acc, d) => {
         const diff = d.producto.price - d.precioUnitario;
@@ -218,11 +221,21 @@ export const AdminOrderCardDesktop = ({
                                     onNavigateToEnvio ? (
                                         <button
                                             type="button"
+                                            disabled={isNavigatingThisEnvio}
                                             onClick={() => onNavigateToEnvio(order.id)}
-                                            className="inline-flex items-center gap-1.5 rounded-xl text-xs font-bold h-8 px-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all cursor-pointer whitespace-nowrap"
+                                            className="inline-flex items-center gap-1.5 rounded-xl text-xs font-bold h-8 px-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all cursor-pointer whitespace-nowrap disabled:opacity-70 disabled:cursor-not-allowed"
                                         >
-                                            <Truck className="w-3.5 h-3.5" />
-                                            Ir a Envíos
+                                            {isNavigatingThisEnvio ? (
+                                                <>
+                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    Redirigiendo...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Truck className="w-3.5 h-3.5" />
+                                                    Ir a Envíos
+                                                </>
+                                            )}
                                         </button>
                                     ) : (
                                         <Link
