@@ -807,13 +807,23 @@ export function AdminChatPageContent({
     }
   };
 
-  // Select user and get/create conversation
+  // Select user and get/create conversation with idempotency guard
+  const isSelectingUserRef = useRef(false);
   const handleSelectUserChat = async (targetUserId: string) => {
+    if (isSelectingUserRef.current) return;
+
+    // Early return if chat with this user is already active
+    if (activeConvRef.current && activeConvRef.current.userId === targetUserId) {
+      setSidebarTab("chats");
+      return;
+    }
+
+    isSelectingUserRef.current = true;
     try {
       const res = await actions.getOrCreateConversationForAdmin(targetUserId);
       if (res && !isErrorResult(res)) {
         // Find if this conversation is already in our list
-        const existingConv = conversations.find((c) => c.id === res.id);
+        const existingConv = conversationsRef.current.find((c) => c.id === res.id);
 
         const fullConv = existingConv || {
           ...res,
@@ -822,19 +832,22 @@ export function AdminChatPageContent({
         };
 
         if (!existingConv) {
-          // Add to the top of our conversations list
-          setConversations((prev) => [fullConv, ...prev]);
+          // Add to the top of our conversations list if not present
+          setConversations((prev) => (prev.some((c) => c.id === fullConv.id) ? prev : [fullConv, ...prev]));
         }
 
-        // Set as active — the useEffect watching activeConv will handle
-        // message loading and show a spinner only when necessary.
-        setActiveConv(fullConv);
+        // Set as active if it changed
+        if (activeConvRef.current?.id !== fullConv.id) {
+          setActiveConv(fullConv);
+        }
 
         // Return to chats tab
         setSidebarTab("chats");
       }
     } catch (err) {
       log.error("Error initiating chat with user:", err);
+    } finally {
+      isSelectingUserRef.current = false;
     }
   };
 
