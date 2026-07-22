@@ -365,8 +365,10 @@ export function AdminChatPageContent({
   }, [searchQuery]);
 
   // Load messages when active conversation changes
+  const activeConvId = activeConv?.id;
   useEffect(() => {
-    if (!activeConv || !sessionUserId) return;
+    const conv = activeConvRef.current;
+    if (!conv || !sessionUserId) return;
 
     let isCancelled = false;
 
@@ -381,9 +383,9 @@ export function AdminChatPageContent({
       try {
         signalStore.setUserId(sessionUserId);
 
-        const res = await actions.getConversationMessages(activeConv.id);
+        const res = await actions.getConversationMessages(conv.id);
         if (isCancelled) return;
-        const isWhatsAppConv = activeConv.type === "WHATSAPP";
+        const isWhatsAppConv = conv.type === "WHATSAPP";
         if (res && !("error" in res)) {
           // WhatsApp messages don't need E2EE decryption
 
@@ -393,7 +395,7 @@ export function AdminChatPageContent({
 
             if (!isWhatsAppConv && m.isEncrypted) {
               try {
-                const targetId = m.senderId === sessionUserId ? (activeConv.userId || m.senderId) : m.senderId;
+                const targetId = m.senderId === sessionUserId ? (conv.userId || m.senderId) : m.senderId;
                 decryptedContent = await SignalService.decryptMessage(targetId, m.content, m.encryptionType || 1);
               } catch (e) {
                 decryptedContent = "🔒 Mensaje de otra sesión";
@@ -402,7 +404,7 @@ export function AdminChatPageContent({
 
             if (!isWhatsAppConv && m.replyTo && m.replyTo.isEncrypted && m.replyTo.content) {
               try {
-                const replyTargetId = m.replyTo.senderId === sessionUserId ? (activeConv.userId || m.replyTo.senderId) : m.replyTo.senderId;
+                const replyTargetId = m.replyTo.senderId === sessionUserId ? (conv.userId || m.replyTo.senderId) : m.replyTo.senderId;
                 decryptedReplyContent = await SignalService.decryptMessage(replyTargetId, m.replyTo.content, m.replyTo.encryptionType || 1);
               } catch (e) {
                 decryptedReplyContent = "🔒 Mensaje de otra sesión";
@@ -423,17 +425,17 @@ export function AdminChatPageContent({
 
         // Mark as read (WhatsApp uses its own markAsRead)
         if (isWhatsAppConv && actions.markWhatsAppAsRead) {
-          await actions.markWhatsAppAsRead(activeConv.id);
+          await actions.markWhatsAppAsRead(conv.id);
         } else {
-          await actions.markAsRead(activeConv.id);
+          await actions.markAsRead(conv.id);
         }
 
         // Reset unread indicator locally in conversations list
         if (!isCancelled) {
           const updater = (prev: Conversation[]) =>
-            prev.map((c) => (c.id === activeConv.id ? { ...c, unreadCount: 0 } : c));
+            prev.map((c) => (c.id === conv.id ? { ...c, unreadCount: 0 } : c));
 
-          if (activeConv.type === "WHATSAPP") {
+          if (isWhatsAppConv) {
             setWhatsAppConversations(updater);
           } else {
             setConversations(updater);
@@ -451,7 +453,7 @@ export function AdminChatPageContent({
     return () => {
       isCancelled = true;
     };
-  }, [activeConv, sessionUserId]);
+  }, [activeConvId, sessionUserId]);
 
   // Handle Socket events
   useEffect(() => {

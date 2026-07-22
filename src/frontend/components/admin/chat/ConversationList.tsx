@@ -51,7 +51,7 @@ export function ConversationList({
         return (
           <button
             key={conv.id}
-            onClick={() => setActiveConv(conv)}
+            onClick={() => { if (activeConv?.id !== conv.id) setActiveConv(conv); }}
             className={`w-full text-left p-3.5 sm:p-4 rounded-xl transition-all flex items-center gap-3 border ${
               isActive
                 ? isWhatsApp

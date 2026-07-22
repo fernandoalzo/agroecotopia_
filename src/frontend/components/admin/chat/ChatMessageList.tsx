@@ -1,5 +1,5 @@
 import React from "react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, MessageSquare, Phone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Message } from "@/frontend/components/chat/ChatWidget";
 import { Conversation } from "./types";
@@ -21,6 +21,74 @@ interface ChatMessageListProps {
   setActiveMessageId: (id: string | null) => void;
   handleCopy: (id: string, text: string) => void;
   setReplyingTo: (msg: Message | null) => void;
+}
+
+function EmptyMessagesWatermark({ activeConv }: { activeConv: Conversation | null }) {
+  const isWhatsApp = activeConv?.type === "WHATSAPP";
+  const displayName = isWhatsApp
+    ? activeConv?.whatsappPhone || activeConv?.user?.name || "este contacto"
+    : activeConv?.user?.name || "este usuario";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      className="h-full flex items-center justify-center select-none pointer-events-none"
+    >
+      <div className="flex flex-col items-center gap-4 max-w-xs text-center px-6">
+        {/* Decorative icon ring */}
+        <div className="relative">
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center ${
+            isWhatsApp
+              ? "bg-[#25D366]/5 border border-[#25D366]/10"
+              : "bg-primary/5 border border-primary/10"
+          }`}>
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+              isWhatsApp
+                ? "bg-[#25D366]/10"
+                : "bg-primary/10"
+            }`}>
+              {isWhatsApp ? (
+                <Phone className="w-5 h-5 text-[#25D366]/50" />
+              ) : (
+                <MessageSquare className="w-5 h-5 text-primary/50" />
+              )}
+            </div>
+          </div>
+          {/* Subtle floating dots decoration */}
+          <div className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full ${
+            isWhatsApp ? "bg-[#25D366]/15" : "bg-primary/15"
+          }`} />
+          <div className={`absolute -bottom-0.5 -left-1.5 w-2 h-2 rounded-full ${
+            isWhatsApp ? "bg-[#25D366]/10" : "bg-primary/10"
+          }`} />
+        </div>
+
+        {/* Text */}
+        <div className="space-y-1.5">
+          <p className="text-sm font-medium text-muted-foreground/70">
+            No hay mensajes aún
+          </p>
+          <p className="text-xs text-muted-foreground/40 leading-relaxed">
+            Escribe un mensaje para iniciar la conversación con{" "}
+            <span className={`font-medium ${
+              isWhatsApp ? "text-[#25D366]/50" : "text-primary/50"
+            }`}>
+              {displayName}
+            </span>
+          </p>
+        </div>
+
+        {/* Subtle decorative line */}
+        <div className={`w-12 h-px ${
+          isWhatsApp
+            ? "bg-gradient-to-r from-transparent via-[#25D366]/20 to-transparent"
+            : "bg-gradient-to-r from-transparent via-primary/20 to-transparent"
+        }`} />
+      </div>
+    </motion.div>
+  );
 }
 
 export function ChatMessageList({
@@ -49,6 +117,8 @@ export function ChatMessageList({
         <div className="h-full flex items-center justify-center">
           <Loading text="" subtext="" className="py-0" />
         </div>
+      ) : messages.length === 0 ? (
+        <EmptyMessagesWatermark activeConv={activeConv} />
       ) : (
         <>
           {(() => {
