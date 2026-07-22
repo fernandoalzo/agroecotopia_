@@ -85,6 +85,16 @@ export class WhatsAppRepository {
       senderRole: data.senderRole,
     });
 
+    if (data.whatsappMsgId) {
+      const existing = await prisma.message.findUnique({
+        where: { whatsappMsgId: data.whatsappMsgId },
+      });
+      if (existing) {
+        log.info("[db] Mensaje WhatsApp duplicado omitido:", { whatsappMsgId: data.whatsappMsgId });
+        return existing;
+      }
+    }
+
     const message = await prisma.message.create({
       data: {
         content: data.content,

@@ -325,6 +325,13 @@ export function AdminChatPageContent({
     refresh: refreshConversations,
   });
 
+  useSocketRefresh({
+    socket,
+    enabled: status === "authenticated" && sessionUserRole === "admin",
+    refresh: () => refreshWhatsAppConversations(),
+    events: ["whatsapp:new_message", "whatsapp:message_inbound", "whatsapp:message_outbound"],
+  });
+
   // Load users list when user searches or paginates
   useEffect(() => {
     if (status !== "authenticated" || sessionUserRole !== "admin" || sidebarTab !== "users") return;
