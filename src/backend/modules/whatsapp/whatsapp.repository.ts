@@ -30,10 +30,18 @@ export class WhatsAppRepository {
 
   async findConversationByPhone(phone: string) {
     log.debug("[db] Buscando conversación WhatsApp por teléfono:", { phone });
+    const digits = phone.replace(/\D/g, "");
+    const withoutPrefix = digits.replace(/^57/, "");
+
     return prisma.conversation.findFirst({
       where: {
         type: "WHATSAPP",
-        whatsappPhone: phone,
+        OR: [
+          { whatsappPhone: phone },
+          { whatsappPhone: digits },
+          { whatsappPhone: `57${withoutPrefix}` },
+          { whatsappPhone: withoutPrefix },
+        ],
       },
       include: {
         user: {

@@ -26,18 +26,20 @@ export class WhatsAppService {
     msgId: string;
     name?: string;
   }) {
-    const { from, text, msgId, name } = payload;
+    const rawFrom = payload.from;
+    const from = normalizePhone(rawFrom);
+    const { text, msgId, name } = payload;
 
-    log.info("[whatsapp] Procesando mensaje entrante de WhatsApp:", { from, msgId });
+    log.info("[whatsapp] Procesando mensaje entrante de WhatsApp:", { from, rawFrom, msgId });
 
     // 1. Try to find user by phone
     const user = await this.whatsappRepository.findUserByPhone(from);
 
     if (!user) {
-      log.warn("[whatsapp] No se encontró usuario con teléfono:", { from });
+      log.warn("[whatsapp] No se encontró usuario registrado con teléfono:", { from });
     }
 
-    // 2. Find or create WhatsApp conversation
+    // 2. Find or create WhatsApp conversation with normalized phone number
     const conversation = await this.whatsappRepository.findOrCreateWhatsAppConversation(
       from,
       user?.id
@@ -71,27 +73,22 @@ export class WhatsAppService {
       from,
     });
 
-    // 6. Dispatch notification for admin if user is linked
-    if (user) {
-      const adminUser = await this.whatsappRepository.findUserByPhone(from);
-      if (adminUser) {
-        notificationsService.dispatchNotification({
-          eventType: "whatsapp_message_received",
-          actorId: user.id,
-          entityType: "Conversation",
-          entityId: conversation.id,
-          notification: {
-            type: "whatsapp_message",
-            title: `Mensaje WhatsApp de ${user.name || from}`,
-            message: text.length > 120 ? text.slice(0, 120) + "..." : text,
-            audienceType: "BROADCAST",
-            metadata: { actionUrl: "/admin/chat" },
-          },
-        }).catch((err) => {
-          log.error("[whatsapp] Error al despachar notificación:", err);
-        });
-      }
-    }
+    // 6. Dispatch notification for admin team (BROADCAST audience)
+    notificationsService.dispatchNotification({
+      eventType: "whatsapp_message_received",
+      actorId: user?.id || "whatsapp-system",
+      entityType: "Conversation",
+      entityId: conversation.id,
+      notification: {
+        type: "whatsapp_message",
+        title: `Mensaje WhatsApp de ${user?.name || name || from}`,
+        message: text.length > 120 ? text.slice(0, 120) + "..." : text,
+        audienceType: "BROADCAST",
+        metadata: { actionUrl: "/admin/chat" },
+      },
+    }).catch((err) => {
+      log.error("[whatsapp] Error al despachar notificación:", err);
+    });
 
     return { conversation, message };
   }

@@ -95,41 +95,63 @@ export async function POST(request: Request) {
 
     const body = JSON.parse(rawBody);
 
-    // Meta sends a challenge test first; also handles entry looping
-    if (body.entry?.[0]?.changes?.[0]?.field !== "messages") {
-      // Not a message notification (could be status update, etc.)
+    if (!body.entry || !Array.isArray(body.entry)) {
       return NextResponse.json({ received: true });
     }
 
-    const change = body.entry[0].changes[0].value;
-    const messages = change.messages;
+    for (const entry of body.entry) {
+      const changes = entry?.changes;
+      if (!changes || !Array.isArray(changes)) continue;
 
-    if (!messages || messages.length === 0) {
-      // No messages in this payload (e.g., status updates)
-      return NextResponse.json({ received: true });
-    }
+      for (const change of changes) {
+        if (change.field !== "messages") continue;
 
-    for (const msg of messages) {
-      // Only handle text messages
-      if (msg.type !== "text") {
-        log.debug("[whatsapp] Ignorando mensaje no textual:", { type: msg.type, msgId: msg.id });
-        continue;
+        const value = change.value;
+        const messages = value?.messages;
+        if (!messages || !Array.isArray(messages)) continue;
+
+        const profileName = value.contacts?.[0]?.profile?.name;
+
+        for (const msg of messages) {
+          const from = msg.from;             // sender phone number
+          const msgId = msg.id;              // WhatsApp message ID
+
+          let text = "";
+          if (msg.type === "text" && msg.text?.body) {
+            text = msg.text.body;
+          } else if (msg.type === "interactive") {
+            text = msg.interactive?.button_reply?.title
+              || msg.interactive?.list_reply?.title
+              || "[Respuesta interactiva]";
+          } else if (msg.type === "button") {
+            text = msg.button?.text || "[Botón]";
+          } else if (msg.type === "image") {
+            text = msg.image?.caption ? `[Imagen] ${msg.image.caption}` : "[Imagen]";
+          } else if (msg.type === "audio") {
+            text = "[Nota de voz/Audio]";
+          } else if (msg.type === "video") {
+            text = msg.video?.caption ? `[Video] ${msg.video.caption}` : "[Video]";
+          } else if (msg.type === "document") {
+            text = msg.document?.caption || msg.document?.filename || "[Documento]";
+          } else if (msg.type === "location") {
+            text = "[Ubicación compartida]";
+          } else if (msg.type === "sticker") {
+            text = "[Sticker]";
+          } else {
+            text = `[Mensaje ${msg.type || "desconocido"}]`;
+          }
+
+          log.info("[whatsapp] Mensaje entrante procesado:", { from, msgId, type: msg.type, textLength: text.length });
+
+          // Process the message
+          await whatsappService.processIncomingMessage({
+            from,
+            text,
+            msgId,
+            name: profileName,
+          });
+        }
       }
-
-      const from = msg.from;             // sender phone number
-      const text = msg.text.body;        // message text
-      const msgId = msg.id;              // WhatsApp message ID
-      const profileName = change.contacts?.[0]?.profile?.name;
-
-      log.info("[whatsapp] Mensaje entrante procesado:", { from, msgId, textLength: text.length });
-
-      // Process the message
-      await whatsappService.processIncomingMessage({
-        from,
-        text,
-        msgId,
-        name: profileName,
-      });
     }
 
     // Always return 200 to prevent Meta from retrying
