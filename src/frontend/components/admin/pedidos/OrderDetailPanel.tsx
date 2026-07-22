@@ -38,7 +38,7 @@ import { es } from "date-fns/locale";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
-import { getNextStatuses, getPreviousStatus, getNextStatusLineal } from "./adminOrderUtils";
+import { getNextStatuses, getPreviousStatus, getNextStatusLineal, isEnvioEnProceso } from "./adminOrderUtils";
 
 const statusConfig: Record<string, {
   label: string;
@@ -315,7 +315,7 @@ export function OrderDetailPanel({
   const nextStatusLineal = getNextStatusLineal(order.estado as PedidoEstado, order.tipoEntrega);
   const esEnvio = order.tipoEntrega === "ENVIO";
   const esRecojo = order.tipoEntrega === "RECOJO_EN_BODEGA";
-  const esEnvioEnProceso = esEnvio && ([PedidoEstado.EN_PREPARACION, PedidoEstado.EN_CAMINO, PedidoEstado.ENTREGADO] as PedidoEstado[]).includes(order.estado as PedidoEstado);
+  const esEnvioEnProceso = isEnvioEnProceso(order);
 
   const totalDiscount = order.detalles?.reduce((acc: number, d: any) => {
     const diff = (d.producto?.price || 0) - d.precioUnitario;

@@ -117,10 +117,11 @@ export const AdminOrdersList = ({
         onOpenOrderChat,
         unreadChatCounts,
         openingChatOrderId,
-        setSelectedOrderId
+        setSelectedOrderId,
+        onNavigateToEnvio
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isUpdatingMap, onOpenOrderChat, unreadChatCounts, openingChatOrderId]
+    [isUpdatingMap, onOpenOrderChat, unreadChatCounts, openingChatOrderId, onNavigateToEnvio]
   );
 
   // ── Admin view ────────────────────────────────────────────────────

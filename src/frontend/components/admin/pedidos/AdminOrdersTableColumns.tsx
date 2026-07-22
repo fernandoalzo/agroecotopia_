@@ -9,7 +9,7 @@ import { PedidoEstado } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { AdminOrder, statusConfig, getNextStatuses } from "./adminOrderUtils";
+import { AdminOrder, statusConfig, getNextStatuses, isEnvioEnProceso } from "./adminOrderUtils";
 import { AnimatePresence, motion } from "framer-motion";
 
 interface OrderRowActionsProps {
@@ -20,6 +20,7 @@ interface OrderRowActionsProps {
   unreadChatCount?: number;
   isOpeningChat?: boolean;
   onOpenOrderDetail?: (orderId: string) => void;
+  onNavigateToEnvio?: (pedidoId: string) => void;
 }
 
 const OrderRowActions = ({
@@ -30,9 +31,11 @@ const OrderRowActions = ({
   unreadChatCount = 0,
   isOpeningChat = false,
   onOpenOrderDetail,
+  onNavigateToEnvio,
 }: OrderRowActionsProps) => {
   const [confirmingStatus, setConfirmingStatus] = useState<PedidoEstado | null>(null);
   const nextStatuses = getNextStatuses(order.estado, order.tipoEntrega);
+  const esEnvioEnProceso = isEnvioEnProceso(order);
 
   const handleConfirm = async () => {
     if (confirmingStatus) {
@@ -93,28 +96,38 @@ const OrderRowActions = ({
             exit={{ opacity: 0, scale: 0.98 }}
             className="flex items-center gap-1.5"
           >
-            {nextStatuses.length > 0 ? (
-              nextStatuses.map((ns) => (
+            {esEnvioEnProceso && (
+              onNavigateToEnvio ? (
                 <button
-                  key={ns}
-                  className={cn(
-                    "rounded-xl text-xs font-bold h-8 px-3 transition-all duration-200 cursor-pointer inline-flex items-center justify-center whitespace-nowrap",
-                    statusConfig[ns].btnClass
-                  )}
-                  onClick={() => setConfirmingStatus(ns)}
+                  type="button"
+                  onClick={() => onNavigateToEnvio(order.id)}
+                  className="inline-flex items-center gap-1.5 rounded-xl text-xs font-bold h-8 px-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all cursor-pointer whitespace-nowrap"
                 >
-                  {statusConfig[ns].label}
+                  <Truck className="w-3.5 h-3.5" />
+                  Ir a Envíos
                 </button>
-              ))
-            ) : order.tipoEntrega === "ENVIO" && order.estado === "EN_PREPARACION" ? (
-              <Link
-                href="/mi-tienda?tab=envios"
-                className="inline-flex items-center gap-1.5 rounded-xl text-xs font-bold h-8 px-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all"
+              ) : (
+                <Link
+                  href="/mi-tienda?tab=envios"
+                  className="inline-flex items-center gap-1.5 rounded-xl text-xs font-bold h-8 px-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all whitespace-nowrap"
+                >
+                  <Truck className="w-3.5 h-3.5" />
+                  Ir a Envíos
+                </Link>
+              )
+            )}
+            {nextStatuses.map((ns) => (
+              <button
+                key={ns}
+                className={cn(
+                  "rounded-xl text-xs font-bold h-8 px-3 transition-all duration-200 cursor-pointer inline-flex items-center justify-center whitespace-nowrap",
+                  statusConfig[ns].btnClass
+                )}
+                onClick={() => setConfirmingStatus(ns)}
               >
-                <Truck className="w-3.5 h-3.5" />
-                Envíos
-              </Link>
-            ) : null}
+                {statusConfig[ns].label}
+              </button>
+            ))}
             {onOpenOrderChat && (
               <div className="relative">
                 <Button
@@ -160,7 +173,8 @@ export const getAdminOrderColumns = (
   onOpenOrderChat?: (order: AdminOrder) => void,
   unreadChatCounts?: Record<string, number>,
   openingChatOrderId?: string | null,
-  onOpenOrderDetail?: (orderId: string) => void
+  onOpenOrderDetail?: (orderId: string) => void,
+  onNavigateToEnvio?: (pedidoId: string) => void
 ) => {
   const columnHelper = createColumnHelper<AdminOrder>();
 
@@ -335,6 +349,7 @@ export const getAdminOrderColumns = (
           unreadChatCount={unreadChatCounts?.[row.original.id]}
           isOpeningChat={openingChatOrderId === row.original.id}
           onOpenOrderDetail={onOpenOrderDetail}
+          onNavigateToEnvio={onNavigateToEnvio}
         />
       ),
     }),

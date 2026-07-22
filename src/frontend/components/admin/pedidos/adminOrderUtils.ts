@@ -155,3 +155,11 @@ export const getNextStatusLineal = (current: PedidoEstado, tipoEntrega?: string)
     default: return null;
   }
 };
+
+export const isEnvioEnProceso = (order: { tipoEntrega?: string; estado: string | PedidoEstado }): boolean => {
+  return order.tipoEntrega === "ENVIO" && (
+    order.estado === PedidoEstado.EN_PREPARACION ||
+    order.estado === PedidoEstado.EN_CAMINO ||
+    order.estado === PedidoEstado.ENTREGADO
+  );
+};

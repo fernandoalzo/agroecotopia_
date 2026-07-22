@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { PedidoEstado } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AdminOrder, statusConfig } from "../adminOrderUtils";
+import { AdminOrder, statusConfig, isEnvioEnProceso } from "../adminOrderUtils";
 
 interface AdminOrderCardMobileProps {
     order: AdminOrder;
@@ -26,6 +26,7 @@ interface AdminOrderCardMobileProps {
     unreadChatCount?: number;
     isOpeningChat?: boolean;
     onOpenOrderDetail?: () => void;
+    onNavigateToEnvio?: (pedidoId: string) => void;
 }
 
 export const AdminOrderCardMobile = ({
@@ -43,6 +44,7 @@ export const AdminOrderCardMobile = ({
     unreadChatCount = 0,
     isOpeningChat = false,
     onOpenOrderDetail,
+    onNavigateToEnvio,
 }: AdminOrderCardMobileProps) => {
     const cfg = statusConfig[order.estado];
     const StatusIcon = cfg.icon;
@@ -252,28 +254,38 @@ export const AdminOrderCardMobile = ({
                             exit={{ opacity: 0, scale: 0.98 }}
                             className="flex items-center gap-2 w-full"
                         >
-                            {nextStatuses.length > 0 ? (
-                              nextStatuses.map((ns) => (
+                            {isEnvioEnProceso(order) && (
+                              onNavigateToEnvio ? (
                                 <button
-                                    key={ns}
-                                    className={cn(
-                                        "rounded-xl text-xs font-bold h-9 px-4 transition-all duration-200 cursor-pointer inline-flex items-center justify-center flex-1",
-                                        statusConfig[ns].btnClass
-                                    )}
-                                    onClick={() => onSetConfirmingStatus(ns)}
+                                  type="button"
+                                  onClick={() => onNavigateToEnvio(order.id)}
+                                  className="inline-flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold h-9 px-4 flex-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all cursor-pointer whitespace-nowrap"
                                 >
-                                    {statusConfig[ns].label}
+                                  <Truck className="w-3.5 h-3.5" />
+                                  Ir a Envíos
                                 </button>
-                              ))
-                            ) : order.tipoEntrega === "ENVIO" && order.estado === "EN_PREPARACION" ? (
-                              <Link
-                                href="/mi-tienda?tab=envios"
-                                className="inline-flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold h-9 px-4 flex-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all"
+                              ) : (
+                                <Link
+                                  href="/mi-tienda?tab=envios"
+                                  className="inline-flex items-center justify-center gap-1.5 rounded-xl text-xs font-bold h-9 px-4 flex-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all whitespace-nowrap"
+                                >
+                                  <Truck className="w-3.5 h-3.5" />
+                                  Ir a Envíos
+                                </Link>
+                              )
+                            )}
+                            {nextStatuses.map((ns) => (
+                              <button
+                                  key={ns}
+                                  className={cn(
+                                      "rounded-xl text-xs font-bold h-9 px-4 transition-all duration-200 cursor-pointer inline-flex items-center justify-center flex-1",
+                                      statusConfig[ns].btnClass
+                                  )}
+                                  onClick={() => onSetConfirmingStatus(ns)}
                               >
-                                <Truck className="w-3.5 h-3.5" />
-                                Envíos
-                              </Link>
-                            ) : null}
+                                  {statusConfig[ns].label}
+                              </button>
+                            ))}
                             {onOpenOrderChat && (
                                 <div className="relative shrink-0">
                                     <Button
