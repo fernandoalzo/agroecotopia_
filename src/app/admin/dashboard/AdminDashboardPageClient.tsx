@@ -117,6 +117,7 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
   const [adminEnviosTotalPages, setAdminEnviosTotalPages] = useState(1);
   const [adminEnviosTotalCount, setAdminEnviosTotalCount] = useState(0);
   const [adminEnviosRefresh, setAdminEnviosRefresh] = useState(0);
+  const [autoOpenEnvioPedidoId, setAutoOpenEnvioPedidoId] = useState<string | null>(null);
   const [wafRules, setWafRules] = useState<WafRuleRow[]>([]);
 
   const { state: productState, actions: productActions } = useProductsLogic(undefined, true, {
@@ -616,6 +617,11 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                      setOrdersRefresh(prev => prev + 1);
                      return true;
                    }}
+                   onNavigateToEnvio={(pedidoId: string) => {
+                     setAutoOpenEnvioPedidoId(pedidoId);
+                     setAdminEnviosSearch(pedidoId);
+                     handleTabChange("envios");
+                   }}
                 />
               </motion.div>
             )}
@@ -648,6 +654,8 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                   onStatusFilterChange={setAdminEnviosFilter}
                   onUpdateStatus={async () => false}
                   onRefresh={() => setAdminEnviosRefresh(prev => prev + 1)}
+                  autoOpenPedidoId={autoOpenEnvioPedidoId}
+                  onAutoOpenConsumed={() => setAutoOpenEnvioPedidoId(null)}
                 />
               </motion.div>
             )}

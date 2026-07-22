@@ -828,8 +828,8 @@ export function OrderDetailPanel({
                       onClick={() => {
                         if (onNavigateToEnvio) {
                           onNavigateToEnvio(order.id);
-                          onClose();
                         }
+                        onClose();
                       }}
                       className="inline-flex items-center gap-1.5 mt-3 rounded-lg text-xs font-bold h-8 px-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-black transition-all"
                     >
