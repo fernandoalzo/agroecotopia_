@@ -5,11 +5,11 @@ import { notificationsService } from "@/backend/modules/notifications";
 
 const log = logger.child("src/backend/modules/whatsapp/whatsapp.service.ts");
 
-/** Normalize phone to E.164 without +: strip non-digits, prepend 57 (Colombia) if missing */
+/** Normalize phone to E.164 without +: strip non-digits, prepend 57 for 10-digit local numbers */
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");
-  if (digits.startsWith("57")) return digits;
-  return `57${digits}`;
+  if (digits.length === 10) return `57${digits}`;
+  return digits;
 }
 
 export class WhatsAppService {
@@ -73,22 +73,24 @@ export class WhatsAppService {
       from,
     });
 
-    // 6. Dispatch notification for admin team (BROADCAST audience)
-    notificationsService.dispatchNotification({
-      eventType: "whatsapp_message_received",
-      actorId: user?.id || "whatsapp-system",
-      entityType: "Conversation",
-      entityId: conversation.id,
-      notification: {
-        type: "whatsapp_message",
-        title: `Mensaje WhatsApp de ${user?.name || name || from}`,
-        message: text.length > 120 ? text.slice(0, 120) + "..." : text,
-        audienceType: "BROADCAST",
-        metadata: { actionUrl: "/admin/chat" },
-      },
-    }).catch((err) => {
-      log.error("[whatsapp] Error al despachar notificación:", err);
-    });
+    // 6. Dispatch in-app notification if linked user exists (requires valid User actorId)
+    if (user?.id) {
+      notificationsService.dispatchNotification({
+        eventType: "whatsapp_message_received",
+        actorId: user.id,
+        entityType: "Conversation",
+        entityId: conversation.id,
+        notification: {
+          type: "whatsapp_message",
+          title: `Mensaje WhatsApp de ${user.name || name || from}`,
+          message: text.length > 120 ? text.slice(0, 120) + "..." : text,
+          audienceType: "BROADCAST",
+          metadata: { actionUrl: "/admin/chat" },
+        },
+      }).catch((err) => {
+        log.error("[whatsapp] Error al despachar notificación:", err);
+      });
+    }
 
     return { conversation, message };
   }
