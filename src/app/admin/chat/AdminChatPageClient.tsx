@@ -370,8 +370,14 @@ export function AdminChatPageContent({
 
     let isCancelled = false;
 
+    // Clear stale messages from the previous conversation immediately.
+    // This prevents briefly showing the wrong conversation's messages.
+    setMessages([]);
+    // Do NOT show a loading spinner here — the empty message area is
+    // sufficient visual feedback during the brief network fetch, and
+    // avoids the jarring spinner flash the user reported.
+
     const loadMessages = async () => {
-      setIsLoadingMsgs(true);
       try {
         signalStore.setUserId(sessionUserId);
 
@@ -801,7 +807,6 @@ export function AdminChatPageContent({
 
   // Select user and get/create conversation
   const handleSelectUserChat = async (targetUserId: string) => {
-    setIsLoadingMsgs(true);
     try {
       const res = await actions.getOrCreateConversationForAdmin(targetUserId);
       if (res && !isErrorResult(res)) {
@@ -819,7 +824,8 @@ export function AdminChatPageContent({
           setConversations((prev) => [fullConv, ...prev]);
         }
 
-        // Set as active
+        // Set as active — the useEffect watching activeConv will handle
+        // message loading and show a spinner only when necessary.
         setActiveConv(fullConv);
 
         // Return to chats tab
@@ -827,8 +833,6 @@ export function AdminChatPageContent({
       }
     } catch (err) {
       log.error("Error initiating chat with user:", err);
-    } finally {
-      setIsLoadingMsgs(false);
     }
   };
 
