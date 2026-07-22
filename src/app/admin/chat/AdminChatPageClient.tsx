@@ -783,7 +783,11 @@ export function AdminChatPageContent({
         socket.emit("delete_conversation", { conversationId: activeConv.id });
 
         // Update local state
-        setConversations((prev) => prev.filter((c) => c.id !== activeConv.id));
+        if (activeConv.type === "WHATSAPP") {
+          setWhatsAppConversations((prev) => prev.filter((c) => c.id !== activeConv.id));
+        } else {
+          setConversations((prev) => prev.filter((c) => c.id !== activeConv.id));
+        }
         setActiveConv(null);
         setMessages([]);
         setShowDeleteConfirm(false);
