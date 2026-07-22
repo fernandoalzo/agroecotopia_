@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { useIsMobile } from "@/hooks/use-mobile";
 import Footer from "@/components/Footer";
 import { useLanguage } from "@/context/LanguageContext";
 import { useProductsData } from "@/hooks/useProductsData";
@@ -49,8 +50,11 @@ export default function ProductsPageClient() {
   const limitParam = Number(searchParams.get("limit")) || 20;
   const categoryParam = searchParams.get("category") || "";
 
-  // View & UI state
+  const isMobile = useIsMobile();
+
+  // On mobile, always force compact view; on desktop, respect user toggle
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
+  const effectiveViewMode: 'grid' | 'compact' = isMobile ? 'compact' : viewMode;
   const [groupByCategory, setGroupByCategory] = useState(false);
   const [searchTerm, setSearchTerm] = useState(queryParam);
 
@@ -190,7 +194,7 @@ export default function ProductsPageClient() {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <ProductsGridSkeleton viewMode={viewMode} showPagination />
+                  <ProductsGridSkeleton viewMode={effectiveViewMode} showPagination />
                 </motion.div>
               ) : (products.length > 0 || (groups && groups.length > 0)) ? (
                 <motion.div
@@ -203,7 +207,7 @@ export default function ProductsPageClient() {
                   <ProductsGrid
                     products={groups ? undefined : products}
                     groups={groups}
-                    viewMode={viewMode}
+                    viewMode={effectiveViewMode}
                     t={t}
                   />
 
