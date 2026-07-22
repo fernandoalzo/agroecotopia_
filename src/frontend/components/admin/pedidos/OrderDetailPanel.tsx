@@ -39,6 +39,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { getNextStatuses, getPreviousStatus, getNextStatusLineal, isEnvioEnProceso } from "./adminOrderUtils";
+import { ProductDetailPanel } from "@/frontend/components/shared/productos/ProductDetailPanel";
 
 const statusConfig: Record<string, {
   label: string;
@@ -150,6 +151,8 @@ export function OrderDetailPanel({
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [updatingToStatus, setUpdatingToStatus] = useState<PedidoEstado | null>(null);
   const [isNavigatingToEnvio, setIsNavigatingToEnvio] = useState(false);
+
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -327,8 +330,8 @@ export function OrderDetailPanel({
   const timelineStatuses = getTimelineStatuses(order.tipoEntrega);
 
   return (
-    <AnimatePresence>
-      <>
+    <>
+      <AnimatePresence>
         <motion.div
           key="backdrop"
           initial={{ opacity: 0 }}
@@ -505,7 +508,11 @@ export function OrderDetailPanel({
               </h3>
               <div className="divide-y divide-border/40 rounded-xl border border-border/30 overflow-hidden">
                 {order.detalles?.map((detalle: any) => (
-                  <div key={detalle.id} className="flex items-start gap-3 p-3">
+                  <div
+                    key={detalle.id}
+                    onClick={() => detalle.producto && setSelectedProduct(detalle.producto)}
+                    className="flex items-center gap-3 p-3 hover:bg-accent/50 transition-colors cursor-pointer group"
+                  >
                     <div className="h-10 w-10 rounded-lg bg-muted overflow-hidden border border-border/40 flex-shrink-0">
                       {detalle.producto?.images?.[0] ? (
                         <img src={detalle.producto.images[0]} alt={detalle.producto.name} className="h-full w-full object-cover" />
@@ -516,14 +523,17 @@ export function OrderDetailPanel({
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{detalle.producto?.name}</p>
+                      <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors">{detalle.producto?.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {detalle.cantidad} x ${(detalle.precioUnitario || 0).toLocaleString("es-CO")}
                       </p>
                     </div>
-                    <p className="text-sm font-bold shrink-0">
-                      ${(detalle.subtotal || 0).toLocaleString("es-CO")}
-                    </p>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <p className="text-sm font-bold">
+                        ${(detalle.subtotal || 0).toLocaleString("es-CO")}
+                      </p>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -870,7 +880,17 @@ export function OrderDetailPanel({
             </div>
           </div>
         </motion.div>
-      </>
+      </AnimatePresence>
+
+    {/* Product Detail Panel Drawer */}
+    <AnimatePresence>
+      {selectedProduct && (
+        <ProductDetailPanel
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
     </AnimatePresence>
+    </>
   );
 }
