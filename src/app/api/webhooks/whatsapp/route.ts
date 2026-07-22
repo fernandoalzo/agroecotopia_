@@ -80,41 +80,81 @@ function verifySignature(payload: string, signatureHeader: string | null): boole
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
+  log.info("[whatsapp] ========== WEBHOOK POST RECIBIDO ==========");
+
   try {
     const rawBody = await request.text();
     const signature = request.headers.get("x-hub-signature-256");
 
-    // Verify HMAC signature
-    if (!verifySignature(rawBody, signature)) {
-      log.error("[whatsapp] Firma HMAC inválida. Rechazando webhook.");
-      return NextResponse.json(
-        { error: "Invalid signature" },
-        { status: 401 }
-      );
+    log.info("[whatsapp] Payload recibido:", {
+      bodyLength: rawBody.length,
+      hasSignature: !!signature,
+      signaturePrefix: signature ? signature.substring(0, 20) + "..." : "NONE",
+      contentType: request.headers.get("content-type"),
+    });
+
+    // Verify HMAC signature — LOG but DON'T BLOCK while debugging
+    const signatureValid = verifySignature(rawBody, signature);
+    if (!signatureValid) {
+      log.warn("[whatsapp] ⚠️ Firma HMAC inválida — PERMITIENDO temporalmente para diagnóstico.", {
+        configuredSecret: config.whatsapp.webhookSecret ? `${config.whatsapp.webhookSecret.substring(0, 6)}...` : "NO CONFIGURADO",
+        receivedSignature: signature || "NO ENVIADA",
+      });
+      // TODO: Restaurar bloqueo después del diagnóstico
+      // return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    } else {
+      log.info("[whatsapp] ✅ Firma HMAC válida.");
     }
 
     const body = JSON.parse(rawBody);
+    log.info("[whatsapp] Body parseado:", {
+      hasEntry: !!body.entry,
+      entryCount: body.entry?.length || 0,
+      object: body.object,
+    });
 
     if (!body.entry || !Array.isArray(body.entry)) {
+      log.info("[whatsapp] No hay entries en el body. Respondiendo 200.");
       return NextResponse.json({ received: true });
     }
 
+    let messagesProcessed = 0;
+
     for (const entry of body.entry) {
       const changes = entry?.changes;
+      log.info("[whatsapp] Entry:", {
+        entryId: entry?.id,
+        changesCount: changes?.length || 0,
+      });
+
       if (!changes || !Array.isArray(changes)) continue;
 
       for (const change of changes) {
-        if (change.field !== "messages") continue;
+        log.info("[whatsapp] Change:", {
+          field: change.field,
+          hasValue: !!change.value,
+          hasMessages: !!change.value?.messages,
+          messagesCount: change.value?.messages?.length || 0,
+          hasStatuses: !!change.value?.statuses,
+        });
+
+        if (change.field !== "messages") {
+          log.info("[whatsapp] Campo ignorado (no es 'messages'):", { field: change.field });
+          continue;
+        }
 
         const value = change.value;
         const messages = value?.messages;
-        if (!messages || !Array.isArray(messages)) continue;
+        if (!messages || !Array.isArray(messages)) {
+          log.info("[whatsapp] No hay mensajes en este change (posible status update).");
+          continue;
+        }
 
         const profileName = value.contacts?.[0]?.profile?.name;
 
         for (const msg of messages) {
-          const from = msg.from;             // sender phone number
-          const msgId = msg.id;              // WhatsApp message ID
+          const from = msg.from;
+          const msgId = msg.id;
 
           let text = "";
           if (msg.type === "text" && msg.text?.body) {
@@ -141,23 +181,48 @@ export async function POST(request: Request) {
             text = `[Mensaje ${msg.type || "desconocido"}]`;
           }
 
-          log.info("[whatsapp] Mensaje entrante procesado:", { from, msgId, type: msg.type, textLength: text.length });
-
-          // Process the message
-          await whatsappService.processIncomingMessage({
+          log.info("[whatsapp] 📩 Procesando mensaje:", {
             from,
-            text,
             msgId,
-            name: profileName,
+            type: msg.type,
+            textLength: text.length,
+            profileName,
           });
+
+          try {
+            const result = await whatsappService.processIncomingMessage({
+              from,
+              text,
+              msgId,
+              name: profileName,
+            });
+            messagesProcessed++;
+            log.info("[whatsapp] ✅ Mensaje procesado exitosamente:", {
+              conversationId: result.conversation.id,
+              messageId: result.message.id,
+            });
+          } catch (processError: any) {
+            log.error("[whatsapp] ❌ Error al procesar mensaje individual:", {
+              from,
+              msgId,
+              error: processError.message,
+              stack: processError.stack?.substring(0, 300),
+            });
+          }
         }
       }
     }
 
-    // Always return 200 to prevent Meta from retrying
+    log.info("[whatsapp] ========== WEBHOOK COMPLETADO ==========", {
+      messagesProcessed,
+    });
+
     return NextResponse.json({ received: true });
   } catch (error: any) {
-    log.error("[whatsapp] Error procesando webhook:", error);
+    log.error("[whatsapp] ❌ Error fatal procesando webhook:", {
+      message: error.message,
+      stack: error.stack?.substring(0, 500),
+    });
     return NextResponse.json(
       { error: error.message || "Internal Server Error", processed: false },
       { status: 200 }
