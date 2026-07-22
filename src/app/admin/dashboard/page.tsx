@@ -45,6 +45,11 @@ import {
   getWafRequestLog,
   clearWafRequestLog,
 } from "@/backend/modules/waf/waf.actions";
+import {
+  getWhatsAppConversationsAction,
+  sendWhatsAppMessageAction,
+  markWhatsAppAsReadAction,
+} from "@/backend/modules/whatsapp/whatsapp.actions";
 import AdminDashboardPage from "./AdminDashboardPageClient";
 
 export default function Page() {
@@ -82,6 +87,9 @@ export default function Page() {
           deleteConversation: deleteConversationAction,
           getAdminUsersList,
           getOrCreateConversationForAdmin,
+          getWhatsAppConversations: getWhatsAppConversationsAction,
+          sendWhatsAppMessage: sendWhatsAppMessageAction,
+          markWhatsAppAsRead: markWhatsAppAsReadAction,
         },
         waf: {
           list: getWafRules,
