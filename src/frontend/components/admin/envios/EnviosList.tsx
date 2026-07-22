@@ -227,7 +227,6 @@ export function EnviosList({
           onClose={() => setSelectedPedidoId(null)}
           getOrderDetail={getOrderDetail}
           updateStoreOrderStatus={updateStoreOrderStatus}
-          onNavigateToEnvio={() => setSelectedPedidoId(null)}
         />
       )}
     </>

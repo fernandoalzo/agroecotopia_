@@ -238,7 +238,7 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
     try {
       const res = await actions.waf.list();
       if (res && !("error" in res) && "rules" in res) setWafRules(res.rules as WafRuleRow[]);
-    } catch {}
+    } catch { }
   }, [actions, isAdmin]);
 
   useEffect(() => {
@@ -600,26 +600,25 @@ function AdminDashboardPageContent({ actions }: { actions: AdminDashboardActions
                   updateStoreOrderStatus={async (_storeId: string, pedidoId: string, newStatus: any) => {
                     return await actions.updateOrderStatus(pedidoId, newStatus);
                   }}
-                   onUpdateStatus={async (orderId, newStatus) => {
-                     const result = await actions.updateOrderStatus(orderId, newStatus);
-                     if (result && "error" in result) {
-                       if (result.outOfStockProducts && result.outOfStockProducts.length > 0) {
-                         const names = result.outOfStockProducts.map((p: any) => p.productName).join(", ");
-                         toast.error("Stock insuficiente", {
-                           description: `Sin stock para: ${names}. Ve al detalle del pedido para retirarlos.`,
-                           action: { label: "Ver detalle", onClick: () => router.push(`/pedidos/${orderId}`) }
-                         });
-                       } else {
-                         toast.error("Error", { description: result.error });
-                       }
-                       return false;
-                     }
-                     setOrdersRefresh(prev => prev + 1);
-                     return true;
-                   }}
-                   onNavigateToEnvio={(pedidoId: string) => {
+                  onUpdateStatus={async (orderId, newStatus) => {
+                    const result = await actions.updateOrderStatus(orderId, newStatus);
+                    if (result && "error" in result) {
+                      if (result.outOfStockProducts && result.outOfStockProducts.length > 0) {
+                        const names = result.outOfStockProducts.map((p: any) => p.productName).join(", ");
+                        toast.error("Stock insuficiente", {
+                          description: `Sin stock para: ${names}. Ve al detalle del pedido para retirarlos.`,
+                          action: { label: "Ver detalle", onClick: () => router.push(`/pedidos/${orderId}`) }
+                        });
+                      } else {
+                        toast.error("Error", { description: result.error });
+                      }
+                      return false;
+                    }
+                    setOrdersRefresh(prev => prev + 1);
+                    return true;
+                  }}
+                  onNavigateToEnvio={(pedidoId: string) => {
                      setAutoOpenEnvioPedidoId(pedidoId);
-                     setAdminEnviosSearch(pedidoId);
                      handleTabChange("envios");
                    }}
                 />
