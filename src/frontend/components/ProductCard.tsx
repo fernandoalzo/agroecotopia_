@@ -6,6 +6,7 @@ import { Product } from "@/types";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { formatPrice } from "@/lib/utils";
 import { useLanguage } from "@/context/LanguageContext";
 import { useCart } from "@/context/CartContext";
@@ -144,13 +145,15 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground/80 mb-2">
                 <Store className="w-4 h-4 text-primary/70" />
                 {(p as any).store.slug ? (
-                  <Link
-                    href={`/tienda/${(p as any).store.slug}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="truncate hover:text-primary hover:underline transition-colors font-medium"
-                  >
-                    {(p as any).store.name}
-                  </Link>
+                  <motion.div whileHover={{ scale: 1.03, x: 2 }} whileTap={{ scale: 0.97 }}>
+                    <Link
+                      href={`/tienda/${(p as any).store.slug}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="truncate text-foreground/90 hover:text-primary hover:underline transition-colors font-semibold"
+                    >
+                      {(p as any).store.name}
+                    </Link>
+                  </motion.div>
                 ) : (
                   <span className="truncate">{(p as any).store.name}</span>
                 )}
@@ -302,13 +305,15 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground/80 mb-1">
                 <Store className="w-2.5 h-2.5 text-primary/70" />
                 {(p as any).store.slug ? (
-                  <Link
-                    href={`/tienda/${(p as any).store.slug}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="truncate hover:text-primary hover:underline transition-colors font-medium"
-                  >
-                    {(p as any).store.name}
-                  </Link>
+                  <motion.div whileHover={{ scale: 1.03, x: 1 }} whileTap={{ scale: 0.97 }}>
+                    <Link
+                      href={`/tienda/${(p as any).store.slug}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="truncate text-foreground/90 hover:text-primary hover:underline transition-colors font-semibold"
+                    >
+                      {(p as any).store.name}
+                    </Link>
+                  </motion.div>
                 ) : (
                   <span className="truncate">{(p as any).store.name}</span>
                 )}
@@ -475,13 +480,15 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
             <div className="flex items-center gap-1 text-[11px] text-muted-foreground/80 mb-1">
               <Store className="w-3 h-3 text-primary/70" />
               {(p as any).store.slug ? (
-                <Link
-                  href={`/tienda/${(p as any).store.slug}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="truncate hover:text-primary hover:underline transition-colors font-medium"
-                >
-                  {(p as any).store.name}
-                </Link>
+                <motion.div whileHover={{ scale: 1.03, x: 1 }} whileTap={{ scale: 0.97 }}>
+                  <Link
+                    href={`/tienda/${(p as any).store.slug}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="truncate text-foreground/90 hover:text-primary hover:underline transition-colors font-semibold"
+                  >
+                    {(p as any).store.name}
+                  </Link>
+                </motion.div>
               ) : (
                 <span className="truncate">{(p as any).store.name}</span>
               )}

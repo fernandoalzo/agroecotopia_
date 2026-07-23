@@ -182,12 +182,14 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
                   <div className="flex items-center gap-2 text-sm text-muted-foreground/80 mt-2 mb-3">
                     <Store className="w-4 h-4 text-primary/70" />
                     {(product as any).store.slug ? (
-                      <Link
-                        href={`/tienda/${(product as any).store.slug}`}
-                        className="truncate hover:text-primary hover:underline transition-colors font-medium"
-                      >
-                        {(product as any).store.name}
-                      </Link>
+                      <motion.div whileHover={{ scale: 1.03, x: 2 }} whileTap={{ scale: 0.97 }}>
+                        <Link
+                          href={`/tienda/${(product as any).store.slug}`}
+                          className="truncate text-foreground/90 hover:text-primary hover:underline transition-colors font-semibold"
+                        >
+                          {(product as any).store.name}
+                        </Link>
+                      </motion.div>
                     ) : (
                       <span className="truncate">{(product as any).store.name}</span>
                     )}
