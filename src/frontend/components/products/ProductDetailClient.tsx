@@ -180,9 +180,14 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
                 {/* Store */}
                 {(product as any).store?.name && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground/80 mt-2 mb-3">
-                    <Store className="w-4 h-4 text-primary/70" />
+                    <Store className="w-4 h-4 text-primary/70 shrink-0" />
                     {(product as any).store.slug ? (
-                      <motion.div whileHover={{ scale: 1.03, x: 2 }} whileTap={{ scale: 0.97 }}>
+                      <motion.div
+                        whileHover={{ scale: 1.05, x: 2 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                        className="inline-flex min-w-0"
+                      >
                         <Link
                           href={`/tienda/${(product as any).store.slug}`}
                           className="truncate text-foreground/90 hover:text-primary hover:underline transition-colors font-semibold"

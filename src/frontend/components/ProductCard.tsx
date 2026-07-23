@@ -143,12 +143,17 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
             </h3>
             {(p as any).store?.name && (
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground/80 mb-2">
-                <Store className="w-4 h-4 text-primary/70" />
+                <Store className="w-4 h-4 text-primary/70 shrink-0" />
                 {(p as any).store.slug ? (
-                  <motion.div whileHover={{ scale: 1.03, x: 2 }} whileTap={{ scale: 0.97 }}>
+                  <motion.div
+                    whileHover={{ scale: 1.05, x: 2 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                    className="inline-flex min-w-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Link
                       href={`/tienda/${(p as any).store.slug}`}
-                      onClick={(e) => e.stopPropagation()}
                       className="truncate text-foreground/90 hover:text-primary hover:underline transition-colors font-semibold"
                     >
                       {(p as any).store.name}
@@ -303,12 +308,17 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
             </h3>
             {(p as any).store?.name && (
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground/80 mb-1">
-                <Store className="w-2.5 h-2.5 text-primary/70" />
+                <Store className="w-2.5 h-2.5 text-primary/70 shrink-0" />
                 {(p as any).store.slug ? (
-                  <motion.div whileHover={{ scale: 1.03, x: 1 }} whileTap={{ scale: 0.97 }}>
+                  <motion.div
+                    whileHover={{ scale: 1.05, x: 2 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                    className="inline-flex min-w-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Link
                       href={`/tienda/${(p as any).store.slug}`}
-                      onClick={(e) => e.stopPropagation()}
                       className="truncate text-foreground/90 hover:text-primary hover:underline transition-colors font-semibold"
                     >
                       {(p as any).store.name}
@@ -478,12 +488,17 @@ const ProductCard = ({ p, priority = false, variant = 'grid' }: ProductCardProps
           </h3>
           {(p as any).store?.name && (
             <div className="flex items-center gap-1 text-[11px] text-muted-foreground/80 mb-1">
-              <Store className="w-3 h-3 text-primary/70" />
+              <Store className="w-3 h-3 text-primary/70 shrink-0" />
               {(p as any).store.slug ? (
-                <motion.div whileHover={{ scale: 1.03, x: 1 }} whileTap={{ scale: 0.97 }}>
+                <motion.div
+                  whileHover={{ scale: 1.05, x: 2 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                  className="inline-flex min-w-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Link
                     href={`/tienda/${(p as any).store.slug}`}
-                    onClick={(e) => e.stopPropagation()}
                     className="truncate text-foreground/90 hover:text-primary hover:underline transition-colors font-semibold"
                   >
                     {(p as any).store.name}
