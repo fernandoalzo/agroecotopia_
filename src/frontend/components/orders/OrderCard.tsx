@@ -122,13 +122,14 @@ interface OrderCardProps {
   index: number;
   unreadChatCount?: number;
   onNavigate: (href: string) => void;
-  onCancelOrder: (orderId: string) => Promise<void>;
+  onCancelOrder: (orderId: string, motivoCancelacion?: string) => Promise<void>;
   onDeleteOrder: (orderId: string) => Promise<void>;
 }
 
 export const OrderCard = ({ order, index, unreadChatCount = 0, onNavigate, onCancelOrder, onDeleteOrder }: OrderCardProps) => {
   const [isCanceling, setIsCanceling] = useState(false);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
@@ -139,7 +140,7 @@ export const OrderCard = ({ order, index, unreadChatCount = 0, onNavigate, onCan
   const handleCancelOrder = async () => {
     setIsCanceling(true);
     try {
-      await onCancelOrder(order.id);
+      await onCancelOrder(order.id, cancelReason.trim() || undefined);
       toast.success("Pedido cancelado", { description: "Tu pedido ha sido cancelado exitosamente." });
     } catch (error) {
       toast.error("Error", { description: "Hubo un problema al cancelar el pedido." });
@@ -372,28 +373,40 @@ export const OrderCard = ({ order, index, unreadChatCount = 0, onNavigate, onCan
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="flex items-center gap-1.5 bg-secondary/60 border border-border/80 rounded-xl px-2.5 py-1 shadow-sm"
+                      className="flex flex-col gap-1.5 bg-secondary/60 border border-border/80 rounded-xl px-2.5 py-1.5 shadow-sm"
                     >
                       <span className="text-[11px] font-bold text-muted-foreground whitespace-nowrap">¿Cancelar?</span>
-                      <Button
-                        size="sm"
-                        className="rounded-lg text-[11px] font-extrabold h-6 px-2.5 bg-red-600 hover:bg-red-700 text-white shadow-sm transition-all"
-                        disabled={isCanceling}
-                        onClick={handleCancelOrder}
-                      >
-                        {isCanceling ? (
-                          <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        ) : (
-                          "Sí"
-                        )}
-                      </Button>
-                      <button
-                        className="rounded-lg text-[11px] font-bold h-6 px-2 hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground transition-all cursor-pointer inline-flex items-center"
-                        disabled={isCanceling}
-                        onClick={() => setIsConfirmingCancel(false)}
-                      >
-                        No
-                      </button>
+                      <input
+                        type="text"
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        placeholder="Motivo (opcional)"
+                        className="w-full rounded-lg border border-border/60 bg-background px-2 py-1 text-[11px] placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                      />
+                      <div className="flex items-center gap-1.5">
+                        <Button
+                          size="sm"
+                          className="rounded-lg text-[11px] font-extrabold h-6 px-2.5 bg-red-600 hover:bg-red-700 text-white shadow-sm transition-all"
+                          disabled={isCanceling}
+                          onClick={handleCancelOrder}
+                        >
+                          {isCanceling ? (
+                            <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          ) : (
+                            "Sí"
+                          )}
+                        </Button>
+                        <button
+                          className="rounded-lg text-[11px] font-bold h-6 px-2 hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground transition-all cursor-pointer inline-flex items-center"
+                          disabled={isCanceling}
+                          onClick={() => {
+                            setIsConfirmingCancel(false);
+                            setCancelReason("");
+                          }}
+                        >
+                          No
+                        </button>
+                      </div>
                     </motion.div>
                   ) : isConfirmingDelete ? (
                     <motion.div

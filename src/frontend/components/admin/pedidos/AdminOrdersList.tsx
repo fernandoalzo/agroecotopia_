@@ -29,7 +29,7 @@ interface AdminOrdersListProps {
   onOpenOrderChat?: (order: AdminOrder) => void;
   unreadChatCounts?: Record<string, number>;
   openingChatOrderId?: string | null;
-  onUpdateStatus: (orderId: string, newStatus: PedidoEstado) => Promise<boolean>;
+  onUpdateStatus: (orderId: string, newStatus: PedidoEstado, motivoCancelacion?: string) => Promise<boolean>;
   onPageChange: (page: number) => void;
   currentPage: number;
   onSearchChange: (query: string) => void;
@@ -38,7 +38,7 @@ interface AdminOrdersListProps {
   statusFilter: PedidoEstado | "ALL";
   storeId?: string;
   getOrderDetail?: (pedidoId: string) => Promise<any>;
-  updateStoreOrderStatus?: (storeId: string, pedidoId: string, newStatus: PedidoEstado) => Promise<any>;
+  updateStoreOrderStatus?: (storeId: string, pedidoId: string, newStatus: PedidoEstado, motivoCancelacion?: string) => Promise<any>;
   onDeleteOrder?: (pedidoId: string) => Promise<any>;
   onNavigateToEnvio?: (pedidoId: string) => void;
 }
@@ -94,11 +94,11 @@ export const AdminOrdersList = ({
     }
   }, [orders, updatingStatusId, pendingTargetStatus]);
 
-  const handleUpdateStatus = useCallback(async (orderId: string, newStatus: PedidoEstado) => {
+  const handleUpdateStatus = useCallback(async (orderId: string, newStatus: PedidoEstado, motivoCancelacion?: string) => {
     setUpdatingStatusId(orderId);
     setPendingTargetStatus(newStatus);
     try {
-      const success = await onUpdateStatus(orderId, newStatus);
+      const success = await onUpdateStatus(orderId, newStatus, motivoCancelacion);
       if (success && newStatus === PedidoEstado.EN_PREPARACION && onNavigateToEnvio) {
         const order = orders.find((o) => o.id === orderId);
         if (order?.tipoEntrega === "ENVIO") {
@@ -118,14 +118,14 @@ export const AdminOrdersList = ({
   }, [onUpdateStatus, onNavigateToEnvio, orders, handleNavigateToEnvioWrapper]);
 
   // Keep a ref so the memoized columns always call the latest handler
-  const handleUpdateStatusRef = useRef(handleUpdateStatus);
+  const handleUpdateStatusRef = useRef<(orderId: string, newStatus: PedidoEstado, motivoCancelacion?: string) => Promise<boolean>>(handleUpdateStatus);
   handleUpdateStatusRef.current = handleUpdateStatus;
 
   const columns = useMemo(
     () =>
       getAdminOrderColumns(
         isUpdatingMap,
-        (...args: Parameters<typeof handleUpdateStatus>) => handleUpdateStatusRef.current(...args),
+        (...args: Parameters<typeof handleUpdateStatusRef.current>) => handleUpdateStatusRef.current(...args),
         onOpenOrderChat,
         unreadChatCounts,
         openingChatOrderId,

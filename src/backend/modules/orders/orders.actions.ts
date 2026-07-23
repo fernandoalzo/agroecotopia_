@@ -167,8 +167,9 @@ export async function getOrderDetailAction(pedidoId: string) {
 
 /**
  * Cancela un pedido del usuario autenticado (Solo si está en estado PENDIENTE).
+ * @param motivoCancelacion - Opcional para el cliente, obligatorio para el vendedor.
  */
-export async function cancelUserOrderAction(pedidoId: string) {
+export async function cancelUserOrderAction(pedidoId: string, motivoCancelacion?: string) {
   return await withAuth(async (session) => {
     const userId = session.user.id;
 
@@ -194,7 +195,7 @@ export async function cancelUserOrderAction(pedidoId: string) {
         pedidoId, 
         PedidoEstado.CANCELADO, 
         userId,
-        "Cancelado por el usuario"
+        motivoCancelacion || undefined,
       );
       
       log.info("Pedido cancelado exitosamente:", { pedidoId });
@@ -312,6 +313,11 @@ export async function updateStoreOrderStatusAction(
   return await withStoreOwner(storeId, async (session) => {
     try {
       const userId = session.user.id;
+
+      // El motivo de cancelación es obligatorio cuando el vendedor cancela
+      if (nuevoEstado === PedidoEstado.CANCELADO && !motivoCancelacion?.trim()) {
+        return { error: "El motivo de cancelación es obligatorio" };
+      }
 
       log.info("Seller actualizando estado de pedido de tienda:", { storeId, pedidoId, nuevoEstado });
       const pedido = await ordersService.updateEstadoForStore(storeId, pedidoId, nuevoEstado, userId, motivoCancelacion);

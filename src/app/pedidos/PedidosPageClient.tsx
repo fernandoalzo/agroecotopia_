@@ -19,7 +19,7 @@ import { config } from "@/config/config";
 
 interface PedidosPageClientProps {
   getUserOrders: () => Promise<unknown>;
-  cancelUserOrder: (orderId: string) => Promise<unknown>;
+  cancelUserOrder: (orderId: string, motivoCancelacion?: string) => Promise<unknown>;
   deleteUserOrder: (orderId: string) => Promise<unknown>;
   getUserOrderConversations: () => Promise<unknown>;
 }
@@ -94,15 +94,16 @@ export default function PedidosPageClient({
 
   // React Query Mutations
   const cancelOrderMutation = useMutation({
-    mutationFn: cancelUserOrder,
+    mutationFn: ({ orderId, motivoCancelacion }: { orderId: string; motivoCancelacion?: string }) =>
+      cancelUserOrder(orderId, motivoCancelacion),
   });
 
   const deleteOrderMutation = useMutation({
     mutationFn: deleteUserOrder,
   });
 
-  const handleCancelOrder = async (orderId: string) => {
-    await cancelOrderMutation.mutateAsync(orderId);
+  const handleCancelOrder = async (orderId: string, motivoCancelacion?: string) => {
+    await cancelOrderMutation.mutateAsync({ orderId, motivoCancelacion });
     await queryClient.invalidateQueries({ queryKey: ["userOrders"] });
   };
 

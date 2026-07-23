@@ -845,8 +845,8 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                     onPageChange={setStoreOrderCurrentPage}
                     onSearchChange={setStoreOrderSearchQuery}
                     onStatusFilterChange={setStoreOrderStatusFilter}
-                    onUpdateStatus={async (orderId, newStatus) => {
-                      const result = await actions.updateStoreOrderStatus(activeStore.id, orderId, newStatus);
+                    onUpdateStatus={async (orderId, newStatus, motivoCancelacion) => {
+                      const result = await actions.updateStoreOrderStatus(activeStore.id, orderId, newStatus, motivoCancelacion);
                       if (result && "error" in result) {
                         if (result.outOfStockProducts && result.outOfStockProducts.length > 0) {
                           const names = result.outOfStockProducts.map((p: any) => p.productName).join(", ");
@@ -869,8 +869,8 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                     openingChatOrderId={openingChatOrderId}
                     storeId={activeStore.id}
                     getOrderDetail={actions.getOrderDetail}
-                    updateStoreOrderStatus={async (_storeId, pedidoId, newStatus) => {
-                      const result = await actions.updateStoreOrderStatus(activeStore.id, pedidoId, newStatus);
+                    updateStoreOrderStatus={async (_storeId, pedidoId, newStatus, motivoCancelacion) => {
+                      const result = await actions.updateStoreOrderStatus(activeStore.id, pedidoId, newStatus, motivoCancelacion);
                       if (result && "error" in result) return result;
                       setStoreOrdersRefresh(prev => prev + 1);
                       return result;
@@ -904,8 +904,8 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                     getOrderDetail={actions.getOrderDetail}
                     getEnvioDetail={actions.getEnvioDetail}
                     bodegas={bodegasList}
-                    updateStoreOrderStatus={async (_storeId, pedidoId, newStatus) => {
-                      const result = await actions.updateStoreOrderStatus(activeStore.id, pedidoId, newStatus);
+                    updateStoreOrderStatus={async (_storeId, pedidoId, newStatus, motivoCancelacion) => {
+                      const result = await actions.updateStoreOrderStatus(activeStore.id, pedidoId, newStatus, motivoCancelacion);
                       if (result && "error" in result) {
                         return result;
                       }

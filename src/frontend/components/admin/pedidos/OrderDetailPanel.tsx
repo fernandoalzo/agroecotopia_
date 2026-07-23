@@ -123,7 +123,7 @@ interface OrderDetailPanelProps {
   storeId: string;
   onClose: () => void;
   getOrderDetail: (pedidoId: string) => Promise<any>;
-  updateStoreOrderStatus: (storeId: string, pedidoId: string, newStatus: PedidoEstado) => Promise<any>;
+  updateStoreOrderStatus: (storeId: string, pedidoId: string, newStatus: PedidoEstado, motivoCancelacion?: string) => Promise<any>;
   onDeleteOrder?: (pedidoId: string) => Promise<any>;
   onNavigateToEnvio?: (pedidoId: string) => void;
 }
@@ -152,6 +152,7 @@ export function OrderDetailPanel({
   const [updatingToStatus, setUpdatingToStatus] = useState<PedidoEstado | null>(null);
   const [isNavigatingToEnvio, setIsNavigatingToEnvio] = useState(false);
 
+  const [cancelReason, setCancelReason] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
 
   useEffect(() => {
@@ -179,14 +180,15 @@ export function OrderDetailPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pedidoId, getOrderDetail]);
 
-  const handleUpdateStatus = async (nuevoEstado: PedidoEstado) => {
+  const handleUpdateStatus = async (nuevoEstado: PedidoEstado, motivoCancelacion?: string) => {
     setIsUpdatingStatus(true);
     setUpdatingToStatus(nuevoEstado);
     setConfirmingStatus(null);
     setShowStatusOptions(false);
+    setCancelReason("");
 
     try {
-      const result = await updateStoreOrderStatus(storeId, order.id, nuevoEstado);
+      const result = await updateStoreOrderStatus(storeId, order.id, nuevoEstado, motivoCancelacion);
       if (result && "error" in result) {
         toast.error(result.error);
       } else {
@@ -624,6 +626,11 @@ export function OrderDetailPanel({
                           <XCircle className="h-3 w-3" />
                           <span className="text-xs font-bold">Cancelado</span>
                         </div>
+                        {order.motivoCancelacion && (
+                          <p className="text-[11px] font-medium text-muted-foreground mt-1 italic">
+                            &ldquo;{order.motivoCancelacion}&rdquo;
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -700,27 +707,42 @@ export function OrderDetailPanel({
                           Cancelar Pedido
                         </button>
                       ) : (
-                        <div className="p-3 mt-3 border border-rose-500/20 bg-rose-500/5 rounded-lg">
-                          <div className="flex items-center gap-2 mb-3">
+                        <div className="p-3 mt-3 border border-rose-500/20 bg-rose-500/5 rounded-lg space-y-3">
+                          <div className="flex items-center gap-2">
                             <XCircle className="h-4 w-4 shrink-0 text-rose-500" />
                             <p className="text-xs font-medium text-rose-700 dark:text-rose-400">
                               ¿Seguro que deseas cancelar este pedido?
                             </p>
                           </div>
+                          <textarea
+                            value={cancelReason}
+                            onChange={(e) => setCancelReason(e.target.value)}
+                            placeholder="Motivo de cancelación (obligatorio)"
+                            rows={3}
+                            className="w-full rounded-lg border border-rose-500/30 bg-background px-3 py-2 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-rose-500/30 resize-none"
+                          />
                           <div className="flex gap-2">
                             <button
                               type="button"
-                              onClick={() => setConfirmingStatus(null)}
+                              onClick={() => {
+                                setConfirmingStatus(null);
+                                setCancelReason("");
+                              }}
                               className="flex-1 rounded-lg border border-border/40 px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-accent transition-colors"
                             >
                               Volver
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleUpdateStatus(PedidoEstado.CANCELADO)}
-                              className="flex-1 rounded-lg px-3 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 transition-all flex items-center justify-center gap-1.5"
+                              disabled={!cancelReason.trim() || isUpdatingStatus}
+                              onClick={() => handleUpdateStatus(PedidoEstado.CANCELADO, cancelReason.trim())}
+                              className="flex-1 rounded-lg px-3 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              <Check className="h-3.5 w-3.5" />
+                              {isUpdatingStatus ? (
+                                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                              ) : (
+                                <Check className="h-3.5 w-3.5" />
+                              )}
                               Confirmar Cancelación
                             </button>
                           </div>

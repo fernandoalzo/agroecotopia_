@@ -40,7 +40,7 @@ interface EnviosListProps {
   onRefresh: () => void;
   getOrderDetail?: (pedidoId: string) => Promise<any>;
   getEnvioDetail?: (envioId: string) => Promise<any>;
-  updateStoreOrderStatus?: (storeId: string, pedidoId: string, newStatus: PedidoEstado) => Promise<any>;
+  updateStoreOrderStatus?: (storeId: string, pedidoId: string, newStatus: PedidoEstado, motivoCancelacion?: string) => Promise<any>;
   bodegas?: any[];
   autoOpenPedidoId?: string | null;
   onAutoOpenConsumed?: () => void;

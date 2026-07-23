@@ -16,7 +16,7 @@ import { AnimatePresence, motion } from "framer-motion";
 interface OrderRowActionsProps {
   order: AdminOrder;
   isUpdating: boolean;
-  onUpdateStatus: (orderId: string, newStatus: PedidoEstado) => Promise<boolean>;
+  onUpdateStatus: (orderId: string, newStatus: PedidoEstado, motivoCancelacion?: string) => Promise<boolean>;
   onOpenOrderChat?: (order: AdminOrder) => void;
   unreadChatCount?: number;
   isOpeningChat?: boolean;
@@ -37,17 +37,21 @@ const OrderRowActions = ({
   navigatingEnvioOrderId,
 }: OrderRowActionsProps) => {
   const [confirmingStatus, setConfirmingStatus] = useState<PedidoEstado | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
   const nextStatuses = getNextStatuses(order.estado, order.tipoEntrega);
   const esEnvioEnProceso = isEnvioEnProceso(order);
   const isNavigatingThisEnvio = navigatingEnvioOrderId === order.id;
 
   const handleConfirm = async () => {
     if (confirmingStatus) {
-      const success = await onUpdateStatus(order.id, confirmingStatus);
+      const reason = confirmingStatus === PedidoEstado.CANCELADO ? cancelReason.trim() : undefined;
+      if (confirmingStatus === PedidoEstado.CANCELADO && !reason) return;
+      const success = await onUpdateStatus(order.id, confirmingStatus, reason);
       if (!success) {
         toast.error("No se pudo actualizar el estado del pedido");
       }
       setConfirmingStatus(null);
+      setCancelReason("");
     }
   };
 
@@ -73,24 +77,56 @@ const OrderRowActions = ({
             exit={{ opacity: 0, scale: 0.95, x: 10 }}
             className="flex items-center gap-2 bg-secondary/60 border border-border/80 rounded-xl px-3 py-1 shadow-sm"
           >
-            <span className="text-xs font-bold text-muted-foreground">
-              ¿Confirmar {statusConfig[confirmingStatus].label}?
-            </span>
-            <Button
-              size="sm"
-              className="rounded-lg text-xs font-extrabold h-7 px-3 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all"
-              disabled={isUpdating}
-              onClick={handleConfirm}
-            >
-              Sí
-            </Button>
-            <button
-              className="rounded-lg text-xs font-bold h-7 px-3 hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all cursor-pointer inline-flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isUpdating}
-              onClick={() => setConfirmingStatus(null)}
-            >
-              No
-            </button>
+            {confirmingStatus === PedidoEstado.CANCELADO ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Motivo (obligatorio)"
+                  className="w-36 rounded-lg border border-rose-500/30 bg-background px-2 py-1 text-[11px] placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+                />
+                <Button
+                  size="sm"
+                  className="rounded-lg text-xs font-extrabold h-7 px-3 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all"
+                  disabled={isUpdating || !cancelReason.trim()}
+                  onClick={handleConfirm}
+                >
+                  Sí
+                </Button>
+                <button
+                  className="rounded-lg text-xs font-bold h-7 px-3 hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all cursor-pointer inline-flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isUpdating}
+                  onClick={() => {
+                    setConfirmingStatus(null);
+                    setCancelReason("");
+                  }}
+                >
+                  No
+                </button>
+              </div>
+            ) : (
+              <>
+                <span className="text-xs font-bold text-muted-foreground">
+                  ¿Confirmar {statusConfig[confirmingStatus].label}?
+                </span>
+                <Button
+                  size="sm"
+                  className="rounded-lg text-xs font-extrabold h-7 px-3 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all"
+                  disabled={isUpdating}
+                  onClick={handleConfirm}
+                >
+                  Sí
+                </Button>
+                <button
+                  className="rounded-lg text-xs font-bold h-7 px-3 hover:bg-black/5 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all cursor-pointer inline-flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isUpdating}
+                  onClick={() => setConfirmingStatus(null)}
+                >
+                  No
+                </button>
+              </>
+            )}
           </motion.div>
         ) : (
           <motion.div
@@ -183,7 +219,7 @@ const OrderRowActions = ({
 
 export const getAdminOrderColumns = (
   isUpdatingMap: Record<string, boolean>,
-  onUpdateStatus: (orderId: string, newStatus: PedidoEstado) => Promise<boolean>,
+  onUpdateStatus: (orderId: string, newStatus: PedidoEstado, motivoCancelacion?: string) => Promise<boolean>,
   onOpenOrderChat?: (order: AdminOrder) => void,
   unreadChatCounts?: Record<string, number>,
   openingChatOrderId?: string | null,

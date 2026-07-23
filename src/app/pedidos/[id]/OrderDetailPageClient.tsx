@@ -83,7 +83,7 @@ const statusConfig = {
 interface OrderDetailPageClientProps {
   id: string;
   getOrderDetail: (orderId: string) => Promise<any>;
-  cancelUserOrder: (orderId: string) => Promise<any>;
+  cancelUserOrder: (orderId: string, motivoCancelacion?: string) => Promise<any>;
   deleteUserOrder: (orderId: string) => Promise<any>;
   processMercadoPagoPayment: (storeId: string, paymentId: string) => Promise<any>;
   getConversationMessages: (conversationId: string) => Promise<any>;
@@ -120,6 +120,7 @@ export default function OrderDetailPageClient({
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
   const [isConfirmingCancel, setIsConfirmingCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -508,7 +509,7 @@ export default function OrderDetailPageClient({
   const handleCancelOrder = async () => {
     setCanceling(true);
     try {
-      const result = await cancelUserOrder(order.id);
+      const result = await cancelUserOrder(order.id, cancelReason.trim() || undefined);
       if (result && "error" in result) {
         toast.error("Error", { description: result.error });
       } else {
@@ -520,6 +521,7 @@ export default function OrderDetailPageClient({
     } finally {
       setCanceling(false);
       setIsConfirmingCancel(false);
+      setCancelReason("");
     }
   };
 
@@ -1136,6 +1138,11 @@ export default function OrderDetailPageClient({
                                       <XCircle className="h-3.5 w-3.5" />
                                       <span className="text-xs font-bold">Cancelado</span>
                                     </div>
+                                    {order.motivoCancelacion && (
+                                      <p className="text-[11px] font-medium text-muted-foreground mt-1 italic">
+                                        &ldquo;{order.motivoCancelacion}&rdquo;
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                               )}
@@ -1148,27 +1155,39 @@ export default function OrderDetailPageClient({
 
                   {isBuyer && order.estado === PedidoEstado.PENDIENTE && (
                     isConfirmingCancel ? (
-                      <div className="mt-6 flex gap-2 w-full">
-                        <Button
-                          variant="outline"
-                          className="flex-1 rounded-2xl"
-                          onClick={() => setIsConfirmingCancel(false)}
-                          disabled={canceling}
-                        >
-                          No
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          className="flex-1 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-md shadow-red-500/20"
-                          onClick={handleCancelOrder}
-                          disabled={canceling}
-                        >
-                          {canceling ? (
-                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                          ) : (
-                            "Sí, cancelar"
-                          )}
-                        </Button>
+                      <div className="mt-6 space-y-3">
+                        <textarea
+                          value={cancelReason}
+                          onChange={(e) => setCancelReason(e.target.value)}
+                          placeholder="¿Por qué cancelas el pedido? (opcional)"
+                          rows={2}
+                          className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                        />
+                        <div className="flex gap-2 w-full">
+                          <Button
+                            variant="outline"
+                            className="flex-1 rounded-2xl"
+                            onClick={() => {
+                              setIsConfirmingCancel(false);
+                              setCancelReason("");
+                            }}
+                            disabled={canceling}
+                          >
+                            No
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            className="flex-1 rounded-2xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-md shadow-red-500/20"
+                            onClick={handleCancelOrder}
+                            disabled={canceling}
+                          >
+                            {canceling ? (
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            ) : (
+                              "Sí, cancelar"
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <Button
