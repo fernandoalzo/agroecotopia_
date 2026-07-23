@@ -215,13 +215,17 @@ export class ChatService {
       throw new Error("CONVERSATION_NOT_FOUND");
     }
 
-    // Solo soporte y WhatsApp permiten borrado. Los chats de pedido se conservan como historial operativo.
-    if (conversation.type !== ConversationType.SUPPORT && conversation.type !== ConversationType.WHATSAPP) {
-      throw new Error("DELETE_NOT_ALLOWED");
-    }
+    const isParticipant =
+      conversation.userId === currentUserId || conversation.sellerId === currentUserId;
+    const isAdminOrSeller = userRole === "admin" || userRole === "seller";
 
-    if (userRole !== "admin" && conversation.userId !== currentUserId) {
-      log.warn("Acceso no autorizado para eliminar conversación:", { conversationId, currentUserId, ownerUserId: conversation.userId });
+    if (!isAdminOrSeller && !isParticipant) {
+      log.warn("Acceso no autorizado para eliminar conversación:", {
+        conversationId,
+        currentUserId,
+        ownerUserId: conversation.userId,
+        sellerId: conversation.sellerId,
+      });
       throw new Error("UNAUTHORIZED_ACCESS");
     }
 

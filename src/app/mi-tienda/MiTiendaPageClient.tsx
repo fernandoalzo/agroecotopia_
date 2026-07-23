@@ -113,6 +113,7 @@ interface MiTiendaActions {
   getStoreCustomersChat: (storeId: string) => Promise<any>;
   getStoreCustomerChatMessages: (storeId: string, customerId: string) => Promise<any>;
   getOrCreateCustomerConversation: (storeId: string, customerId: string) => Promise<any>;
+  deleteConversation?: (conversationId: string) => Promise<any>;
 }
 
 const SIDEBAR_ITEMS: { id: SellerTab; labelEs: string; labelEn: string; icon: React.ElementType }[] = [
@@ -978,6 +979,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                     getStoreCustomerChatMessagesAction={actions.getStoreCustomerChatMessages}
                     getOrCreateCustomerConversationAction={actions.getOrCreateCustomerConversation}
                     markAsReadAction={actions.markAsRead}
+                    deleteConversationAction={actions.deleteConversation}
                   />
                 )}
               </motion.div>

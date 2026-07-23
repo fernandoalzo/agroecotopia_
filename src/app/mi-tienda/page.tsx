@@ -9,6 +9,7 @@ import {
   getStoreCustomersChatAction,
   getStoreCustomerChatMessagesAction,
   getOrCreateCustomerActiveConversationAction,
+  deleteConversationAction,
 } from "@/backend/modules/chat/chat.actions";
 import {
   getPaginatedProductsAction,
@@ -133,6 +134,7 @@ export default function Page() {
         getStoreCustomersChat: getStoreCustomersChatAction,
         getStoreCustomerChatMessages: getStoreCustomerChatMessagesAction,
         getOrCreateCustomerConversation: getOrCreateCustomerActiveConversationAction,
+        deleteConversation: deleteConversationAction,
       }}
     />
   );

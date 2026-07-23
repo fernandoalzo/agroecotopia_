@@ -3,12 +3,13 @@
 import React, { useState, useEffect, useRef, useCallback, FormEvent } from "react";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, User, Send, X, Leaf, ArrowLeft, Store, ShoppingBag, ChevronRight } from "lucide-react";
+import { MessageSquare, User, Send, X, Leaf, ArrowLeft, Store, ShoppingBag, ChevronRight, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import { Message } from "@/frontend/components/chat/ChatWidget";
 import { ChatMessageBubble } from "@/frontend/components/chat/ChatMessageBubble";
+import { DeleteConfirmModal } from "@/frontend/components/admin/chat/DeleteConfirmModal";
 import { Loading } from "@/components/ui/Loading";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -46,6 +47,7 @@ interface StoreChatPanelProps {
   getStoreCustomerChatMessagesAction: (storeId: string, customerId: string) => Promise<any>;
   getOrCreateCustomerConversationAction: (storeId: string, customerId: string) => Promise<any>;
   markAsReadAction: (conversationId: string) => Promise<any>;
+  deleteConversationAction?: (conversationId: string) => Promise<any>;
 }
 
 export function StoreChatPanel({
@@ -56,6 +58,7 @@ export function StoreChatPanel({
   getStoreCustomerChatMessagesAction,
   getOrCreateCustomerConversationAction,
   markAsReadAction,
+  deleteConversationAction,
 }: StoreChatPanelProps) {
   const { data: session } = useSession();
   const { socket, isConnected } = useSocket();
@@ -72,6 +75,34 @@ export function StoreChatPanel({
   const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isUserTyping, setIsUserTyping] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteConversation = async () => {
+    if (!activeConversationId) return;
+    setIsDeleting(true);
+    try {
+      const res = await deleteConversationAction?.(activeConversationId);
+      if (res && typeof res === "object" && "error" in res) {
+        toast.error("Error al eliminar", { description: String(res.error) });
+      } else {
+        if (socket) {
+          socket.emit("delete_conversation", { conversationId: activeConversationId });
+        }
+        toast.success("Conversación eliminada");
+        setActiveCustomer(null);
+        setMessages([]);
+        setActiveConversationId(null);
+        setShowDeleteConfirm(false);
+        await loadCustomers();
+      }
+    } catch (err) {
+      log.error("Error deleting conversation in StoreChatPanel:", err);
+      toast.error("No se pudo eliminar la conversación.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -150,14 +181,25 @@ export function StoreChatPanel({
       }
     };
 
+    const handleConversationDeleted = (payload: { conversationId: string }) => {
+      if (payload.conversationId === activeConversationId) {
+        setActiveCustomer(null);
+        setMessages([]);
+        setActiveConversationId(null);
+        loadCustomers();
+      }
+    };
+
     socket.on("receive_message", handleReceiveMessage);
     socket.on("chat_error", handleChatError);
     socket.on("user_typing", handleTyping);
+    socket.on("conversation_deleted", handleConversationDeleted);
 
     return () => {
       socket.off("receive_message", handleReceiveMessage);
       socket.off("chat_error", handleChatError);
       socket.off("user_typing", handleTyping);
+      socket.off("conversation_deleted", handleConversationDeleted);
     };
   }, [socket, activeConversationId, session?.user?.id]);
 
@@ -398,7 +440,7 @@ export function StoreChatPanel({
                   {activeCustomer.user.email || ""}
                 </p>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <span
                   className={cn(
                     "w-2 h-2 rounded-full",
@@ -406,6 +448,13 @@ export function StoreChatPanel({
                   )}
                   title={isConnected ? "Conectado" : "Desconectado"}
                 />
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="p-2.5 shrink-0 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl transition-all flex items-center justify-center cursor-pointer border border-red-500/20 hover:border-red-500/30 shadow-sm"
+                  title="Eliminar Conversación"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
@@ -555,6 +604,13 @@ export function StoreChatPanel({
           </div>
         )}
       </main>
+
+      <DeleteConfirmModal
+        show={showDeleteConfirm}
+        isDeleting={isDeleting}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeleteConversation}
+      />
     </div>
   );
 }
