@@ -671,7 +671,7 @@ export default function OrderDetailPageClient({
   }
 
   const StatusIcon = statusConfig[order.estado as PedidoEstado].icon;
-  const closedOrderStatuses: PedidoEstado[] = [PedidoEstado.ENTREGADO, PedidoEstado.CANCELADO];
+  const closedOrderStatuses: PedidoEstado[] = [PedidoEstado.ENTREGADO];
   const isOrderChatDisabled = closedOrderStatuses.includes(order.estado as PedidoEstado);
 
   return (

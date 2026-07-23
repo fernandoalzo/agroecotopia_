@@ -457,6 +457,7 @@ export class ChatRepository {
               PedidoEstado.CONFIRMADO,
               PedidoEstado.EN_PREPARACION,
               PedidoEstado.EN_BODEGA,
+              PedidoEstado.CANCELADO,
             ],
           },
         },
