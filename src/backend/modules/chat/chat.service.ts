@@ -343,6 +343,13 @@ export class ChatService {
     };
   }
 
+  async getStoreConversationUnreadInfo(storeId: string, userId: string) {
+    const conversation = await this.chatRepository.findStoreConversation(storeId, userId);
+    if (!conversation) return { hasConversation: false, unreadCount: 0, conversationId: null };
+    const unreadCount = await this.chatRepository.getConversationUnreadCount(conversation.id, userId);
+    return { hasConversation: true, unreadCount, conversationId: conversation.id };
+  }
+
   async getUsersForAdminChat(searchQuery?: string, page: number = 1) {
     log.debug("Buscando usuarios paginados para chat de admin:", { searchQuery, page });
     return this.chatRepository.findUsersPaginated(searchQuery, page);

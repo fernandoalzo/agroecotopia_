@@ -25,6 +25,8 @@ import { OrderChatPanel, type OrderConversation } from "@/components/chat/OrderC
 import type { Message } from "@/components/chat/ChatWidget";
 import { toast } from "sonner";
 import logger from "@/utils/logger";
+import { useSocket } from "@/frontend/context/SocketContext";
+import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import type { Product } from "@/types";
 import type { Store as StoreType } from "@/types/store";
 
@@ -37,19 +39,48 @@ interface StorePublicProfileProps {
   };
   products: Product[];
   openStoreChatAction?: (storeId: string) => Promise<{ conversation: OrderConversation; messages: Message[] } | { error: string }>;
+  getStoreChatUnreadAction?: (storeId: string) => Promise<{ hasConversation: boolean; unreadCount: number; conversationId: string | null } | { error: string }>;
 }
 
-export function StorePublicProfile({ store, products, openStoreChatAction }: StorePublicProfileProps) {
+export function StorePublicProfile({ store, products, openStoreChatAction, getStoreChatUnreadAction }: StorePublicProfileProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const { language } = useLanguage();
+  const { socket } = useSocket();
   const [storeChat, setStoreChat] = useState<{ conversation: OrderConversation; messages: Message[] } | null>(null);
   const [isOpeningChat, setIsOpeningChat] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const searchParams = useSearchParams();
   const shouldAutoOpenChat = searchParams.get("openChat") === "true";
   const autoOpenTriggeredRef = useRef(false);
 
   const isOwner = session?.user?.id === store.owner?.id;
+
+  const loadUnreadCount = useCallback(async () => {
+    if (!session?.user?.id || isOwner || !getStoreChatUnreadAction) {
+      setUnreadCount(0);
+      return;
+    }
+    try {
+      const res = await getStoreChatUnreadAction(store.id);
+      if (res && "unreadCount" in res) {
+        setUnreadCount(res.unreadCount);
+      }
+    } catch {
+      setUnreadCount(0);
+    }
+  }, [store.id, session?.user?.id, isOwner, getStoreChatUnreadAction]);
+
+  useSocketRefresh({
+    socket,
+    enabled: !!session?.user?.id && !isOwner && !!getStoreChatUnreadAction,
+    refresh: loadUnreadCount,
+    events: ["new_message_notification", "unread_count_updated"],
+  });
+
+  useEffect(() => {
+    loadUnreadCount();
+  }, [loadUnreadCount]);
 
   const t = {
     back: language === "es" ? "Volver" : "Back",
@@ -103,6 +134,7 @@ export function StorePublicProfile({ store, products, openStoreChatAction }: Sto
         conversation: res.conversation as OrderConversation,
         messages: (res.messages || []) as Message[],
       });
+      setUnreadCount(0);
     } catch (err) {
       log.error("Error abriendo chat de tienda:", err);
       toast.error("No se pudo abrir el chat");
@@ -316,6 +348,11 @@ export function StorePublicProfile({ store, products, openStoreChatAction }: Sto
               <span className="text-sm font-semibold whitespace-nowrap">
                 {t.talkToSeller}
               </span>
+              {unreadCount > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-primary">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </motion.button>
           </AnimatePresence>
         </div>

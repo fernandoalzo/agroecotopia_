@@ -302,6 +302,16 @@ export async function openOrderChatAction(pedidoId: string, storeId: string) {
   });
 }
 
+export async function getStoreChatUnreadAction(storeId: string) {
+  return withAuth(async (session) => {
+    try {
+      return await chatService.getStoreConversationUnreadInfo(storeId, session.user.id);
+    } catch {
+      return { hasConversation: false, unreadCount: 0, conversationId: null };
+    }
+  });
+}
+
 export async function openStoreChatAction(storeId: string) {
   return withAuth(async (session) => {
     const userId = session.user.id;

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { config } from "@/config/config";
 import { getPublicStoreBySlugAction } from "@/backend/modules/store/store.actions";
 import { getPaginatedProductsAction } from "@/backend/modules/product/product.actions";
-import { openStoreChatAction } from "@/backend/modules/chat/chat.actions";
+import { openStoreChatAction, getStoreChatUnreadAction } from "@/backend/modules/chat/chat.actions";
 import { StorePublicProfile } from "@/frontend/components/store/StorePublicProfile";
 import logger from "@/utils/logger";
 
@@ -57,5 +57,5 @@ export default async function StorePublicPage({ params }: { params: Promise<{ sl
   // Fetch store products (up to 50 for the public page)
   const { products } = await getPaginatedProductsAction(1, 50, undefined, store.id);
 
-  return <StorePublicProfile store={store as any} products={products as any[]} openStoreChatAction={openStoreChatAction} />;
+  return <StorePublicProfile store={store as any} products={products as any[]} openStoreChatAction={openStoreChatAction} getStoreChatUnreadAction={getStoreChatUnreadAction} />;
 }

@@ -386,6 +386,16 @@ export class ChatRepository {
     });
   }
 
+  async getConversationUnreadCount(conversationId: string, excludeUserId: string) {
+    return prisma.message.count({
+      where: {
+        conversationId,
+        isRead: false,
+        senderId: { not: excludeUserId },
+      },
+    });
+  }
+
   async findStoreOwner(storeId: string) {
     log.debug("Buscando propietario de tienda:", { storeId });
     return prisma.store.findUnique({
