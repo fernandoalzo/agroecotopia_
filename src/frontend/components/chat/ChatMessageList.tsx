@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Bot, Leaf } from "lucide-react";
-import { Loading } from "@/components/ui/Loading";
+import { ChatMessageSkeleton } from "./ChatMessageSkeleton";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 import type { Message } from "./ChatWidget";
 
@@ -81,13 +81,7 @@ export const ChatMessageList = ({
             style={{ overflowX: "hidden" }}
         >
             {isLoading ? (
-                <div className="h-full flex items-center justify-center">
-                    <Loading
-                        text=""
-                        subtext=""
-                        className="py-0 scale-75"
-                    />
-                </div>
+                <ChatMessageSkeleton className="p-0 bg-transparent" />
             ) : showAIEmpty ? (
                 /* ── AI Empty state ── */
                 <div className="h-full flex flex-col items-center justify-center text-center p-8 select-none bg-gradient-to-b from-transparent to-violet-500/[0.02]">

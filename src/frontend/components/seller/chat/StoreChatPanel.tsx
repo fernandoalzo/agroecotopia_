@@ -9,6 +9,7 @@ import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
 import { Message } from "@/frontend/components/chat/ChatWidget";
 import { ChatMessageBubble } from "@/frontend/components/chat/ChatMessageBubble";
 import { DeleteConfirmModal } from "@/frontend/components/admin/chat/DeleteConfirmModal";
+import { ChatMessageSkeleton } from "@/frontend/components/chat/ChatMessageSkeleton";
 import { Loading } from "@/components/ui/Loading";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -92,7 +93,7 @@ export function StoreChatPanel({
         setMessages([]);
         setActiveConversationId(null);
         setShowDeleteConfirm(false);
-        await loadCustomers();
+        await loadCustomers(false);
       }
     } catch (err) {
       log.error("Error deleting conversation in StoreChatPanel:", err);
@@ -108,9 +109,9 @@ export function StoreChatPanel({
   const firstUnreadRef = useRef<HTMLDivElement>(null);
   const joinedRoomRef = useRef<string | null>(null);
 
-  const loadCustomers = useCallback(async () => {
+  const loadCustomers = useCallback(async (withLoading = false) => {
     if (!storeId) return;
-    setLoading(true);
+    if (withLoading) setLoading(true);
     try {
       const res = await getStoreCustomersAction(storeId);
       if (Array.isArray(res)) {
@@ -121,18 +122,18 @@ export function StoreChatPanel({
     } catch (err) {
       log.error("Error loading store customers:", err);
     } finally {
-      setLoading(false);
+      if (withLoading) setLoading(false);
     }
   }, [storeId, getStoreCustomersAction]);
 
   useEffect(() => {
-    loadCustomers();
+    loadCustomers(true);
   }, [loadCustomers]);
 
   useSocketRefresh({
     socket,
     enabled: !!storeId,
-    refresh: loadCustomers,
+    refresh: () => loadCustomers(false),
     events: [
       "unread_count_updated",
       "new_message_notification",
@@ -208,6 +209,7 @@ export function StoreChatPanel({
   }, [socket]);
 
   const handleSelectCustomer = async (customer: StoreCustomer) => {
+    if (activeCustomer?.user.id === customer.user.id) return;
     setActiveCustomer(customer);
     setReplyingTo(null);
     setLoadingMessages(true);
@@ -441,9 +443,7 @@ export function StoreChatPanel({
               className="flex-1 p-4 md:p-6 overflow-y-auto space-y-4 bg-secondary/5 min-h-0 overscroll-y-contain"
             >
               {loadingMessages ? (
-                <div className="h-full flex items-center justify-center">
-                  <Loading text="" subtext="" className="py-0" />
-                </div>
+                <ChatMessageSkeleton className="p-0 bg-transparent" />
               ) : messages.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-center p-8 select-none">
                   <div className="flex flex-col items-center justify-center">

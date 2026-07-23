@@ -6,7 +6,7 @@ import { Leaf, MessageSquare, Send, X } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { Button } from "@/components/ui/button";
-import { Loading } from "@/components/ui/Loading";
+import { ChatMessageSkeleton } from "./ChatMessageSkeleton";
 import { toast } from "sonner";
 import type { Message } from "./ChatWidget";
 import { ChatMessageBubble } from "./ChatMessageBubble";
@@ -173,9 +173,7 @@ export function OrderChatPanel({
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 py-4">
           {isLoading ? (
-            <div className="flex h-full items-center justify-center">
-              <Loading text="" subtext="" className="py-0 scale-75" />
-            </div>
+            <ChatMessageSkeleton className="p-0 bg-transparent" />
           ) : messages.length === 0 ? (
             <div className="flex h-full items-center justify-center text-center p-8 select-none bg-gradient-to-b from-transparent to-primary/[0.02]">
               <div className="flex flex-col items-center justify-center">

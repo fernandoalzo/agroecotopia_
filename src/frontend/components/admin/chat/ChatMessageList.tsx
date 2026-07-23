@@ -3,7 +3,7 @@ import { Copy, Check, MessageSquare, Phone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Message } from "@/frontend/components/chat/ChatWidget";
 import { Conversation } from "./types";
-import { Loading } from "@/components/ui/Loading";
+import { ChatMessageSkeleton } from "@/frontend/components/chat/ChatMessageSkeleton";
 import { getFirstUnreadMessageIndex } from "@/frontend/lib/chatUnread";
 
 interface ChatMessageListProps {
@@ -114,9 +114,7 @@ export function ChatMessageList({
       style={keyboardInset > 0 ? { paddingBottom: keyboardInset + 16 } : undefined}
     >
       {isLoadingMsgs ? (
-        <div className="h-full flex items-center justify-center">
-          <Loading text="" subtext="" className="py-0" />
-        </div>
+        <ChatMessageSkeleton className="p-0 bg-transparent" />
       ) : messages.length === 0 ? (
         <EmptyMessagesWatermark activeConv={activeConv} />
       ) : (
