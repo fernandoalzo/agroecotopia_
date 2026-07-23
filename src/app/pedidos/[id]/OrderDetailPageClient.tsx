@@ -114,7 +114,6 @@ export default function OrderDetailPageClient({
   const { status, data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const shouldAutoOpenChat = searchParams.get("openChat") === "true";
   const { t } = useLanguage();
   const { addToCart } = useCart();
   const [order, setOrder] = useState<any>(null);
@@ -440,17 +439,6 @@ export default function OrderDetailPageClient({
   useEffect(() => {
     loadUnreadCounts();
   }, [loadUnreadCounts]);
-
-  useEffect(() => {
-    if (!shouldAutoOpenChat || !order?.id || orderStoreIds.length === 0 || orderChat) return;
-
-    const cleaned = new URL(window.location.href);
-    cleaned.searchParams.delete("openChat");
-    window.history.replaceState(null, "", cleaned.pathname + cleaned.search);
-
-    handleOpenSellerChat(orderStoreIds[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldAutoOpenChat, order?.id, orderStoreIds.join("|"), orderChat]);
 
   const handleRepeatOrder = async (e: React.MouseEvent) => {
     e.preventDefault();
