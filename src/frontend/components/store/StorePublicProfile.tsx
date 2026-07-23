@@ -1,7 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   Store as StoreIcon,
@@ -12,13 +14,21 @@ import {
   Package,
   User,
   ShieldCheck,
+  MessageSquare,
+  Loader2,
 } from "lucide-react";
 import Image from "next/image";
 import { useLanguage } from "@/context/LanguageContext";
 import ProductCard from "@/components/ProductCard";
 import Footer from "@/components/Footer";
+import { OrderChatPanel, type OrderConversation } from "@/components/chat/OrderChatPanel";
+import type { Message } from "@/components/chat/ChatWidget";
+import { toast } from "sonner";
+import logger from "@/utils/logger";
 import type { Product } from "@/types";
 import type { Store as StoreType } from "@/types/store";
+
+const log = logger.child();
 
 interface StorePublicProfileProps {
   store: StoreType & {
@@ -26,11 +36,20 @@ interface StorePublicProfileProps {
     _count?: { products: number };
   };
   products: Product[];
+  openStoreChatAction?: (storeId: string) => Promise<{ conversation: OrderConversation; messages: Message[] } | { error: string }>;
 }
 
-export function StorePublicProfile({ store, products }: StorePublicProfileProps) {
+export function StorePublicProfile({ store, products, openStoreChatAction }: StorePublicProfileProps) {
   const router = useRouter();
+  const { data: session } = useSession();
   const { language } = useLanguage();
+  const [storeChat, setStoreChat] = useState<{ conversation: OrderConversation; messages: Message[] } | null>(null);
+  const [isOpeningChat, setIsOpeningChat] = useState(false);
+  const searchParams = useSearchParams();
+  const shouldAutoOpenChat = searchParams.get("openChat") === "true";
+  const autoOpenTriggeredRef = useRef(false);
+
+  const isOwner = session?.user?.id === store.owner?.id;
 
   const t = {
     back: language === "es" ? "Volver" : "Back",
@@ -48,6 +67,7 @@ export function StorePublicProfile({ store, products }: StorePublicProfileProps)
       language === "es" ? `${n} producto${n !== 1 ? "s" : ""}` : `${n} product${n !== 1 ? "s" : ""}`,
     noProducts: language === "es" ? "Esta tienda aún no tiene productos." : "This store has no products yet.",
     storeOwner: language === "es" ? "Propietario de la tienda" : "Store owner",
+    talkToSeller: language === "es" ? "Habla con el vendedor" : "Talk to the seller",
   };
 
   const infoItems = [
@@ -64,6 +84,46 @@ export function StorePublicProfile({ store, products }: StorePublicProfileProps)
       ),
     },
   ];
+
+  const handleOpenStoreChat = useCallback(async () => {
+    if (!openStoreChatAction) {
+      toast.error("Chat no disponible");
+      return;
+    }
+    setIsOpeningChat(true);
+    try {
+      const res = await openStoreChatAction(store.id);
+      if (!res || "error" in res) {
+        toast.error("No se pudo abrir el chat", {
+          description: res && "error" in res ? String(res.error) : undefined,
+        });
+        return;
+      }
+      setStoreChat({
+        conversation: res.conversation as OrderConversation,
+        messages: (res.messages || []) as Message[],
+      });
+    } catch (err) {
+      log.error("Error abriendo chat de tienda:", err);
+      toast.error("No se pudo abrir el chat");
+    } finally {
+      setIsOpeningChat(false);
+    }
+  }, [store.id, openStoreChatAction]);
+
+  const handleMarkAsRead = useCallback(async (_conversationId: string) => {
+  }, []);
+
+  useEffect(() => {
+    if (!shouldAutoOpenChat || !store?.id || storeChat || autoOpenTriggeredRef.current || !openStoreChatAction) return;
+    autoOpenTriggeredRef.current = true;
+
+    const cleaned = new URL(window.location.href);
+    cleaned.searchParams.delete("openChat");
+    window.history.replaceState(null, "", cleaned.pathname + cleaned.search);
+
+    handleOpenStoreChat();
+  }, [shouldAutoOpenChat, store?.id, storeChat, openStoreChatAction, handleOpenStoreChat]);
 
   return (
     <div className="min-h-screen bg-background text-foreground font-body">
@@ -224,6 +284,42 @@ export function StorePublicProfile({ store, products }: StorePublicProfileProps)
         </div>
       </main>
       <Footer />
+
+      {/* Chat Panel Modal */}
+      {storeChat && (
+        <OrderChatPanel
+          conversation={storeChat.conversation}
+          initialMessages={storeChat.messages}
+          title={store.name}
+          onClose={() => setStoreChat(null)}
+          onMarkAsRead={handleMarkAsRead}
+        />
+      )}
+
+      {/* Floating Chat Button */}
+      {session?.user && !isOwner && !storeChat && openStoreChatAction && (
+        <div className="fixed bottom-6 right-6 z-[998]">
+          <AnimatePresence>
+            <motion.button
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.9 }}
+              onClick={handleOpenStoreChat}
+              disabled={isOpeningChat}
+              className="flex items-center gap-3 rounded-full bg-primary px-5 py-3.5 text-primary-foreground shadow-lg transition-all hover:scale-105 hover:shadow-xl active:scale-95 disabled:opacity-70"
+            >
+              {isOpeningChat ? (
+                <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+              ) : (
+                <MessageSquare className="h-5 w-5 shrink-0" />
+              )}
+              <span className="text-sm font-semibold whitespace-nowrap">
+                {t.talkToSeller}
+              </span>
+            </motion.button>
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }

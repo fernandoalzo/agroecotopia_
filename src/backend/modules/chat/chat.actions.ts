@@ -18,6 +18,7 @@ function getChatActionErrorMessage(error: unknown) {
     CONVERSATION_NOT_FOUND: "No se encontró la conversación solicitada.",
     DELETE_NOT_ALLOWED: "Los chats de pedido se conservan como historial y no se pueden eliminar.",
     CUSTOMER_NO_ORDERS: "Este cliente no tiene pedidos en tu tienda.",
+    STORE_NOT_FOUND: "Tienda no encontrada.",
   };
 
   return messages[error.message] || "Ocurrió un error inesperado en el chat.";
@@ -296,6 +297,30 @@ export async function openOrderChatAction(pedidoId: string, storeId: string) {
       return { conversation, messages };
     } catch (error) {
       log.warn("No se pudo abrir el chat consolidado de pedido:", { pedidoId, storeId, userId, error });
+      return { error: getChatActionErrorMessage(error) };
+    }
+  });
+}
+
+export async function openStoreChatAction(storeId: string) {
+  return withAuth(async (session) => {
+    const userId = session.user.id;
+    const userRole = session.user.role as Role;
+
+    try {
+      log.info("Abriendo chat de tienda:", { storeId, userId });
+      const conversation = await chatService.getOrCreateStoreConversation(storeId, userId, userRole);
+
+      const [messages] = await Promise.all([
+        chatService.getMessages(conversation.id, userId, userRole),
+        chatService.markAsRead(conversation.id, userId),
+      ]);
+
+      eventBus.emit("unread_count_updated", { conversationId: conversation.id });
+
+      return { conversation, messages };
+    } catch (error) {
+      log.warn("No se pudo abrir el chat de tienda:", { storeId, userId, error });
       return { error: getChatActionErrorMessage(error) };
     }
   });

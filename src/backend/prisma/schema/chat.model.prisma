@@ -1,6 +1,7 @@
 enum ConversationType {
   SUPPORT
   ORDER
+  STORE
   WHATSAPP
 }
 

@@ -2,6 +2,7 @@
 export const ConversationType = {
   SUPPORT: "SUPPORT",
   ORDER: "ORDER",
+  STORE: "STORE",
   WHATSAPP: "WHATSAPP",
 } as const;
 

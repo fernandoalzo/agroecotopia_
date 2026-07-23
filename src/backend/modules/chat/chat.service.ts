@@ -37,10 +37,12 @@ export class ChatService {
       && (userRole === "admin" || conversation.userId === currentUserId);
     const canAccessOrder = conversation.type === ConversationType.ORDER
       && (conversation.userId === currentUserId || conversation.sellerId === currentUserId || userRole === "admin");
+    const canAccessStore = conversation.type === ConversationType.STORE
+      && (conversation.userId === currentUserId || conversation.sellerId === currentUserId || userRole === "admin");
     const canAccessWhatsApp = conversation.type === ConversationType.WHATSAPP
       && (userRole === "admin" || conversation.userId === currentUserId);
 
-    if (!canAccessSupport && !canAccessOrder && !canAccessWhatsApp) {
+    if (!canAccessSupport && !canAccessOrder && !canAccessStore && !canAccessWhatsApp) {
       log.warn("Acceso no autorizado a conversación:", { conversationId: id, currentUserId, ownerUserId: conversation.userId });
       throw new Error("UNAUTHORIZED_ACCESS");
     }
@@ -105,6 +107,31 @@ export class ChatService {
     });
   }
 
+  async getOrCreateStoreConversation(storeId: string, currentUserId: string, userRole: Role) {
+    const store = await this.chatRepository.findStoreOwner(storeId);
+
+    if (!store) {
+      log.warn("Tienda no encontrada para chat:", { storeId, currentUserId });
+      throw new Error("STORE_NOT_FOUND");
+    }
+
+    const isStoreOwner = store.ownerId === currentUserId;
+
+    if (isStoreOwner && userRole !== "admin" && userRole !== "seller") {
+      log.warn("Acceso denegado - el propietario no puede chatear consigo mismo:", { storeId, currentUserId });
+      throw new Error("UNAUTHORIZED_ACCESS");
+    }
+
+    const existing = await this.chatRepository.findStoreConversation(storeId, currentUserId);
+    if (existing) return existing;
+
+    return await this.chatRepository.createStoreConversation({
+      storeId,
+      userId: currentUserId,
+      sellerId: store.ownerId,
+    });
+  }
+
   async getSellerOrderConversations(storeId: string, sellerId: string, userRole: Role) {
     if (userRole !== "admin" && userRole !== "seller") {
       throw new Error("UNAUTHORIZED_ACCESS");
@@ -128,6 +155,8 @@ export class ChatService {
         throw new Error("ORDER_CLOSED");
       }
     }
+
+    // STORE and SUPPORT conversations are always open
 
     return conversation;
   }
@@ -200,6 +229,40 @@ export class ChatService {
       }
     }
 
+    if (conversation.type === ConversationType.STORE && conversation.store) {
+      const isSeller = data.senderId === conversation.seller?.id;
+      const recipientId = isSeller ? conversation.userId : conversation.seller?.id;
+      const storeSlug = (conversation.store as any).slug || conversation.store.id;
+
+      if (recipientId && recipientId !== data.senderId) {
+        const actionUrl = isSeller
+          ? `/tienda/${storeSlug}?openChat=true`
+          : `/mi-tienda?tab=chat`;
+
+        notificationsService.dispatchNotification({
+          eventType: "store_message_sent",
+          actorId: data.senderId,
+          entityType: "Store",
+          entityId: conversation.store.id,
+          notification: {
+            type: "store_message",
+            title: isSeller ? "Respuesta del vendedor" : "Nuevo mensaje sobre tu tienda",
+            message: data.content.length > 120 ? data.content.slice(0, 120) + "..." : data.content,
+            audienceType: "INDIVIDUAL",
+            audienceRef: recipientId,
+            metadata: { actionUrl },
+          },
+        }).then((result) => {
+          log.info("Notificación de mensaje de tienda despachada:", {
+            notificationId: result.notification.id,
+            recipientCount: result.recipientCount,
+          });
+        }).catch((err) => {
+          log.error("Error al despachar notificación de mensaje de tienda:", err);
+        });
+      }
+    }
+
     return message;
   }
 
@@ -242,26 +305,14 @@ export class ChatService {
   }
 
   async getOrCreateCustomerActiveConversation(storeId: string, customerId: string, sellerId: string) {
-    // Find the customer's most recent order in this store
-    const order = await this.chatRepository.findFirstStoreOwnerOrder(storeId, customerId);
-    if (!order) {
-      log.warn("El cliente no tiene pedidos en esta tienda:", { storeId, customerId });
-      throw new Error("CUSTOMER_NO_ORDERS");
-    }
-
-    // Find or create ORDER conversation for this order
-    const existing = await this.chatRepository.findOrderConversation(order.id, storeId);
+    // Find existing STORE conversation for this customer + store
+    const existing = await this.chatRepository.findStoreConversation(storeId, customerId);
     if (existing) return existing;
 
-    // Need seller info
-    const store = await this.chatRepository.findPedidoStoreAccess(order.id, storeId);
-    const sellerIdFromStore = store?.detalles[0]?.store?.ownerId || sellerId;
-
-    return this.chatRepository.createOrderConversation({
-      pedidoId: order.id,
+    return this.chatRepository.createStoreConversation({
       storeId,
       userId: customerId,
-      sellerId: sellerIdFromStore,
+      sellerId,
     });
   }
 
@@ -270,19 +321,15 @@ export class ChatService {
       throw new Error("UNAUTHORIZED_ACCESS");
     }
 
-    // Get or create the active conversation for messaging
     const activeConversation = await this.getOrCreateCustomerActiveConversation(storeId, customerId, sellerId);
 
-    // Get all conversations for this customer in this store
     const conversations = await this.chatRepository.findCustomerConversations(storeId, customerId);
     const conversationIds = conversations.map(c => c.id);
 
-    // Get all messages from all conversations
     const messages = conversationIds.length > 0
       ? await this.chatRepository.findAllMessagesByConversationIds(conversationIds)
       : [];
 
-    // Mark messages as read
     for (const conv of conversations) {
       await this.chatRepository.markMessagesAsRead(conv.id, sellerId);
     }

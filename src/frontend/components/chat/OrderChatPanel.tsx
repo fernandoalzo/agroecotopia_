@@ -13,7 +13,7 @@ import { ChatMessageBubble } from "./ChatMessageBubble";
 
 export type OrderConversation = {
   id: string;
-  userId: string;
+  userId: string | null;
   sellerId?: string | null;
   pedidoId?: string | null;
   store?: {

@@ -41,6 +41,7 @@ export class ChatRepository {
             select: {
               id: true,
               name: true,
+              slug: true,
             },
           },
           pedido: {
@@ -166,6 +167,73 @@ export class ChatRepository {
 
     log.debug("Conversaciones obtenidas:", { count: mappedConversations.length });
     return mappedConversations;
+  }
+
+  async findStoreConversation(storeId: string, userId: string) {
+    log.debug("Buscando conversación de tienda:", { storeId, userId });
+    return prisma.conversation.findFirst({
+      where: {
+        type: ConversationType.STORE,
+        storeId,
+        userId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        store: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+  }
+
+  async createStoreConversation(data: { storeId: string; userId: string; sellerId: string }) {
+    log.info("Creando conversación de tienda:", data);
+    return prisma.conversation.create({
+      data: {
+        type: ConversationType.STORE,
+        storeId: data.storeId,
+        userId: data.userId,
+        sellerId: data.sellerId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        store: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
   }
 
   async findOrderConversation(pedidoId: string, storeId: string) {
@@ -314,6 +382,19 @@ export class ChatRepository {
             estado: true,
           },
         },
+      },
+    });
+  }
+
+  async findStoreOwner(storeId: string) {
+    log.debug("Buscando propietario de tienda:", { storeId });
+    return prisma.store.findUnique({
+      where: { id: storeId },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        ownerId: true,
       },
     });
   }
@@ -560,57 +641,34 @@ export class ChatRepository {
   }
 
   async findStoreCustomersWithConversations(storeId: string, sellerId: string) {
-    log.debug("Obteniendo clientes con pedidos abiertos para tienda:", { storeId });
-
-    const orderCustomers = await prisma.pedido.findMany({
-      where: {
-        detalles: { some: { storeId } },
-        estado: {
-          in: [
-            PedidoEstado.PENDIENTE,
-            PedidoEstado.CONFIRMADO,
-            PedidoEstado.EN_PREPARACION,
-            PedidoEstado.EN_BODEGA,
-          ],
-        },
-      },
-      select: { usuarioId: true },
-      distinct: ["usuarioId"],
-    });
-
-    if (orderCustomers.length === 0) return [];
-
-    const userIds = orderCustomers.map(c => c.usuarioId);
-
-    const users = await prisma.user.findMany({
-      where: { id: { in: userIds } },
-      select: { id: true, name: true, email: true },
-    });
+    log.debug("Obteniendo clientes con chat de tienda:", { storeId });
 
     const conversations = await prisma.conversation.findMany({
       where: {
-        type: ConversationType.ORDER,
+        type: ConversationType.STORE,
         storeId,
-        userId: { in: userIds },
       },
       include: {
+        user: {
+          select: { id: true, name: true, email: true },
+        },
         messages: {
           orderBy: { createdAt: "desc" },
           take: 1,
-        },
-        pedido: {
-          select: { id: true, estado: true, fechaPedido: true },
         },
       },
       orderBy: { updatedAt: "desc" },
     });
 
+    if (conversations.length === 0) return [];
+
+    const conversationIds = conversations.map(c => c.id);
     let unreadMap = new Map<string, number>();
-    if (conversations.length > 0) {
+    if (conversationIds.length > 0) {
       const unreadCounts = await prisma.message.groupBy({
         by: ["conversationId"],
         where: {
-          conversationId: { in: conversations.map(c => c.id) },
+          conversationId: { in: conversationIds },
           isRead: false,
           senderId: { not: sellerId },
         },
@@ -619,19 +677,24 @@ export class ChatRepository {
       unreadMap = new Map(unreadCounts.map(u => [u.conversationId, u._count._all]));
     }
 
-    const userConvMap = new Map<string, any[]>();
+    const userMap = new Map<string, { user: any; conversations: any[] }>();
     for (const conv of conversations) {
-      const uid = conv.userId;
-      if (!uid) continue;
-      const list = userConvMap.get(uid) || [];
-      list.push({ ...conv, unreadCount: unreadMap.get(conv.id) ?? 0 });
-      userConvMap.set(uid, list);
+      if (!conv.userId || !conv.user) continue;
+      const unread = unreadMap.get(conv.id) ?? 0;
+      const entry = userMap.get(conv.userId);
+      if (entry) {
+        entry.conversations.push({ ...conv, unreadCount: unread, pedido: null });
+      } else {
+        userMap.set(conv.userId, {
+          user: conv.user,
+          conversations: [{ ...conv, unreadCount: unread, pedido: null }],
+        });
+      }
     }
 
-    return users.map(user => {
-      const convs = userConvMap.get(user.id) || [];
+    return Array.from(userMap.values()).map(({ user, conversations: convs }) => {
       const totalUnread = convs.reduce((sum: number, c: any) => sum + c.unreadCount, 0);
-      const lastMsg = convs.length > 0 ? convs[0].messages?.[0] : null;
+      const lastMsg = convs[0]?.messages?.[0] ?? null;
       return {
         user,
         conversations: convs,
@@ -639,7 +702,7 @@ export class ChatRepository {
         lastMessage: lastMsg
           ? { content: lastMsg.content, createdAt: lastMsg.createdAt }
           : null,
-        updatedAt: convs.length > 0 ? convs[0].updatedAt : null,
+        updatedAt: convs[0]?.updatedAt ?? null,
       };
     }).sort((a, b) => {
       if (!a.updatedAt) return 1;
@@ -673,14 +736,9 @@ export class ChatRepository {
     log.debug("Buscando conversaciones de cliente en tienda:", { storeId, customerId });
     return prisma.conversation.findMany({
       where: {
-        type: ConversationType.ORDER,
+        type: ConversationType.STORE,
         storeId,
         userId: customerId,
-      },
-      include: {
-        pedido: {
-          select: { id: true, estado: true, fechaPedido: true },
-        },
       },
       orderBy: { updatedAt: "desc" },
     });

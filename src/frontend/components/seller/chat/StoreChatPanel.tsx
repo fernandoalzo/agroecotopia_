@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, FormEvent } from "react";
 import { useSession } from "next-auth/react";
-import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, User, Send, X, Leaf, ArrowLeft, Store, ShoppingBag, ChevronRight, Trash2 } from "lucide-react";
+import { MessageSquare, User, Send, X, Leaf, ArrowLeft, ChevronRight, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSocket } from "@/frontend/context/SocketContext";
 import { useSocketRefresh } from "@/frontend/hooks/useSocketRefresh";
@@ -25,7 +24,6 @@ type CustomerUser = {
 
 type CustomerConversation = {
   id: string;
-  pedido: { id: string; estado: string; fechaPedido: Date } | null;
   messages?: { content: string; createdAt: Date }[];
   unreadCount: number;
   updatedAt: Date;
@@ -136,10 +134,8 @@ export function StoreChatPanel({
     enabled: !!storeId,
     refresh: loadCustomers,
     events: [
-      "order:created",
-      "order:status_updated_store",
-      "order:deleted_store",
       "unread_count_updated",
+      "new_message_notification",
     ],
   });
 
@@ -275,19 +271,6 @@ export function StoreChatPanel({
     loadCustomers();
   };
 
-  const getPedidoStatusLabel = (estado: string) => {
-    const labels: Record<string, string> = {
-      PENDIENTE: "Pendiente",
-      CONFIRMADO: "Confirmado",
-      EN_PREPARACION: "En preparación",
-      EN_CAMINO: "En camino",
-      EN_BODEGA: "En bodega",
-      ENTREGADO: "Entregado",
-      CANCELADO: "Cancelado",
-    };
-    return labels[estado] || estado;
-  };
-
   const getCustomerUnreadCount = (customer: StoreCustomer) => {
     if (activeCustomer?.user.id === customer.user.id) return 0;
     return customer.unreadCount;
@@ -311,7 +294,7 @@ export function StoreChatPanel({
               <div>
                 <h2 className="font-semibold text-sm leading-snug font-display">Chat con Clientes</h2>
                 <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                  Clientes que han comprado en tu tienda
+                  Clientes que te han escrito desde tu tienda
                 </p>
               </div>
             </div>
@@ -326,15 +309,12 @@ export function StoreChatPanel({
             </div>
           ) : customers.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground text-sm">
-              No hay clientes con pedidos en tu tienda aún.
+              No hay conversaciones aún. Los clientes pueden contactarte desde tu tienda.
             </div>
           ) : (
             customers.map((customer) => {
               const isActive = activeCustomer?.user.id === customer.user.id;
               const badgeCount = getCustomerUnreadCount(customer);
-              const hasOpenOrders = customer.conversations.some(
-                c => c.pedido && !["ENTREGADO", "CANCELADO"].includes(c.pedido.estado)
-              );
               return (
                 <button
                   key={customer.user.id}
@@ -355,9 +335,6 @@ export function StoreChatPanel({
                     >
                       {customer.user.name?.[0]?.toUpperCase() || <User className="w-5 h-5" />}
                     </div>
-                    {hasOpenOrders && (
-                      <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-background rounded-full" />
-                    )}
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -481,29 +458,6 @@ export function StoreChatPanel({
                     <p className="font-sans text-sm text-muted-foreground max-w-[245px] leading-relaxed font-medium">
                       Envía un mensaje para contactar con {activeCustomer.user.name || "este cliente"}.
                     </p>
-                    {activeCustomer.conversations.length > 0 && (
-                      <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                        {activeCustomer.conversations.map(conv => (
-                          conv.pedido && (
-                            <span
-                              key={conv.id}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary/60 text-[11px] font-semibold text-muted-foreground"
-                            >
-                              <ShoppingBag className="w-3 h-3" />
-                              Pedido #{conv.pedido.id.slice(-6).toUpperCase()}
-                              <span className={cn(
-                                "ml-1 px-1.5 py-0.5 rounded-full text-[10px]",
-                                conv.pedido.estado === "ENTREGADO" ? "bg-green-500/10 text-green-600" :
-                                conv.pedido.estado === "CANCELADO" ? "bg-red-500/10 text-red-600" :
-                                "bg-blue-500/10 text-blue-600"
-                              )}>
-                                {getPedidoStatusLabel(conv.pedido.estado)}
-                              </span>
-                            </span>
-                          )
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
               ) : (
@@ -596,7 +550,7 @@ export function StoreChatPanel({
               <MessageSquare className="w-10 h-10" />
             </div>
             <h2 className="text-foreground/90 font-semibold font-display mb-1 text-base">
-              Chat Centralizado
+              Chat con Clientes
             </h2>
             <p className="text-muted-foreground max-w-sm text-xs leading-relaxed">
               Selecciona un cliente de la lista para ver sus mensajes y responder en tiempo real.

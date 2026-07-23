@@ -395,6 +395,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     socket,
     enabled: !!activeStore?.id && !!isSeller && activeTab !== "chat",
     refresh: refreshChatUnread,
+    events: ["new_message_notification", "unread_count_updated"],
   });
 
   useEffect(() => {
@@ -809,7 +810,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
               {activeTab === "products" && "Gestiona los productos de tu tienda"}
               {activeTab === "store_info" && "Información y configuración de tu tienda"}
               {activeTab === "configuration" && "Configura impuestos, zonas de envío y bodegas de recogida"}
-              {activeTab === "chat" && "Chat centralizado con clientes que han comprado en tu tienda"}
+              {activeTab === "chat" && "Chat con clientes que se contactan desde tu tienda"}
             </p>
           </div>
         </div>
