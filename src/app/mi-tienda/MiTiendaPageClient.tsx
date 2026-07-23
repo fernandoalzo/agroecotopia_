@@ -1032,7 +1032,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
           conversation={orderChat.conversation}
           initialMessages={orderChat.messages}
           title={`Pedido #${orderChat.conversation.pedidoId?.slice(-6).toUpperCase() || "pedido"}`}
-          disabled={["ENTREGADO", "CANCELADO"].includes(orderChat.conversation.pedido?.estado || "")}
+          disabled={orderChat.conversation.pedido?.estado === "ENTREGADO"}
           onClose={() => setOrderChat(null)}
           onMarkAsRead={handleMarkOrderChatAsRead}
         />
