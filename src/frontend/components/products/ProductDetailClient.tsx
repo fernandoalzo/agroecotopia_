@@ -180,14 +180,9 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
                 {/* Store */}
                 {(product as any).store?.name && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground/80 mt-2 mb-3">
-                    <Store className="w-4 h-4 text-primary/70 shrink-0" />
+                    <Store className="w-4 h-4 text-primary/70" />
                     {(product as any).store.slug ? (
-                      <motion.div
-                        whileHover={{ scale: 1.05, x: 2 }}
-                        whileTap={{ scale: 0.95 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                        className="inline-flex min-w-0"
-                      >
+                      <motion.div whileHover={{ scale: 1.03, x: 2 }} whileTap={{ scale: 0.97 }}>
                         <Link
                           href={`/tienda/${(product as any).store.slug}`}
                           className="truncate text-foreground/90 hover:text-primary hover:underline transition-colors font-semibold"
@@ -280,7 +275,7 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
                         await navigator.clipboard.writeText(productUrl);
                         setCopiedLink(true);
                         setTimeout(() => setCopiedLink(false), 2000);
-                      } catch {}
+                      } catch { }
                     }}
                     className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded"
                   >
@@ -306,7 +301,7 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
                           : product.stock > 0
                             ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
                             : "bg-red-500/10 text-red-600 border-red-500/20"
-                        }`}
+                          }`}
                       >
                         <span
                           className={`w-1.5 h-1.5 rounded-full animate-pulse ${product.stock > 5
@@ -314,7 +309,7 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
                             : product.stock > 0
                               ? "bg-amber-500"
                               : "bg-red-500"
-                          }`}
+                            }`}
                         />
                         {product.stock > 0 ? `${product.stock} ${t.products.available}` : t.products.outOfStock}
                       </div>
@@ -344,13 +339,12 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
                     <Button
                       onClick={handleAddToCart}
                       disabled={added || product.stock === 0}
-                      className={`flex-1 py-6 rounded-xl font-display text-lg font-bold shadow-lg transition-all ${
-                        added
-                          ? "bg-green-600 hover:bg-green-700 shadow-green-600/20 text-[#fefce8]"
-                          : product.stock === 0
-                            ? "bg-muted text-muted-foreground cursor-not-allowed"
-                            : "bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] active:shadow-inner border border-[#fcd200]"
-                      }`}
+                      className={`flex-1 py-6 rounded-xl font-display text-lg font-bold shadow-lg transition-all ${added
+                        ? "bg-green-600 hover:bg-green-700 shadow-green-600/20 text-[#fefce8]"
+                        : product.stock === 0
+                          ? "bg-muted text-muted-foreground cursor-not-allowed"
+                          : "bg-[#ffd814] hover:bg-[#f7ca00] text-[#0f1111] active:shadow-inner border border-[#fcd200]"
+                        }`}
                     >
                       {added ? (
                         <span className="flex items-center gap-2">
