@@ -71,16 +71,19 @@ export const OrderProductsTooltip = ({ detalles }: OrderProductsTooltipProps) =>
                   key={det.id}
                   className="flex items-start gap-3 p-2 rounded-xl bg-secondary/20 hover:bg-secondary/40 border border-border/30 transition-colors"
                 >
-                  <div className="relative h-10 w-10 shrink-0 rounded-lg overflow-hidden border border-border/50 bg-secondary/50">
-                    {/* eslint-disable-next-next/no-img-element */}
-                    <img
-                      src={imgUrl}
-                      alt={det.producto.name}
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/placeholder-product.png";
-                      }}
-                    />
+                  <div className="relative h-10 w-10 shrink-0 rounded-lg overflow-hidden border border-border/50 bg-secondary/50 flex items-center justify-center">
+                    {det.producto?.images?.[0] ? (
+                      /* eslint-disable-next-next/no-img-element */
+                      <img
+                        src={det.producto.images[0]}
+                        alt={det.producto.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-primary font-bold text-xs">
+                        {det.producto?.name?.charAt(0)?.toUpperCase() || "?"}
+                      </span>
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-bold text-foreground line-clamp-1 leading-snug">
