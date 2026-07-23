@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { OrderProductsTooltip } from "@/frontend/components/admin/pedidos/OrderProductsTooltip";
 
 export interface Order {
   id: string;
@@ -356,36 +357,9 @@ export const OrderCard = ({ order, index, unreadChatCount = 0, onNavigate, onCan
                 </div>
               </div>
 
-              {/* Product thumbnails */}
-              <div className="hidden md:flex items-center gap-2 shrink-0">
-                <div className="flex -space-x-2">
-                  {order.detalles?.slice(0, 3).map((detalle) => (
-                    <div
-                      key={detalle.id}
-                      className="relative h-8 w-8 rounded-full border-2 border-background bg-muted shadow-sm ring-1 ring-border/30 overflow-hidden"
-                    >
-                      {detalle.producto.images && detalle.producto.images.length > 0 ? (
-                        <img
-                          src={detalle.producto.images[0]}
-                          alt={detalle.producto.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-primary/10 text-[10px] font-bold text-primary">
-                          {detalle.producto.name.charAt(0)}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {(order.detalles?.length || 0) > 3 && (
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-primary text-[10px] font-bold text-primary-foreground shadow-sm">
-                      +{order.detalles.length - 3}
-                    </div>
-                  )}
-                </div>
-                <span className="text-[11px] text-muted-foreground font-medium">
-                  {order.detalles?.length || 0} {order.detalles?.length === 1 ? "prod." : "prods."}
-                </span>
+              {/* Product thumbnails with Tooltip */}
+              <div className="hidden md:block shrink-0">
+                <OrderProductsTooltip detalles={order.detalles} />
               </div>
 
               {/* Right: Action buttons */}

@@ -7,10 +7,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { AdminOrder } from "./adminOrderUtils";
-
 interface OrderProductsTooltipProps {
-  detalles: AdminOrder["detalles"];
+  detalles: {
+    id: string;
+    cantidad: number;
+    precioUnitario: number;
+    producto: {
+      id?: string;
+      name: string;
+      images?: string[];
+    };
+  }[];
 }
 
 export const OrderProductsTooltip = ({ detalles }: OrderProductsTooltipProps) => {
