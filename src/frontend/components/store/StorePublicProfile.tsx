@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -50,9 +50,6 @@ export function StorePublicProfile({ store, products, openStoreChatAction, getSt
   const [storeChat, setStoreChat] = useState<{ conversation: OrderConversation; messages: Message[] } | null>(null);
   const [isOpeningChat, setIsOpeningChat] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const searchParams = useSearchParams();
-  const shouldAutoOpenChat = searchParams.get("openChat") === "true";
-  const autoOpenTriggeredRef = useRef(false);
 
   const isOwner = session?.user?.id === store.owner?.id;
 
@@ -145,17 +142,6 @@ export function StorePublicProfile({ store, products, openStoreChatAction, getSt
 
   const handleMarkAsRead = useCallback(async (_conversationId: string) => {
   }, []);
-
-  useEffect(() => {
-    if (!shouldAutoOpenChat || !store?.id || storeChat || autoOpenTriggeredRef.current || !openStoreChatAction) return;
-    autoOpenTriggeredRef.current = true;
-
-    const cleaned = new URL(window.location.href);
-    cleaned.searchParams.delete("openChat");
-    window.history.replaceState(null, "", cleaned.pathname + cleaned.search);
-
-    handleOpenStoreChat();
-  }, [shouldAutoOpenChat, store?.id, storeChat, openStoreChatAction, handleOpenStoreChat]);
 
   return (
     <div className="min-h-screen bg-background text-foreground font-body">
