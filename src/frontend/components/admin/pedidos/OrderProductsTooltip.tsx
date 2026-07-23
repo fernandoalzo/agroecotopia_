@@ -49,7 +49,9 @@ export const OrderProductsTooltip = ({ detalles }: OrderProductsTooltipProps) =>
           side="top"
           align="start"
           sideOffset={6}
-          className="z-50 min-w-[280px] max-w-[340px] p-0 border border-border/80 bg-background/95 backdrop-blur-xl shadow-2xl rounded-2xl overflow-hidden animate-in fade-in-0 zoom-in-95"
+          avoidCollisions={true}
+          collisionPadding={12}
+          className="z-50 min-w-[280px] max-w-[340px] p-0 border border-border/80 bg-background/95 backdrop-blur-xl shadow-2xl rounded-2xl overflow-hidden animate-in fade-in-0 zoom-in-95 data-[side=top]:slide-in-from-bottom-2 data-[side=bottom]:slide-in-from-top-2"
         >
           <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-2.5 border-b border-border/50 flex items-center justify-between">
             <span className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
