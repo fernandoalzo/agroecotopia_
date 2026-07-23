@@ -144,18 +144,36 @@ export const AdminOrderCardDesktop = ({
                 </div>
 
                 {/* Products summary */}
-                <div className="min-w-0 flex-1">
-                    <p className="text-xs text-muted-foreground/60 font-bold uppercase tracking-wider mb-1">
-                        Productos
-                    </p>
-                    <p className="text-sm font-medium truncate">
-                        {order.detalles
-                            ?.slice(0, 2)
-                            .map((d) => d.producto.name)
-                            .join(", ")}
-                        {(order.detalles?.length || 0) > 2 &&
-                            ` +${order.detalles.length - 2} más`}
-                    </p>
+                <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex -space-x-2">
+                        {order.detalles?.slice(0, 3).map((detalle) => (
+                            <div
+                                key={detalle.id}
+                                className="relative h-8 w-8 rounded-full border-2 border-background bg-muted shadow-sm ring-1 ring-border/30 overflow-hidden"
+                            >
+                                {detalle.producto?.images && detalle.producto.images.length > 0 ? (
+                                    /* eslint-disable-next-next/no-img-element */
+                                    <img
+                                        src={detalle.producto.images[0]}
+                                        alt={detalle.producto.name}
+                                        className="h-full w-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="flex h-full w-full items-center justify-center bg-primary/10 text-[10px] font-bold text-primary">
+                                        {detalle.producto?.name ? detalle.producto.name.charAt(0).toUpperCase() : "?"}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                        {(order.detalles?.length || 0) > 3 && (
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-primary text-[10px] font-bold text-primary-foreground shadow-sm">
+                                +{order.detalles.length - 3}
+                            </div>
+                        )}
+                    </div>
+                    <span className="text-[11px] text-muted-foreground font-medium">
+                        {order.detalles?.length || 0} {order.detalles?.length === 1 ? "prod." : "prods."}
+                    </span>
                 </div>
 
                 {/* Total */}

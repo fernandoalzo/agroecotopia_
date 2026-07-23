@@ -24,25 +24,36 @@ export const OrderProductsTooltip = ({ detalles }: OrderProductsTooltipProps) =>
     <TooltipProvider delayDuration={150}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="min-w-0 max-w-[210px] cursor-pointer group/prod py-1">
-            <div className="flex items-center gap-1.5">
-              <p className="text-sm font-semibold truncate group-hover/prod:text-primary transition-colors">
-                {detalles
-                  ?.slice(0, 2)
-                  .map((d) => d.producto.name)
-                  .join(", ")}
-                {(detalles?.length || 0) > 2 &&
-                  ` +${detalles.length - 2} más`}
-              </p>
+          <div className="flex items-center gap-2 cursor-pointer group/prod py-1 shrink-0">
+            <div className="flex -space-x-2">
+              {detalles?.slice(0, 3).map((detalle) => (
+                <div
+                  key={detalle.id}
+                  className="relative h-8 w-8 rounded-full border-2 border-background bg-muted shadow-sm ring-1 ring-border/30 overflow-hidden"
+                >
+                  {detalle.producto?.images && detalle.producto.images.length > 0 ? (
+                    /* eslint-disable-next-next/no-img-element */
+                    <img
+                      src={detalle.producto.images[0]}
+                      alt={detalle.producto.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-primary/10 text-[10px] font-bold text-primary">
+                      {detalle.producto?.name ? detalle.producto.name.charAt(0).toUpperCase() : "?"}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {(detalles?.length || 0) > 3 && (
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-primary text-[10px] font-bold text-primary-foreground shadow-sm">
+                  +{detalles.length - 3}
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-[10px] font-bold text-muted-foreground bg-secondary/80 px-1.5 py-0.2 rounded-md">
-                {detalles?.length || 0} {detalles?.length === 1 ? "ítem" : "ítems"} ({totalItems} unid.)
-              </span>
-              <span className="text-[10px] font-semibold text-primary/80 opacity-0 group-hover/prod:opacity-100 transition-opacity">
-                • Ver detalles
-              </span>
-            </div>
+            <span className="text-[11px] text-muted-foreground font-medium group-hover/prod:text-primary transition-colors">
+              {detalles?.length || 0} {detalles?.length === 1 ? "prod." : "prods."}
+            </span>
           </div>
         </TooltipTrigger>
         <TooltipContent
