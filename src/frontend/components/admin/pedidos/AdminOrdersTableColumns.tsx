@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { AdminOrder, statusConfig, getNextStatuses, isEnvioEnProceso } from "./adminOrderUtils";
+import { OrderProductsTooltip } from "./OrderProductsTooltip";
 import { AnimatePresence, motion } from "framer-motion";
 
 interface OrderRowActionsProps {
@@ -306,21 +307,7 @@ export const getAdminOrderColumns = (
     }),
     columnHelper.accessor("detalles", {
       header: "Productos",
-      cell: ({ row }) => {
-        const order = row.original;
-        return (
-          <div className="min-w-0 max-w-[200px]">
-            <p className="text-sm font-medium truncate" title={order.detalles.map(d => d.producto.name).join(", ")}>
-              {order.detalles
-                ?.slice(0, 2)
-                .map((d) => d.producto.name)
-                .join(", ")}
-              {(order.detalles?.length || 0) > 2 &&
-                ` +${order.detalles.length - 2} más`}
-            </p>
-          </div>
-        );
-      },
+      cell: ({ row }) => <OrderProductsTooltip detalles={row.original.detalles} />,
     }),
     columnHelper.accessor("total", {
       header: () => <div className="text-right w-full">Total</div>,
