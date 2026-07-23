@@ -514,7 +514,11 @@ export default function OrderDetailPageClient({
         toast.error("Error", { description: result.error });
       } else {
         toast.success("Pedido cancelado", { description: "Tu pedido ha sido cancelado exitosamente." });
-        setOrder({ ...order, estado: PedidoEstado.CANCELADO });
+        if (result?.pedido) {
+          setOrder(result.pedido);
+        } else {
+          setOrder({ ...order, estado: PedidoEstado.CANCELADO });
+        }
       }
     } catch (error) {
       toast.error("Error", { description: "Hubo un problema al cancelar el pedido." });
