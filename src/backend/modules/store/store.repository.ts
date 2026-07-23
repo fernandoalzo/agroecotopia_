@@ -63,6 +63,17 @@ export class StoreRepository {
     });
   }
 
+  async findPublicBySlug(slug: string) {
+    log.debug("[db] Buscando tienda pública por slug", { slug });
+    return await prisma.store.findUnique({
+      where: { slug, status: "ACTIVE" },
+      include: {
+        owner: { select: { id: true, name: true, image: true } },
+        _count: { select: { products: true } },
+      }
+    });
+  }
+
   async updateStore(id: string, data: Prisma.StoreUpdateInput) {
     log.info("Actualizando tienda", { storeId: id });
     return await prisma.store.update({

@@ -245,6 +245,11 @@ export const reactivateStoreAction = async (storeId: string) => {
 
 // --- Public Actions ---
 
+export const getPublicStoreBySlugAction = async (slug: string) => {
+  log.info("Action: getPublicStoreBySlugAction", { slug });
+  return deepSerialize(await storeService.getPublicStoreBySlug(slug));
+};
+
 export const getStoreBySlugAction = async (slug: string) => {
   log.info("Action: getStoreBySlugAction", { slug });
   return deepSerialize(await storeService.getStoreBySlug(slug));

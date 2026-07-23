@@ -181,7 +181,16 @@ export const ProductDetailClient = ({ product, relatedProducts }: ProductDetailC
                 {(product as any).store?.name && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground/80 mt-2 mb-3">
                     <Store className="w-4 h-4 text-primary/70" />
-                    <span className="truncate">{(product as any).store.name}</span>
+                    {(product as any).store.slug ? (
+                      <Link
+                        href={`/tienda/${(product as any).store.slug}`}
+                        className="truncate hover:text-primary hover:underline transition-colors font-medium"
+                      >
+                        {(product as any).store.name}
+                      </Link>
+                    ) : (
+                      <span className="truncate">{(product as any).store.name}</span>
+                    )}
                   </div>
                 )}
 

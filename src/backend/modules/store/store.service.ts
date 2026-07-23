@@ -137,6 +137,13 @@ export class StoreService {
     return store;
   }
 
+  async getPublicStoreBySlug(slug: string) {
+    log.info("Obteniendo perfil público de tienda", { slug });
+    const store = await this.storeRepository.findPublicBySlug(slug);
+    if (!store) return null;
+    return store;
+  }
+
   async getActiveStoresForCatalog(page: number = 1, limit: number = 12) {
     const skip = (page - 1) * limit;
     return await this.storeRepository.findActiveStores(skip, limit);
