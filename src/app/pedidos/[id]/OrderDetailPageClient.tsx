@@ -1133,15 +1133,20 @@ export default function OrderDetailPageClient({
                                   <div className="relative z-10 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-rose-500 bg-rose-500 shadow-[0_0_0_4px_rgba(244,63,94,0.15)]">
                                     <XCircle className="h-3 w-3 text-white" />
                                   </div>
-                                  <div className="min-w-0 pt-0.5 font-bold text-rose-500">
-                                    <div className="flex items-center gap-2">
+                                  <div className="min-w-0 pt-0.5">
+                                    <div className="flex items-center gap-2 font-bold text-rose-500">
                                       <XCircle className="h-3.5 w-3.5" />
-                                      <span className="text-xs font-bold">Cancelado</span>
+                                      <span className="text-xs">Cancelado</span>
                                     </div>
                                     {order.motivoCancelacion && (
-                                      <p className="text-[11px] font-medium text-muted-foreground mt-1 italic">
-                                        &ldquo;{order.motivoCancelacion}&rdquo;
-                                      </p>
+                                      <div className="mt-2 rounded-xl border border-rose-500/15 bg-rose-500/5 px-4 py-3">
+                                        <p className="text-[11px] font-semibold text-rose-600/70 uppercase tracking-wider mb-1">
+                                          Motivo
+                                        </p>
+                                        <p className="text-sm font-medium text-rose-700 dark:text-rose-300 leading-relaxed">
+                                          {order.motivoCancelacion}
+                                        </p>
+                                      </div>
                                     )}
                                   </div>
                                 </div>
