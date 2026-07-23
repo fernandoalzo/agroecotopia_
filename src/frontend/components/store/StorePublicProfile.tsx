@@ -1,18 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
-  Store,
+  Store as StoreIcon,
   MapPin,
   Phone,
   Mail,
   Calendar,
   Package,
   User,
-  ExternalLink,
   ShieldCheck,
 } from "lucide-react";
 import Image from "next/image";
@@ -36,10 +34,9 @@ export function StorePublicProfile({ store, products }: StorePublicProfileProps)
 
   const t = {
     back: language === "es" ? "Volver" : "Back",
-    about: language === "es" ? "Sobre la Tienda" : "About the Store",
-    details: language === "es" ? "Detalles" : "Details",
+    details: language === "es" ? "Información de la Tienda" : "Store Information",
     owner: language === "es" ? "Propietario" : "Owner",
-    products: language === "es" ? "Productos" : "Products",
+    products: language === "es" ? "Catálogo de Productos" : "Product Catalog",
     memberSince: language === "es" ? "Miembro desde" : "Member since",
     city: language === "es" ? "Ciudad" : "City",
     address: language === "es" ? "Dirección" : "Address",
@@ -50,7 +47,7 @@ export function StorePublicProfile({ store, products }: StorePublicProfileProps)
     productCount: (n: number) =>
       language === "es" ? `${n} producto${n !== 1 ? "s" : ""}` : `${n} product${n !== 1 ? "s" : ""}`,
     noProducts: language === "es" ? "Esta tienda aún no tiene productos." : "This store has no products yet.",
-    storeOwner: language === "es" ? "Dueño de la tienda" : "Store owner",
+    storeOwner: language === "es" ? "Propietario de la tienda" : "Store owner",
   };
 
   const infoItems = [
@@ -71,7 +68,7 @@ export function StorePublicProfile({ store, products }: StorePublicProfileProps)
   return (
     <div className="min-h-screen bg-background text-foreground font-body">
       <main className="pt-24 pb-16 md:pt-32 md:pb-24">
-        <div className="container mx-auto px-4 md:px-6">
+        <div className="container mx-auto px-4 md:px-6 max-w-7xl">
           {/* Back button */}
           <button
             onClick={() => router.back()}
@@ -81,20 +78,16 @@ export function StorePublicProfile({ store, products }: StorePublicProfileProps)
             {t.back}
           </button>
 
-          {/* ── Hero Section ── */}
+          {/* ── Seamless Header & Store Info Section ── */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-primary/10 via-background to-secondary/30 border border-border/50 p-6 sm:p-10 mb-10"
+            className="mb-16"
           >
-            {/* Decorative blobs */}
-            <div className="absolute top-0 right-0 w-72 h-72 bg-primary/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-56 h-56 bg-secondary/40 rounded-full blur-[80px] translate-y-1/3 -translate-x-1/4 pointer-events-none" />
-
-            <div className="relative flex flex-col sm:flex-row items-start sm:items-end gap-6">
-              {/* Store Avatar */}
-              <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-3xl bg-card border border-border/50 shadow-xl flex items-center justify-center shrink-0 overflow-hidden">
+            {/* Store Name, Avatar & Badges Header */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pb-8 border-b border-border/40">
+              <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-3xl bg-secondary/40 border border-border/40 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
                 {store.logo ? (
                   <Image
                     src={store.logo}
@@ -104,113 +97,105 @@ export function StorePublicProfile({ store, products }: StorePublicProfileProps)
                     className="object-cover w-full h-full"
                   />
                 ) : (
-                  <Store className="w-12 h-12 text-primary" />
+                  <StoreIcon className="w-12 h-12 text-primary" />
                 )}
               </div>
 
-              {/* Store Info */}
-              <div className="flex-1 min-w-0 pb-1">
-                <h1 className="font-display text-3xl sm:text-4xl font-black text-foreground tracking-tight leading-tight">
-                  {store.name}
-                </h1>
-                <div className="flex flex-wrap items-center gap-3 mt-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-3 mb-2">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    <ShieldCheck className="w-3 h-3" />
+                    <ShieldCheck className="w-3.5 h-3.5" />
                     {t.activeStore}
                   </span>
                   {store._count && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-secondary/80 text-muted-foreground border border-border/50">
-                      <Package className="w-3 h-3" />
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-secondary/50 border border-border/30">
+                      <Package className="w-3.5 h-3.5" />
                       {t.productCount(store._count.products)}
                     </span>
                   )}
                 </div>
+
+                <h1 className="font-display text-3xl sm:text-5xl font-black text-foreground tracking-tight leading-tight">
+                  {store.name}
+                </h1>
+
+                {store.description && (
+                  <p className="text-base text-muted-foreground leading-relaxed mt-3 max-w-4xl">
+                    {store.description}
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Description */}
-            {store.description && (
-              <p className="relative text-base text-muted-foreground leading-relaxed mt-8 max-w-3xl">
-                {store.description}
-              </p>
-            )}
+            {/* Seamless Details Grid + Owner Profile (No Cards / Native Background) */}
+            <div className="pt-8 grid grid-cols-1 lg:grid-cols-3 gap-10">
+              {/* Info Items Column */}
+              <div className="lg:col-span-2 space-y-6">
+                <h2 className="text-xs font-black text-muted-foreground uppercase tracking-widest">
+                  {t.details}
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
+                  {infoItems.map((item, i) => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={i} className="flex items-start gap-3.5">
+                        <div className="p-2 rounded-lg bg-secondary/40 text-primary shrink-0 mt-0.5">
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mb-0.5">
+                            {item.label}
+                          </p>
+                          <p className="text-sm text-foreground font-semibold truncate">
+                            {item.value}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Owner Column */}
+              <div className="space-y-6 border-t lg:border-t-0 lg:border-l border-border/40 pt-8 lg:pt-0 lg:pl-10">
+                <h2 className="text-xs font-black text-muted-foreground uppercase tracking-widest">
+                  {t.owner}
+                </h2>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-full bg-secondary/50 border border-border/40 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                    {store.owner?.image ? (
+                      <Image
+                        src={store.owner.image}
+                        alt={store.owner.name || ""}
+                        width={56}
+                        height={56}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <User className="w-7 h-7 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-display font-bold text-base text-foreground truncate">
+                      {store.owner?.name || t.notSpecified}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                      {t.storeOwner}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </motion.div>
 
-          {/* ── Info Grid + Owner ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-14">
-            {/* Info Grid */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="lg:col-span-2 bg-card rounded-2xl border border-border/50 p-6 sm:p-8"
-            >
-              <h2 className="text-xs font-black text-foreground uppercase tracking-widest mb-6 opacity-80">
-                {t.details}
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
-                {infoItems.map((item, i) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={i} className="flex items-start gap-4">
-                      <div className="p-2.5 rounded-xl bg-secondary/50 text-muted-foreground shrink-0">
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider mb-0.5">
-                          {item.label}
-                        </p>
-                        <p className="text-sm text-foreground font-semibold truncate">
-                          {item.value}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
+          {/* Divider line before products catalog */}
+          <div className="h-px w-full bg-border/40 mb-12" />
 
-            {/* Owner Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="bg-card rounded-2xl border border-border/50 p-6 sm:p-8 flex flex-col items-center justify-center text-center"
-            >
-              <h2 className="text-xs font-black text-foreground uppercase tracking-widest mb-6 opacity-80 self-start">
-                {t.owner}
-              </h2>
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-20 h-20 rounded-full bg-secondary/80 border-2 border-border/50 flex items-center justify-center overflow-hidden shadow-lg">
-                  {store.owner?.image ? (
-                    <Image
-                      src={store.owner.image}
-                      alt={store.owner.name || ""}
-                      width={80}
-                      height={80}
-                      className="object-cover w-full h-full"
-                    />
-                  ) : (
-                    <User className="w-8 h-8 text-muted-foreground" />
-                  )}
-                </div>
-                <div>
-                  <p className="font-display font-bold text-lg text-foreground">
-                    {store.owner?.name || t.notSpecified}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {t.storeOwner}
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* ── Products Section ── */}
+          {/* ── Products Catalog Section ── */}
           <motion.section
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
           >
             <div className="flex items-center justify-between mb-8">
               <h2 className="font-display text-2xl font-black text-foreground">
