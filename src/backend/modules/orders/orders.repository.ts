@@ -12,7 +12,7 @@ type TxClient = any;
 export class OrdersRepository {
   constructor(private cacheService?: CacheService) {}
 
-  private static readonly STATUS_ORDER_SQL = `CASE WHEN p."estado" IN ('CANCELADO', 'ENTREGADO') THEN 1 ELSE 0 END, p."fechaPedido" DESC`;
+  private static readonly STATUS_ORDER_SQL = `CASE WHEN p."estado" = 'ENTREGADO' THEN 1 ELSE 0 END, p."fechaPedido" DESC`;
   /**
    * Ejecuta operaciones dentro de una transacción atómica de base de datos.
    */
