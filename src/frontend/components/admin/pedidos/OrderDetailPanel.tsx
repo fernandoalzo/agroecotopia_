@@ -237,115 +237,72 @@ export function OrderDetailPanel({
     }
   };
 
-  if (loading) {
-    return (
-      <>
-        <motion.div
-          key="backdrop"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          onClick={onClose}
-          className="fixed inset-0 backdrop-blur-[3px] z-40 cursor-pointer"
-        />
-        <motion.div
-          key="panel"
-          initial={{ opacity: 0, x: "100%" }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: "100%" }}
-          transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-card border-l border-border shadow-2xl flex flex-col"
-        >
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-            <h2 className="text-lg font-bold tracking-tight">Cargando pedido...</h2>
-            <button onClick={onClose} className="p-2 hover:bg-secondary rounded-xl transition-all text-muted-foreground">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="flex-1 flex items-center justify-center">
-            <Loading text="Cargando pedido..." subtext="Conectando a la huerta digital" className="py-0" />
-          </div>
-        </motion.div>
-      </>
-    );
-  }
-
-  if (error || !order) {
-    return (
-      <>
-        <motion.div
-          key="backdrop"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          onClick={onClose}
-          className="fixed inset-0 backdrop-blur-[3px] z-40 cursor-pointer"
-        />
-        <motion.div
-          key="panel"
-          initial={{ opacity: 0, x: "100%" }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: "100%" }}
-          transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-card border-l border-border shadow-2xl flex flex-col"
-        >
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-            <h2 className="text-lg font-bold tracking-tight">Pedido</h2>
-            <button onClick={onClose} className="p-2 hover:bg-secondary rounded-xl transition-all text-muted-foreground">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-            <XCircle className="h-12 w-12 text-rose-500 mb-4" />
-            <p className="font-semibold text-muted-foreground">
-              {error === "FORBIDDEN" ? "No tienes permiso para ver este pedido" : "Pedido no encontrado"}
-            </p>
-          </div>
-        </motion.div>
-      </>
-    );
-  }
-
-  const cfg = statusConfig[order.estado as PedidoEstado];
+  const cfg = order ? statusConfig[order.estado as PedidoEstado] : null;
   const StatusIcon = cfg?.icon || Package;
-  const nextStatuses = getNextStatuses(order.estado as PedidoEstado, order.tipoEntrega);
-  const prevStatus = getPreviousStatus(order.estado as PedidoEstado, order.tipoEntrega);
-  const nextStatusLineal = getNextStatusLineal(order.estado as PedidoEstado, order.tipoEntrega);
-  const esEnvio = order.tipoEntrega === "ENVIO";
-  const esRecojo = order.tipoEntrega === "RECOJO_EN_BODEGA";
-  const esEnvioEnProceso = isEnvioEnProceso(order);
+  const nextStatuses = order ? getNextStatuses(order.estado as PedidoEstado, order.tipoEntrega) : [];
+  const prevStatus = order ? getPreviousStatus(order.estado as PedidoEstado, order.tipoEntrega) : null;
+  const nextStatusLineal = order ? getNextStatusLineal(order.estado as PedidoEstado, order.tipoEntrega) : null;
+  const esEnvio = order?.tipoEntrega === "ENVIO";
+  const esRecojo = order?.tipoEntrega === "RECOJO_EN_BODEGA";
+  const esEnvioEnProceso = order ? isEnvioEnProceso(order) : false;
 
-  const totalDiscount = order.detalles?.reduce((acc: number, d: any) => {
+  const totalDiscount = order?.detalles?.reduce((acc: number, d: any) => {
     const diff = (d.producto?.price || 0) - d.precioUnitario;
     return acc + (diff > 0 ? diff * d.cantidad : 0);
   }, 0) || 0;
   const hasDiscount = totalDiscount > 0;
 
-  const timelineStatuses = getTimelineStatuses(order.tipoEntrega);
+  const timelineStatuses = getTimelineStatuses(order?.tipoEntrega);
 
   return (
     <>
-      <AnimatePresence>
-        <motion.div
-          key="backdrop"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          onClick={onClose}
-          className="fixed inset-0 backdrop-blur-[3px] z-40 cursor-pointer"
-        />
-        <motion.div
-          key="panel"
-          initial={{ opacity: 0, x: "100%" }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: "100%" }}
-          transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-card border-l border-border shadow-2xl flex flex-col"
-        >
-          {/* Header */}
+      <motion.div
+        key="backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3 }}
+        onClick={onClose}
+        className="fixed inset-0 backdrop-blur-[3px] z-40 cursor-pointer"
+      />
+      <motion.div
+        key="panel"
+        initial={{ opacity: 0, x: "100%" }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: "100%" }}
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-card border-l border-border shadow-2xl flex flex-col"
+      >
+        {loading ? (
+          <>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+              <h2 className="text-lg font-bold tracking-tight">Cargando pedido...</h2>
+              <button onClick={onClose} className="p-2 hover:bg-secondary rounded-xl transition-all text-muted-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <Loading text="Cargando pedido..." subtext="Conectando a la huerta digital" className="py-0" />
+            </div>
+          </>
+        ) : error || !order ? (
+          <>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+              <h2 className="text-lg font-bold tracking-tight">Pedido</h2>
+              <button onClick={onClose} className="p-2 hover:bg-secondary rounded-xl transition-all text-muted-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+              <XCircle className="h-12 w-12 text-rose-500 mb-4" />
+              <p className="font-semibold text-muted-foreground">
+                {error === "FORBIDDEN" ? "No tienes permiso para ver este pedido" : "Pedido no encontrado"}
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -875,8 +832,9 @@ export function OrderDetailPanel({
               </a>
             </div>
           </div>
-        </motion.div>
-      </AnimatePresence>
+        </>
+      )}
+    </motion.div>
 
     {/* Product Detail Panel Drawer */}
     <AnimatePresence>
