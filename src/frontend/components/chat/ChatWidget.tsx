@@ -41,7 +41,7 @@ import { usePathname } from "next/navigation";
 
 export default function ChatWidget({ forceShow = false, targetUserId, chatDeps }: ChatWidgetProps = {}) {
   const pathname = usePathname();
-  const shouldEnableChat = !(pathname?.startsWith("/comunidad") || pathname?.startsWith("/mi-tienda") || pathname?.startsWith("/pedidos/") || pathname?.startsWith("/tienda/"));
+  const shouldEnableChat = !(pathname?.startsWith("/comunidad") || pathname?.startsWith("/mi-tienda") || pathname?.startsWith("/pedidos/") || pathname?.startsWith("/tienda/") || pathname?.startsWith("/cart") || pathname?.startsWith("/checkout"));
   const chat = useChatWidget(forceShow, targetUserId, shouldEnableChat, chatDeps);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
