@@ -170,6 +170,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
   const [autoOpenEnvioPedidoId, setAutoOpenEnvioPedidoId] = useState<string | null>(null);
   const [bodegasList, setBodegasList] = useState<any[]>([]);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
+  const [newOrdersCount, setNewOrdersCount] = useState(0);
 
   const activeStore = stores.find(s => s.id === activeStoreId) || null;
 
@@ -442,6 +443,17 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
     events: ["order:created", "order:status_updated_store", "order:deleted_store"],
   });
 
+  useEffect(() => {
+    if (!socket || !activeStoreId || !isSeller) return;
+    const handler = (payload: { storeId?: string }) => {
+      if (payload.storeId === activeStoreId) {
+        setNewOrdersCount(prev => prev + 1);
+      }
+    };
+    socket.on("order:created", handler);
+    return () => { socket.off("order:created", handler); };
+  }, [socket, activeStoreId, isSeller]);
+
   useSocketRefresh({
     socket,
     enabled: !!activeStore?.id && !!isSeller && activeTab === "products",
@@ -511,6 +523,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
   // Update tab in URL
   const handleTabChange = (tab: SellerTab) => {
     setActiveTab(tab);
+    if (tab === "orders") setNewOrdersCount(0);
     setSidebarOpen(false);
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
@@ -554,6 +567,7 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
 
   const handleStoreChange = (storeId: string) => {
     setActiveStoreId(storeId);
+    setNewOrdersCount(0);
     setIsStoreSelectorOpen(false);
     const params = new URLSearchParams(searchParams.toString());
     params.set("store", storeId);
@@ -755,6 +769,11 @@ function SellerDashboardContent({ actions }: { actions: MiTiendaActions }) {
                 >
                   <Icon className={cn("w-5 h-5 shrink-0 transition-transform duration-200", isActive && "scale-110")} />
                   <span className="flex-1 text-left">{item.labelEs}</span>
+                  {item.id === "orders" && newOrdersCount > 0 && (
+                    <span className="flex-shrink-0 min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold px-1.5 bg-red-500 text-white shadow-sm shadow-red-500/20">
+                      {newOrdersCount > 99 ? "99+" : newOrdersCount}
+                    </span>
+                  )}
                   {item.id === "chat" && chatUnreadCount > 0 && (
                     <span className="flex-shrink-0 min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold px-1.5 bg-red-500 text-white shadow-sm shadow-red-500/20">
                       {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
